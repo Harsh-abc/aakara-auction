@@ -7,8 +7,319 @@ datasource db {
   provider = "postgresql"
 }
 
-model Test {
-  id        Int      @id @default(autoincrement())
-  name      String
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+
+model User {
+  id   BigInt @id @default(autoincrement())
+  uuid String @unique @default(uuid()) @db.Uuid
+
+  username     String  @unique @db.VarChar(50)
+  email        String  @unique @db.VarChar(255)
+  phone        String? @unique @db.VarChar(20)
+  passwordHash String  @db.VarChar(255)
+
+  roleId BigInt
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  status UserStatus @default(PENDING_VERIFICATION)
+
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  phoneVerified   Boolean   @default(false)
+  phoneVerifiedAt DateTime?
+
+  lastLoginAt         DateTime?
+  lastLoginIp         String?   @db.Inet
+  passwordChangedAt   DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  profile       UserProfile?
+  sessions      UserSession[]
+  loginAttempts LoginAttempt[]
+
+  // Own KYC record (one-to-one)
+  kyc UserKyc?
+
+  // Reverse relations for admin/self-relation actions performed BY this user
+  kycVerifiedRecords        UserKyc[]             @relation("KycVerifier")
+  kycDocumentsVerified      UserKycDocument[]     @relation("KycDocumentVerifier")
+  kycVerificationsPerformed UserKycVerification[] @relation("KycVerificationPerformer")
+
+  @@index([roleId])
+  @@index([status])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+  DEACTIVATED
+}
+
+model UserProfile {
+  id BigInt @id @default(autoincrement())
+
+  userId BigInt @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  firstName   String
+  lastName    String
+  displayName String?
+  avatarUrl   String?
+  bio         String?
+
+  dateOfBirth DateTime?
+  gender      Gender?
+
+  address String?
+  city    String?
+  state   String?
+  country String?
+  pincode String?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+// ─────────────────────────────────────────────
+// RBAC
+// ─────────────────────────────────────────────
+
+model Role {
+  id           BigInt  @id @default(autoincrement())
+  name         String  @unique
+  description  String?
+  isSystemRole Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          BigInt  @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  module      String
+  action      String
+
+  createdAt DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       BigInt
+  permissionId BigInt
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ─────────────────────────────────────────────
+// SESSIONS / LOGIN HISTORY
+// ─────────────────────────────────────────────
+
+model UserSession {
+  id BigInt @id @default(autoincrement())
+
+  userId BigInt
+  user   User   @relation(fields: [userId], references: [id])
+
+  refreshTokenHash String  @unique
+  ipAddress        String?
+  userAgent        String?
+  deviceName       String?
+
+  expiresAt  DateTime
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+model LoginAttempt {
+  id BigInt @id @default(autoincrement())
+
+  userId BigInt?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  email     String
+  ipAddress String?
+  userAgent String?
+
+  success       Boolean
+  failureReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([createdAt])
+  @@map("login_attempts")
+}
+
+// ─────────────────────────────────────────────
+// KYC
+// ─────────────────────────────────────────────
+
+model UserKyc {
+  id BigInt @id @default(autoincrement())
+
+  userId BigInt @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  kycType KycType
+  status  KycStatus @default(PENDING)
+
+  submittedAt     DateTime?
+  verifiedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+
+  verifiedBy BigInt?
+  verifier   User?   @relation("KycVerifier", fields: [verifiedBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents     UserKycDocument[]
+  verifications UserKycVerification[]
+
+  @@index([status])
+  @@index([verifiedBy])
+  @@map("user_kyc")
+}
+
+enum KycType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+model UserKycDocument {
+  id BigInt @id @default(autoincrement())
+
+  kycId   BigInt
+  userKyc UserKyc @relation(fields: [kycId], references: [id])
+
+  documentType   DocumentType
+  documentNumber String?
+
+  fileUrl  String
+  fileName String
+  mimeType String
+  fileSize Int
+
+  status          DocumentStatus @default(PENDING)
+  rejectionReason String?
+
+  verifiedAt DateTime?
+  verifiedBy BigInt?
+  verifier   User?     @relation("KycDocumentVerifier", fields: [verifiedBy], references: [id])
+
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  verifications UserKycVerification[]
+
+  @@index([kycId])
+  @@index([status])
+  @@index([verifiedBy])
+  @@map("user_kyc_documents")
+}
+
+enum DocumentType {
+  PASSPORT
+  DRIVERS_LICENSE
+  NATIONAL_ID
+  AADHAAR
+  PAN_CARD
+  UTILITY_BILL
+  BANK_STATEMENT
+  BUSINESS_REGISTRATION
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model UserKycVerification {
+  id BigInt @id @default(autoincrement())
+
+  kycId   BigInt
+  userKyc UserKyc @relation(fields: [kycId], references: [id])
+
+  documentId BigInt
+  document   UserKycDocument @relation(fields: [documentId], references: [id])
+
+  action VerificationAction
+  status DocumentStatus
+
+  performedBy BigInt?
+  performer   User?   @relation("KycVerificationPerformer", fields: [performedBy], references: [id])
+
+  reason   String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([kycId])
+  @@index([documentId])
+  @@index([performedBy])
+  @@map("user_kyc_verifications")
+}
+
+enum VerificationAction {
+  SUBMITTED
+  REVIEWED
+  APPROVED
+  REJECTED
+  RESUBMITTED
+  EXPIRED
 }
