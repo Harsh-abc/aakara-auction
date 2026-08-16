@@ -71,8 +71,8 @@ model UserProfile {
   userId BigInt @unique
   user   User   @relation(fields: [userId], references: [id])
 
-  firstName   String
-  lastName    String
+  firstName   String?
+  lastName    String?
   displayName String?
   avatarUrl   String?
   bio         String?
