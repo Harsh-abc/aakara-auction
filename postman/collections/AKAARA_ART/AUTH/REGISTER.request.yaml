@@ -1,0 +1,19 @@
+$kind: http-request
+url: http://localhost:8080/api/auth/register
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"username\" : \"harshvardhan10\",\r
+
+    \    \"name\" : \"harshvardhan\",\r
+
+    \    \"email\" : \"shreeharshpb11@gmail.com\",\r
+
+    \    \"password\" : \"harshvardhan\",\r
+
+    \    \"phone\" : \"8108424368\"\r
+
+    }"
+order: 1786907640653

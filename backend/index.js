@@ -5,6 +5,7 @@ dotenv.config();
 import cookieParser from "cookie-parser";
 import prisma from "./src/libs/prisma.js";
 import redis from './src/libs/redis.js';
+import authRouter from "./src/routes/auth.routes.js";
 
 
 const app = express();
@@ -45,6 +46,7 @@ app.get("/test-redis", async (req, res) => {
     }
 });
 
+app.use("/api/auth", authRouter);
 
 const PORT = process.env.PORT || 8080;
 
