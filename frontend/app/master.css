@@ -1,0 +1,51 @@
+.embla {
+    position: relative;
+    height: 100%;
+}
+
+.embla__viewport {
+    overflow: hidden;
+    height: 100%;
+}
+
+.embla__container {
+    display: flex;
+    height: 100%;
+}
+
+.embla__slide {
+    position: relative;
+    flex: 0 0 100%;
+    min-width: 0;
+    height: 100%;
+}
+
+/* Overlay dots on top of the images */
+.embla__dots {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+    padding: 7.5px;
+    background: #fff;
+    border-radius: 37.5px;
+}
+
+.embla__dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 9999px;
+    background: #CBD5E1;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s ease, width 0.2s ease;
+}
+
+.embla__dot--active {
+    width: 20px;
+    background: #414141;
+}

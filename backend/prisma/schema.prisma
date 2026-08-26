@@ -10,7 +10,6 @@ datasource db {
 // ─────────────────────────────────────────────
 // USER
 // ─────────────────────────────────────────────
-
 model User {
   id   BigInt @id @default(autoincrement())
   uuid String @unique @default(uuid()) @db.Uuid
@@ -44,13 +43,21 @@ model User {
   sessions      UserSession[]
   loginAttempts LoginAttempt[]
 
-  // Own KYC record (one-to-one)
   kyc UserKyc?
 
-  // Reverse relations for admin/self-relation actions performed BY this user
   kycVerifiedRecords        UserKyc[]             @relation("KycVerifier")
   kycDocumentsVerified      UserKycDocument[]     @relation("KycDocumentVerifier")
   kycVerificationsPerformed UserKycVerification[] @relation("KycVerificationPerformer")
+
+  auctionsCreated       Auction[]
+  itemsCurrentlyWinning AuctionItem[]          @relation("AuctionItemCurrentBidder")
+  auctionParticipations AuctionParticipant[]
+  participantsApproved  AuctionParticipant[]   @relation("ParticipantApprover")
+  auctionStatusChanges  AuctionStatusHistory[] @relation("AuctionStatusChanger")
+  auctionsWon           AuctionWinner[]        @relation("AuctionItemWinner")
+
+  bids     Bid[]
+  autoBids AutoBid[]
 
   @@index([roleId])
   @@index([status])
@@ -322,4 +329,460 @@ enum VerificationAction {
   REJECTED
   RESUBMITTED
   EXPIRED
+}
+
+model Category {
+  id   BigInt @id @default(autoincrement())
+  uuid String @unique @default(uuid()) @db.Uuid
+
+  name        String
+  slug        String  @unique
+  description String?
+  imageUrl    String?
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subCategories SubCategory[]
+  items         AuctionItem[]
+
+  @@map("categories")
+}
+
+model SubCategory {
+  id   BigInt @id @default(autoincrement())
+  uuid String @unique @default(uuid()) @db.Uuid
+
+  categoryId BigInt
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  name        String
+  slug        String
+  description String?
+  imageUrl    String?
+
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items AuctionItem[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@map("sub_categories")
+}
+
+enum AuctionType {
+  LIVE
+  FLOOR
+  HYBRID
+}
+
+enum AuctionStatus {
+  DRAFT
+  SCHEDULED
+  PREVIEW
+  LIVE
+  PAUSED
+  ENDED
+  SETTLED
+  CANCELLED
+}
+
+model Auction {
+  id   BigInt @id @default(autoincrement())
+  uuid String @unique @default(uuid()) @db.Uuid
+
+  title         String
+  slug          String  @unique
+  description   String?
+  coverImageUrl String?
+
+  auctionType AuctionType   @default(FLOOR)
+  status      AuctionStatus @default(DRAFT)
+
+  startTime            DateTime
+  endTime              DateTime
+  previewStartAt       DateTime?
+  registrationRequired Boolean   @default(true)
+  registrationDeadline DateTime?
+
+  timezone String @default("Asia/Kolkata")
+  currency String @default("INR")
+
+  isOnline Boolean @default(true)
+  venue    String?
+
+  termsAndConditions String?
+
+  createdBy BigInt
+  creator   User   @relation(fields: [createdBy], references: [id])
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  items         AuctionItem[]
+  rules         AuctionRule[]
+  participants  AuctionParticipant[]
+  statusHistory AuctionStatusHistory[]
+  extensions    AuctionExtension[]
+  winners       AuctionWinner[]
+
+  @@index([status])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([createdBy])
+  @@map("auctions")
+}
+
+enum ItemStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  SOLD
+  UNSOLD
+  PASSED
+  WITHDRAWN
+}
+
+model AuctionItem {
+  id   BigInt @id @default(autoincrement())
+  uuid String @unique @default(uuid()) @db.Uuid
+
+  auctionId BigInt
+  auction   Auction @relation(fields: [auctionId], references: [id])
+
+  categoryId BigInt
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  subCategoryId BigInt?
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+
+  itemNumber  Int
+  title       String
+  description String?
+
+  artistName      String?
+  medium          String?
+  dimensions      String?
+  yearCreated     String?
+  provenance      String?
+  conditionReport String?
+
+  startingPrice Decimal  @db.Decimal(12, 2)
+  reservePrice  Decimal? @db.Decimal(12, 2)
+  estimateLow   Decimal? @db.Decimal(12, 2)
+  estimateHigh  Decimal? @db.Decimal(12, 2)
+
+  currentBid      Decimal? @db.Decimal(12, 2)
+  currentBidderId BigInt?
+  currentBidder   User?    @relation("AuctionItemCurrentBidder", fields: [currentBidderId], references: [id])
+  bidCount        Int      @default(0)
+
+  status ItemStatus @default(DRAFT)
+
+  scheduledStartAt DateTime?
+  scheduledEndAt   DateTime?
+
+  shippingInfo String?
+  isFeatured   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images     AuctionImage[]
+  documents  AuctionDocument[]
+  extensions AuctionExtension[]
+  winner     AuctionWinner?
+  bids       Bid[]
+  autoBids   AutoBid[]
+
+  @@unique([auctionId, itemNumber])
+  @@index([auctionId])
+  @@index([categoryId])
+  @@index([subCategoryId])
+  @@index([status])
+  @@index([currentBidderId])
+  @@map("auction_items")
+}
+
+model AuctionImage {
+  id BigInt @id @default(autoincrement())
+
+  itemId BigInt
+  item   AuctionItem @relation(fields: [itemId], references: [id])
+
+  url          String
+  thumbnailUrl String?
+  caption      String?
+  sortOrder    Int     @default(0)
+  isPrimary    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@map("auction_images")
+}
+
+enum AuctionDocumentType {
+  CERTIFICATE_OF_AUTHENTICITY
+  PROVENANCE
+  APPRAISAL
+  INSURANCE
+  OTHER
+}
+
+model AuctionDocument {
+  id BigInt @id @default(autoincrement())
+
+  itemId BigInt
+  item   AuctionItem @relation(fields: [itemId], references: [id])
+
+  documentType AuctionDocumentType @default(OTHER)
+  fileUrl      String
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  description  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@map("auction_documents")
+}
+
+enum RuleType {
+  BID_INCREMENT
+  BUYER_PREMIUM
+  EXTENSION_TRIGGER
+  REGISTRATION_DEPOSIT
+  MIN_PARTICIPANTS
+}
+
+enum RuleValueType {
+  FIXED
+  PERCENTAGE
+}
+
+model AuctionRule {
+  id BigInt @id @default(autoincrement())
+
+  auctionId BigInt
+  auction   Auction @relation(fields: [auctionId], references: [id])
+
+  ruleType  RuleType
+  valueType RuleValueType @default(FIXED)
+
+  rangeMin Decimal? @db.Decimal(12, 2)
+  rangeMax Decimal? @db.Decimal(12, 2)
+  value    Decimal  @db.Decimal(12, 2)
+
+  description String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([auctionId])
+  @@index([ruleType])
+  @@map("auction_rules")
+}
+
+enum ParticipantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BANNED
+}
+
+model AuctionParticipant {
+  id BigInt @id @default(autoincrement())
+
+  auctionId BigInt
+  auction   Auction @relation(fields: [auctionId], references: [id])
+
+  userId BigInt
+  user   User   @relation(fields: [userId], references: [id])
+
+  paddleNumber String?
+  status       ParticipantStatus @default(PENDING)
+
+  registeredAt DateTime  @default(now())
+  approvedAt   DateTime?
+  approvedBy   BigInt?
+  approver     User?     @relation("ParticipantApprover", fields: [approvedBy], references: [id])
+
+  depositRequired Boolean  @default(false)
+  depositAmount   Decimal? @db.Decimal(12, 2)
+  depositPaid     Boolean  @default(false)
+
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([auctionId, userId])
+  @@index([auctionId])
+  @@index([userId])
+  @@index([status])
+  @@map("auction_participants")
+}
+
+model AuctionStatusHistory {
+  id BigInt @id @default(autoincrement())
+
+  auctionId BigInt
+  auction   Auction @relation(fields: [auctionId], references: [id])
+
+  fromStatus AuctionStatus?
+  toStatus   AuctionStatus
+
+  changedBy BigInt?
+  changer   User?   @relation("AuctionStatusChanger", fields: [changedBy], references: [id])
+
+  reason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([auctionId])
+  @@index([createdAt])
+  @@map("auction_status_history")
+}
+
+model AuctionExtension {
+  id BigInt @id @default(autoincrement())
+
+  auctionId BigInt
+  auction   Auction @relation(fields: [auctionId], references: [id])
+
+  itemId BigInt
+  item   AuctionItem @relation(fields: [itemId], references: [id])
+
+  originalEndTime  DateTime
+  extendedEndTime  DateTime
+  extensionSeconds Int
+
+  triggeredByBidId BigInt?
+  triggeredByBid   Bid?    @relation(fields: [triggeredByBidId], references: [id])
+
+  reason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([auctionId])
+  @@index([itemId])
+  @@map("auction_extensions")
+}
+
+enum WinnerPaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  REFUNDED
+  CANCELLED
+}
+
+model AuctionWinner {
+  id BigInt @id @default(autoincrement())
+
+  auctionId BigInt
+  auction   Auction @relation(fields: [auctionId], references: [id])
+
+  itemId BigInt      @unique
+  item   AuctionItem @relation(fields: [itemId], references: [id])
+
+  winnerId BigInt
+  winner   User   @relation("AuctionItemWinner", fields: [winnerId], references: [id])
+
+  winningBidId BigInt? @unique
+  winningBid   Bid?    @relation(fields: [winningBidId], references: [id])
+
+  finalHammerPrice   Decimal @db.Decimal(12, 2)
+  buyerPremiumAmount Decimal @default(0) @db.Decimal(12, 2)
+  totalAmountDue     Decimal @db.Decimal(12, 2)
+
+  paymentStatus WinnerPaymentStatus @default(PENDING)
+  paymentDueAt  DateTime?
+  wonAt         DateTime            @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([auctionId])
+  @@index([winnerId])
+  @@index([paymentStatus])
+  @@map("auction_winners")
+}
+
+enum BidStatus {
+  PLACED
+  WINNING
+  OUTBID
+  WON
+  LOST
+  CANCELLED
+  RETRACTED
+}
+
+enum BidSource {
+  MANUAL
+  PROXY
+}
+
+model Bid {
+  id   BigInt @id @default(autoincrement())
+  uuid String @unique @default(uuid()) @db.Uuid
+
+  itemId BigInt
+  item   AuctionItem @relation(fields: [itemId], references: [id])
+
+  bidderId BigInt
+  bidder   User   @relation(fields: [bidderId], references: [id])
+
+  amount Decimal   @db.Decimal(12, 2)
+  source BidSource @default(MANUAL)
+  status BidStatus @default(PLACED)
+
+  ipAddress String?
+  userAgent String?
+
+  placedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  extensionsTriggered AuctionExtension[]
+  wonAuctionItem      AuctionWinner?
+
+  @@index([itemId])
+  @@index([bidderId])
+  @@index([itemId, amount])
+  @@index([status])
+  @@map("bids")
+}
+
+model AutoBid {
+  id BigInt @id @default(autoincrement())
+
+  itemId BigInt
+  item   AuctionItem @relation(fields: [itemId], references: [id])
+
+  bidderId BigInt
+  bidder   User   @relation(fields: [bidderId], references: [id])
+
+  maxAmount Decimal @db.Decimal(12, 2)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([itemId, bidderId])
+  @@index([itemId])
+  @@index([bidderId])
+  @@map("auto_bids")
 }
