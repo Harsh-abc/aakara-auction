@@ -140,3 +140,30 @@
     @apply font-sans;
   }
 }
+
+
+
+/* Hide native browser password reveal/clear icons (Edge/IE) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* Hide native password reveal icon in Chrome (newer versions) */
+input[type="password"]::-webkit-textfield-decoration-container {
+  display: none;
+}
+
+
+
+
+.data-checked\:text-primary-foreground:where([data-state="checked"]),
+.data-checked\:text-primary-foreground:where([data-checked]:not([data-checked="false"])) {
+  color: var(--primary-foreground);
+}
+
+.data-checked\:bg-primary:where([data-state="checked"]),
+.data-checked\:bg-primary:where([data-checked]:not([data-checked="false"])) {
+  background-color: #76A3A5;
+  border-color: #76A3A5;
+}

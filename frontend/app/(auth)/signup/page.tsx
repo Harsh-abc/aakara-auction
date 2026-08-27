@@ -24,7 +24,8 @@ export default function SignupPage() {
               <Image
                 src={image}
                 alt={`slide-${index}`}
-                fill
+                width={1200}
+                height={800}
                 className="object-cover"
                 priority={index === 0}
               />
@@ -33,8 +34,11 @@ export default function SignupPage() {
         </Carousel>
       </div>
       <div className="flex flex-col  gap-4 p-6 md:p-10">
+        <div className="flex items-center justify-center">
+          <Image alt="Aakara Logo" src="/logo/aakaralogo.png" width={120} height={40} className="object-contain w-41.5 h-11.25" />
+        </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-md">
+          <div className="w-full md:max-w-sm lg:max-w-md">
             <SignupForm />
           </div>
         </div>
