@@ -2,204 +2,261 @@
 
 import * as React from "react"
 
-import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
+import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
+import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
-import Image from "next/image"
+import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon, LayoutDashboard, Gavel, ReceiptText, Layers, LayersPlus, ChartCandlestick, Gamepad, Users } from "lucide-react"
 
+// This is sample data.
 const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
     avatar: "/avatars/shadcn.jpg",
   },
+  teams: [
+    {
+      name: "Aakara Art",
+      logo: (
+        <GalleryVerticalEndIcon
+        />
+      ),
+      plan: "Auction",
+    },
+  ],
+  // navMain: [
+  //   {
+  //     title: "Dashboard",
+  //     url: "#",
+  //     icon: (
+  //       <LayoutDashboard />
+  //     ),
+  //     // isActive: true,
+  //     // items: [
+  //     //   {
+  //     //     title: "History",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Starred",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Settings",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  //   {
+  //     title: "Live Auctions",
+  //     url: "#",
+  //     icon: (
+  //       <Gavel
+  //         className="rotate-270" />
+  //     ),
+  //     // items: [
+  //     //   {
+  //     //     title: "Genesis",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Explorer",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Quantum",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  //   {
+  //     title: "Auctions & Lots",
+  //     url: "#",
+  //     icon: (
+
+  //       <Layers />
+  //     ),
+  //     // items: [
+  //     //   {
+  //     //     title: "Introduction",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Get Started",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Tutorials",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Changelog",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  //   {
+  //     title: "Bidding Details",
+  //     url: "#",
+  //     icon: (
+  //       <ReceiptText />
+  //     ),
+  //     // items: [
+  //     //   {
+  //     //     title: "General",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Team",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Billing",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Limits",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  //   {
+  //     title: "Results",
+  //     url: "#",
+  //     icon: (
+  //       <ChartCandlestick />
+  //     ),
+  //     // items: [
+  //     //   {
+  //     //     title: "General",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Team",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Billing",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Limits",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  //   {
+  //     title: "Create Auction",
+  //     url: "#",
+  //     icon: (
+  //       <LayersPlus />
+  //     ),
+  //     // items: [
+  //     //   {
+  //     //     title: "General",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Team",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Billing",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Limits",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  //   {
+  //     title: "Bidding Console",
+  //     url: "#",
+  //     icon: (
+  //       <Gamepad />
+  //     ),
+  //     // items: [
+  //     //   {
+  //     //     title: "General",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Team",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Billing",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Limits",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  //   {
+  //     title: "User",
+  //     url: "#",
+  //     icon: (
+  //       <Users />
+  //     ),
+  //     // items: [
+  //     //   {
+  //     //     title: "General",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Team",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Billing",
+  //     //     url: "#",
+  //     //   },
+  //     //   {
+  //     //     title: "Limits",
+  //     //     url: "#",
+  //     //   },
+  //     // ],
+  //   },
+  // ],
+
   navMain: [
-    {
-      title: "Dashboard",
-      url: "#",
-      icon: (
-        <LayoutDashboardIcon
-        />
-      ),
-    },
-    {
-      title: "Lifecycle",
-      url: "#",
-      icon: (
-        <ListIcon
-        />
-      ),
-    },
-    {
-      title: "Analytics",
-      url: "#",
-      icon: (
-        <ChartBarIcon
-        />
-      ),
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: (
-        <FolderIcon
-        />
-      ),
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: (
-        <UsersIcon
-        />
-      ),
-    },
+    { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboard /> },
+    { title: "Live Auctions", url: "/dashboard/live-auctions", icon: <Gavel className="rotate-270" /> },
+    { title: "Auctions & Lots", url: "/dashboard/auctions", icon: <Layers /> },
+    { title: "Bidding Details", url: "/dashboard/bidding-details", icon: <ReceiptText /> },
+    { title: "Results", url: "/dashboard/results", icon: <ChartCandlestick /> },
+    { title: "Create Auction", url: "/dashboard/create-auction", icon: <LayersPlus /> },
+    { title: "Bidding Console", url: "/dashboard/bidding-console", icon: <Gamepad /> },
+    { title: "User", url: "/dashboard/users", icon: <Users /> },
   ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: (
-        <CameraIcon
-        />
-      ),
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: (
-        <FileTextIcon
-        />
-      ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: (
-        <FileTextIcon
-        />
-      ),
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: (
-        <Settings2Icon
-        />
-      ),
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: (
-        <CircleHelpIcon
-        />
-      ),
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: (
-        <SearchIcon
-        />
-      ),
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: (
-        <DatabaseIcon
-        />
-      ),
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: (
-        <FileChartColumnIcon
-        />
-      ),
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: (
-        <FileIcon
-        />
-      ),
-    },
-  ],
+
 }
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              className="data-[slot=sidebar-menu-button]:p-1.5! cursor-pointer hover:bg-transparent"
-              render={<a href="/dashboard" />}>
-              <Image src="/logo.png" alt="Akara Art" width={150} height={150} />
-              {/* <CommandIcon className="size-5!" />
-              <span className="text-base font-semibold">Acme Inc.</span> */}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

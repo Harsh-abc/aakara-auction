@@ -51,6 +51,10 @@
 
   /* TEXT */
   --color-text-secondary: var(--text-color-secondary);
+
+  /* CUSTOM COLOR FOR ADMIN DASHBOARD */
+  --color-sidebar: var(--color-sidebar);
+  --color-mainDashboard: var(--color-mainDashboard);
 }
 
 :root {
@@ -91,6 +95,11 @@
 
   /* TEXT */
   --text-color-secondary: #414141;
+
+
+  /* CUSTOM COLOR FOR ADMIN DASHBOARD */
+  --color-sidebar: #12121A;
+  --color-mainDashboard: #09090E;
 }
 
 .dark {

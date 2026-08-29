@@ -1,14 +1,22 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   SidebarGroup,
-  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import { CirclePlusIcon, MailIcon } from "lucide-react"
+import { ChevronRightIcon } from "lucide-react"
 
 export function NavMain({
   items,
@@ -17,43 +25,79 @@ export function NavMain({
     title: string
     url: string
     icon?: React.ReactNode
+    isActive?: boolean
+    items?: {
+      title: string
+      url: string
+    }[]
   }[]
 }) {
   return (
     <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <SidebarMenuButton
-              tooltip="Quick Create"
-              className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+      <SidebarMenu className="mt-4">
+        {items.map((item) => {
+          // No sub-items -> render as a plain link, no collapsible needed
+          if (!item.items?.length) {
+            return (
+              <SidebarMenuItem key={item.title} className="mb-2">
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  render={
+                    <Link
+                      href={item.url}
+                      className="flex items-center gap-2 rounded-md px-2 py-2 transition-colors text-[#94A3B8] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    />
+                  }
+                >
+                  {item.icon && <span className="w-4 h-4 shrink-0">{item.icon}</span>}
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          }
+
+          // Has sub-items -> collapsible group
+          return (
+            <Collapsible
+              key={item.title}
+              defaultOpen={item.isActive}
+              className="group/collapsible"
+              render={<SidebarMenuItem className="mb-2" />}
             >
-              <CirclePlusIcon
-              />
-              <span>Quick Create</span>
-            </SidebarMenuButton>
-            <Button
-              size="icon"
-              className="size-8 group-data-[collapsible=icon]:opacity-0"
-              variant="outline"
-            >
-              <MailIcon
-              />
-              <span className="sr-only">Inbox</span>
-            </Button>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton tooltip={item.title}>
-                {item.icon}
+              <CollapsibleTrigger
+                render={
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  />
+                }
+              >
+                {item.icon && <span className="w-4 h-4 shrink-0">{item.icon}</span>}
                 <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
+                <ChevronRightIcon className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarMenuSub>
+                  {item.items?.map((subItem) => (
+                    <SidebarMenuSubItem key={subItem.title}>
+                      <SidebarMenuSubButton
+                        render={
+                          <Link
+                            href={subItem.url}
+                            className="rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          />
+                        }
+                      >
+                        <span>{subItem.title}</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  ))}
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </Collapsible>
+          )
+        })}
+      </SidebarMenu>
     </SidebarGroup>
   )
 }
