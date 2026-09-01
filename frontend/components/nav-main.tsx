@@ -45,7 +45,7 @@ export function NavMain({
                   render={
                     <Link
                       href={item.url}
-                      className="flex items-center gap-2 rounded-md px-2 py-2 transition-colors text-[#94A3B8] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className="flex items-center gap-2 rounded-md px-2 py-2 transition-colors text-[#ffffff] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     />
                   }
                 >

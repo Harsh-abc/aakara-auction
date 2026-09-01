@@ -6,6 +6,8 @@ import redis from '../libs/redis.js';
 import { generateOtp } from '../utils/otp.utils.js';
 import sendEmail from '../mail/sendMail.js';
 import { otpVerificationTemplate } from '../mail/templates/otpVerifications.js';
+import { getRolePermissions } from '../libs/rolepermission.js';
+
 
 console.log("OTP utility loaded:", generateOtp);
 
@@ -205,11 +207,16 @@ const logAttempt = async ({ userId, email, ip, userAgent, success, failureReason
     });
 };
 
-// ── Token issuing ────────────────────────────────────
-
-const issueTokens = ({ userId, uuid, roleId, sessionId }) => {
+const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions }) => {
     const accessToken = jwt.sign(
-        { sub: uuid, userId: userId.toString(), roleId: roleId.toString(), sessionId },
+        {
+            sub: uuid,
+            userId: userId.toString(),
+            roleId: roleId.toString(),
+            sessionId,
+            role: roleName,
+            permissions,
+        },
         process.env.JWT_ACCESS_SECRET,
         { expiresIn: ACCESS_TOKEN_TTL }
     );
@@ -226,7 +233,7 @@ const issueTokens = ({ userId, uuid, roleId, sessionId }) => {
 const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
 
-// ── Main service ──────────────────────────────────────
+
 
 export const loginService = async ({ email, password, ip, userAgent }) => {
     if (await isIpBlocked(ip)) {
@@ -287,11 +294,14 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
     await clearIpFailures(ip);
 
     const sessionId = crypto.randomUUID();
+    const { roleName, permissions } = await getRolePermissions(user.roleId);
     const { accessToken, refreshToken } = issueTokens({
         userId: user.id,
         uuid: user.uuid,
         roleId: user.roleId,
         sessionId,
+        roleName,
+        permissions
     });
 
     await prisma.$transaction([

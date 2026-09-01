@@ -233,12 +233,18 @@ const data = {
   navMain: [
     { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboard /> },
     { title: "Live Auctions", url: "/dashboard/live-auctions", icon: <Gavel className="rotate-270" /> },
+    { title: "Artworks", url: "/dashboard/artworks", icon: <Gavel className="rotate-270" /> },
     { title: "Auctions & Lots", url: "/dashboard/auctions", icon: <Layers /> },
+    { title: "Bidders", url: "/dashboard/bidders", icon: <Users /> },
     { title: "Bidding Details", url: "/dashboard/bidding-details", icon: <ReceiptText /> },
     { title: "Results", url: "/dashboard/results", icon: <ChartCandlestick /> },
-    { title: "Create Auction", url: "/dashboard/create-auction", icon: <LayersPlus /> },
+    { title: "Orders", url: "/dashboard/orders", icon: <ChartCandlestick /> },
+    { title: "Payment", url: "/dashboard/payment", icon: <ChartCandlestick /> },
+    { title: "Shipping", url: "/dashboard/shipping", icon: <ChartCandlestick /> },
     { title: "Bidding Console", url: "/dashboard/bidding-console", icon: <Gamepad /> },
     { title: "User", url: "/dashboard/users", icon: <Users /> },
+    { title: "Report", url: "/dashboard/report", icon: <Users /> },
+    { title: "Settings", url: "/dashboard/settings", icon: <Users /> },
   ],
 
 }
