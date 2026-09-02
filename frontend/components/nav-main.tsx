@@ -33,7 +33,7 @@ export function NavMain({
   }[]
 }) {
   return (
-    <SidebarGroup>
+    <SidebarGroup className="px-2">
       <SidebarMenu className="mt-4">
         {items.map((item) => {
           // No sub-items -> render as a plain link, no collapsible needed
@@ -45,9 +45,10 @@ export function NavMain({
                   render={
                     <Link
                       href={item.url}
-                      className="flex items-center gap-2 rounded-md px-2 py-2 transition-colors text-[#ffffff] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className="flex items-center gap-2 rounded-md px-2 py-2 transition-colors text-[#ffffff] hover:bg-[#491B3A] hover:text-[#491B3A]"
                     />
                   }
+                  className="hover:bg-[#491B3A] hover:border-l-[#491B3A] hover:text-white px-3 py-4"
                 >
                   {item.icon && <span className="w-4 h-4 shrink-0">{item.icon}</span>}
                   <span>{item.title}</span>

@@ -1,3 +1,4 @@
+"use client"
 // app/dashboard/layout.tsx
 import { AppSidebar } from "@/components/app-sidebar"
 import {
@@ -6,8 +7,13 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { usePathname } from "next/navigation"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const pathName = usePathname()
+    const urlLocations = pathName.split('/')
+
+
     return (
         <SidebarProvider>
             <AppSidebar />
@@ -19,11 +25,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <Breadcrumb>
                             <BreadcrumbList>
                                 <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                                    <BreadcrumbLink className="capitalize" href="/dashboard">{urlLocations[1]}</BreadcrumbLink>
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden md:block" />
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage>Overview</BreadcrumbPage>
+                                    <BreadcrumbPage className="capitalize">{urlLocations[2]}</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>

@@ -55,6 +55,7 @@
   /* CUSTOM COLOR FOR ADMIN DASHBOARD */
   --color-sidebar: var(--color-sidebar);
   --color-mainDashboard: var(--color-mainDashboard);
+  --color-dashboardButton: var(--color-dashboardButton);
 }
 
 :root {
@@ -100,6 +101,7 @@
   /* CUSTOM COLOR FOR ADMIN DASHBOARD */
   --color-sidebar: #7A3D5E;
   --color-mainDashboard: #09090E;
+  --color-dashboardButton: #F59E0B;
 }
 
 .dark {
