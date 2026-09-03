@@ -16,9 +16,9 @@ export function AuctionStats() {
             className="
         grid
         grid-cols-1
-        gap-3
         sm:grid-cols-2
         lg:grid-cols-4
+        py-6
       "
         >
 
@@ -27,9 +27,8 @@ export function AuctionStats() {
                 title="Auctions"
                 value="48"
                 description="+6 this month"
-                icon={Gavel}
-                iconBgClassName="bg-slate-100"
-                iconClassName="text-slate-600"
+                image={"/admin/statscard01.png"}
+                imageClassName="text-slate-600"
             />
 
             {/* Live Auctions */}
@@ -37,9 +36,8 @@ export function AuctionStats() {
                 title="Live Auctions"
                 value="6"
                 description="Active bidding"
-                icon={Activity}
-                iconBgClassName="bg-emerald-100"
-                iconClassName="text-emerald-500"
+                image={"/admin/statscard02.png"}
+                imageClassName="text-emerald-500"
             />
 
             {/* Scheduled */}
@@ -47,9 +45,8 @@ export function AuctionStats() {
                 title="Scheduled"
                 value="10"
                 description="Starting soon"
-                icon={CalendarDays}
-                iconBgClassName="bg-orange-50"
-                iconClassName="text-orange-500"
+                image={"/admin/statscard03.png"}
+                imageClassName="text-orange-500"
             />
 
             {/* Completed */}
@@ -57,9 +54,8 @@ export function AuctionStats() {
                 title="Completed"
                 value="48"
                 description="Archived results"
-                icon={CircleCheck}
-                iconBgClassName="bg-slate-100"
-                iconClassName="text-slate-600"
+                image={"/admin/statscard04.png"}
+                imageClassName="text-slate-600"
             />
 
         </div>
