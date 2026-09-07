@@ -49,3 +49,110 @@
     width: 20px;
     background: #414141;
 }
+
+
+
+
+
+
+/* Hide native browser password reveal/clear icons (Edge/IE) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+/* Hide native password reveal icon in Chrome (newer versions) */
+input[type="password"]::-webkit-textfield-decoration-container {
+    display: none;
+}
+
+
+select option {
+    font-size: 14px;
+    color: #414141;
+}
+
+select option[value] {
+    font-size: 14px;
+    color: #414141;
+}
+
+select option:checked {
+    background-color: #833b61;
+    color: white;
+}
+
+.data-checked\:text-primary-foreground:where([data-state="checked"]),
+.data-checked\:text-primary-foreground:where([data-checked]:not([data-checked="false"])) {
+    color: var(--primary-foreground);
+}
+
+.data-checked\:bg-primary:where([data-state="checked"]),
+.data-checked\:bg-primary:where([data-checked]:not([data-checked="false"])) {
+    background-color: #7A3D5E;
+    border-color: #7A3D5E;
+}
+
+
+/* DASHBOARD INPUT  */
+.input-wrapper {
+    position: relative;
+    margin-top: 30px;
+    background-color: white;
+    border-radius: 8px;
+    /* room for the label to sit above the border */
+}
+
+.input-wrapper label {
+    position: absolute;
+    top: -9px;
+    left: 12px;
+    background: var(--color-dashboardFormBg);
+    /* must match the page/card background so it "cuts" the border */
+    padding: 0 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    /* gray-700 */
+    line-height: 1;
+}
+
+
+/* RICH TEXT EDITOR */
+
+.ProseMirror {
+    outline: none;
+    min-height: 120px;
+}
+
+.ProseMirror p {
+    margin: 0 0 0.5rem;
+}
+
+.ProseMirror p:last-child {
+    margin-bottom: 0;
+}
+
+.ProseMirror ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+}
+
+.ProseMirror ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+}
+
+.ProseMirror a {
+    text-decoration: underline;
+}
+
+.ProseMirror h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.ProseMirror h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+}

@@ -1,9 +1,15 @@
+import DashboardFormText from "@/components/common/DashboardFormText";
+import ImageUploader from "@/components/common/ImageUploader/ImageUploader";
+
 export default function UploadImages() {
     return (
-        <div className="border rounded-xl p-10 text-center">
-            <h1>
-                Upload Images
-            </h1>
+        <div className="px-6 pb-6">
+
+            <DashboardFormText text="Artwork Imagery Catalog" />
+            <div className="mt-6">
+
+                <ImageUploader />
+            </div>
         </div>
     )
 }

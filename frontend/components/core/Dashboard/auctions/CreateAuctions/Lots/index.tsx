@@ -121,7 +121,7 @@ export default function AddLots({
 
   
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 bg-dashboardFormBg rounded-[8px]">
 
             <LotStepper
                 currentStep={currentLotStep}

@@ -8,6 +8,7 @@ import { Upload, X } from "lucide-react";
 import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
 import ImageUploader from "@/components/common/ImageUploader/ImageUploader";
 import TagsInput from "@/components/common/Tags/TagsInput";
+import DashboardFormText from "@/components/common/DashboardFormText";
 
 
 
@@ -75,9 +76,8 @@ export default function BasicInfo() {
         <div className="space-y-60">
             <div className="flex items-start justify-between gap-4 pb-10">
                 <div className="flex-2 w-182.5 px-7 py-7 bg-dashboardFormBg rounded-[8px]">
-                    <div className="">
-                        <h1 className="text-[18px] font-bold">Auction Details</h1>
-                    </div>
+
+                    <DashboardFormText text="Auction Details" />
 
                     <div className="input-wrapper ">
                         <label className="block mb-2">
@@ -236,10 +236,52 @@ export default function BasicInfo() {
                     </div>
                 </div>
                 <div className="flex-1 w-93">
-                    <div className="flex items-start gap-4 pb-10 border rounded-[8px] h-100 bg-dashboardFormBg">
-                        <h1 className="text-[18px] font-bold flex items-center justify-center text-center">
-                            Auction Image
-                        </h1>
+                    <div className="w-full max-w-[330px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <div className="h-[176px] w-full overflow-hidden">
+                            <img
+                                src={''}
+                                alt={''}
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+
+                        <div className="p-4">
+                            <div className="mb-3 flex items-center gap-2">
+                                <span className="rounded bg-[#fce8f1] px-2 py-1 text-[11px] font-medium text-[#833b61]">
+                                    auctionType
+                                </span>
+
+                                <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                                    category
+                                </span>
+                            </div>
+
+                            <h3 className="min-h-[40px] text-[15px] font-semibold leading-5 text-slate-700">
+                                title
+                            </h3>
+
+                            <div className="my-3 border-t border-slate-200" />
+
+                            <div className="flex items-center justify-between text-[12px]">
+                                <span className="text-slate-500">
+                                    Artworks
+                                </span>
+
+                                <span className="font-semibold text-slate-700">
+                                    artworkCount Item
+                                </span>
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-between text-[12px]">
+                                <span className="text-slate-500">
+                                    Status
+                                </span>
+
+                                <span className="font-semibold text-slate-700">
+                                    status
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

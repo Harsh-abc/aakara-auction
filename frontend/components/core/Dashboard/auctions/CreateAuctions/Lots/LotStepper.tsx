@@ -13,7 +13,7 @@ export default function LotStepper({
     onStepChange,
 }: LotStepperProps) {
     return (
-        <div className="flex items-center w-full overflow-x-auto">
+        <div className="flex items-center w-full overflow-x-auto m-0">
 
             {lotSteps.map((step, index) => {
 
@@ -25,7 +25,7 @@ export default function LotStepper({
                 return (
                     <div
                         key={step.id}
-                        className="flex items-center flex-1"
+                        className="flex items-center flex-1 py-6 bg-dashboardFormBg px-6 rounded-t-[8px] rounded-tr-[8px]"
                     >
                         <button
                             type="button"
@@ -42,15 +42,15 @@ export default function LotStepper({
                                     flex
                                     items-center
                                     justify-center
-                                    w-7
-                                    h-7
+                                    w-6
+                                    h-6
                                     rounded-full
                                     text-xs
                                     font-medium
                                     shrink-0
 
                                     ${isCurrent
-                                        ? "bg-black text-white"
+                                        ? "bg-dashboardTextPrimary text-white"
                                         : isCompleted
                                             ? "bg-green-600 text-white"
                                             : "bg-gray-200 text-gray-500"
@@ -66,9 +66,10 @@ export default function LotStepper({
 
                             <span
                                 className={`
-                                    text-sm
+                                    text-xs
+                                    whitespace-nowrap
                                     ${isCurrent
-                                        ? "font-semibold text-black"
+                                        ? "font-semibold text-dashboardTextPrimary"
                                         : "text-gray-500"
                                     }
                                 `}
@@ -78,12 +79,11 @@ export default function LotStepper({
                         </button>
 
                         {index < lotSteps.length - 1 && (
-                            <div className="flex-1 h-px bg-gray-300 mx-3" />
+                            <div className="flex-1 h-px bg-gray-300 ml-1 mx-auto" />
                         )}
                     </div>
                 );
             })}
-
         </div>
     );
 }
