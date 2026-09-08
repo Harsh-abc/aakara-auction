@@ -47,7 +47,7 @@ export default function PricingValuation() {
                 </div>
 
 
-                <div className="grid grid-cols-3 gap-4 w-full">
+                <div className="grid grid-cols-4 gap-4 w-full">
 
                     <div className="input-wrapper">
                         <label className="block mb-2">
@@ -83,6 +83,29 @@ export default function PricingValuation() {
                             placeholder="₹ Insurance Declared value"
                             className="w-full border rounded-md px-3 py-2 h-11"
                         />
+                    </div>
+
+                    <div className="input-wrapper">
+                        <label className="block mb-2">
+                            Currency
+                        </label>
+
+                        <select
+
+                            className="w-full border rounded-md px-3 py-2"
+                        >
+                            <option value="">
+                                Select Currency
+                            </option>
+
+                            <option value="live">
+                                INR
+                            </option>
+
+                            <option value="online">
+                                DOLLAR
+                            </option>
+                        </select>
                     </div>
                 </div>
             </div>

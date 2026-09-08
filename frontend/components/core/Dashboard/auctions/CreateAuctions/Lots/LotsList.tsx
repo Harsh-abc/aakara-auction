@@ -11,13 +11,19 @@ import { ColumnFiltersState, getCoreRowModel, getFilteredRowModel, getPagination
 import { CalendarIcon, ChevronLeft, ChevronRight, SearchIcon } from "lucide-react";
 import React from "react";
 import { DateRange } from "react-day-picker";
+import { AuctionLotsList as AuctionLotsDataTable } from "../AuctionsLotsList";
+import { getColumns } from "../../AuctionsLotsColumns";
+import { AuctionLotsList } from "@/lib/data";
 
 type LotsListProps = {
-    lots: any[];
-    onAddLot: () => void;
-    onSelectLot: (index: number) => void;
-    onRemoveLot: (index: number) => void;
-};
+    lots: AuctionLotsList[]
+
+    onAddLot: () => void
+
+    onSelectLot: (index: number) => void
+
+    onRemoveLot: (index: number) => void
+}
 
 export default function LotsList({
     lots,
@@ -26,6 +32,36 @@ export default function LotsList({
     onRemoveLot,
 
 }: LotsListProps) {
+
+    const columns = React.useMemo(
+        () =>
+            getColumns({
+                onEdit: (id) => {
+                    const index = lots.findIndex(
+                        (lot) => lot.id === id
+                    )
+
+                    if (index !== -1) {
+                        onSelectLot(index)
+                    }
+                },
+
+                onView: (id) => {
+                    console.log("View lot:", id)
+                },
+
+                onDelete: (id) => {
+                    const index = lots.findIndex(
+                        (lot) => lot.id === id
+                    )
+
+                    if (index !== -1) {
+                        onRemoveLot(index)
+                    }
+                },
+            }),
+        [lots, onSelectLot, onRemoveLot]
+    )
 
 
     const items = [
@@ -268,67 +304,18 @@ export default function LotsList({
             ) : (
                 <div className="space-y-4">
 
-                    <div className="flex justify-between items-center">
 
-                        <h2 className="text-lg font-semibold">
-                            Auction Lots
-                        </h2>
-
-                        <button
-                            type="button"
-                            onClick={onAddLot}
-                            className="bg-black text-white px-4 py-2 rounded-md"
-                        >
-                            + Add New Lot
-                        </button>
-
-                    </div>
-
-                    {lots.map((lot, index) => (
-
-                        <div
-                            key={lot.id}
-                            className="border rounded-lg p-4 flex justify-between"
-                        >
-
-                            <div>
-                                <p className="font-medium">
-                                    Lot {index + 1}
-                                </p>
-
-                                <p className="text-sm text-gray-500">
-                                    {lot.details?.title ||
-                                        "Untitled Artwork"}
-                                </p>
-                            </div>
-
-                            <div className="flex gap-2">
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onSelectLot(index)
-                                    }
-                                    className="border px-3 py-1 rounded-md"
-                                >
-                                    Edit
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onRemoveLot(index)
-                                    }
-                                    className="border px-3 py-1 rounded-md text-red-500"
-                                >
-                                    Delete
-                                </button>
-
-                            </div>
-
+                    {lots.length > 0 ? (
+                        <AuctionLotsDataTable
+                            columns={columns}
+                            data={lots}
+                            onAddLot={onAddLot}
+                        />
+                    ) : (
+                        <div className="border rounded-md bg-white p-10 text-center">
+                            No lots found.
                         </div>
-
-                    ))}
+                    )}
 
                 </div>
             )}

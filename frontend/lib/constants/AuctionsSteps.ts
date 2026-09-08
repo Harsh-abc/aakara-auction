@@ -11,24 +11,21 @@ export const auctionSteps = [
         id: 3,
         title: "Add Lots",
     },
+
     {
         id: 4,
-        title: "Bidding Settings",
-    },
-    {
-        id: 5,
         title: "Payments",
     },
     {
-        id: 6,
+        id: 5,
         title: "Shipping",
     },
     {
-        id: 7,
+        id: 6,
         title: "Visibility",
     },
     {
-        id: 8,
+        id: 7,
         title: "Publish",
     },
 ];

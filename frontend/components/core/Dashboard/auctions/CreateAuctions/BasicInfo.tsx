@@ -10,7 +10,16 @@ import ImageUploader from "@/components/common/ImageUploader/ImageUploader";
 import TagsInput from "@/components/common/Tags/TagsInput";
 import DashboardFormText from "@/components/common/DashboardFormText";
 
-
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+    Field,
+    FieldContent,
+    FieldDescription,
+    FieldGroup,
+    FieldLabel,
+    FieldTitle,
+} from "@/components/ui/field"
+import { Label } from "@/components/ui/label"
 
 export default function BasicInfo() {
 
@@ -234,6 +243,42 @@ export default function BasicInfo() {
                         </label>
                         <TagsInput />
                     </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+
+                        <div className="input-wrapper">
+                            <label className="block mb-2">
+                                Auctions Currency
+                            </label>
+                        </div>
+                        <FieldGroup className="flex flex-row items-center gap-6">
+                            <Field orientation="horizontal" className="w-auto">
+                                <Checkbox id="currency-inr" name="currency" value="INR" />
+                                <Label htmlFor="currency-inr">INR</Label>
+                            </Field>
+
+                            <Field orientation="horizontal" className="w-auto">
+                                <Checkbox id="currency-usd" name="currency" value="USD" />
+                                <Label htmlFor="currency-usd">USD</Label>
+                            </Field>
+
+                            <Field orientation="horizontal" className="w-auto">
+                                <Checkbox id="currency-eur" name="currency" value="EUR" />
+                                <Label htmlFor="currency-eur">EUR</Label>
+                            </Field>
+
+                            <Field orientation="horizontal" className="w-auto">
+                                <Checkbox id="currency-gbp" name="currency" value="GBP" />
+                                <Label htmlFor="currency-gbp">GBP</Label>
+                            </Field>
+
+                            <Field orientation="horizontal" className="w-auto">
+                                <Checkbox id="currency-jpy" name="currency" value="JPY" />
+                                <Label htmlFor="currency-jpy">JPY</Label>
+                            </Field>
+                        </FieldGroup>
+
+                    </div>
                 </div>
                 <div className="flex-1 w-93">
                     <div className="w-full max-w-[330px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -293,3 +338,46 @@ export default function BasicInfo() {
 
 
 
+
+
+
+export function CheckboxDemo() {
+    return (
+        <FieldGroup className="max-w-sm">
+            <Field orientation="horizontal">
+                <Checkbox id="terms-checkbox" name="terms-checkbox" />
+                <Label htmlFor="terms-checkbox">Accept terms and conditions</Label>
+            </Field>
+            <Field orientation="horizontal">
+                <Checkbox
+                    id="terms-checkbox-2"
+                    name="terms-checkbox-2"
+                    defaultChecked
+                />
+                <FieldContent>
+                    <FieldLabel htmlFor="terms-checkbox-2">
+                        Accept terms and conditions
+                    </FieldLabel>
+                    <FieldDescription>
+                        By clicking this checkbox, you agree to the terms.
+                    </FieldDescription>
+                </FieldContent>
+            </Field>
+            <Field orientation="horizontal" data-disabled>
+                <Checkbox id="toggle-checkbox" name="toggle-checkbox" disabled />
+                <FieldLabel htmlFor="toggle-checkbox">Enable notifications</FieldLabel>
+            </Field>
+            <FieldLabel>
+                <Field orientation="horizontal">
+                    <Checkbox id="toggle-checkbox-2" name="toggle-checkbox-2" />
+                    <FieldContent>
+                        <FieldTitle>Enable notifications</FieldTitle>
+                        <FieldDescription>
+                            You can enable or disable notifications at any time.
+                        </FieldDescription>
+                    </FieldContent>
+                </Field>
+            </FieldLabel>
+        </FieldGroup>
+    )
+}

@@ -12,6 +12,9 @@ import BasicInfo from "@/components/core/Dashboard/auctions/CreateAuctions/Basic
 import AddLots from "@/components/core/Dashboard/auctions/CreateAuctions/Lots";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import FeeConfiguration from "@/components/core/Dashboard/auctions/CreateAuctions/FeeConfigurations";
+import ShippingInfo from "@/components/core/Dashboard/auctions/CreateAuctions/ShippingInfo";
+import AuctionVisibility from "@/components/core/Dashboard/auctions/CreateAuctions/AuctionVisbility";
 
 export default function CreateAuctions() {
 
@@ -133,19 +136,19 @@ export default function CreateAuctions() {
 
                     {currentStep === 4 && (
                         <div>
-                            Bidding Settings
+                            <FeeConfiguration />
                         </div>
                     )}
 
                     {currentStep === 5 && (
                         <div>
-                            Payments
+                            <ShippingInfo />
                         </div>
                     )}
 
                     {currentStep === 6 && (
                         <div>
-                            Shipping
+                            <AuctionVisibility />
                         </div>
                     )}
 
@@ -155,11 +158,7 @@ export default function CreateAuctions() {
                         </div>
                     )}
 
-                    {currentStep === 8 && (
-                        <div>
-                            Publish
-                        </div>
-                    )}
+
 
                 </div>
 

@@ -10,6 +10,26 @@ export type Auction = {
     image: string
 }
 
+export type AuctionLotsList = {
+    id: string
+
+    lotImage: string
+
+    artworkName: string
+
+    artist: string
+
+    artworkId: number | string
+
+    category: string
+
+    startingBid: string
+
+    reserveBid: string
+
+    status: "Ready"
+}
+
 export const auctionData: Auction[] = [
     {
         id: 1,
