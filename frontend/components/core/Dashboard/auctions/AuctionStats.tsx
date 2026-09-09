@@ -1,12 +1,7 @@
 "use client"
 
-import {
-    Gavel,
-    Activity,
-    CalendarDays,
-    CircleCheck,
-} from "lucide-react"
-import { AuctionStatsCard } from "./AuctionStatsCard"
+
+import { StatsCard } from "@/components/common/StatsCard"
 
 
 
@@ -22,17 +17,14 @@ export function AuctionStats() {
       "
         >
 
-            {/* Auctions */}
-            <AuctionStatsCard
+            <StatsCard
                 title="Auctions"
                 value="48"
                 description="+6 this month"
                 image={"/admin/statscard01.png"}
                 imageClassName="text-slate-600"
             />
-
-            {/* Live Auctions */}
-            <AuctionStatsCard
+            <StatsCard
                 title="Live Auctions"
                 value="6"
                 description="Active bidding"
@@ -40,8 +32,7 @@ export function AuctionStats() {
                 imageClassName="text-emerald-500"
             />
 
-            {/* Scheduled */}
-            <AuctionStatsCard
+            <StatsCard
                 title="Scheduled"
                 value="10"
                 description="Starting soon"
@@ -49,8 +40,7 @@ export function AuctionStats() {
                 imageClassName="text-orange-500"
             />
 
-            {/* Completed */}
-            <AuctionStatsCard
+            <StatsCard
                 title="Completed"
                 value="48"
                 description="Archived results"
