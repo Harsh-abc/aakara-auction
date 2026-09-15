@@ -12,10 +12,14 @@ import adminRouter from "./src/routes/admin.routes.js";
 const app = express();
 
 
-
+app.use(
+    cors({
+        origin: process.env.FRONTEND_URL,
+        credentials: true,
+    })
+);
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors());
 
 
 

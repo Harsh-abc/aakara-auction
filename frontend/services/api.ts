@@ -1,12 +1,12 @@
 
-const BASE_URL = process.env.NEXT_AUTH_BASE_URL as string;
+const BASE_URL = process.env.NEXT_PUBLIC_AUTH_BASE_URL;
 
 
 
 export const authEndPoints = {
-    LOGIN_API : `${BASE_URL}/auth/login`,
-    REGISTER_API : `${BASE_URL}/auth/register`,
-    VERIFY_OTP_API : `${BASE_URL}/auth/verify-otp`,
+    LOGIN_API : `${BASE_URL}/api/auth/login`,
+    REGISTER_API : `${BASE_URL}/api/auth/register`,
+    VERIFY_OTP_API : `${BASE_URL}/api/auth/verify-otp`,
 
 }
 

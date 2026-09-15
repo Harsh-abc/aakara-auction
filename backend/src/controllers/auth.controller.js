@@ -1,5 +1,6 @@
 import { registerSchema, verifyOtpSchema, loginSchema } from '../validations/auth.validation.js';
 import { registerService, verifyOtpService, loginService } from '../services/auth.services.js';
+import { ZodError } from 'zod';
 
 export const register = async (req, res, next) => {
     try {
@@ -12,6 +13,7 @@ export const register = async (req, res, next) => {
             data: result,
         });
     } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
         next(err);
     }
 };
@@ -27,6 +29,7 @@ export const verifyOtp = async (req, res, next) => {
             data: result,
         });
     } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
         next(err);
     }
 };
@@ -74,6 +77,7 @@ export const login = async (req, res, next) => {
             data: { user, accessToken },
         });
     } catch (err) {
+        if (error instanceof ZodError) { return res.status(400).json({ success: false, message: error.issues[0]?.message || "Validation failed", errors: error.issues, }); }
         next(err);
     }
 };

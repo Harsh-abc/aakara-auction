@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import { changeUserRole } from '../controllers/admin.controller';
-import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/rbac.middleware';
+import { changeUserRole } from '../controllers/admin.controller.js';
+import { authenticate } from '../middleware/auth.middleware.js';
+import { requireRole } from '../middleware/rbac.middleware.js';
 
 const adminRouter = Router();
 
