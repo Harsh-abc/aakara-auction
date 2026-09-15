@@ -6,7 +6,7 @@ export interface AuthUser {
 }
 
 export interface DecodedAccessToken {
-    sub: string          
+    sub: string
     userId: string
     roleId: string
     sessionId: string
@@ -38,21 +38,25 @@ export interface SignupPayload {
 }
 
 export interface VerifyOtpPayload {
-    otp: string
+    email: string;
+    otp: string;
 }
 
 export interface LoginApiResponse {
     success: boolean
     message?: string
-    user: AuthUser
-    accessToken: string
-    refreshToken?: string
+    data: {
+        user: AuthUser
+        accessToken: string
+    }
 }
 
 export interface RefreshTokenApiResponse {
     success: boolean
     message?: string
-    accessToken: string
+    data: {
+        accessToken: string
+    }
 }
 
 export interface GenericApiResponse {

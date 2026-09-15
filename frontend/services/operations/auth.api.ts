@@ -1,6 +1,6 @@
 import toast from "react-hot-toast";
 import { authEndPoints } from "../api"
-import { setLoading, setSignupEmail } from "@/redux/slices/authSlice";
+import { setSignupEmail } from "@/redux/slices/authSlice";
 import { apiConnector } from "../apiConnector";
 
 import { createAsyncThunk } from "@reduxjs/toolkit";
@@ -11,7 +11,7 @@ const { LOGIN_API, REGISTER_API, VERIFY_OTP_API } = authEndPoints;
 // import { NavigateFunction } from "react-router-dom"
 
 
-import { GenericApiResponse, SignupPayload } from "@/lib/types/auth.types";
+import { GenericApiResponse, SignupPayload, VerifyOtpPayload, LoginApiResponse, LoginPayload } from "@/lib/types/auth.types";
 import { AppDispatch } from "@/redux/store";
 
 
@@ -65,6 +65,75 @@ export const sendSignupOtp = createAsyncThunk<
             dispatch(setSignupEmail(payload.email));
 
             return response.data;
+        } catch (error: any) {
+            const message =
+                error?.response?.data?.message ||
+                error?.message ||
+                "Could not send OTP. Try again.";
+
+            return rejectWithValue(message);
+        }
+    }
+);
+
+
+export const verifySignupOtp = createAsyncThunk<
+    GenericApiResponse,
+    VerifyOtpPayload,
+    { rejectValue: string }
+>(
+    "auth/verifySignupOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await apiConnector<GenericApiResponse>({
+                method: "POST",
+                url: VERIFY_OTP_API,
+                body: payload,
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(
+                    response.data.message || "OTP verification failed"
+                );
+            }
+
+            return response.data;
+        } catch (error: any) {
+            const message =
+                error?.response?.data?.message ||
+                error?.message ||
+                "Could not send OTP. Try again.";
+
+            return rejectWithValue(message);
+        }
+
+    }
+);
+
+
+
+export const loginUser = createAsyncThunk<
+    LoginApiResponse,
+    LoginPayload,
+    { rejectValue: string }
+>(
+    "auth/loginUser",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await apiConnector<LoginApiResponse>({
+                method: "POST",
+                url: LOGIN_API,
+                body: payload,
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(
+                    response.data.message || "Login failed"
+                );
+            }
+
+            return response.data;
+
         } catch (error: any) {
             const message =
                 error?.response?.data?.message ||

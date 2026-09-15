@@ -27,9 +27,14 @@ const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const REFRESH_TOKEN_TTL_STRING = '7d';
 
-const IP_BLOCK_WINDOW = 15 * 60;   // 15 minutes
-const IP_BLOCK_THRESHOLD = 3;
-const IP_BLOCK_DURATION = 30 * 60; // 30 minutes
+// const IP_BLOCK_WINDOW = 15 * 60;   // 15 minutes
+// const IP_BLOCK_THRESHOLD = 3;
+// const IP_BLOCK_DURATION = 30 * 60; // 30 minutes
+
+
+const IP_BLOCK_THRESHOLD = 20;
+const IP_BLOCK_WINDOW = 15 * 60;
+const IP_BLOCK_DURATION = 5 * 60;
 
 const ACCOUNT_LOCK_THRESHOLD = 5;
 const ACCOUNT_LOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
@@ -128,6 +133,12 @@ export const verifyOtpService = async ({ email, otp }) => {
 
     const defaultRole = await prisma.role.findFirst({ where: { name: 'BIDDER' } });
 
+    if (!defaultRole) {
+        const error = new Error("Default BIDDER role is not configured.");
+        error.statusCode = 500;
+        throw error;
+    }
+
     const user = await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
             data: {
@@ -162,7 +173,14 @@ export const verifyOtpService = async ({ email, otp }) => {
 
 const isIpBlocked = async (ip) => {
     try {
-        const blocked = await redis.get(ipBlockKey(ip));
+        // const blocked = await redis.get(ipBlockKey(ip));
+        const key = ipBlockKey(ip);
+
+        const blocked = await redis.get(key);
+
+        console.log("IP:", ip);
+        console.log("Block key:", key);
+        console.log("Block value:", blocked);
         return Boolean(blocked);
     } catch (err) {
         // Fail open: never let a Redis outage lock out every login

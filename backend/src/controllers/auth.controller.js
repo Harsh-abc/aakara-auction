@@ -39,6 +39,20 @@ export const verifyOtp = async (req, res, next) => {
 const REFRESH_COOKIE_NAME = 'aakara_refresh';
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days, matches REFRESH_TOKEN_TTL_SECONDS
 
+const normalizeIp = (ip) => {
+    if (!ip) return "unknown";
+
+    if (ip === "::1") {
+        return "127.0.0.1";
+    }
+
+    if (ip.startsWith("::ffff:")) {
+        return ip.replace("::ffff:", "");
+    }
+
+    return ip;
+};
+
 export const login = async (req, res, next) => {
     try {
         const parsed = loginSchema.safeParse(req.body);
@@ -53,7 +67,7 @@ export const login = async (req, res, next) => {
 
         const { email, password } = parsed.data;
 
-        const ip = req.ip;
+        const ip = normalizeIp(req.ip);
         const userAgent = req.headers['user-agent'] ?? null;
 
         const { user, accessToken, refreshToken } = await loginService({
@@ -77,7 +91,10 @@ export const login = async (req, res, next) => {
             data: { user, accessToken },
         });
     } catch (err) {
-        if (error instanceof ZodError) { return res.status(400).json({ success: false, message: error.issues[0]?.message || "Validation failed", errors: error.issues, }); }
-        next(err);
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
     }
 };

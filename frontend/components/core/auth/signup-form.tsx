@@ -31,6 +31,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { sendSignupOtp } from "@/services/operations/auth.api";
 
 import type { SignupPayload } from "@/lib/types/auth.types";
+import Link from "next/link";
 
 export function SignupForm({
   className,
@@ -487,12 +488,12 @@ export function SignupForm({
 
             Already have an account?{" "}
 
-            <a
+            <Link
               href="/login"
               className="underline text-[#76A3A5]"
             >
               Login
-            </a>
+            </Link>
 
           </span>
 
