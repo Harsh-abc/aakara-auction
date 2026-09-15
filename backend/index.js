@@ -7,6 +7,7 @@ import prisma from "./src/libs/prisma.js";
 import redis from './src/libs/redis.js';
 import authRouter from "./src/routes/auth.routes.js";
 import adminRouter from "./src/routes/admin.routes.js";
+import uploadRouter from "./src/routes/upload.routes.js";
 
 
 const app = express();
@@ -53,6 +54,7 @@ app.get("/test-redis", async (req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter)
+app.use('/api/image', uploadRouter)
 
 const PORT = process.env.PORT || 8080;
 
