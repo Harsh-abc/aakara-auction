@@ -46,8 +46,10 @@ export interface LoginApiResponse {
     success: boolean
     message?: string
     data: {
-        user: AuthUser
-        accessToken: string
+        user: AuthUser;
+        accessToken: string;
+        role: string | null;
+        permissions: string[];
     }
 }
 

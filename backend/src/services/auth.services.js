@@ -348,6 +348,8 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
 
     return {
         user: { uuid: user.uuid, username: user.username, email: user.email, roleId: user.roleId.toString() },
+        role: roleName,
+        permissions,
         accessToken,
         refreshToken,
     };

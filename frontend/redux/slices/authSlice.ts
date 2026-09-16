@@ -166,6 +166,9 @@ const authSlice = createSlice({
 
                 state.accessToken = action.payload.data.accessToken;
                 state.user = action.payload.data.user;
+
+                state.role = action.payload.data.role;
+                state.permissions = action.payload.data.permissions;
             })
 
             .addCase(loginUser.rejected, (state) => {

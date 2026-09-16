@@ -70,7 +70,7 @@ export const login = async (req, res, next) => {
         const ip = normalizeIp(req.ip);
         const userAgent = req.headers['user-agent'] ?? null;
 
-        const { user, accessToken, refreshToken } = await loginService({
+        const { user, role, permissions, accessToken, refreshToken } = await loginService({
             email,
             password,
             ip,
@@ -85,10 +85,12 @@ export const login = async (req, res, next) => {
             maxAge: REFRESH_COOKIE_MAX_AGE_MS,
         });
 
+        console.log(user)
+
         return res.status(200).json({
             success: true,
             message: 'Login successful',
-            data: { user, accessToken },
+            data: { user, role, permissions, accessToken },
         });
     } catch (err) {
         if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
