@@ -54,6 +54,124 @@ const rolePermissionMap = {
     ],
 };
 
+const categories = [
+    {
+        name: "Paintings",
+        slug: "paintings",
+        description: "Original paintings and artworks created using various painting techniques.",
+        sortOrder: 1,
+        subCategories: [
+            "Abstract",
+            "Contemporary",
+            "Modern",
+            "Traditional",
+            "Landscape",
+            "Portrait",
+            "Still Life",
+            "Figurative",
+            "Miniature",
+        ],
+    },
+    {
+        name: "Sculptures",
+        slug: "sculptures",
+        description: "Three-dimensional artworks created using various materials and techniques.",
+        sortOrder: 2,
+        subCategories: [
+            "Bronze",
+            "Stone",
+            "Wood",
+            "Metal",
+            "Ceramic",
+            "Marble",
+            "Mixed Media",
+        ],
+    },
+    {
+        name: "Photography",
+        slug: "photography",
+        description: "Fine art and collectible photographic works.",
+        sortOrder: 3,
+        subCategories: [
+            "Fine Art Photography",
+            "Black & White",
+            "Contemporary Photography",
+            "Documentary",
+            "Landscape Photography",
+            "Portrait Photography",
+        ],
+    },
+    {
+        name: "Prints & Multiples",
+        slug: "prints-multiples",
+        description: "Limited edition prints and artworks produced using printmaking techniques.",
+        sortOrder: 4,
+        subCategories: [
+            "Lithographs",
+            "Serigraphs",
+            "Etchings",
+            "Woodcuts",
+            "Linocuts",
+            "Limited Edition Prints",
+        ],
+    },
+    {
+        name: "Decorative Art",
+        slug: "decorative-art",
+        description: "Decorative and functional artistic objects and design works.",
+        sortOrder: 5,
+        subCategories: [
+            "Ceramics",
+            "Glass Art",
+            "Textiles",
+            "Tapestries",
+            "Furniture",
+            "Decorative Objects",
+        ],
+    },
+    {
+        name: "Jewellery",
+        slug: "jewellery",
+        description: "Fine, designer and collectible jewellery offered through auctions.",
+        sortOrder: 6,
+        subCategories: [
+            "Rings",
+            "Necklaces",
+            "Bracelets",
+            "Earrings",
+            "Brooches",
+            "Designer Jewellery",
+        ],
+    },
+    {
+        name: "Collectibles",
+        slug: "collectibles",
+        description: "Rare, historical and collectible objects.",
+        sortOrder: 7,
+        subCategories: [
+            "Coins",
+            "Stamps",
+            "Memorabilia",
+            "Manuscripts",
+            "Books",
+            "Antiques",
+        ],
+    },
+    {
+        name: "Contemporary Art",
+        slug: "contemporary-art",
+        description: "Contemporary artworks using traditional and emerging artistic practices.",
+        sortOrder: 8,
+        subCategories: [
+            "Mixed Media",
+            "Installation Art",
+            "Digital Art",
+            "New Media Art",
+            "Conceptual Art",
+        ],
+    },
+];
+
 
 async function main() {
     // 1. Roles
@@ -109,6 +227,63 @@ async function main() {
         }
     }
     console.log('RolePermission links seeded');
+
+
+    console.log("Seeding categories...");
+
+    for (const categoryData of categories) {
+        const { subCategories, ...category } = categoryData;
+
+        const createdCategory = await prisma.category.upsert({
+            where: {
+                slug: category.slug,
+            },
+            update: {
+                name: category.name,
+                description: category.description,
+                sortOrder: category.sortOrder,
+                isActive: true,
+            },
+            create: {
+                ...category,
+            },
+        });
+
+        console.log(`Category: ${createdCategory.name}`);
+
+        for (let index = 0; index < subCategories.length; index++) {
+            const name = subCategories[index];
+
+            const slug = name
+                .toLowerCase()
+                .replace(/&/g, "and")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-|-$/g, "");
+
+            await prisma.subCategory.upsert({
+                where: {
+                    categoryId_slug: {
+                        categoryId: createdCategory.id,
+                        slug,
+                    },
+                },
+                update: {
+                    name,
+                    isActive: true,
+                    sortOrder: index + 1,
+                },
+                create: {
+                    categoryId: createdCategory.id,
+                    name,
+                    slug,
+                    sortOrder: index + 1,
+                    isActive: true,
+                },
+            });
+        }
+    }
+
+    console.log("Categories and subcategories seeded successfully.");
 }
 
 main()

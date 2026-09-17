@@ -224,6 +224,7 @@ model Category {
   updatedAt     DateTime      @updatedAt
   items         AuctionItem[]
   subCategories SubCategory[]
+  auctions      Auction[]
 
   @@map("categories")
 }
@@ -242,6 +243,7 @@ model SubCategory {
   updatedAt   DateTime      @updatedAt
   items       AuctionItem[]
   category    Category      @relation(fields: [categoryId], references: [id])
+  auctions    Auction[]
 
   @@unique([categoryId, slug])
   @@index([categoryId])
@@ -259,14 +261,20 @@ model Auction {
   status               AuctionStatus          @default(DRAFT)
   startTime            DateTime
   endTime              DateTime
+  startDate            DateTime
+  endDate              DateTime
   previewStartAt       DateTime?
   registrationRequired Boolean                @default(true)
+  registrationStarts   DateTime
   registrationDeadline DateTime?
   timezone             String                 @default("Asia/Kolkata")
-  currency             String                 @default("INR")
+  currencyId           BigInt
+  currency             Currency               @relation(fields: [currencyId], references: [id])
   isOnline             Boolean                @default(true)
   venue                String?
   termsAndConditions   String?
+  categoryId           BigInt
+  subCategoryId        BigInt?
   createdBy            BigInt
   publishedAt          DateTime?
   createdAt            DateTime               @default(now())
@@ -278,21 +286,102 @@ model Auction {
   rules                AuctionRule[]
   statusHistory        AuctionStatusHistory[]
   winners              AuctionWinner[]
+  category             Category               @relation(fields: [categoryId], references: [id])
+  subCategory          SubCategory?           @relation(fields: [subCategoryId], references: [id])
   creator              User                   @relation(fields: [createdBy], references: [id])
+  tags                 AuctionTagRelation[]
+  auctionFees          AuctionFee[]
+  shippingStrategy     ShippingStrategy       @default(SHIPPING_CALCULATED_SEPARATELY)
+  visibility           AuctionVisibility      @default(REGISTERED_USERS_ONLY)
 
   @@index([status])
   @@index([startTime])
   @@index([endTime])
   @@index([createdBy])
+  @@index([categoryId])
+  @@index([subCategoryId])
   @@map("auctions")
 }
 
+model Currency {
+  id        BigInt   @id @default(autoincrement())
+  code      String   @unique @db.VarChar(3)
+  name      String
+  symbol    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auctions     Auction[]
+  auctionItems AuctionItem[]
+
+  @@map("currencies")
+}
+
+model AuctionTag {
+  id   BigInt @id @default(autoincrement())
+  name String @unique
+  slug String @unique
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auctions AuctionTagRelation[]
+
+  @@map("auction_tags")
+}
+
+model AuctionTagRelation {
+  auctionId BigInt
+  tagId     BigInt
+
+  auction Auction @relation(fields: [auctionId], references: [id])
+
+  tag AuctionTag @relation(fields: [tagId], references: [id])
+
+  @@id([auctionId, tagId])
+  @@index([auctionId])
+  @@index([tagId])
+  @@map("auction_tag_relations")
+}
+
+model AuctionFee {
+  id   BigInt @id @default(autoincrement())
+  uuid String @unique @default(uuid()) @db.Uuid
+
+  auctionId BigInt
+
+  feeType AuctionFeeType
+
+  name String
+
+  calculationType FeeCalculationType
+
+  value Decimal @db.Decimal(15, 2)
+
+  description String?
+
+  isActive Boolean @default(true)
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auction Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId])
+  @@index([feeType])
+  @@map("auction_fees")
+}
+
 model AuctionItem {
-  id               BigInt             @id @default(autoincrement())
-  uuid             String             @unique @default(uuid()) @db.Uuid
-  auctionId        BigInt
-  categoryId       BigInt
-  subCategoryId    BigInt?
+  id        BigInt @id @default(autoincrement())
+  uuid      String @unique @default(uuid()) @db.Uuid
+  auctionId BigInt
+
   itemNumber       Int
   title            String
   description      String?
@@ -320,17 +409,21 @@ model AuctionItem {
   extensions       AuctionExtension[]
   images           AuctionImage[]
   auction          Auction            @relation(fields: [auctionId], references: [id])
-  category         Category           @relation(fields: [categoryId], references: [id])
-  currentBidder    User?              @relation("AuctionItemCurrentBidder", fields: [currentBidderId], references: [id])
-  subCategory      SubCategory?       @relation(fields: [subCategoryId], references: [id])
-  winner           AuctionWinner?
-  autoBids         AutoBid[]
-  bids             Bid[]
+
+  currentBidder User? @relation("AuctionItemCurrentBidder", fields: [currentBidderId], references: [id])
+
+  winner        AuctionWinner?
+  autoBids      AutoBid[]
+  bids          Bid[]
+  category      Category?      @relation(fields: [categoryId], references: [id])
+  categoryId    BigInt?
+  subCategory   SubCategory?   @relation(fields: [subCategoryId], references: [id])
+  subCategoryId BigInt?
+  currency      Currency?      @relation(fields: [currencyId], references: [id])
+  currencyId    BigInt?
 
   @@unique([auctionId, itemNumber])
   @@index([auctionId])
-  @@index([categoryId])
-  @@index([subCategoryId])
   @@index([status])
   @@index([currentBidderId])
   @@map("auction_items")
@@ -643,4 +736,32 @@ enum BidStatus {
 enum BidSource {
   MANUAL
   PROXY
+}
+
+enum AuctionFeeType {
+  BUYER_PREMIUM
+  PLATFORM_FEE
+  TAX_GST
+  PAYMENT_PROCESSING
+  LATE_PAYMENT
+  SHIPPING
+  CUSTOM
+}
+
+enum FeeCalculationType {
+  PERCENTAGE
+  FIXED
+}
+
+enum ShippingStrategy {
+  SHIPPING_INCLUDED
+  SHIPPING_CALCULATED_SEPARATELY
+  BUYER_ARRANGES_PICKUP
+  ADMIN_ARRANGES_DELIVERY
+}
+
+enum AuctionVisibility {
+  PUBLIC
+  REGISTERED_USERS_ONLY
+  PRIVATE_INVITE_ONLY
 }
