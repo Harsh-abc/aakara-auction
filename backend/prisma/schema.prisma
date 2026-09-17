@@ -22,7 +22,7 @@ model User {
   lastLoginAt               DateTime?
   lastLoginIp               String?                @db.Inet
   passwordChangedAt         DateTime?
-  failedLoginAttempts       Int                    @default(0)
+  failedLoginAttempts       BigInt                    @default(0)
   lockedUntil               DateTime?
   createdAt                 DateTime               @default(now())
   updatedAt                 DateTime               @updatedAt
@@ -173,7 +173,7 @@ model UserKycDocument {
   fileUrl         String
   fileName        String
   mimeType        String
-  fileSize        Int
+  fileSize        BigInt
   status          DocumentStatus        @default(PENDING)
   rejectionReason String?
   verifiedAt      DateTime?
@@ -219,7 +219,7 @@ model Category {
   description   String?
   imageUrl      String?
   isActive      Boolean       @default(true)
-  sortOrder     Int           @default(0)
+  sortOrder     BigInt           @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   items         AuctionItem[]
@@ -238,7 +238,7 @@ model SubCategory {
   description String?
   imageUrl    String?
   isActive    Boolean       @default(true)
-  sortOrder   Int           @default(0)
+  sortOrder   BigInt           @default(0)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   items       AuctionItem[]
@@ -256,6 +256,7 @@ model Auction {
   title                String
   slug                 String                 @unique
   description          String?
+  short_description    String?
   coverImageUrl        String?
   auctionType          AuctionType            @default(FLOOR)
   status               AuctionStatus          @default(DRAFT)
@@ -365,7 +366,7 @@ model AuctionFee {
 
   isActive Boolean @default(true)
 
-  sortOrder Int @default(0)
+  sortOrder BigInt @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -382,7 +383,7 @@ model AuctionItem {
   uuid      String @unique @default(uuid()) @db.Uuid
   auctionId BigInt
 
-  itemNumber       Int
+  itemNumber       BigInt
   title            String
   description      String?
   artistName       String?
@@ -397,7 +398,7 @@ model AuctionItem {
   estimateHigh     Decimal?           @db.Decimal(12, 2)
   currentBid       Decimal?           @db.Decimal(12, 2)
   currentBidderId  BigInt?
-  bidCount         Int                @default(0)
+  bidCount         BigInt                @default(0)
   status           ItemStatus         @default(DRAFT)
   scheduledStartAt DateTime?
   scheduledEndAt   DateTime?
@@ -435,7 +436,7 @@ model AuctionImage {
   url          String
   thumbnailUrl String?
   caption      String?
-  sortOrder    Int         @default(0)
+  sortOrder    BigInt         @default(0)
   isPrimary    Boolean     @default(false)
   createdAt    DateTime    @default(now())
   item         AuctionItem @relation(fields: [itemId], references: [id])
@@ -451,7 +452,7 @@ model AuctionDocument {
   fileUrl      String
   fileName     String
   mimeType     String
-  fileSize     Int
+  fileSize     BigInt
   description  String?
   createdAt    DateTime            @default(now())
   item         AuctionItem         @relation(fields: [itemId], references: [id])
@@ -527,7 +528,7 @@ model AuctionExtension {
   itemId           BigInt
   originalEndTime  DateTime
   extendedEndTime  DateTime
-  extensionSeconds Int
+  extensionSeconds BigInt
   triggeredByBidId BigInt?
   reason           String?
   createdAt        DateTime    @default(now())

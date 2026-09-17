@@ -172,6 +172,131 @@ const categories = [
     },
 ];
 
+const currencies = [
+    {
+        code: "INR",
+        name: "Indian Rupee",
+        symbol: "₹",
+        isActive: true,
+    },
+    {
+        code: "USD",
+        name: "US Dollar",
+        symbol: "$",
+        isActive: true,
+    },
+    {
+        code: "EUR",
+        name: "Euro",
+        symbol: "€",
+        isActive: true,
+    },
+    {
+        code: "GBP",
+        name: "British Pound Sterling",
+        symbol: "£",
+        isActive: true,
+    },
+    {
+        code: "AED",
+        name: "UAE Dirham",
+        symbol: "د.إ",
+        isActive: true,
+    },
+    {
+        code: "SGD",
+        name: "Singapore Dollar",
+        symbol: "S$",
+        isActive: true,
+    },
+    {
+        code: "HKD",
+        name: "Hong Kong Dollar",
+        symbol: "HK$",
+        isActive: true,
+    },
+];
+
+
+const auctionTags = [
+    {
+        name: "Featured",
+        slug: "featured",
+        isActive: true,
+    },
+    {
+        name: "New Arrival",
+        slug: "new-arrival",
+        isActive: true,
+    },
+    {
+        name: "Modern Art",
+        slug: "modern-art",
+        isActive: true,
+    },
+    {
+        name: "Contemporary Art",
+        slug: "contemporary-art",
+        isActive: true,
+    },
+    {
+        name: "Indian Art",
+        slug: "indian-art",
+        isActive: true,
+    },
+    {
+        name: "Fine Art",
+        slug: "fine-art",
+        isActive: true,
+    },
+    {
+        name: "Painting",
+        slug: "painting",
+        isActive: true,
+    },
+    {
+        name: "Sculpture",
+        slug: "sculpture",
+        isActive: true,
+    },
+    {
+        name: "Photography",
+        slug: "photography",
+        isActive: true,
+    },
+    {
+        name: "Limited Edition",
+        slug: "limited-edition",
+        isActive: true,
+    },
+    {
+        name: "Rare",
+        slug: "rare",
+        isActive: true,
+    },
+    {
+        name: "Collectible",
+        slug: "collectible",
+        isActive: true,
+    },
+    {
+        name: "Emerging Artist",
+        slug: "emerging-artist",
+        isActive: true,
+    },
+    {
+        name: "Masterpiece",
+        slug: "masterpiece",
+        isActive: true,
+    },
+    {
+        name: "Online Auction",
+        slug: "online-auction",
+        isActive: true,
+    },
+];
+
+
 
 async function main() {
     // 1. Roles
@@ -284,6 +409,43 @@ async function main() {
     }
 
     console.log("Categories and subcategories seeded successfully.");
+
+
+    for (const currency of currencies) {
+        await prisma.currency.upsert({
+            where: {
+                code: currency.code,
+            },
+            update: {
+                name: currency.name,
+                symbol: currency.symbol,
+                isActive: currency.isActive,
+            },
+            create: currency,
+        });
+
+        console.log(`✓ ${currency.code} - ${currency.name}`);
+    }
+
+    console.log("Currency seeding completed.");
+
+
+    console.log("\nSeeding auction tags...");
+
+    for (const tag of auctionTags) {
+        await prisma.auctionTag.upsert({
+            where: {
+                slug: tag.slug,
+            },
+            update: {
+                name: tag.name,
+                isActive: tag.isActive,
+            },
+            create: tag,
+        });
+
+        console.log(`✓ Tag: ${tag.name}`);
+    }
 }
 
 main()
