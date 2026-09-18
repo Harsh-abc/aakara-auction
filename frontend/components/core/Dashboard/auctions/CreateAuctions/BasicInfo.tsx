@@ -5,12 +5,22 @@ import { useFormContext } from "react-hook-form";
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 
 import { Input } from "@/components/ui/input";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 
 import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
 import TagsInput from "@/components/common/Tags/TagsInput";
 import DashboardFormText from "@/components/common/DashboardFormText";
+
+import {
+    getCategories,
+    getSubCategories,
+} from "@/services/operations/category.api";
+
+import {
+    Category,
+    SubCategory,
+} from "@/lib/types/category.types";
 
 export default function BasicInfo() {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -18,12 +28,21 @@ export default function BasicInfo() {
     const [isDragging, setIsDragging] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
 
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+
+    const [categoriesLoading, setCategoriesLoading] = useState(false);
+    const [subCategoriesLoading, setSubCategoriesLoading] =
+        useState(false);
+
     const {
         register,
         setValue,
         watch,
         formState: { errors },
     } = useFormContext<AuctionFormData>();
+
+
 
     /* =====================================================
        WATCH FORM VALUES
@@ -107,6 +126,69 @@ export default function BasicInfo() {
     /* =====================================================
        RENDER
     ===================================================== */
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                setCategoriesLoading(true);
+
+                const response = await getCategories();
+
+                if (response.success) {
+                    setCategories(response.data);
+                }
+            } catch (error) {
+                console.error(
+                    "Failed to fetch categories:",
+                    error
+                );
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    useEffect(() => {
+        if (!categoryUuid) {
+            setSubCategories([]);
+
+            setValue(
+                "basicInfo.subCategoryUuid",
+                "",
+                {
+                    shouldDirty: true,
+                }
+            );
+
+            return;
+        }
+
+        const fetchSubCategories = async () => {
+            try {
+                setSubCategoriesLoading(true);
+
+                const response =
+                    await getSubCategories(categoryUuid);
+
+                if (response.success) {
+                    setSubCategories(response.data);
+                }
+            } catch (error) {
+                console.error(
+                    "Failed to fetch subcategories:",
+                    error
+                );
+
+                setSubCategories([]);
+            } finally {
+                setSubCategoriesLoading(false);
+            }
+        };
+
+        fetchSubCategories();
+    }, [categoryUuid, setValue]);
 
     return (
         <div className="space-y-60">
@@ -341,21 +423,33 @@ export default function BasicInfo() {
                             </label>
 
                             <select
-                                {...register(
-                                    "basicInfo.categoryUuid"
-                                )}
+                                {...register("basicInfo.categoryUuid", {
+                                    required: "Category is required",
+                                })}
                                 className="w-full border rounded-md px-3 py-2 h-11"
                             >
                                 <option value="">
-                                    Select category
+                                    {categoriesLoading
+                                        ? "Loading categories..."
+                                        : "Select category"}
                                 </option>
 
-                                {/* TODO:
-                                    Replace with categories
-                                    fetched from API.
-                                */}
-
+                                {categories.map((category) => (
+                                    <option
+                                        key={category.uuid}
+                                        value={category.uuid}
+                                    >
+                                        {category.name}
+                                    </option>
+                                ))}
                             </select>
+
+                            {errors.basicInfo?.categoryUuid && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.basicInfo.categoryUuid.message ||
+                                        "Category is required"}
+                                </p>
+                            )}
                         </div>
 
                         {/* SubCategory */}
@@ -366,20 +460,29 @@ export default function BasicInfo() {
                             </label>
 
                             <select
-                                {...register(
-                                    "basicInfo.subCategoryUuid"
-                                )}
-                                className="w-full border rounded-md px-3 py-2 h-11"
+                                {...register("basicInfo.subCategoryUuid")}
+                                disabled={
+                                    !categoryUuid ||
+                                    subCategoriesLoading
+                                }
+                                className="w-full border rounded-md px-3 py-2 h-11 disabled:bg-slate-100 disabled:cursor-not-allowed"
                             >
                                 <option value="">
-                                    Select subcategory
+                                    {!categoryUuid
+                                        ? "Select category first"
+                                        : subCategoriesLoading
+                                            ? "Loading subcategories..."
+                                            : "Select subcategory"}
                                 </option>
 
-                                {/* TODO:
-                                    Replace with subcategories
-                                    fetched from API.
-                                */}
-
+                                {subCategories.map((subCategory) => (
+                                    <option
+                                        key={subCategory.uuid}
+                                        value={subCategory.uuid}
+                                    >
+                                        {subCategory.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
@@ -487,8 +590,8 @@ export default function BasicInfo() {
                                     <label
                                         key={currency.value}
                                         className={`flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-md border px-4 py-3 transition ${isSelected
-                                                ? "border-[#7A3D5E] bg-[#fdf5f9]"
-                                                : "border-slate-200 bg-white"
+                                            ? "border-[#7A3D5E] bg-[#fdf5f9]"
+                                            : "border-slate-200 bg-white"
                                             }`}
                                     >
                                         <input

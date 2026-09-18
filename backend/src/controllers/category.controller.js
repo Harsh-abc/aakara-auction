@@ -3,6 +3,7 @@ import {
     getCategoryByUuid,
     getSubCategoriesByCategoryUuid,
 } from "../services/category.services.js";
+import { serializeBigInt } from "../utils/serialize.js";
 
 export const getCategories = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ export const getCategories = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Categories fetched successfully",
-            data: categories,
+            data: serializeBigInt(categories),
         });
     } catch (error) {
         console.error("Get categories error:", error);
@@ -46,7 +47,7 @@ export const getCategory = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Category fetched successfully",
-            data: category,
+            data: serializeBigInt(category),
         });
     } catch (error) {
         console.error("Get category error:", error);
@@ -68,7 +69,7 @@ export const getCategorySubCategories = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Subcategories fetched successfully",
-            data: subCategories,
+            data: serializeBigInt(subCategories),
         });
     } catch (error) {
         console.error(
