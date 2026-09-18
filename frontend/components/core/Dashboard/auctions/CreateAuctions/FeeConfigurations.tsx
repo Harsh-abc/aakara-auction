@@ -1,6 +1,17 @@
+
 "use client";
 
 import { Trash2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useFormContext } from "react-hook-form";
+
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 import {
     Tabs,
@@ -11,27 +22,13 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+
 import DashboardFormText from "@/components/common/DashboardFormText";
 
-
-
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import { useState } from "react";
-
-
+    AuctionFormData,
+    AuctionFeeForm,
+} from "@/lib/types/AuctionsFormData";
 
 type FeeType = "percentage" | "fixed";
 
@@ -43,6 +40,7 @@ type Fee = {
     custom?: boolean;
     deletable?: boolean;
 };
+
 const defaultFees: Fee[] = [
     {
         id: 1,
@@ -80,7 +78,10 @@ const defaultFees: Fee[] = [
         deletable: true,
     },
 ];
+
 export default function FeeConfiguration() {
+    const { setValue } = useFormContext<AuctionFormData>();
+
     const [fees, setFees] = useState<Fee[]>(defaultFees);
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,64 +91,144 @@ export default function FeeConfiguration() {
         useState<FeeType>("percentage");
     const [newFeeAmount, setNewFeeAmount] = useState("");
 
+    /*
+     * Convert UI fee structure into React Hook Form structure.
+     */
+    const syncFeesToForm = (updatedFees: Fee[]) => {
+        const formFees: AuctionFeeForm[] = updatedFees.map(
+            (fee, index) => ({
+                feeType: getFeeType(fee.name),
+                name: fee.name,
+                calculationType:
+                    fee.type === "percentage"
+                        ? "PERCENTAGE"
+                        : "FIXED",
+                value: Number(fee.amount) || 0,
+                description: "",
+                isActive: true,
+                sortOrder: index,
+            })
+        );
+
+        setValue("fees", formFees, {
+            shouldDirty: true,
+            shouldTouch: true,
+        });
+    };
+
+    /*
+     * Map UI fee name to backend FeeType enum.
+     */
+    const getFeeType = (
+        name: string
+    ): AuctionFeeForm["feeType"] => {
+        switch (name) {
+            case "Buyer Premium":
+                return "BUYER_PREMIUM";
+
+            case "Platform Fee":
+                return "PLATFORM_FEE";
+
+            case "Tax / GST":
+                return "TAX_GST";
+
+            case "Payment Processing Fee":
+                return "PAYMENT_PROCESSING";
+
+            case "Late Payment Fee":
+                return "LATE_PAYMENT";
+
+            case "Shipping":
+                return "SHIPPING";
+
+            default:
+                return "CUSTOM";
+        }
+    };
+
+    /*
+     * Set default fees into RHF when component loads.
+     */
+    useEffect(() => {
+        syncFeesToForm(defaultFees);
+    }, []);
 
     const handleTypeChange = (
         id: number,
         type: FeeType
     ) => {
-        setFees((prev) =>
-            prev.map((fee) =>
+        setFees((prev) => {
+            const updatedFees = prev.map((fee) =>
                 fee.id === id
                     ? {
                         ...fee,
                         type,
                     }
                     : fee
-            )
-        );
-    };
+            );
 
+            syncFeesToForm(updatedFees);
+
+            return updatedFees;
+        });
+    };
 
     const handleAmountChange = (
         id: number,
         amount: string
     ) => {
-        setFees((prev) =>
-            prev.map((fee) =>
+        setFees((prev) => {
+            const updatedFees = prev.map((fee) =>
                 fee.id === id
                     ? {
                         ...fee,
                         amount,
                     }
                     : fee
-            )
-        );
-    };
+            );
 
+            syncFeesToForm(updatedFees);
+
+            return updatedFees;
+        });
+    };
 
     const handleDelete = (id: number) => {
-        setFees((prev) =>
-            prev.filter((fee) => fee.id !== id)
-        );
+        setFees((prev) => {
+            const updatedFees = prev.filter(
+                (fee) => fee.id !== id
+            );
+
+            syncFeesToForm(updatedFees);
+
+            return updatedFees;
+        });
     };
 
-
     const handleAddCustomFee = () => {
-        if (!newFeeName.trim() || !newFeeAmount.trim()) {
+        if (
+            !newFeeName.trim() ||
+            !newFeeAmount.trim()
+        ) {
             return;
         }
 
         const newFee: Fee = {
             id: Date.now(),
-            name: newFeeName,
+            name: newFeeName.trim(),
             type: newFeeType,
             amount: newFeeAmount,
             custom: true,
             deletable: true,
         };
 
-        setFees((prev) => [...prev, newFee]);
+        setFees((prev) => {
+            const updatedFees = [...prev, newFee];
 
+            syncFeesToForm(updatedFees);
+
+            return updatedFees;
+        });
 
         setNewFeeName("");
         setNewFeeType("percentage");
@@ -155,14 +236,16 @@ export default function FeeConfiguration() {
 
         setIsDialogOpen(false);
     };
+
     return (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_332px]">
+
+            {/* ================= FEE CONFIGURATION ================= */}
 
             <div className="rounded-lg bg-dashboardFormBg p-6">
                 <DashboardFormText text="Fee Configuration" />
 
-
-                <div className="grid grid-cols-[1.5fr_1fr_1fr_44px] gap-4 pt-6  mb-4">
+                <div className="grid grid-cols-[1.5fr_1fr_1fr_44px] gap-4 pt-6 mb-4">
 
                     <div className="text-sm font-semibold text-slate-600">
                         Fee platform
@@ -179,7 +262,6 @@ export default function FeeConfiguration() {
                     <div className="text-sm font-semibold text-slate-600">
                         Action
                     </div>
-
                 </div>
 
                 <div className="space-y-3">
@@ -189,18 +271,21 @@ export default function FeeConfiguration() {
                             key={fee.id}
                             className="grid grid-cols-[1.5fr_1fr_1fr_44px] gap-4 items-center"
                         >
-
+                            {/* NAME */}
                             <div className="h-11 flex items-center rounded-lg bg-white px-3">
                                 <span className="text-sm font-semibold text-slate-800">
                                     {fee.name}
-                                    {fee.name === "Buyer Premium" && (
-                                        <span className="text-red-500">
-                                            *
-                                        </span>
-                                    )}
+
+                                    {fee.name ===
+                                        "Buyer Premium" && (
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        )}
                                 </span>
                             </div>
 
+                            {/* TYPE */}
                             <div className="h-11 rounded-lg bg-[#ebe7e7] p-1 flex">
 
                                 <button
@@ -214,7 +299,8 @@ export default function FeeConfiguration() {
                                     className={`
                                         flex-1 rounded-md text-xs font-medium
                                         transition-all
-                                        ${fee.type === "percentage"
+                                        ${fee.type ===
+                                            "percentage"
                                             ? "bg-white text-[#914968] shadow-sm"
                                             : "text-gray-600"
                                         }
@@ -242,9 +328,9 @@ export default function FeeConfiguration() {
                                 >
                                     Fixed
                                 </button>
-
                             </div>
 
+                            {/* AMOUNT */}
                             <div className="relative">
 
                                 {fee.type === "fixed" && (
@@ -254,6 +340,7 @@ export default function FeeConfiguration() {
                                 )}
 
                                 <Input
+                                    type="number"
                                     value={fee.amount}
                                     onChange={(e) =>
                                         handleAmountChange(
@@ -270,43 +357,46 @@ export default function FeeConfiguration() {
                                     `}
                                 />
 
-                                {fee.type === "percentage" && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">
-                                        %
-                                    </span>
-                                )}
-
+                                {fee.type ===
+                                    "percentage" && (
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">
+                                            %
+                                        </span>
+                                    )}
                             </div>
 
+                            {/* DELETE */}
                             {fee.deletable !== false ? (
                                 <Button
                                     type="button"
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => handleDelete(fee.id)}
+                                    onClick={() =>
+                                        handleDelete(fee.id)
+                                    }
                                     className="
-            h-11 w-11
-            border-red-500
-            text-red-500
-            hover:bg-red-50
-            hover:text-red-600
-        "
+                                        h-11 w-11
+                                        border-red-500
+                                        text-red-500
+                                        hover:bg-red-50
+                                        hover:text-red-600
+                                    "
                                 >
                                     <Trash2 size={17} />
                                 </Button>
                             ) : (
                                 <div className="h-11 w-11" />
                             )}
-
                         </div>
                     ))}
-
                 </div>
 
-
+                {/* ADD CUSTOM FEE */}
                 <button
                     type="button"
-                    onClick={() => setIsDialogOpen(true)}
+                    onClick={() =>
+                        setIsDialogOpen(true)
+                    }
                     className="
                         mt-5
                         h-11
@@ -329,9 +419,9 @@ export default function FeeConfiguration() {
                     <Plus size={18} />
                     Add Custom Charge
                 </button>
-
             </div>
 
+            {/* ================= CUSTOM FEE DIALOG ================= */}
 
             <Dialog
                 open={isDialogOpen}
@@ -347,6 +437,7 @@ export default function FeeConfiguration() {
 
                     <div className="space-y-5 py-4">
 
+                        {/* NAME */}
                         <div className="space-y-2">
                             <label className="text-sm font-semibold">
                                 Fee Platform
@@ -363,6 +454,7 @@ export default function FeeConfiguration() {
                             />
                         </div>
 
+                        {/* TYPE */}
                         <div className="space-y-2">
                             <label className="text-sm font-semibold">
                                 Type
@@ -404,10 +496,10 @@ export default function FeeConfiguration() {
                                 >
                                     Fixed
                                 </button>
-
                             </div>
                         </div>
 
+                        {/* AMOUNT */}
                         <div className="space-y-2">
                             <label className="text-sm font-semibold">
                                 Amount
@@ -415,11 +507,12 @@ export default function FeeConfiguration() {
 
                             <div className="relative">
 
-                                {newFeeType === "fixed" && (
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2">
-                                        ₹
-                                    </span>
-                                )}
+                                {newFeeType ===
+                                    "fixed" && (
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                                            ₹
+                                        </span>
+                                    )}
 
                                 <Input
                                     type="number"
@@ -431,21 +524,21 @@ export default function FeeConfiguration() {
                                         )
                                     }
                                     className={
-                                        newFeeType === "fixed"
+                                        newFeeType ===
+                                            "fixed"
                                             ? "pl-7"
                                             : "pr-8"
                                     }
                                 />
 
-                                {newFeeType === "percentage" && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                                        %
-                                    </span>
-                                )}
-
+                                {newFeeType ===
+                                    "percentage" && (
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            %
+                                        </span>
+                                    )}
                             </div>
                         </div>
-
                     </div>
 
                     <DialogFooter>
@@ -467,17 +560,16 @@ export default function FeeConfiguration() {
                         >
                             Add Charge
                         </Button>
-
                     </DialogFooter>
 
                 </DialogContent>
             </Dialog>
 
-
-
+            {/* ================= RIGHT SIDE ================= */}
 
             <div className="space-y-4">
 
+                {/* CALCULATION */}
                 <div className="rounded-[12px] border border-slate-100 bg-white p-4 shadow-sm">
 
                     <div className="mb-3 flex items-center justify-between">
@@ -533,7 +625,6 @@ export default function FeeConfiguration() {
                                 ₹2,000
                             </span>
                         </div>
-
                     </div>
 
                     <div className="my-3 border-t border-slate-200" />
@@ -547,11 +638,11 @@ export default function FeeConfiguration() {
                             ₹1,13,800
                         </span>
                     </div>
-
                 </div>
 
-
+                {/* COLLATERAL */}
                 <div className="rounded-[12px] border border-slate-100 bg-white p-4 shadow-sm">
+
                     <div className="mb-3 flex items-center justify-between">
                         <DashboardFormText text="Collateral Settings" />
                     </div>
@@ -568,14 +659,12 @@ export default function FeeConfiguration() {
                         />
                     </div>
 
-                    <div className="input-wrapper ">
+                    <div className="input-wrapper mt-4">
                         <label className="block mb-2">
                             Refund & Clawback Rules
                         </label>
 
-                        <select
-                            className="w-full border rounded-md px-3 py-2"
-                        >
+                        <select className="w-full border rounded-md px-3 py-2">
                             <option value="">
                                 Fully Refundable on Loss
                             </option>
@@ -590,93 +679,7 @@ export default function FeeConfiguration() {
                         </select>
                     </div>
                 </div>
-
             </div>
-
-        </div >
-    );
-}
-
-
-type FeeRowProps = {
-    name: string;
-    required?: boolean;
-    type: "percentage" | "fixed";
-    amount: string;
-};
-
-function FeeRow({
-    name,
-    required,
-    type,
-    amount,
-}: FeeRowProps) {
-    return (
-        <div className="grid grid-cols-[1.4fr_1fr_1fr_36px] items-center gap-3">
-
-            {/* NAME */}
-            <div className="flex h-9 items-center rounded-md bg-slate-50 px-3 text-xs font-medium text-slate-800">
-                {name}
-
-                {required && (
-                    <span className="ml-0.5 text-red-500">*</span>
-                )}
-            </div>
-
-            {/* TYPE */}
-            <div className="flex h-9 rounded-md bg-slate-100 p-0.5">
-
-                <button
-                    type="button"
-                    className={`
-                        flex-1 rounded-md text-[11px] font-medium
-                        ${type === "percentage"
-                            ? "bg-white text-[#7c365c] shadow-sm"
-                            : "text-slate-500"
-                        }
-                    `}
-                >
-                    Percentage
-                </button>
-
-                <button
-                    type="button"
-                    className={`
-                        flex-1 rounded-md text-[11px] font-medium
-                        ${type === "fixed"
-                            ? "bg-white text-[#7c365c] shadow-sm"
-                            : "text-slate-500"
-                        }
-                    `}
-                >
-                    Fixed
-                </button>
-
-            </div>
-
-            {/* AMOUNT */}
-            <div className="flex h-9 items-center rounded-md bg-slate-50 px-3 text-xs font-medium text-slate-800">
-                {amount}
-            </div>
-
-            {/* DELETE */}
-            <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="
-                    h-9
-                    w-9
-                    border-red-400
-                    text-red-500
-                    hover:bg-red-50
-                    hover:text-red-600
-                "
-            >
-                <Trash2 className="h-4 w-4" />
-            </Button>
-
         </div>
     );
 }
-

@@ -54,16 +54,33 @@ export default function AddLots({
         name: "lots",
     });
 
-  
+
     const handleAddNewLot = () => {
         const newLotIndex = fields.length;
 
+
         append({
-            status: "draft",
+            status: "DRAFT",
 
             details: {
                 title: "",
                 artist: "",
+                artworkId: "",
+                categoryUuid: "",
+                medium: "",
+                yearCreated: "",
+
+                dimensions: {
+                    width: null,
+                    height: null,
+                    depth: null,
+                    unit: "cm",
+                },
+
+                weight: null,
+
+                editionType: "UNIQUE",
+
                 description: "",
             },
 
@@ -71,29 +88,55 @@ export default function AddLots({
 
             pricing: {
                 startingPrice: null,
+                reservePrice: null,
+                minimumPrice: null,
                 estimateFrom: null,
                 estimateTo: null,
+                insuranceDeclaredValue: null,
+                currency: "",
+                gstRate: null,
+                hsnCode: "",
             },
 
             condition: {
-                condition: "",
-                provenance: "",
+                overallCondition: "",
+                frameCondition: "",
+                detailedConditionNotes: "",
+                restorationHistory: "",
             },
 
-            certificates: [],
+            provenance: {
+                previousOwner: "",
+                acquisitionMethod: "",
+                acquisitionDate: "",
+                exhibitionHistory: "",
+            },
+
+            authentication: {
+                authenticatedBy: "",
+                authenticatedDate: "",
+            },
+
+            documents: [],
+
+            isFeatured: false,
+
+            shippingInfo: "",
         });
 
         setSelectedLotIndex(newLotIndex);
         setCurrentLotStep(1);
+
+
     };
 
-  
+
     const handleEditLot = (index: number) => {
         setSelectedLotIndex(index);
         setCurrentLotStep(1);
     };
 
-   
+
     const handleRemoveLot = (index: number) => {
         remove(index);
 
@@ -103,7 +146,7 @@ export default function AddLots({
         }
     };
 
- 
+
     if (selectedLotIndex === null) {
         return (
             <div className="space-y-6">
@@ -119,7 +162,7 @@ export default function AddLots({
         );
     }
 
-  
+
     return (
         <div className="space-y-6 bg-dashboardFormBg rounded-[8px]">
 
@@ -128,7 +171,7 @@ export default function AddLots({
                 onStepChange={setCurrentLotStep}
             />
 
-       
+
             <div className="mt-8">
 
                 {currentLotStep === 1 && (

@@ -5,6 +5,7 @@ export const createAuctionService = async (data) => {
         title,
         slug,
         description,
+        short_description,
         coverImageUrl,
 
         auctionType,
@@ -118,6 +119,7 @@ export const createAuctionService = async (data) => {
                     title,
                     slug,
                     description,
+                    short_description,
                     coverImageUrl,
 
                     auctionType,
@@ -261,7 +263,17 @@ export const createAuctionService = async (data) => {
 
                         conditionReport:
                             lot.conditionReport,
-
+                        overallCondition: lot.overallCondition,
+                        frameCondition: lot.frameCondition,
+                        detailedConditionNotes: lot.detailedConditionNotes,
+                        restorationHistory: lot.restorationHistory,
+                        previousOwner: lot.previousOwner,
+                        acquisitionMethod: lot.acquisitionMethod,
+                        acquisitionDate: lot.acquisitionDate,
+                        exhibitionHistory: lot.exhibitionHistory,
+                        authenticateBy: lot.authenticateBy,
+                        auctheticateDate: lot.auctheticateDate,
+                        editionType: lot.editionType,
                         startingPrice:
                             lot.startingPrice,
 
@@ -290,6 +302,10 @@ export const createAuctionService = async (data) => {
                                     lot.scheduledEndAt
                                 )
                                 : null,
+
+                        insureanceValue: lot.insureanceValue,
+                        gstRate: lot.gstRate,
+                        hsnCode: lot.hsnCode,
 
                         shippingInfo:
                             lot.shippingInfo,
@@ -332,6 +348,7 @@ export const createAuctionService = async (data) => {
 
                             isPrimary:
                                 image.isPrimary ?? false,
+                            mediaType: image.mediaType ?? "IMAGE",
                         })
                     ),
                 });

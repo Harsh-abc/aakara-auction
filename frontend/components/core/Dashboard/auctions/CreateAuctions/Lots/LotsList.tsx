@@ -14,15 +14,13 @@ import { DateRange } from "react-day-picker";
 import { AuctionLotsList as AuctionLotsDataTable } from "../AuctionsLotsList";
 import { getColumns } from "../../AuctionsLotsColumns";
 import { AuctionLotsList } from "@/lib/data";
+import { AuctionLotForm } from "@/lib/types/AuctionsFormData";
 
-type LotsListProps = {
-    lots: AuctionLotsList[]
-
-    onAddLot: () => void
-
-    onSelectLot: (index: number) => void
-
-    onRemoveLot: (index: number) => void
+interface LotsListProps {
+    lots: (AuctionLotForm & { id: string })[];
+    onAddLot: () => void;
+    onSelectLot: (index: number) => void;
+    onRemoveLot: (index: number) => void;
 }
 
 export default function LotsList({

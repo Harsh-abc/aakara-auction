@@ -22,7 +22,7 @@ model User {
   lastLoginAt               DateTime?
   lastLoginIp               String?                @db.Inet
   passwordChangedAt         DateTime?
-  failedLoginAttempts       BigInt                    @default(0)
+  failedLoginAttempts       BigInt                 @default(0)
   lockedUntil               DateTime?
   createdAt                 DateTime               @default(now())
   updatedAt                 DateTime               @updatedAt
@@ -219,7 +219,7 @@ model Category {
   description   String?
   imageUrl      String?
   isActive      Boolean       @default(true)
-  sortOrder     BigInt           @default(0)
+  sortOrder     BigInt        @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   items         AuctionItem[]
@@ -238,7 +238,7 @@ model SubCategory {
   description String?
   imageUrl    String?
   isActive    Boolean       @default(true)
-  sortOrder   BigInt           @default(0)
+  sortOrder   BigInt        @default(0)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   items       AuctionItem[]
@@ -383,33 +383,47 @@ model AuctionItem {
   uuid      String @unique @default(uuid()) @db.Uuid
   auctionId BigInt
 
-  itemNumber       BigInt
-  title            String
-  description      String?
-  artistName       String?
-  medium           String?
-  dimensions       String?
-  yearCreated      String?
-  provenance       String?
-  conditionReport  String?
-  startingPrice    Decimal            @db.Decimal(12, 2)
-  reservePrice     Decimal?           @db.Decimal(12, 2)
-  estimateLow      Decimal?           @db.Decimal(12, 2)
-  estimateHigh     Decimal?           @db.Decimal(12, 2)
-  currentBid       Decimal?           @db.Decimal(12, 2)
-  currentBidderId  BigInt?
-  bidCount         BigInt                @default(0)
-  status           ItemStatus         @default(DRAFT)
-  scheduledStartAt DateTime?
-  scheduledEndAt   DateTime?
-  shippingInfo     String?
-  isFeatured       Boolean            @default(false)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  documents        AuctionDocument[]
-  extensions       AuctionExtension[]
-  images           AuctionImage[]
-  auction          Auction            @relation(fields: [auctionId], references: [id])
+  itemNumber             BigInt
+  title                  String
+  description            String?
+  artistName             String?
+  medium                 String?
+  dimensions             String?
+  yearCreated            String?
+  provenance             String?
+  conditionReport        String?
+  overallCondition       String?
+  frameCondition         String?
+  detailedConditionNotes String?
+  restorationHistory     String?
+  previousOwner          String?
+  acquisitionMethod      String?
+  acquisitionDate        String?
+  exhibitionHistory      String?
+  authenticateBy         String?
+  auctheticateDate       DateTime?
+  editionType            EDITIONTYPE
+  startingPrice          Decimal            @db.Decimal(12, 2)
+  reservePrice           Decimal?           @db.Decimal(12, 2)
+  estimateLow            Decimal?           @db.Decimal(12, 2)
+  estimateHigh           Decimal?           @db.Decimal(12, 2)
+  insureanceValue        Decimal?           @db.Decimal(12, 2)
+  gstRate                Decimal?           @db.Decimal(12, 2)
+  hsnCode                Decimal?           @db.Decimal(12, 2)
+  currentBid             Decimal?           @db.Decimal(12, 2)
+  currentBidderId        BigInt?
+  bidCount               BigInt             @default(0)
+  status                 ItemStatus         @default(DRAFT)
+  scheduledStartAt       DateTime?
+  scheduledEndAt         DateTime?
+  shippingInfo           String?
+  isFeatured             Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  documents              AuctionDocument[]
+  extensions             AuctionExtension[]
+  images                 AuctionImage[]
+  auction                Auction            @relation(fields: [auctionId], references: [id])
 
   currentBidder User? @relation("AuctionItemCurrentBidder", fields: [currentBidderId], references: [id])
 
@@ -436,8 +450,9 @@ model AuctionImage {
   url          String
   thumbnailUrl String?
   caption      String?
-  sortOrder    BigInt         @default(0)
+  sortOrder    BigInt      @default(0)
   isPrimary    Boolean     @default(false)
+  mediaType    MEDIATYPE
   createdAt    DateTime    @default(now())
   item         AuctionItem @relation(fields: [itemId], references: [id])
 
@@ -765,4 +780,15 @@ enum AuctionVisibility {
   PUBLIC
   REGISTERED_USERS_ONLY
   PRIVATE_INVITE_ONLY
+}
+
+enum EDITIONTYPE {
+  UNIQUE
+  LIMITED
+  OPEN
+}
+
+enum MEDIATYPE {
+  IMAGE
+  VIDEO
 }

@@ -1,31 +1,42 @@
+
 "use client";
 
 import { useFormContext } from "react-hook-form";
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
+
 import { Input } from "@/components/ui/input";
 import { useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
+
 import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
-import ImageUploader from "@/components/common/ImageUploader/ImageUploader";
 import TagsInput from "@/components/common/Tags/TagsInput";
 import DashboardFormText from "@/components/common/DashboardFormText";
 
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-    Field,
-    FieldContent,
-    FieldDescription,
-    FieldGroup,
-    FieldLabel,
-    FieldTitle,
-} from "@/components/ui/field"
-import { Label } from "@/components/ui/label"
-
 export default function BasicInfo() {
-
     const inputRef = useRef<HTMLInputElement>(null);
+
     const [isDragging, setIsDragging] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
+
+    const {
+        register,
+        setValue,
+        watch,
+        formState: { errors },
+    } = useFormContext<AuctionFormData>();
+
+    /* =====================================================
+       WATCH FORM VALUES
+    ===================================================== */
+
+    const auctionName = watch("basicInfo.auctionName");
+    const auctionType = watch("basicInfo.auctionType");
+    const categoryUuid = watch("basicInfo.categoryUuid");
+    const coverImage = watch("basicInfo.coverImage");
+
+    /* =====================================================
+       COVER IMAGE
+    ===================================================== */
 
     const handleFile = (file: File) => {
         if (!file) return;
@@ -36,9 +47,19 @@ export default function BasicInfo() {
             return;
         }
 
+        // Store file inside React Hook Form
+        setValue("basicInfo.coverImage", file, {
+            shouldDirty: true,
+            shouldTouch: true,
+            shouldValidate: true,
+        });
 
+        // Remove previous object URL if required
+        if (preview) {
+            URL.revokeObjectURL(preview);
+        }
 
-        // Preview
+        // Create preview
         if (file.type.startsWith("image/")) {
             const url = URL.createObjectURL(file);
             setPreview(url);
@@ -55,8 +76,11 @@ export default function BasicInfo() {
         }
     };
 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDrop = (
+        e: React.DragEvent<HTMLDivElement>
+    ) => {
         e.preventDefault();
+
         setIsDragging(false);
 
         const file = e.dataTransfer.files?.[0];
@@ -69,44 +93,64 @@ export default function BasicInfo() {
     const removeFile = () => {
         setPreview(null);
 
+        setValue("basicInfo.coverImage", null, {
+            shouldDirty: true,
+            shouldTouch: true,
+            shouldValidate: true,
+        });
 
         if (inputRef.current) {
             inputRef.current.value = "";
         }
     };
 
-
-    const {
-        register,
-        formState: { errors },
-    } = useFormContext<AuctionFormData>();
+    /* =====================================================
+       RENDER
+    ===================================================== */
 
     return (
         <div className="space-y-60">
+
             <div className="flex items-start justify-between gap-4 pb-10">
+
+                {/* =================================================
+                    LEFT SIDE
+                ================================================= */}
+
                 <div className="flex-2 w-182.5 px-7 py-7 bg-dashboardFormBg rounded-[8px]">
 
                     <DashboardFormText text="Auction Details" />
 
-                    <div className="input-wrapper ">
+                    {/* =================================================
+                        AUCTION NAME
+                    ================================================= */}
+
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Auction Name
                         </label>
+
                         <Input
-                            {...register("basicInfo.name")}
+                            {...register("basicInfo.auctionName")}
                             type="text"
                             placeholder="e.g. Modern Master of Mumbai : Autumn Collections"
                             className="w-full border rounded-md px-3 py-2 h-11"
                         />
 
-                        {errors.basicInfo?.name && (
+                        {errors.basicInfo?.auctionName && (
                             <p className="text-red-500 text-sm mt-1">
                                 Auction name is required
                             </p>
                         )}
                     </div>
 
+                    {/* =================================================
+                        AUCTION ID + AUCTION TYPE
+                    ================================================= */}
+
                     <div className="grid grid-cols-2 gap-4">
+
+                        {/* Auction ID */}
 
                         <div className="input-wrapper">
                             <label className="block mb-2">
@@ -114,38 +158,53 @@ export default function BasicInfo() {
                             </label>
 
                             <Input
-                                {...register("basicInfo.reference")}
+                                {...register("basicInfo.auctionId")}
                                 type="text"
                                 placeholder="Enter reference"
                                 className="w-full border rounded-md px-3 py-2 h-11"
                             />
                         </div>
 
-                        <div className="input-wrapper ">
+                        {/* Auction Type */}
+
+                        <div className="input-wrapper">
                             <label className="block mb-2">
                                 Auction Type
                             </label>
 
                             <select
                                 {...register("basicInfo.auctionType")}
-                                className="w-full border rounded-md px-3 py-2"
+                                className="w-full border rounded-md px-3 py-2 h-11"
                             >
                                 <option value="">
                                     Select auction type
                                 </option>
 
-                                <option value="live">
+                                <option value="LIVE">
                                     Live Auction
                                 </option>
 
-                                <option value="online">
-                                    Online Auction
+                                <option value="FLOOR">
+                                    Floor Auction
+                                </option>
+
+                                <option value="HYBRID">
+                                    Hybrid Auction
                                 </option>
                             </select>
+
+                            {errors.basicInfo?.auctionType && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    Auction type is required
+                                </p>
+                            )}
                         </div>
 
                     </div>
 
+                    {/* =================================================
+                        SHORT DESCRIPTION
+                    ================================================= */}
 
                     <div className="input-wrapper">
                         <label className="block mb-2">
@@ -153,25 +212,128 @@ export default function BasicInfo() {
                         </label>
 
                         <textarea
-                            {...register("basicInfo.description")}
+                            {...register(
+                                "basicInfo.shortDescription"
+                            )}
                             rows={3}
-                            placeholder="Enter auction description"
+                            placeholder="Enter short auction description"
                             className="w-full border rounded-md px-3 py-2"
                         />
                     </div>
+
+                    {/* =================================================
+                        DETAILED DESCRIPTION
+                    ================================================= */}
 
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Detailed Description
                         </label>
-                        <RichTextEditor />
+
+                        <RichTextEditor
+                            value={watch(
+                                "basicInfo.description"
+                            )}
+                            onChange={(value: string) => {
+                                setValue(
+                                    "basicInfo.description",
+                                    value,
+                                    {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                        shouldValidate: true,
+                                    }
+                                );
+                            }}
+                        />
                     </div>
 
-                    <div className="input-wrapper ">
-                        <ImageUploader />
+                    {/* =================================================
+                        AUCTION COVER IMAGE
+                    ================================================= */}
+
+                    <div className="input-wrapper">
+
+                        <label className="block mb-2">
+                            Auction Cover Image
+                        </label>
+
+                        <div
+                            className={`relative flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-white transition ${isDragging
+                                ? "border-[#7A3D5E] bg-[#fdf5f9]"
+                                : "border-slate-300"
+                                }`}
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                setIsDragging(true);
+                            }}
+                            onDragLeave={() => {
+                                setIsDragging(false);
+                            }}
+                            onDrop={handleDrop}
+                            onClick={() =>
+                                inputRef.current?.click()
+                            }
+                        >
+
+                            <input
+                                ref={inputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleInputChange}
+                            />
+
+                            {preview ? (
+                                <div className="relative h-[220px] w-full overflow-hidden rounded-lg">
+
+                                    <img
+                                        src={preview}
+                                        alt="Auction cover preview"
+                                        className="h-full w-full object-cover"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeFile();
+                                        }}
+                                        className="absolute right-3 top-3 rounded-full bg-white p-2 shadow"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+
+                                </div>
+                            ) : (
+                                <>
+                                    <Upload className="mb-3 h-8 w-8 text-slate-400" />
+
+                                    <p className="text-sm font-medium text-slate-700">
+                                        Upload Auction Cover Image
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-slate-400">
+                                        Drag & drop or click to upload
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-slate-400">
+                                        Maximum file size: 50MB
+                                    </p>
+                                </>
+                            )}
+
+                        </div>
+
                     </div>
+
+                    {/* =================================================
+                        CATEGORY + SUBCATEGORY
+                    ================================================= */}
 
                     <div className="grid grid-cols-2 gap-4">
+
+                        {/* Category */}
 
                         <div className="input-wrapper">
                             <label className="block mb-2">
@@ -179,22 +341,24 @@ export default function BasicInfo() {
                             </label>
 
                             <select
-                                {...register("basicInfo.category")}
-                                className="w-full border rounded-md px-3 py-2"
+                                {...register(
+                                    "basicInfo.categoryUuid"
+                                )}
+                                className="w-full border rounded-md px-3 py-2 h-11"
                             >
                                 <option value="">
                                     Select category
                                 </option>
 
-                                <option value="live">
-                                    Live Auction
-                                </option>
+                                {/* TODO:
+                                    Replace with categories
+                                    fetched from API.
+                                */}
 
-                                <option value="online">
-                                    Online Auction
-                                </option>
                             </select>
                         </div>
+
+                        {/* SubCategory */}
 
                         <div className="input-wrapper">
                             <label className="block mb-2">
@@ -202,182 +366,262 @@ export default function BasicInfo() {
                             </label>
 
                             <select
-                                {...register("basicInfo.subCategory")}
-                                className="w-full border rounded-md px-3 py-2"
+                                {...register(
+                                    "basicInfo.subCategoryUuid"
+                                )}
+                                className="w-full border rounded-md px-3 py-2 h-11"
                             >
                                 <option value="">
                                     Select subcategory
                                 </option>
 
-                                <option value="live">
-                                    Live Auction
-                                </option>
+                                {/* TODO:
+                                    Replace with subcategories
+                                    fetched from API.
+                                */}
 
-                                <option value="online">
-                                    Online Auction
-                                </option>
                             </select>
                         </div>
 
                     </div>
 
+                    {/* =================================================
+                        AUCTION LOCATION
+                    ================================================= */}
+
                     <div className="grid grid-cols-1 gap-4">
 
                         <div className="input-wrapper">
+
                             <label className="block mb-2">
                                 Auction Location
                             </label>
 
                             <Input
-                                {...register("basicInfo.reference")}
+                                {...register(
+                                    "basicInfo.auctionLocation"
+                                )}
                                 type="text"
                                 placeholder="Enter Location"
                                 className="w-full border rounded-md px-3 py-2 h-11"
                             />
+
                         </div>
 
                     </div>
+
+                    {/* =================================================
+                        AUCTION TAGS
+                    ================================================= */}
+
                     <div className="input-wrapper">
+
                         <label className="block mb-2">
-                            Auctions Tags
+                            Auction Tags
                         </label>
-                        <TagsInput />
+
+                        <TagsInput
+                            value={
+                                watch(
+                                    "basicInfo.auctionTags"
+                                ) ?? []
+                            }
+                            onChange={(tags: string[]) => {
+                                setValue(
+                                    "basicInfo.auctionTags",
+                                    tags,
+                                    {
+                                        shouldDirty: true,
+                                        shouldTouch: true,
+                                    }
+                                );
+                            }}
+                        />
+
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4">
+                    {/* =================================================
+                        CURRENCY
+                    ================================================= */}
 
-                        <div className="input-wrapper">
-                            <label className="block mb-2">
-                                Auctions Currency
-                            </label>
+                    <div className="mt-6">
+                        <label className="block mb-2 text-sm font-medium">
+                            Auction Currencies
+                        </label>
+
+                        <p className="mb-4 text-sm text-slate-500">
+                            Select the currencies that can be used for lots in this auction.
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-3">
+
+                            {[
+                                {
+                                    value: "INR",
+                                    label: "INR - Indian Rupee",
+                                },
+                                {
+                                    value: "USD",
+                                    label: "USD - US Dollar",
+                                },
+                                {
+                                    value: "EUR",
+                                    label: "EUR - Euro",
+                                },
+                                {
+                                    value: "GBP",
+                                    label: "GBP - British Pound",
+                                },
+                                {
+                                    value: "JPY",
+                                    label: "JPY - Japanese Yen",
+                                },
+                            ].map((currency) => {
+                                const selectedCurrencies =
+                                    watch("basicInfo.currency") ?? [];
+
+                                const isSelected =
+                                    selectedCurrencies.includes(currency.value);
+
+                                return (
+                                    <label
+                                        key={currency.value}
+                                        className={`flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-md border px-4 py-3 transition ${isSelected
+                                                ? "border-[#7A3D5E] bg-[#fdf5f9]"
+                                                : "border-slate-200 bg-white"
+                                            }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={(e) => {
+                                                const current =
+                                                    watch("basicInfo.currency") ?? [];
+
+                                                const updated = e.target.checked
+                                                    ? [...current, currency.value]
+                                                    : current.filter(
+                                                        (value) =>
+                                                            value !== currency.value
+                                                    );
+
+                                                setValue(
+                                                    "basicInfo.currency",
+                                                    updated,
+                                                    {
+                                                        shouldDirty: true,
+                                                        shouldTouch: true,
+                                                        shouldValidate: true,
+                                                    }
+                                                );
+                                            }}
+                                            className="h-4 w-4 shrink-0"
+                                        />
+
+                                        <span className="text-sm text-slate-700">
+                                            {currency.label}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+
                         </div>
-                        <FieldGroup className="flex flex-row items-center gap-6">
-                            <Field orientation="horizontal" className="w-auto">
-                                <Checkbox id="currency-inr" name="currency" value="INR" />
-                                <Label htmlFor="currency-inr">INR</Label>
-                            </Field>
 
-                            <Field orientation="horizontal" className="w-auto">
-                                <Checkbox id="currency-usd" name="currency" value="USD" />
-                                <Label htmlFor="currency-usd">USD</Label>
-                            </Field>
-
-                            <Field orientation="horizontal" className="w-auto">
-                                <Checkbox id="currency-eur" name="currency" value="EUR" />
-                                <Label htmlFor="currency-eur">EUR</Label>
-                            </Field>
-
-                            <Field orientation="horizontal" className="w-auto">
-                                <Checkbox id="currency-gbp" name="currency" value="GBP" />
-                                <Label htmlFor="currency-gbp">GBP</Label>
-                            </Field>
-
-                            <Field orientation="horizontal" className="w-auto">
-                                <Checkbox id="currency-jpy" name="currency" value="JPY" />
-                                <Label htmlFor="currency-jpy">JPY</Label>
-                            </Field>
-                        </FieldGroup>
-
+                        {errors.basicInfo?.currency && (
+                            <p className="mt-2 text-sm text-red-500">
+                                Please select at least one currency.
+                            </p>
+                        )}
                     </div>
+
                 </div>
+
+                {/* =================================================
+                    RIGHT SIDE PREVIEW
+                ================================================= */}
+
                 <div className="flex-1 w-93">
+
                     <div className="w-full max-w-[330px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+
+                        {/* Cover Preview */}
+
                         <div className="h-[176px] w-full overflow-hidden">
-                            <img
-                                src={''}
-                                alt={''}
-                                className="h-full w-full object-cover"
-                            />
+
+                            {coverImage instanceof File ? (
+                                preview ? (
+                                    <img
+                                        src={preview}
+                                        alt="Auction cover"
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
+                                        No cover image
+                                    </div>
+                                )
+                            ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
+                                    No cover image
+                                </div>
+                            )}
+
                         </div>
+
+                        {/* Preview Details */}
 
                         <div className="p-4">
+
                             <div className="mb-3 flex items-center gap-2">
+
                                 <span className="rounded bg-[#fce8f1] px-2 py-1 text-[11px] font-medium text-[#833b61]">
-                                    auctionType
+                                    {auctionType || "Auction Type"}
                                 </span>
 
                                 <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
-                                    category
+                                    {categoryUuid || "Category"}
                                 </span>
+
                             </div>
 
                             <h3 className="min-h-[40px] text-[15px] font-semibold leading-5 text-slate-700">
-                                title
+                                {auctionName || "Auction Title"}
                             </h3>
 
                             <div className="my-3 border-t border-slate-200" />
 
                             <div className="flex items-center justify-between text-[12px]">
+
                                 <span className="text-slate-500">
                                     Artworks
                                 </span>
 
                                 <span className="font-semibold text-slate-700">
-                                    artworkCount Item
+                                    0 Items
                                 </span>
+
                             </div>
 
                             <div className="mt-3 flex items-center justify-between text-[12px]">
+
                                 <span className="text-slate-500">
                                     Status
                                 </span>
 
                                 <span className="font-semibold text-slate-700">
-                                    status
+                                    Draft
                                 </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
 
         </div>
     );
-}
-
-
-
-
-
-
-export function CheckboxDemo() {
-    return (
-        <FieldGroup className="max-w-sm">
-            <Field orientation="horizontal">
-                <Checkbox id="terms-checkbox" name="terms-checkbox" />
-                <Label htmlFor="terms-checkbox">Accept terms and conditions</Label>
-            </Field>
-            <Field orientation="horizontal">
-                <Checkbox
-                    id="terms-checkbox-2"
-                    name="terms-checkbox-2"
-                    defaultChecked
-                />
-                <FieldContent>
-                    <FieldLabel htmlFor="terms-checkbox-2">
-                        Accept terms and conditions
-                    </FieldLabel>
-                    <FieldDescription>
-                        By clicking this checkbox, you agree to the terms.
-                    </FieldDescription>
-                </FieldContent>
-            </Field>
-            <Field orientation="horizontal" data-disabled>
-                <Checkbox id="toggle-checkbox" name="toggle-checkbox" disabled />
-                <FieldLabel htmlFor="toggle-checkbox">Enable notifications</FieldLabel>
-            </Field>
-            <FieldLabel>
-                <Field orientation="horizontal">
-                    <Checkbox id="toggle-checkbox-2" name="toggle-checkbox-2" />
-                    <FieldContent>
-                        <FieldTitle>Enable notifications</FieldTitle>
-                        <FieldDescription>
-                            You can enable or disable notifications at any time.
-                        </FieldDescription>
-                    </FieldContent>
-                </Field>
-            </FieldLabel>
-        </FieldGroup>
-    )
 }

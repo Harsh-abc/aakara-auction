@@ -1,7 +1,20 @@
+
+"use client";
+
 import DashboardFormText from "@/components/common/DashboardFormText";
 import { Input } from "@/components/ui/input";
+import { useFormContext } from "react-hook-form";
+import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 
-export default function PricingValuation() {
+interface PricingValuationProps {
+    lotIndex: number;
+}
+
+export default function PricingValuation({
+    lotIndex,
+}: PricingValuationProps) {
+    const { register } = useFormContext<AuctionFormData>();
+
     return (
         <div className="px-6 pb-6">
             <div>
@@ -9,100 +22,144 @@ export default function PricingValuation() {
 
                 <div className="grid grid-cols-3 gap-4 w-full">
 
+                    {/* Starting Bid Price */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Starting Bid Price
                         </label>
 
                         <Input
-                            type="text"
+                            type="number"
                             placeholder="₹ Enter Starting Bid Amount"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.startingPrice`,
+                                {
+                                    valueAsNumber: true,
+                                }
+                            )}
                         />
                     </div>
 
-                    <div className="input-wrapper ">
+                    {/* Reserve Price */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Reserve Price
                         </label>
 
                         <Input
-                            type="text"
+                            type="number"
                             placeholder="₹ Enter Reserve Price"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.reservePrice`,
+                                {
+                                    valueAsNumber: true,
+                                }
+                            )}
                         />
                     </div>
 
-                    <div className="input-wrapper ">
+                    {/* Minimum Price */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Minimum Price
                         </label>
 
                         <Input
-                            type="text"
+                            type="number"
                             placeholder="₹ Enter Minimum Price"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.minimumPrice`,
+                                {
+                                    valueAsNumber: true,
+                                }
+                            )}
                         />
                     </div>
                 </div>
 
+                <div className="grid grid-cols-4 gap-4 w-full mt-4">
 
-                <div className="grid grid-cols-4 gap-4 w-full">
-
+                    {/* Estimated Start Value */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Estimated Start Value
                         </label>
 
                         <Input
-                            type="text"
+                            type="number"
                             placeholder="₹ Enter Estimated Start Value"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.estimateFrom`,
+                                {
+                                    valueAsNumber: true,
+                                }
+                            )}
                         />
                     </div>
 
-                    <div className="input-wrapper ">
+                    {/* Estimated End Value */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Estimated End Value
                         </label>
 
                         <Input
-                            type="text"
+                            type="number"
                             placeholder="₹ Enter Estimated End Value"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.estimateTo`,
+                                {
+                                    valueAsNumber: true,
+                                }
+                            )}
                         />
                     </div>
 
-                    <div className="input-wrapper ">
+                    {/* Insurance Declared Value */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Insurance Declared value
                         </label>
 
                         <Input
-                            type="text"
+                            type="number"
                             placeholder="₹ Insurance Declared value"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.insuranceDeclaredValue`,
+                                {
+                                    valueAsNumber: true,
+                                }
+                            )}
                         />
                     </div>
 
+                    {/* Currency */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Currency
                         </label>
 
                         <select
-
-                            className="w-full border rounded-md px-3 py-2"
+                            className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.currency`
+                            )}
                         >
                             <option value="">
                                 Select Currency
                             </option>
 
-                            <option value="live">
+                            <option value="INR">
                                 INR
                             </option>
 
-                            <option value="online">
+                            <option value="USD">
                                 DOLLAR
                             </option>
                         </select>
@@ -115,19 +172,27 @@ export default function PricingValuation() {
 
                 <div className="grid grid-cols-2 gap-4 w-full">
 
+                    {/* GST Rate */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             GST Rate (%)
                         </label>
 
                         <Input
-                            type="text"
+                            type="number"
                             placeholder="Enter A GST Rate"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.gstRate`,
+                                {
+                                    valueAsNumber: true,
+                                }
+                            )}
                         />
                     </div>
 
-                    <div className="input-wrapper ">
+                    {/* HSN Code */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             HSN Code
                         </label>
@@ -136,11 +201,13 @@ export default function PricingValuation() {
                             type="text"
                             placeholder="Enter HSN Code"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.pricing.hsnCode`
+                            )}
                         />
                     </div>
                 </div>
-
             </div>
         </div>
-    )
+    );
 }

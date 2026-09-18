@@ -1,26 +1,19 @@
+
 "use client";
 
-
 import DashboardFormText from "@/components/common/DashboardFormText";
-
-import { Checkbox } from "@/components/ui/checkbox"
 import {
     Field,
     FieldContent,
     FieldDescription,
-    FieldGroup,
     FieldLabel,
-    FieldTitle,
-} from "@/components/ui/field"
-import { Label } from "@/components/ui/label"
-
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useState } from "react";
-
+} from "@/components/ui/field";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Controller, useFormContext } from "react-hook-form";
+import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 
 export default function ShippingInfo() {
-
-    const [shippingMethod, setShippingMethod] = useState("comfortable");
+    const { control } = useFormContext<AuctionFormData>();
 
     return (
         <div className="space-y-60">
@@ -31,163 +24,170 @@ export default function ShippingInfo() {
 
                     <div className="grid grid-cols-1 gap-4">
 
-                        <RadioGroup
-                            value={shippingMethod}
-                            onValueChange={setShippingMethod}
-                            className="w-full"
-                        >
-                            <Field
-                                orientation="horizontal"
-                                className={`
-                mt-4
-                px-3.5
-                py-3.5
-                border
-                rounded-[8px]
-                transition-all
-                cursor-pointer
-                ${shippingMethod === "default"
-                                        ? "border-[#914968]"
-                                        : "border-slate-200 bg-white"
-                                    }
-            `}
-                            >
-                                <RadioGroupItem
-                                    value="default"
-                                    id="desc-r1"
-                                />
-
-                                <FieldContent>
-                                    <FieldLabel
-                                        htmlFor="desc-r1"
-                                        className="text-[16px] font-semibold"
+                        <Controller
+                            name="shipping.shippingStrategy"
+                            control={control}
+                            render={({ field }) => (
+                                <RadioGroup
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                    className="w-full"
+                                >
+                                    {/* Shipping Included */}
+                                    <Field
+                                        orientation="horizontal"
+                                        className={`
+                                            mt-4
+                                            px-3.5
+                                            py-3.5
+                                            border
+                                            rounded-[8px]
+                                            transition-all
+                                            cursor-pointer
+                                            ${field.value ===
+                                                "SHIPPING_INCLUDED"
+                                                ? "border-[#914968]"
+                                                : "border-slate-200 bg-white"
+                                            }
+                                        `}
                                     >
-                                        Shipping Included
-                                    </FieldLabel>
+                                        <RadioGroupItem
+                                            value="SHIPPING_INCLUDED"
+                                            id="shipping-included"
+                                        />
 
-                                    <FieldDescription>
-                                        Complimentary shipping globally paid by seller
-                                    </FieldDescription>
-                                </FieldContent>
-                            </Field>
+                                        <FieldContent>
+                                            <FieldLabel
+                                                htmlFor="shipping-included"
+                                                className="text-[16px] font-semibold"
+                                            >
+                                                Shipping Included
+                                            </FieldLabel>
 
-                            <Field
-                                orientation="horizontal"
-                                className={`
-                mt-4
-                px-3.5
-                py-3.5
-                border
-                rounded-[8px]
-                transition-all
-                cursor-pointer
-                ${shippingMethod === "comfortable"
-                                        ? "border-[#914968]"
-                                        : "border-slate-200 bg-white"
-                                    }
-            `}
-                            >
-                                <RadioGroupItem
-                                    value="comfortable"
-                                    id="desc-r2"
-                                />
+                                            <FieldDescription>
+                                                Complimentary shipping globally paid by seller
+                                            </FieldDescription>
+                                        </FieldContent>
+                                    </Field>
 
-                                <FieldContent>
-                                    <FieldLabel
-                                        htmlFor="desc-r2"
-                                        className="text-[16px] font-semibold"
+                                    {/* Shipping Calculated Separately */}
+                                    <Field
+                                        orientation="horizontal"
+                                        className={`
+                                            mt-4
+                                            px-3.5
+                                            py-3.5
+                                            border
+                                            rounded-[8px]
+                                            transition-all
+                                            cursor-pointer
+                                            ${field.value ===
+                                                "SHIPPING_CALCULATED_SEPARATELY"
+                                                ? "border-[#914968]"
+                                                : "border-slate-200 bg-white"
+                                            }
+                                        `}
                                     >
-                                        Shipping Calculated Separately
-                                    </FieldLabel>
+                                        <RadioGroupItem
+                                            value="SHIPPING_CALCULATED_SEPARATELY"
+                                            id="shipping-calculated"
+                                        />
 
-                                    <FieldDescription>
-                                        Buyer pays determined carrier rates dynamically
-                                        after delivery address confirmation
-                                    </FieldDescription>
-                                </FieldContent>
-                            </Field>
+                                        <FieldContent>
+                                            <FieldLabel
+                                                htmlFor="shipping-calculated"
+                                                className="text-[16px] font-semibold"
+                                            >
+                                                Shipping Calculated Separately
+                                            </FieldLabel>
 
-                            <Field
-                                orientation="horizontal"
-                                className={`
-                mt-4
-                px-3.5
-                py-3.5
-                border
-                rounded-[8px]
-                transition-all
-                cursor-pointer
-                ${shippingMethod === "compact"
-                                        ? "border-[#914968]"
-                                        : "border-slate-200 bg-white"
-                                    }
-            `}
-                            >
-                                <RadioGroupItem
-                                    value="compact"
-                                    id="desc-r3"
-                                />
+                                            <FieldDescription>
+                                                Buyer pays determined carrier rates dynamically
+                                                after delivery address confirmation
+                                            </FieldDescription>
+                                        </FieldContent>
+                                    </Field>
 
-                                <FieldContent>
-                                    <FieldLabel
-                                        htmlFor="desc-r3"
-                                        className="text-[16px] font-semibold"
+                                    {/* Buyer Arranges Pickup */}
+                                    <Field
+                                        orientation="horizontal"
+                                        className={`
+                                            mt-4
+                                            px-3.5
+                                            py-3.5
+                                            border
+                                            rounded-[8px]
+                                            transition-all
+                                            cursor-pointer
+                                            ${field.value ===
+                                                "BUYER_ARRANGES_PICKUP"
+                                                ? "border-[#914968]"
+                                                : "border-slate-200 bg-white"
+                                            }
+                                        `}
                                     >
-                                        Buyer Arranges Pickup
-                                    </FieldLabel>
+                                        <RadioGroupItem
+                                            value="BUYER_ARRANGES_PICKUP"
+                                            id="buyer-pickup"
+                                        />
 
-                                    <FieldDescription>
-                                        Local gallery hand-over directly to the winning bidder
-                                    </FieldDescription>
-                                </FieldContent>
-                            </Field>
+                                        <FieldContent>
+                                            <FieldLabel
+                                                htmlFor="buyer-pickup"
+                                                className="text-[16px] font-semibold"
+                                            >
+                                                Buyer Arranges Pickup
+                                            </FieldLabel>
 
-                            <Field
-                                orientation="horizontal"
-                                className={`
-                mt-4
-                px-3.5
-                py-3.5
-                border
-                rounded-[8px]
-                transition-all
-                cursor-pointer
-                ${shippingMethod === "platform"
-                                        ? "border-[#914968] "
-                                        : "border-slate-200 bg-white"
-                                    }
-            `}
-                            >
-                                <RadioGroupItem
-                                    value="platform"
-                                    id="desc-r4"
-                                />
+                                            <FieldDescription>
+                                                Local gallery hand-over directly to the winning bidder
+                                            </FieldDescription>
+                                        </FieldContent>
+                                    </Field>
 
-                                <FieldContent>
-                                    <FieldLabel
-                                        htmlFor="desc-r4"
-                                        className="text-[16px] font-semibold"
+                                    {/* Admin Arranges Delivery */}
+                                    <Field
+                                        orientation="horizontal"
+                                        className={`
+                                            mt-4
+                                            px-3.5
+                                            py-3.5
+                                            border
+                                            rounded-[8px]
+                                            transition-all
+                                            cursor-pointer
+                                            ${field.value ===
+                                                "ADMIN_ARRANGES_DELIVERY"
+                                                ? "border-[#914968]"
+                                                : "border-slate-200 bg-white"
+                                            }
+                                        `}
                                     >
-                                        Admin Arranges Delivery
-                                    </FieldLabel>
+                                        <RadioGroupItem
+                                            value="ADMIN_ARRANGES_DELIVERY"
+                                            id="admin-delivery"
+                                        />
 
-                                    <FieldDescription>
-                                        Platform handles custom logistics independently
-                                    </FieldDescription>
-                                </FieldContent>
-                            </Field>
+                                        <FieldContent>
+                                            <FieldLabel
+                                                htmlFor="admin-delivery"
+                                                className="text-[16px] font-semibold"
+                                            >
+                                                Admin Arranges Delivery
+                                            </FieldLabel>
 
-                        </RadioGroup>
+                                            <FieldDescription>
+                                                Platform handles custom logistics independently
+                                            </FieldDescription>
+                                        </FieldContent>
+                                    </Field>
+                                </RadioGroup>
+                            )}
+                        />
 
                     </div>
                 </div>
             </div>
-
-
         </div>
     );
 }
-
-
-
-

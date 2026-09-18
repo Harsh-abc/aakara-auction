@@ -1,6 +1,5 @@
 "use client";
 
-import { Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface TimePickerProps {
@@ -17,15 +16,12 @@ export default function TimePicker({
     className,
 }: TimePickerProps) {
     return (
-        <div className="">
-            <Input
-                type="time"
-                value={value}
-                disabled={disabled}
-                onChange={(e) => onChange?.(e.target.value)}
-                className={`h-11 pr-10 ${className ?? ""}`}
-            />
-
-        </div>
+        <Input
+            type="time"
+            value={value}
+            disabled={disabled}
+            onChange={(e) => onChange?.(e.target.value)}
+            className={`h-11 ${className ?? ""}`}
+        />
     );
 }

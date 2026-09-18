@@ -1,59 +1,116 @@
+
+"use client";
+
 import DashboardFormText from "@/components/common/DashboardFormText";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import { Input } from "@/components/ui/input";
+import {
+    Controller,
+    useFormContext,
+} from "react-hook-form";
+import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 
-export default function ConditionProvenance() {
+interface ConditionProvenanceProps {
+    lotIndex: number;
+}
+
+export default function ConditionProvenance({
+    lotIndex,
+}: ConditionProvenanceProps) {
+    const { register, control } =
+        useFormContext<AuctionFormData>();
+
     return (
         <div className="px-6">
+            {/* ==================== CONDITION REPORT ==================== */}
             <div className="mt-10">
                 <DashboardFormText text="Condition Report" />
 
                 <div className="grid grid-cols-2 gap-2 w-full">
-                    <div className="input-wrapper ">
+
+                    {/* Overall Condition */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Overall Condition Class
                         </label>
 
                         <select
                             className="w-full border rounded-md px-3 py-2"
+                            {...register(
+                                `lots.${lotIndex}.condition.overallCondition`
+                            )}
                         >
                             <option value="">
                                 Select Overall Condition Class
                             </option>
 
-                            <option value="live">
-                                Live Auction
+                            <option value="Excellent">
+                                Excellent
                             </option>
 
-                            <option value="online">
-                                Online Auction
+                            <option value="Very Good">
+                                Very Good
+                            </option>
+
+                            <option value="Good">
+                                Good
+                            </option>
+
+                            <option value="Fair">
+                                Fair
+                            </option>
+
+                            <option value="Poor">
+                                Poor
                             </option>
                         </select>
                     </div>
-                    <div className="input-wrapper ">
+
+                    {/* Frame Condition */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Frame Condition
                         </label>
 
                         <select
                             className="w-full border rounded-md px-3 py-2"
+                            {...register(
+                                `lots.${lotIndex}.condition.frameCondition`
+                            )}
                         >
                             <option value="">
-                                Select Overall Condition Class
+                                Select Frame Condition
                             </option>
 
-                            <option value="live">
-                                Live Auction
+                            <option value="Excellent">
+                                Excellent
                             </option>
 
-                            <option value="online">
-                                Online Auction
+                            <option value="Very Good">
+                                Very Good
+                            </option>
+
+                            <option value="Good">
+                                Good
+                            </option>
+
+                            <option value="Fair">
+                                Fair
+                            </option>
+
+                            <option value="Poor">
+                                Poor
+                            </option>
+
+                            <option value="Not Applicable">
+                                Not Applicable
                             </option>
                         </select>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 w-full">
+                {/* Detailed Condition Notes */}
+                <div className="grid grid-cols-1 gap-2 w-full mt-4">
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Detailed Condition Notes
@@ -61,14 +118,17 @@ export default function ConditionProvenance() {
 
                         <Input
                             type="text"
-                            placeholder="Describe any micro , surface discoloration"
+                            placeholder="Describe any micro, surface discoloration"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.condition.detailedConditionNotes`
+                            )}
                         />
                     </div>
-
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 w-full">
+                {/* Restoration History */}
+                <div className="grid grid-cols-1 gap-2 w-full mt-4">
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Restoration & Conservation History
@@ -78,16 +138,21 @@ export default function ConditionProvenance() {
                             type="text"
                             placeholder="Provide Details of any conservation treatments"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.condition.restorationHistory`
+                            )}
                         />
                     </div>
-
                 </div>
             </div>
+
+            {/* ==================== PROVENANCE ==================== */}
             <div className="mt-10">
                 <DashboardFormText text="Provenance & History" />
 
-
                 <div className="grid grid-cols-3 gap-2 w-full">
+
+                    {/* Previous Owner */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Previous Owner / collection
@@ -95,43 +160,91 @@ export default function ConditionProvenance() {
 
                         <Input
                             type="text"
-                            placeholder="e.g. Private Collection , Mumbai"
+                            placeholder="e.g. Private Collection, Mumbai"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.provenance.previousOwner`
+                            )}
                         />
                     </div>
 
-                    <div className="input-wrapper ">
+                    {/* Acquisition Method */}
+                    <div className="input-wrapper">
                         <label className="block mb-2">
                             Acquisition Method
                         </label>
 
                         <select
                             className="w-full border rounded-md px-3 py-2"
+                            {...register(
+                                `lots.${lotIndex}.provenance.acquisitionMethod`
+                            )}
                         >
                             <option value="">
-                                Select  Acquisition Method
+                                Select Acquisition Method
                             </option>
 
-                            <option value="live">
-                                Live Auction
+                            <option value="PURCHASE">
+                                Purchase
                             </option>
 
-                            <option value="online">
-                                Online Auction
+                            <option value="INHERITANCE">
+                                Inheritance
+                            </option>
+
+                            <option value="GIFT">
+                                Gift
+                            </option>
+
+                            <option value="AUCTION">
+                                Auction
+                            </option>
+
+                            <option value="COMMISSION">
+                                Commission
+                            </option>
+
+                            <option value="OTHER">
+                                Other
                             </option>
                         </select>
                     </div>
 
+                    {/* Acquisition Date */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Acquisition Date
                         </label>
 
-                        <DatePicker placeholder="Select the auction's start date" className="w-95" />
+                        <Controller
+                            name={`lots.${lotIndex}.provenance.acquisitionDate`}
+                            control={control}
+                            render={({ field }) => (
+                                <DatePicker
+                                    placeholder="Select acquisition date"
+                                    className="w-95"
+                                    value={
+                                        field.value
+                                            ? new Date(field.value)
+                                            : undefined
+                                    }
+                                    onChange={(date) =>
+                                        field.onChange(
+                                            date
+                                                ? date
+                                                    .toISOString()
+                                                    .split("T")[0]
+                                                : ""
+                                        )
+                                    }
+                                />
+                            )}
+                        />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 w-full">
+                {/* Exhibition History */}
+                <div className="grid grid-cols-1 gap-2 w-full mt-4">
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Exhibition History
@@ -141,16 +254,21 @@ export default function ConditionProvenance() {
                             type="text"
                             placeholder="List major exhibitions, museum displays"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.provenance.exhibitionHistory`
+                            )}
                         />
                     </div>
-
                 </div>
             </div>
+
+            {/* ==================== AUTHENTICATION ==================== */}
             <div className="mt-10 pb-10">
                 <DashboardFormText text="Authentication Metadata" />
 
-
                 <div className="grid grid-cols-2 gap-2 w-full">
+
+                    {/* Authenticate By */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Authenticate By
@@ -160,21 +278,45 @@ export default function ConditionProvenance() {
                             type="text"
                             placeholder="Expert Name"
                             className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(
+                                `lots.${lotIndex}.authentication.authenticatedBy`
+                            )}
                         />
                     </div>
 
+                    {/* Authenticate Date */}
                     <div className="input-wrapper">
                         <label className="block mb-2">
                             Authenticate Date
                         </label>
 
-                        <DatePicker placeholder="Select the auction's start date" className="w-xl" />
+                        <Controller
+                            name={`lots.${lotIndex}.authentication.authenticatedDate`}
+                            control={control}
+                            render={({ field }) => (
+                                <DatePicker
+                                    placeholder="Select authentication date"
+                                    className="w-xl"
+                                    value={
+                                        field.value
+                                            ? new Date(field.value)
+                                            : undefined
+                                    }
+                                    onChange={(date) =>
+                                        field.onChange(
+                                            date
+                                                ? date
+                                                    .toISOString()
+                                                    .split("T")[0]
+                                                : ""
+                                        )
+                                    }
+                                />
+                            )}
+                        />
                     </div>
-
                 </div>
-
-
             </div>
         </div>
-    )
+    );
 }
