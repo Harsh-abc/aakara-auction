@@ -75,13 +75,13 @@ export const columns: ColumnDef<Auction>[] = [
 
     // Type
     {
-        accessorKey: "type",
+        accessorKey: "auctionType",
 
-        header: "Type",
+        header: "Auction Type",
 
         cell: ({ row }) => (
             <span className="text-[12px] text-muted-foreground whitespace-nowrap">
-                {row.getValue("type")}
+                {row.getValue("auctionType")}
             </span>
         ),
     },
@@ -89,14 +89,17 @@ export const columns: ColumnDef<Auction>[] = [
     // Category
     {
         accessorKey: "category",
-
         header: "Category",
 
-        cell: ({ row }) => (
-            <span className="text-[12px] text-muted-foreground whitespace-nowrap">
-                {row.getValue("category")}
-            </span>
-        ),
+        cell: ({ row }) => {
+            const category = row.original.category;
+
+            return (
+                <span>
+                    {category?.name || "-"}
+                </span>
+            );
+        },
     },
 
     // Artworks

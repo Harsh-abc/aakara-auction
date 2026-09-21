@@ -1,5 +1,7 @@
 "use client";
-
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
+import { getLotsByAuction } from "@/services/operations/auction.api";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Field } from "@/components/ui/field";
@@ -17,6 +19,8 @@ import { AuctionLotsList } from "@/lib/data";
 import { AuctionLotForm } from "@/lib/types/AuctionsFormData";
 
 interface LotsListProps {
+    auctionUuid?: string;
+
     lots: (AuctionLotForm & { id: string })[];
     onAddLot: () => void;
     onSelectLot: (index: number) => void;
@@ -24,6 +28,7 @@ interface LotsListProps {
 }
 
 export default function LotsList({
+    auctionUuid,
     lots,
     onAddLot,
     onSelectLot,
@@ -31,35 +36,55 @@ export default function LotsList({
 
 }: LotsListProps) {
 
+    const dispatch = useDispatch<AppDispatch>();
+
+    const {
+        lots: fetchedLots,
+        loading,
+        error,
+    } = useSelector((state: RootState) => state.auction);
+
+    React.useEffect(() => {
+        if (!auctionUuid) return;
+
+        dispatch(
+            getLotsByAuction({
+                auctionUuid,
+            })
+        );
+    }, [auctionUuid, dispatch]);
+
+    const displayLots = auctionUuid ? fetchedLots : lots;
+
     const columns = React.useMemo(
         () =>
             getColumns({
                 onEdit: (id) => {
-                    const index = lots.findIndex(
+                    const index = displayLots.findIndex(
                         (lot) => lot.id === id
-                    )
+                    );
 
                     if (index !== -1) {
-                        onSelectLot(index)
+                        onSelectLot(index);
                     }
                 },
 
                 onView: (id) => {
-                    console.log("View lot:", id)
+                    console.log("View lot:", id);
                 },
 
                 onDelete: (id) => {
-                    const index = lots.findIndex(
+                    const index = displayLots.findIndex(
                         (lot) => lot.id === id
-                    )
+                    );
 
                     if (index !== -1) {
-                        onRemoveLot(index)
+                        onRemoveLot(index);
                     }
                 },
             }),
-        [lots, onSelectLot, onRemoveLot]
-    )
+        [displayLots, onSelectLot, onRemoveLot]
+    );
 
 
     const items = [
@@ -303,10 +328,10 @@ export default function LotsList({
                 <div className="space-y-4">
 
 
-                    {lots.length > 0 ? (
+                    {displayLots.length > 0 ? (
                         <AuctionLotsDataTable
                             columns={columns}
-                            data={lots}
+                            data={displayLots}
                             onAddLot={onAddLot}
                         />
                     ) : (

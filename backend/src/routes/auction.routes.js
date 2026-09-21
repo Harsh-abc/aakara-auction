@@ -12,7 +12,7 @@ auctionRouter.post('/create-auction', authenticate, requireRole("SUPER_ADMIN", "
 
 auctionRouter.get('/getAuction', authenticate, getAuction)
 
-auctionRouter.get('/getLots/:auctionUuid/lots', getLotByAuctionIdController)
+auctionRouter.get('/getLots/:auctionUuid/lots', authenticate, getLotByAuctionIdController)
 
 
 export default auctionRouter;

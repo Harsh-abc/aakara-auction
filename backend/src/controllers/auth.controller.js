@@ -81,7 +81,7 @@ export const login = async (req, res, next) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            path: '/api/auth', // scope the cookie to auth routes (refresh/logout live here)
+            path: '/', // scope the cookie to auth routes (refresh/logout live here)
             maxAge: REFRESH_COOKIE_MAX_AGE_MS,
         });
 

@@ -23,7 +23,7 @@ const attemptsKey = (email) => `register:otp:verify-attempts:${email}`;
 
 // LOGIN
 
-const ACCESS_TOKEN_TTL = '15m';
+const ACCESS_TOKEN_TTL = '300m';
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const REFRESH_TOKEN_TTL_STRING = '7d';
 

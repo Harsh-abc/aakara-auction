@@ -3,13 +3,15 @@ import {
     PayloadAction,
 } from "@reduxjs/toolkit";
 
-import { createAuction } from "@/services/operations/auction.api";
+import { createAuction, getAuctions, getLotsByAuction } from "@/services/operations/auction.api";
 
 interface AuctionState {
     loading: boolean;
     error: string | null;
     success: boolean;
     auction: any | null;
+    auctions: any[];
+    lots: any[];
 }
 
 const initialState: AuctionState = {
@@ -17,6 +19,8 @@ const initialState: AuctionState = {
     error: null,
     success: false,
     auction: null,
+    auctions: [],
+    lots: [],
 };
 
 const auctionSlice = createSlice({
@@ -66,7 +70,49 @@ const auctionSlice = createSlice({
                         action.payload ||
                         "Failed to create auction";
                 }
-            );
+            )
+
+            .addCase(
+                getAuctions.pending,
+                (state) => {
+                    state.loading = true;
+                    state.error = null;
+                }
+            )
+
+            .addCase(
+                getAuctions.fulfilled,
+                (state, action) => {
+                    state.loading = false;
+                    state.auctions = action.payload.data;
+                }
+            )
+
+            .addCase(
+                getAuctions.rejected,
+                (state, action) => {
+                    state.loading = false;
+
+                    state.error =
+                        action.payload ||
+                        "Failed to fetch auctions";
+                }
+            )
+
+            .addCase(getLotsByAuction.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+
+            .addCase(getLotsByAuction.fulfilled, (state, action) => {
+                state.loading = false;
+                state.lots = action.payload.data;
+            })
+
+            .addCase(getLotsByAuction.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload || "Failed to fetch lots";
+            });
     },
 });
 

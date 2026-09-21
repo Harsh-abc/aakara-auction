@@ -203,3 +203,59 @@ export interface CreateAuctionResponse {
     message: string;
     data: any;
 }
+
+
+
+
+// GET AUCTION 
+
+export interface Auction {
+    uuid: string;
+    title: string;
+    slug: string;
+    status: string;
+    auctionType: string;
+
+    category?: {
+        uuid: string;
+        name: string;
+    };
+
+    subCategory?: {
+        uuid: string;
+        name: string;
+    };
+
+    currency?: {
+        code: string;
+        name: string;
+    };
+
+    creator?: {
+        uuid: string;
+        username: string;
+        email: string;
+    };
+
+    tags?: any[];
+    auctionFees?: any[];
+
+    createdAt: string;
+    updatedAt: string;
+}
+
+
+export interface GetAuctionsResponse {
+    success: boolean;
+    message: string;
+    data: Auction[];
+}
+
+export interface GetAuctionsParams {
+    search?: string;
+    status?: string;
+    auctionType?: string;
+}
+export interface GetAuctionsLotsParams {
+    auctionUuid: string;
+}
