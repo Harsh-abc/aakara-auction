@@ -53,7 +53,7 @@ export default function CreateAuctions() {
                 subCategoryUuid: "",
                 auctionLocation: "",
                 auctionTags: [],
-                currency: "INR",
+                currency: ["INR"],
                 coverImage: null,
             },
 
@@ -306,18 +306,18 @@ export default function CreateAuctions() {
                 </div>
 
                 {/* API Error */}
-                {error && (
+                {/* {error && (
                     <div className="fixed bottom-20 left-1/2 -translate-x-1/2 rounded-md bg-red-100 px-4 py-3 text-sm text-red-700">
                         {error}
                     </div>
-                )}
+                )} */}
 
                 {/* API Success */}
-                {success && (
+                {/* {success && (
                     <div className="fixed bottom-20 left-1/2 -translate-x-1/2 rounded-md bg-green-100 px-4 py-3 text-sm text-green-700">
                         Auction created successfully.
                     </div>
-                )}
+                )} */}
 
             </div>
         </FormProvider>

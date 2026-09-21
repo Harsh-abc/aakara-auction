@@ -1,4 +1,6 @@
+
 import prisma from "../libs/prisma.js";
+import { serializeBigInt } from "../utils/serialize.js";
 
 export const createAuctionService = async (data) => {
     const {
@@ -44,16 +46,35 @@ export const createAuctionService = async (data) => {
         createdBy,
     } = data;
 
+    // -----------------------------------
+    // Basic validations
+    // -----------------------------------
+
     if (!createdBy) {
         throw new Error("Authenticated user is required");
     }
 
-    if (!lots.length) {
-        throw new Error("At least one lot is required");
+    if (!Array.isArray(tags)) {
+        throw new Error("Tags must be an array");
     }
+
+    if (!Array.isArray(fees)) {
+        throw new Error("Fees must be an array");
+    }
+
+    if (!Array.isArray(lots)) {
+        throw new Error("Lots must be an array");
+    }
+
+    // Lots are optional during draft creation.
+    // Validate minimum lot requirement when publishing
+    // the auction instead of during draft creation.
 
     return await prisma.$transaction(async (tx) => {
 
+        // -----------------------------------
+        // Validate category
+        // -----------------------------------
 
         const category = await tx.category.findUnique({
             where: {
@@ -65,6 +86,9 @@ export const createAuctionService = async (data) => {
             throw new Error("Invalid category");
         }
 
+        // -----------------------------------
+        // Validate subcategory
+        // -----------------------------------
 
         let subCategory = null;
 
@@ -75,116 +99,140 @@ export const createAuctionService = async (data) => {
                 },
             });
 
-            if (
-                !subCategory ||
-                !subCategory.isActive
-            ) {
-                throw new Error(
-                    "Invalid subcategory"
-                );
+            if (!subCategory || !subCategory.isActive) {
+                throw new Error("Invalid subcategory");
             }
 
-            if (
-                subCategory.categoryId !== category.id
-            ) {
+            if (subCategory.categoryId !== category.id) {
                 throw new Error(
                     "Subcategory does not belong to selected category"
                 );
             }
         }
 
+        // -----------------------------------
+        // Validate currency
+        // -----------------------------------
 
-
-        const currencyRecord =
-            await tx.currency.findUnique({
-                where: {
-                    code: currency,
-                },
-            });
+        const currencyCode = Array.isArray(currency)
+            ? currency[0]
+            : currency;
 
         if (
-            !currencyRecord ||
-            !currencyRecord.isActive
+            typeof currencyCode !== "string" ||
+            !currencyCode.trim()
         ) {
-            throw new Error(
-                "Invalid currency"
-            );
+            throw new Error("Valid currency code is required");
         }
 
+        const currencyRecord = await tx.currency.findUnique({
+            where: {
+                code: currencyCode.trim().toUpperCase(),
+            },
+        });
 
+        if (!currencyRecord || !currencyRecord.isActive) {
+            throw new Error("Invalid currency");
+        }
 
-        const auction =
-            await tx.auction.create({
-                data: {
-                    title,
-                    slug,
-                    description,
-                    short_description,
-                    coverImageUrl,
+        // -----------------------------------
+        // Create auction
+        // -----------------------------------
 
-                    auctionType,
-                    status: status || "DRAFT",
+        const auction = await tx.auction.create({
+            data: {
+                title,
+                slug,
+                description,
+                short_description,
+                coverImageUrl,
 
-                    startTime: new Date(startTime),
-                    endTime: new Date(endTime),
+                auctionType,
+                status: status || "DRAFT",
 
-                    startDate: new Date(startDate),
-                    endDate: new Date(endDate),
+                startTime: startTime
+                    ? new Date(startTime)
+                    : null,
 
-                    previewStartAt:
-                        previewStartAt
-                            ? new Date(previewStartAt)
-                            : null,
+                endTime: endTime
+                    ? new Date(endTime)
+                    : null,
 
-                    registrationRequired:
-                        registrationRequired ?? true,
+                startDate: startDate
+                    ? new Date(startDate)
+                    : null,
 
-                    registrationStarts:
-                        new Date(registrationStarts),
+                endDate: endDate
+                    ? new Date(endDate)
+                    : null,
 
-                    registrationDeadline:
-                        registrationDeadline
-                            ? new Date(
-                                registrationDeadline
-                            )
-                            : null,
+                previewStartAt: previewStartAt
+                    ? new Date(previewStartAt)
+                    : null,
 
-                    timezone:
-                        timezone || "Asia/Kolkata",
+                registrationRequired:
+                    registrationRequired ?? true,
 
-                    currencyId:
-                        currencyRecord.id,
+                registrationStarts: registrationStarts
+                    ? new Date(registrationStarts)
+                    : null,
 
-                    isOnline:
-                        isOnline ?? true,
+                registrationDeadline:
+                    registrationDeadline
+                        ? new Date(registrationDeadline)
+                        : null,
 
-                    venue,
+                timezone: timezone || "Asia/Kolkata",
 
-                    termsAndConditions,
-
-                    categoryId:
-                        category.id,
-
-                    subCategoryId:
-                        subCategory?.id ?? null,
-
-                    createdBy,
-
-                    shippingStrategy,
-
-                    visibility,
+                currency: {
+                    connect: {
+                        id: currencyRecord.id,
+                    },
                 },
-            });
 
+                isOnline: isOnline ?? true,
+
+                venue,
+
+                termsAndConditions,
+
+                category: {
+                    connect: {
+                        id: category.id,
+                    },
+                },
+
+                subCategory: subCategory
+                    ? {
+                        connect: {
+                            id: subCategory.id,
+                        },
+                    }
+                    : undefined,
+
+
+                creator: {
+                    connect: {
+                        id: BigInt(createdBy),
+                    },
+                },
+
+                shippingStrategy,
+
+                visibility,
+            },
+        });
+
+        // -----------------------------------
+        // Create auction tags
+        // -----------------------------------
 
         for (const tagSlug of tags) {
-
-            const tag =
-                await tx.auctionTag.findUnique({
-                    where: {
-                        slug: tagSlug,
-                    },
-                });
+            const tag = await tx.auctionTag.findUnique({
+                where: {
+                    slug: tagSlug,
+                },
+            });
 
             if (!tag || !tag.isActive) {
                 throw new Error(
@@ -200,9 +248,11 @@ export const createAuctionService = async (data) => {
             });
         }
 
+        // -----------------------------------
+        // Create auction fees
+        // -----------------------------------
 
         for (const fee of fees) {
-
             await tx.auctionFee.create({
                 data: {
                     auctionId: auction.id,
@@ -228,109 +278,203 @@ export const createAuctionService = async (data) => {
             });
         }
 
-        for (const lot of lots) {
+        // -----------------------------------
+        // Create lots
+        // -----------------------------------
 
-            const auctionItem =
-                await tx.auctionItem.create({
-                    data: {
+        if (lots.length > 0) {
+            for (const lot of lots) {
 
-                        auctionId:
-                            auction.id,
+                // Validate required lot fields
+                if (!lot.itemNumber) {
+                    throw new Error(
+                        "Lot item number is required"
+                    );
+                }
 
-                        itemNumber:
-                            lot.itemNumber,
+                if (!lot.title) {
+                    throw new Error(
+                        "Lot title is required"
+                    );
+                }
 
-                        title:
-                            lot.title,
+                if (!lot.editionType) {
+                    throw new Error(
+                        "Lot edition type is required"
+                    );
+                }
 
-                        description:
-                            lot.description,
+                // -----------------------------------
+                // Create auction item
+                // -----------------------------------
 
-                        artistName:
-                            lot.artistName,
+                const auctionItem =
+                    await tx.auctionItem.create({
+                        data: {
 
-                        medium:
-                            lot.medium,
+                            auctionId:
+                                auction.id,
 
-                        dimensions:
-                            lot.dimensions,
+                            itemNumber:
+                                lot.itemNumber,
 
-                        yearCreated:
-                            lot.yearCreated,
+                            title:
+                                lot.title,
 
-                        provenance:
-                            lot.provenance,
+                            description:
+                                lot.description,
 
-                        conditionReport:
-                            lot.conditionReport,
-                        overallCondition: lot.overallCondition,
-                        frameCondition: lot.frameCondition,
-                        detailedConditionNotes: lot.detailedConditionNotes,
-                        restorationHistory: lot.restorationHistory,
-                        previousOwner: lot.previousOwner,
-                        acquisitionMethod: lot.acquisitionMethod,
-                        acquisitionDate: lot.acquisitionDate,
-                        exhibitionHistory: lot.exhibitionHistory,
-                        authenticateBy: lot.authenticateBy,
-                        auctheticateDate: lot.auctheticateDate,
-                        editionType: lot.editionType,
-                        startingPrice:
-                            lot.startingPrice,
+                            artistName:
+                                lot.artistName,
 
-                        reservePrice:
-                            lot.reservePrice,
+                            medium:
+                                lot.medium,
 
-                        estimateLow:
-                            lot.estimateLow,
+                            yearCreated:
+                                lot.yearCreated,
 
-                        estimateHigh:
-                            lot.estimateHigh,
+                            provenance:
+                                lot.provenance,
 
-                        status:
-                            lot.status || "DRAFT",
+                            conditionReport:
+                                lot.conditionReport,
 
-                        scheduledStartAt:
-                            lot.scheduledStartAt
-                                ? new Date(
-                                    lot.scheduledStartAt
-                                )
-                                : null,
+                            overallCondition:
+                                lot.overallCondition,
 
-                        scheduledEndAt:
-                            lot.scheduledEndAt
-                                ? new Date(
-                                    lot.scheduledEndAt
-                                )
-                                : null,
+                            frameCondition:
+                                lot.frameCondition,
 
-                        insureanceValue: lot.insureanceValue,
-                        gstRate: lot.gstRate,
-                        hsnCode: lot.hsnCode,
+                            detailedConditionNotes:
+                                lot.detailedConditionNotes,
 
-                        shippingInfo:
-                            lot.shippingInfo,
+                            restorationHistory:
+                                lot.restorationHistory,
 
-                        isFeatured:
-                            lot.isFeatured ?? false,
+                            previousOwner:
+                                lot.previousOwner,
 
-                        categoryId:
-                            category.id,
+                            acquisitionMethod:
+                                lot.acquisitionMethod,
 
-                        subCategoryId:
-                            subCategory?.id ?? null,
+                            acquisitionDate:
+                                lot.acquisitionDate
+                                    ? new Date(
+                                        lot.acquisitionDate
+                                    )
+                                    : null,
 
-                        currencyId:
-                            currencyRecord.id,
-                    },
-                });
+                            exhibitionHistory:
+                                lot.exhibitionHistory,
 
-            if (
-                lot.images &&
-                lot.images.length > 0
-            ) {
-                await tx.auctionImage.createMany({
-                    data: lot.images.map(
-                        (image) => ({
+                            authenticateBy:
+                                lot.authenticateBy,
+
+                            auctheticateDate:
+                                lot.auctheticateDate
+                                    ? new Date(
+                                        lot.auctheticateDate
+                                    )
+                                    : null,
+
+                            editionType:
+                                lot.editionType,
+
+                            startingPrice:
+                                lot.startingPrice,
+
+                            reservePrice:
+                                lot.reservePrice,
+
+                            estimateLow:
+                                lot.estimateLow,
+
+                            estimateHigh:
+                                lot.estimateHigh,
+
+                            status:
+                                lot.status || "DRAFT",
+
+                            scheduledStartAt:
+                                lot.scheduledStartAt
+                                    ? new Date(
+                                        lot.scheduledStartAt
+                                    )
+                                    : null,
+
+                            scheduledEndAt:
+                                lot.scheduledEndAt
+                                    ? new Date(
+                                        lot.scheduledEndAt
+                                    )
+                                    : null,
+
+                            insureanceValue:
+                                lot.insureanceValue,
+
+                            gstRate:
+                                lot.gstRate,
+
+                            hsnCode:
+                                lot.hsnCode,
+
+                            shippingInfo:
+                                lot.shippingInfo,
+
+                            isFeatured:
+                                lot.isFeatured ?? false,
+
+                            categoryId:
+                                category.id,
+
+                            subCategoryId:
+                                subCategory?.id ?? null,
+
+                            currencyId:
+                                currencyRecord.id,
+
+                            // -----------------------------------
+                            // Create dimension relation
+                            // -----------------------------------
+
+                            dimension: lot.dimension
+                                ? {
+                                    create: {
+                                        width:
+                                            lot.dimension.width,
+
+                                        height:
+                                            lot.dimension.height,
+
+                                        depth:
+                                            lot.dimension.depth,
+
+                                        dimensionUnit:
+                                            lot.dimension.dimensionUnit
+                                            || "CM",
+
+                                        weight:
+                                            lot.dimension.weight,
+
+                                        weightUnit:
+                                            lot.dimension.weightUnit
+                                            || null,
+                                    },
+                                }
+                                : undefined,
+                        },
+                    });
+
+                // -----------------------------------
+                // Create lot images
+                // -----------------------------------
+
+                if (
+                    Array.isArray(lot.images) &&
+                    lot.images.length > 0
+                ) {
+                    await tx.auctionImage.createMany({
+                        data: lot.images.map((image) => ({
                             itemId:
                                 auctionItem.id,
 
@@ -348,27 +492,29 @@ export const createAuctionService = async (data) => {
 
                             isPrimary:
                                 image.isPrimary ?? false,
-                            mediaType: image.mediaType ?? "IMAGE",
-                        })
-                    ),
-                });
-            }
 
+                            mediaType:
+                                image.mediaType || "IMAGE",
+                        })),
+                    });
+                }
 
+                // -----------------------------------
+                // Create lot documents
+                // -----------------------------------
 
-            if (
-                lot.documents &&
-                lot.documents.length > 0
-            ) {
-                await tx.auctionDocument.createMany({
-                    data: lot.documents.map(
-                        (document) => ({
+                if (
+                    Array.isArray(lot.documents) &&
+                    lot.documents.length > 0
+                ) {
+                    await tx.auctionDocument.createMany({
+                        data: lot.documents.map((document) => ({
                             itemId:
                                 auctionItem.id,
 
                             documentType:
-                                document.documentType ||
-                                "OTHER",
+                                document.documentType
+                                || "OTHER",
 
                             fileUrl:
                                 document.fileUrl,
@@ -384,12 +530,15 @@ export const createAuctionService = async (data) => {
 
                             description:
                                 document.description,
-                        })
-                    ),
-                });
+                        })),
+                    });
+                }
             }
         }
 
+        // -----------------------------------
+        // Return created auction
+        // -----------------------------------
 
         return await tx.auction.findUnique({
             where: {
@@ -398,7 +547,9 @@ export const createAuctionService = async (data) => {
 
             include: {
                 category: true,
+
                 subCategory: true,
+
                 currency: true,
 
                 tags: {
@@ -411,7 +562,10 @@ export const createAuctionService = async (data) => {
 
                 items: {
                     include: {
+                        dimension: true,
+
                         images: true,
+
                         documents: true,
                     },
 
@@ -422,4 +576,170 @@ export const createAuctionService = async (data) => {
             },
         });
     });
+};
+
+
+
+
+export const getAuctionService = async (data = {}) => {
+    const {
+        search,
+        status,
+        auctionType,
+        categoryUuid,
+        visibility,
+    } = data;
+
+    const where = {
+        deletedAt: null,
+
+        ...(status && {
+            status,
+        }),
+
+        ...(auctionType && {
+            auctionType,
+        }),
+
+        ...(visibility && {
+            visibility,
+        }),
+
+        ...(search && {
+            OR: [
+                {
+                    title: {
+                        contains: search,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    slug: {
+                        contains: search,
+                        mode: "insensitive",
+                    },
+                },
+            ],
+        }),
+    };
+
+    if (categoryUuid) {
+        const category = await prisma.category.findUnique({
+            where: {
+                uuid: categoryUuid,
+            },
+            select: {
+                id: true,
+            },
+        });
+
+        if (!category) {
+            throw new Error("Category not found");
+        }
+
+        where.categoryId = category.id;
+    }
+
+    const auctions = await prisma.auction.findMany({
+        where,
+
+        orderBy: {
+            createdAt: "desc",
+        },
+
+        include: {
+            currency: true,
+            category: true,
+            subCategory: true,
+
+            creator: {
+                select: {
+                    id: true,
+                    uuid: true,
+                    username: true,
+                    email: true,
+                },
+            },
+
+            tags: true,
+            auctionFees: true,
+        },
+    });
+
+    return {
+        success: true,
+        message: "Auctions fetched successfully",
+        data: serializeBigInt(auctions),
+    };
+};
+
+
+export const getLotByAuctionId = async (data) => {
+    const { auctionUuid } = data;
+
+    if (!auctionUuid) {
+        throw new Error("Auction UUID is required");
+    }
+
+    // 1. Find auction using UUID
+    const auction = await prisma.auction.findUnique({
+        where: {
+            uuid: auctionUuid,
+        },
+
+        select: {
+            id: true,
+            uuid: true,
+            title: true,
+            slug: true,
+            status: true,
+        },
+    });
+
+    if (!auction) {
+        throw new Error("Auction not found");
+    }
+
+    // 2. Fetch all lots belonging to the auction
+    const lots = await prisma.auctionItem.findMany({
+        where: {
+            auctionId: auction.id,
+        },
+
+        orderBy: {
+            itemNumber: "asc",
+        },
+
+        include: {
+            images: true,
+
+            documents: true,
+
+            category: true,
+
+            subCategory: true,
+
+            currency: true,
+
+            currentBidder: {
+                select: {
+                    id: true,
+                    uuid: true,
+                    username: true,
+                    email: true,
+                },
+            },
+        },
+    });
+
+    return {
+        success: true,
+
+        message: "Lots fetched successfully",
+
+        data: {
+            auction: serializeBigInt(auction),
+            lots: serializeBigInt(lots),
+        },
+    };
 };
