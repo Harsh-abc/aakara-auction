@@ -354,3 +354,77 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
         refreshToken,
     };
 };
+
+
+
+
+
+export const refreshService = async (refreshToken) => {
+    if (!refreshToken) {
+        const error = new Error('Refresh token missing');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    try {
+        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    } catch {
+        const error = new Error('Invalid or expired refresh token');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    const tokenHash = hashToken(refreshToken);
+
+    const session = await prisma.userSession.findFirst({
+        where: { refreshTokenHash: tokenHash, expiresAt: { gt: new Date() } },
+    });
+
+    if (!session) {
+        const error = new Error('Session not found or expired');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: session.userId } });
+
+    if (!user || user.status !== 'ACTIVE') {
+        const error = new Error('Account is not active');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    const { roleName, permissions } = await getRolePermissions(user.roleId);
+    const sessionId = crypto.randomUUID();
+
+    const { accessToken, refreshToken: newRefreshToken } = issueTokens({
+        userId: user.id,
+        uuid: user.uuid,
+        roleId: user.roleId,
+        sessionId,
+        roleName,
+        permissions,
+    });
+
+    // rotate: same session row, new hash + fresh expiry
+    await prisma.userSession.update({
+        where: { id: session.id },
+        data: {
+            refreshTokenHash: hashToken(newRefreshToken),
+            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000),
+        },
+    });
+
+    return {
+        accessToken,
+        refreshToken: newRefreshToken,
+        user: { uuid: user.uuid, username: user.username, email: user.email, roleId: user.roleId.toString() },
+        role: roleName,
+        permissions,
+    };
+};
+
+export const logoutService = async (refreshToken) => {
+    if (!refreshToken) return;
+    await prisma.userSession.deleteMany({ where: { refreshTokenHash: hashToken(refreshToken) } });
+};

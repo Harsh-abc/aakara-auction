@@ -1,5 +1,5 @@
 import { registerSchema, verifyOtpSchema, loginSchema } from '../validations/auth.validation.js';
-import { registerService, verifyOtpService, loginService } from '../services/auth.services.js';
+import { registerService, verifyOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
 import { ZodError } from 'zod';
 
 export const register = async (req, res, next) => {
@@ -98,5 +98,56 @@ export const login = async (req, res, next) => {
             success: false,
             message: err.message || "Something went wrong",
         });
+    }
+};
+
+
+
+
+
+const setRefreshCookie = (res, token) => {
+    res.cookie(REFRESH_COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: REFRESH_COOKIE_MAX_AGE_MS,
+    });
+};
+
+export const refresh = async (req, res) => {
+    try {
+        const token = req.cookies?.[REFRESH_COOKIE_NAME];
+        const result = await refreshService(token);
+
+        setRefreshCookie(res, result.refreshToken);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                user: result.user,
+                role: result.role,
+                permissions: result.permissions,
+                accessToken: result.accessToken,
+            },
+        });
+    } catch (err) {
+        res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || 'Could not refresh session',
+        });
+    }
+};
+
+export const logout = async (req, res) => {
+    const token = req.cookies?.[REFRESH_COOKIE_NAME];
+    try {
+        await logoutService(token);
+    } catch (err) {
+        console.error('logoutService error:', err);
+    } finally {
+        res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+        return res.status(200).json({ success: true, message: 'Logged out' });
     }
 };

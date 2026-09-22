@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, register, verifyOtp } from '../controllers/auth.controller.js';
+import { login, logout, refresh, register, verifyOtp } from '../controllers/auth.controller.js';
 
 const authRouter = Router();
 
@@ -11,5 +11,11 @@ authRouter.post('/verify-otp', verifyOtp);
 
 // LOGIN ROUTE
 authRouter.post('/login', login)
+
+// REFRESH ROUTE
+authRouter.post('/refresh', refresh);
+
+// LOGOUT
+authRouter.post('/logout', logout);
 
 export default authRouter;
