@@ -1,5 +1,6 @@
 import {
     createAuctionService,
+    deleteAuctionService,
     getAuctionService,
     getLotByAuctionId,
 } from "../services/auction.services.js";
@@ -249,6 +250,36 @@ export const getLotByAuctionIdController = async (req, res) => {
         return res.status(status).json({
             success: false,
             message: status === 500 ? "Failed to fetch lots" : error.message,
+        });
+    }
+};
+
+
+// DELETE AUCTION WITH LOTS INSIDE THE AUCTION
+
+export const deleteAuction = async (req, res) => {
+    try {
+        const { auctionUuid } = req.params;
+
+        const result = await deleteAuctionService({
+            auctionUuid,
+            deletedBy: req.user?.userId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `"${result.title}" and its ${result.deletedLots} lot(s) were deleted`,
+            data: {
+                uuid: result.uuid,
+                deletedLots: result.deletedLots,
+            },
+        });
+    } catch (error) {
+        console.error("Delete auction error:", error);
+        const status = error.statusCode || (error.code === "P2025" ? 404 : 500);
+        return res.status(status).json({
+            success: false,
+            message: status === 500 ? "Failed to delete auction" : error.message,
         });
     }
 };

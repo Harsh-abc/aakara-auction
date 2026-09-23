@@ -4,11 +4,13 @@ import {
     createAuction,
     getAuctions,
     getLotsByAuction,
+    deleteAuction
 } from "@/services/operations/auction.api";
 import type {
     Auction,
     AuctionLot,
     GetAuctionLotsResponse,
+    DeleteAuctionResponse
 } from "@/lib/types/auction.types";
 
 /**
@@ -36,6 +38,10 @@ interface AuctionState {
     lotsAuction: GetAuctionLotsResponse["data"]["auction"] | null;
     lotsLoading: boolean;
     lotsError: string | null;
+
+    deletingUuid: string | null;
+    deleteError: string | null;
+
 }
 
 const initialState: AuctionState = {
@@ -52,6 +58,9 @@ const initialState: AuctionState = {
     lotsAuction: null,
     lotsLoading: false,
     lotsError: null,
+
+    deletingUuid: null,
+    deleteError: null,
 };
 
 const auctionSlice = createSlice({
@@ -72,6 +81,11 @@ const auctionSlice = createSlice({
             state.lotsAuction = null;
             state.lotsError = null;
         },
+
+        clearDeleteError: (state) => {
+            state.deleteError = null;
+        },
+
     },
 
     extraReducers: (builder) => {
@@ -129,10 +143,28 @@ const auctionSlice = createSlice({
                 state.lotsLoading = false;
                 state.lots = [];
                 state.lotsError = action.payload ?? action.error.message ?? "Failed to fetch lots";
+            })
+
+            .addCase(deleteAuction.pending, (state, action) => {
+                state.deletingUuid = action.meta.arg.auctionUuid;
+                state.deleteError = null;
+            })
+            .addCase(deleteAuction.fulfilled, (state, action) => {
+                const uuid = action.meta.arg.auctionUuid;
+                state.deletingUuid = null;
+                state.auctions = state.auctions.filter((a) => a.uuid !== uuid);
+                if (state.lotsAuction?.uuid === uuid) {
+                    state.lots = [];
+                    state.lotsAuction = null;
+                }
+            })
+            .addCase(deleteAuction.rejected, (state, action) => {
+                state.deletingUuid = null;
+                state.deleteError = action.payload ?? action.error.message ?? "Failed to delete auction";
             });
     },
 });
 
-export const { clearAuctionState, clearLots } = auctionSlice.actions;
+export const { clearAuctionState, clearLots, clearDeleteError } = auctionSlice.actions;
 
 export default auctionSlice.reducer;

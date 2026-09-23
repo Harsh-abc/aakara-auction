@@ -320,3 +320,10 @@ export interface GetAuctionsParams {
 export interface GetAuctionsLotsParams {
     auctionUuid: string;
 }
+
+
+export interface DeleteAuctionResponse {
+    success: boolean;
+    message: string;
+    data: { uuid: string; deletedLots: number };
+}

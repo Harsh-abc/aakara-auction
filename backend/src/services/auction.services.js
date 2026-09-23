@@ -608,3 +608,58 @@ export const getLotByAuctionId = async ({ auctionUuid }) => {
         },
     };
 };
+
+
+
+export const deleteAuctionService = async ({ auctionUuid, deletedBy }) => {
+    if (!auctionUuid) throw httpError("Auction UUID is required");
+
+    const result = await prisma.$transaction(
+        async (tx) => {
+            const auction = await tx.auction.findUnique({
+                where: { uuid: auctionUuid },
+                select: {
+                    id: true,
+                    uuid: true,
+                    title: true,
+                    status: true,
+                    items: { select: { id: true } },
+                },
+            });
+
+            if (!auction) throw httpError("Auction not found", 404);
+
+            if (auction.status !== "DRAFT") {
+                throw httpError("Only draft auctions can be deleted", 409);
+            }
+
+            const itemIds = auction.items.map((item) => item.id);
+
+            if (itemIds.length) {
+                await tx.auctionImage.deleteMany({ where: { itemId: { in: itemIds } } });
+                await tx.auctionDocument.deleteMany({ where: { itemId: { in: itemIds } } });
+                await tx.auctionItemDimension.deleteMany({ where: { auctionItemId: { in: itemIds } } });
+            }
+
+            await tx.auctionTagRelation.deleteMany({ where: { auctionId: auction.id } });
+            await tx.auctionFee.deleteMany({ where: { auctionId: auction.id } });
+            await tx.auctionRule.deleteMany({ where: { auctionId: auction.id } });
+            await tx.auctionStatusHistory.deleteMany({ where: { auctionId: auction.id } });
+
+            const { count: deletedLots } = await tx.auctionItem.deleteMany({
+                where: { auctionId: auction.id },
+            });
+
+            await tx.auction.delete({ where: { id: auction.id } });
+
+            return { uuid: auction.uuid, title: auction.title, deletedLots };
+        },
+        { maxWait: 10_000, timeout: 30_000 }
+    );
+
+    console.info(
+        `[auction] deleted draft "${result.title}" (${result.uuid}) with ${result.deletedLots} lot(s) by user ${deletedBy}`
+    );
+
+    return result;
+};

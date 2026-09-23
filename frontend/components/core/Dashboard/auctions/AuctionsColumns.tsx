@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Eye, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpDown, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import type { Auction, AuctionStatus } from "@/lib/types/auction.types";
@@ -16,6 +16,7 @@ export interface AuctionTableMeta {
     onEdit?: (auction: Auction) => void;
     onView?: (auction: Auction) => void;
     onDelete?: (auction: Auction) => void;
+    deletingUuid?: string | null;
 }
 
 // =====================================================================
@@ -254,12 +255,16 @@ export const columns: ColumnDef<Auction>[] = [
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-red-500 hover:text-red-600"
-                        title={canDelete ? "Delete" : "Only drafts can be deleted"}
+                        title={canDelete ? "Delete" : "Only draft auctions can be deleted"}
                         aria-label="Delete auction"
-                        disabled={!canDelete}
+                        disabled={!canDelete || meta?.deletingUuid === auction.uuid}
                         onClick={() => meta?.onDelete?.(auction)}
                     >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        {meta?.deletingUuid === auction.uuid ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                        )}
                     </Button>
                 </div>
             );

@@ -5,6 +5,7 @@ import { apiConnector } from "../apiConnector";
 import { auctionEndPoints } from "../api";
 import {
     CreateAuctionResponse,
+    DeleteAuctionResponse,
     GetAuctionLotsResponse,
     GetAuctionsLotsParams,
     GetAuctionsParams,
@@ -107,6 +108,29 @@ export const getLotsByAuction = createAsyncThunk<GetAuctionLotsResponse, GetAuct
             return response.data;
         } catch (error) {
             return rejectWithValue(toErrorMessage(error, "Failed to fetch lots"));
+        }
+    }
+);
+
+
+
+
+
+export const deleteAuction = createAsyncThunk<DeleteAuctionResponse, { auctionUuid: string }, ThunkConfig>(
+    "auction/deleteAuction",
+    async ({ auctionUuid }, { getState, rejectWithValue }) => {
+        const token = getState().auth.accessToken;
+        if (!token) return rejectWithValue("Authentication token not found");
+
+        try {
+            const response = await apiConnector<DeleteAuctionResponse>({
+                method: "DELETE",
+                url: auctionEndPoints.DELETE_AUCTION_API(auctionUuid),
+                header: authHeader(token),
+            });
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(toErrorMessage(error, "Failed to delete auction"));
         }
     }
 );
