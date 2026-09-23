@@ -1,17 +1,41 @@
+import { createSlice } from "@reduxjs/toolkit";
+
 import {
-    createSlice,
-    PayloadAction,
-} from "@reduxjs/toolkit";
+    createAuction,
+    getAuctions,
+    getLotsByAuction,
+} from "@/services/operations/auction.api";
+import type {
+    Auction,
+    AuctionLot,
+    GetAuctionLotsResponse,
+} from "@/lib/types/auction.types";
 
-import { createAuction, getAuctions, getLotsByAuction } from "@/services/operations/auction.api";
-
+/**
+ * Each request has its own loading/error so that, for example, fetching the
+ * auction list doesn't disable the "Publish" button or show a list error
+ * inside the create form.
+ *
+ * `loading` / `error` / `success` are kept for CREATE so CreateAuctions.tsx
+ * keeps working unchanged.
+ */
 interface AuctionState {
+    // create
     loading: boolean;
     error: string | null;
     success: boolean;
-    auction: any | null;
-    auctions: any[];
-    lots: any[];
+    auction: Auction | null;
+
+    // list
+    auctions: Auction[];
+    auctionsLoading: boolean;
+    auctionsError: string | null;
+
+    // lots of one auction
+    lots: AuctionLot[];
+    lotsAuction: GetAuctionLotsResponse["data"]["auction"] | null;
+    lotsLoading: boolean;
+    lotsError: string | null;
 }
 
 const initialState: AuctionState = {
@@ -19,105 +43,96 @@ const initialState: AuctionState = {
     error: null,
     success: false,
     auction: null,
+
     auctions: [],
+    auctionsLoading: false,
+    auctionsError: null,
+
     lots: [],
+    lotsAuction: null,
+    lotsLoading: false,
+    lotsError: null,
 };
 
 const auctionSlice = createSlice({
     name: "auction",
-
     initialState,
 
     reducers: {
+        /** Reset the create-form status (call on mount / after navigating away). */
         clearAuctionState: (state) => {
             state.loading = false;
             state.error = null;
             state.success = false;
             state.auction = null;
         },
+
+        clearLots: (state) => {
+            state.lots = [];
+            state.lotsAuction = null;
+            state.lotsError = null;
+        },
     },
 
     extraReducers: (builder) => {
-
         builder
-
-            .addCase(
-                createAuction.pending,
-                (state) => {
-                    state.loading = true;
-                    state.error = null;
-                    state.success = false;
-                }
-            )
-
-            .addCase(
-                createAuction.fulfilled,
-                (state, action) => {
-                    state.loading = false;
-                    state.success = true;
-                    state.auction =
-                        action.payload.data;
-                }
-            )
-
-            .addCase(
-                createAuction.rejected,
-                (state, action) => {
-                    state.loading = false;
-                    state.success = false;
-
-                    state.error =
-                        action.payload ||
-                        "Failed to create auction";
-                }
-            )
-
-            .addCase(
-                getAuctions.pending,
-                (state) => {
-                    state.loading = true;
-                    state.error = null;
-                }
-            )
-
-            .addCase(
-                getAuctions.fulfilled,
-                (state, action) => {
-                    state.loading = false;
-                    state.auctions = action.payload.data;
-                }
-            )
-
-            .addCase(
-                getAuctions.rejected,
-                (state, action) => {
-                    state.loading = false;
-
-                    state.error =
-                        action.payload ||
-                        "Failed to fetch auctions";
-                }
-            )
-
-            .addCase(getLotsByAuction.pending, (state) => {
+            // ---------------- CREATE ----------------
+            .addCase(createAuction.pending, (state) => {
                 state.loading = true;
                 state.error = null;
+                state.success = false;
+            })
+            .addCase(createAuction.fulfilled, (state, action) => {
+                state.loading = false;
+                state.success = true;
+                state.auction = action.payload.data;
+
+                // Show the new auction at the top of the list without refetching
+                if (action.payload.data) {
+                    state.auctions = [
+                        action.payload.data,
+                        ...state.auctions.filter((a) => a.uuid !== action.payload.data.uuid),
+                    ];
+                }
+            })
+            .addCase(createAuction.rejected, (state, action) => {
+                state.loading = false;
+                state.success = false;
+                state.error = action.payload ?? action.error.message ?? "Failed to create auction";
             })
 
+            // ---------------- LIST ----------------
+            .addCase(getAuctions.pending, (state) => {
+                state.auctionsLoading = true;
+                state.auctionsError = null;
+            })
+            .addCase(getAuctions.fulfilled, (state, action) => {
+                state.auctionsLoading = false;
+                state.auctions = action.payload.data ?? [];
+            })
+            .addCase(getAuctions.rejected, (state, action) => {
+                state.auctionsLoading = false;
+                state.auctionsError = action.payload ?? action.error.message ?? "Failed to fetch auctions";
+            })
+
+            // ---------------- LOTS ----------------
+            .addCase(getLotsByAuction.pending, (state) => {
+                state.lotsLoading = true;
+                state.lotsError = null;
+            })
             .addCase(getLotsByAuction.fulfilled, (state, action) => {
-                state.loading = false;
-                state.lots = action.payload.data;
+                state.lotsLoading = false;
+                state.lots = action.payload.data.lots ?? [];
+                state.lotsAuction = action.payload.data.auction ?? null;
             })
-
             .addCase(getLotsByAuction.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload || "Failed to fetch lots";
+                state.lotsLoading = false;
+                state.lots = [];
+                state.lotsError = action.payload ?? action.error.message ?? "Failed to fetch lots";
             });
     },
 });
 
-export const {
-    clearAuctionState,
-} = auctionSlice.actions;
+export const { clearAuctionState, clearLots } = auctionSlice.actions;
 
 export default auctionSlice.reducer;

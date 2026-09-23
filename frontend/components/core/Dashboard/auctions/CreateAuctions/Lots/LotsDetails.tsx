@@ -224,23 +224,12 @@ export default function LotsDetail({
                             Unit
                         </label>
 
-                        <select
-                            className="w-full border rounded-md px-3 py-2"
-                            {...register(
-                                `lots.${lotIndex}.details.dimensions.unit`
-                            )}
-                        >
-                            <option value="cm">
-                                cm
-                            </option>
-
-                            <option value="mm">
-                                mm
-                            </option>
-
-                            <option value="m">
-                                M
-                            </option>
+                        <select {...register(`lots.${lotIndex}.details.dimensions.unit`)} className="w-full border rounded-md px-3 py-2">
+                            <option value="CM">cm</option>
+                            <option value="MM">mm</option>
+                            <option value="INCH">inch</option>
+                            <option value="METER">m</option>
+                            <option value="FEET">ft</option>
                         </select>
                     </div>
 

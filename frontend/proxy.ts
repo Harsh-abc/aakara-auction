@@ -14,7 +14,7 @@ function matchesPrefix(pathname: string, prefixes: string[]) {
     return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname, search } = request.nextUrl;
     const isSignedIn = Boolean(request.cookies.get(REFRESH_COOKIE)?.value);
 

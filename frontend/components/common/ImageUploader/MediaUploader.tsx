@@ -34,14 +34,14 @@ export default function MediaUploader({
     onChange,
 
 
-    accept = "image/jpeg,image/png,image/svg+xml,video/mp4,video/webm,video/quicktime",
+    accept = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime",
+    description = "JPEG, PNG, WEBP, MP4, WEBM, MOV up to 50MB each",
 
     maxSize = 50,
     maxFiles = 20,
 
     title = "Choose images/videos or drag & drop them here",
 
-    description = "JPEG, PNG, SVG, MP4, WEBM, MOV up to 50MB each",
 
     disabled = false,
     className,

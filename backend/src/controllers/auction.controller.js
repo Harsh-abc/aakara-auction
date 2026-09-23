@@ -1,403 +1,254 @@
-
 import {
     createAuctionService,
     getAuctionService,
-    getLotByAuctionId
+    getLotByAuctionId,
 } from "../services/auction.services.js";
 
-import {
-    uploadToS3,
-} from "../services/s3.services.js";
+import { uploadToS3, deleteFromS3 } from "../services/s3.services.js";
+import { serializeBigInt } from "../utils/serialize.js";
 
-import {
-    serializeBigInt,
-} from "../utils/serialize.js";
+// -----------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------
 
-
-// -----------------------------------
-// Helper: Parse JSON form-data fields
-// -----------------------------------
-
-const parseJsonField = (value, defaultValue = []) => {
-    // Field is not provided
-    if (value === undefined || value === null || value === "") {
-        return defaultValue;
-    }
-
-    // Already an array or object
-    if (typeof value !== "string") {
-        return value;
-    }
-
+const parseJsonField = (value, defaultValue, fieldName) => {
+    if (value === undefined || value === null || value === "") return defaultValue;
+    if (typeof value !== "string") return value;
     try {
         return JSON.parse(value);
-    } catch (error) {
-        throw new Error(
-            "Invalid JSON format in form-data field"
-        );
+    } catch {
+        const error = new Error(`Invalid JSON in form-data field "${fieldName}"`);
+        error.statusCode = 400;
+        throw error;
     }
 };
 
+const statusFromError = (error) => {
+    if (error.statusCode) return error.statusCode;
+    // Prisma known errors
+    if (error.code === "P2002") return 409; // unique constraint
+    if (error.code === "P2025") return 404; // record not found
+    if (error.code === "P2003") return 400; // FK violation
+    return 500;
+};
 
-// -----------------------------------
-// Create Auction Controller
-// -----------------------------------
+const messageFromError = (error, status) => {
+    if (error.code === "P2002") {
+        const target = error.meta?.target;
+        return `Duplicate value for ${Array.isArray(target) ? target.join(", ") : target || "a unique field"}`;
+    }
+    if (status === 500) return "Failed to create auction";
+    return error.message || "Failed to create auction";
+};
+
+// -----------------------------------------------------------------
+// Create Auction
+//
+// Expected multipart fields:
+//   coverImage                 (single file, optional)
+//   lotMedia_{i}               images + videos for lot i, in display order
+//   lotImages_{i} / lotVideos_{i}  (legacy, still accepted)
+//   lotDocuments_{i}           documents for lot i, in order
+//   lots                       JSON; each lot may carry:
+//        mediaMeta:    [{ isPrimary, caption }]        aligned with lotMedia_{i}
+//        documentMeta: [{ documentType, description }] aligned with lotDocuments_{i}
+// -----------------------------------------------------------------
 
 export const createAuction = async (req, res) => {
+    const uploadedKeys = []; // for rollback if the DB write fails
+
+    const upload = async (file, folder) => {
+        const result = await uploadToS3({ file, folder });
+        uploadedKeys.push(result.key);
+        return result;
+    };
+
     try {
-        console.log(
-            "========== AUCTION CONTROLLER =========="
-        );
-
-        console.log("REQ.USER:", req.user);
-
-        console.log("BODY:", req.body);
-
-        console.log("========================================");
-
-
-        // -----------------------------------
-        // Authentication validation
-        // -----------------------------------
-
-        if (!req.user) {
+        if (!req.user?.userId) {
             return res.status(401).json({
                 success: false,
                 message: "Authenticated user not found",
             });
         }
 
+        const body = { ...req.body };
 
-        // -----------------------------------
-        // Prepare request body
-        // -----------------------------------
+        body.tags = parseJsonField(body.tags, [], "tags");
+        body.fees = parseJsonField(body.fees, [], "fees");
+        body.lots = parseJsonField(body.lots, [], "lots");
 
-        const body = {
-            ...req.body,
-        };
+        for (const key of ["tags", "fees", "lots"]) {
+            if (!Array.isArray(body[key])) {
+                return res.status(400).json({
+                    success: false,
+                    message: `${key} must be an array`,
+                });
+            }
+        }
 
-
-        // -----------------------------------
-        // Parse multipart form-data fields
-        // -----------------------------------
-
-        body.tags = parseJsonField(
-            body.tags,
-            []
-        );
-
-        body.fees = parseJsonField(
-            body.fees,
-            []
-        );
-
-        body.lots = parseJsonField(
-            body.lots,
-            []
-        );
-
-
-        // -----------------------------------
-        // Validate parsed fields
-        // -----------------------------------
-
-        if (!Array.isArray(body.tags)) {
+        // Cheap validation BEFORE uploading anything to S3
+        if (!body.title?.trim()) {
+            return res.status(400).json({ success: false, message: "Auction title is required" });
+        }
+        if (!body.categoryUuid) {
+            return res.status(400).json({ success: false, message: "Category is required" });
+        }
+        if (!body.startTime || !body.endTime) {
             return res.status(400).json({
                 success: false,
-                message: "Tags must be an array",
+                message: "Auction start and end date/time are required",
             });
         }
 
-        if (!Array.isArray(body.fees)) {
-            return res.status(400).json({
-                success: false,
-                message: "Fees must be an array",
-            });
-        }
+        const files = Array.isArray(req.files) ? req.files : [];
+        const filesFor = (fieldname) => files.filter((f) => f.fieldname === fieldname);
 
-        if (!Array.isArray(body.lots)) {
-            return res.status(400).json({
-                success: false,
-                message: "Lots must be an array",
-            });
-        }
-
-
-        // -----------------------------------
-        // Get uploaded files
-        // -----------------------------------
-
-        const files = Array.isArray(req.files)
-            ? req.files
-            : [];
-
-
-        // -----------------------------------
-        // Upload auction cover image
-        // -----------------------------------
-
-        const coverImage = files.find(
-            (file) =>
-                file.fieldname === "coverImage"
-        );
-
-
+        // ------------------ cover image ------------------
+        const coverImage = files.find((f) => f.fieldname === "coverImage");
         if (coverImage) {
-            const uploadedCover = await uploadToS3({
-                file: coverImage,
-                folder: "auctions/covers",
-            });
-
-            body.coverImageUrl = uploadedCover.url;
+            if (!coverImage.mimetype.startsWith("image/")) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Cover image must be an image file",
+                });
+            }
+            const uploaded = await upload(coverImage, "auctions/covers");
+            body.coverImageUrl = uploaded.url;
+        } else {
+            delete body.coverImageUrl; // never trust a client-supplied URL
         }
 
+        // ------------------ lots ------------------
+        const batchFolder = `auctions/${Date.now()}`;
 
-        // -----------------------------------
-        // Process lots and lot files
-        // -----------------------------------
-
-        for (
-            let i = 0;
-            i < body.lots.length;
-            i++
-        ) {
+        for (let i = 0; i < body.lots.length; i++) {
             const lot = body.lots[i];
+            const mediaMeta = Array.isArray(lot.mediaMeta) ? lot.mediaMeta : [];
+            const documentMeta = Array.isArray(lot.documentMeta) ? lot.documentMeta : [];
 
-
-            // Initialize arrays
+            // Never trust client-supplied URLs
             lot.images = [];
             lot.documents = [];
 
+            // New field keeps the user's order; legacy fields appended after
+            const mediaFiles = [
+                ...filesFor(`lotMedia_${i}`),
+                ...filesFor(`lotImages_${i}`),
+                ...filesFor(`lotVideos_${i}`),
+            ];
 
-            // -----------------------------------
-            // Upload lot images
-            // -----------------------------------
-
-            const lotImages = files.filter(
-                (file) =>
-                    file.fieldname === `lotImages_${i}`
+            const uploadedMedia = await Promise.all(
+                mediaFiles.map((file) => {
+                    const isVideo = file.mimetype.startsWith("video/");
+                    return upload(file, `${batchFolder}/lot-${i + 1}/${isVideo ? "videos" : "images"}`);
+                })
             );
 
-
-            for (
-                let j = 0;
-                j < lotImages.length;
-                j++
-            ) {
-                const file = lotImages[j];
-
-                const uploadedImage = await uploadToS3({
-                    file,
-                    folder: `auctions/lots/${i + 1}/images`,
-                });
-
-
+            uploadedMedia.forEach((result, j) => {
+                const file = mediaFiles[j];
+                const meta = mediaMeta[j] || {};
+                const isVideo = file.mimetype.startsWith("video/");
                 lot.images.push({
-                    url: uploadedImage.url,
-
+                    url: result.url,
                     thumbnailUrl: null,
-
-                    caption: null,
-
+                    caption: meta.caption || null,
                     sortOrder: j,
-
-                    isPrimary: j === 0,
-
-                    mediaType: "IMAGE",
+                    isPrimary: !isVideo && Boolean(meta.isPrimary),
+                    mediaType: isVideo ? "VIDEO" : "IMAGE",
                 });
-            }
+            });
 
-
-            // -----------------------------------
-            // Upload lot videos
-            // -----------------------------------
-
-            const lotVideos = files.filter(
-                (file) =>
-                    file.fieldname === `lotVideos_${i}`
+            const docFiles = filesFor(`lotDocuments_${i}`);
+            const uploadedDocs = await Promise.all(
+                docFiles.map((file) => upload(file, `${batchFolder}/lot-${i + 1}/documents`))
             );
 
-
-            for (
-                let j = 0;
-                j < lotVideos.length;
-                j++
-            ) {
-                const file = lotVideos[j];
-
-                const uploadedVideo = await uploadToS3({
-                    file,
-                    folder: `auctions/lots/${i + 1}/videos`,
-                });
-
-
-                lot.images.push({
-                    url: uploadedVideo.url,
-
-                    thumbnailUrl: null,
-
-                    caption: null,
-
-                    sortOrder:
-                        lotImages.length + j,
-
-                    isPrimary: false,
-
-                    mediaType: "VIDEO",
-                });
-            }
-
-
-            // -----------------------------------
-            // Upload lot documents
-            // -----------------------------------
-
-            const lotDocuments = files.filter(
-                (file) =>
-                    file.fieldname === `lotDocuments_${i}`
-            );
-
-
-            for (
-                let j = 0;
-                j < lotDocuments.length;
-                j++
-            ) {
-                const file = lotDocuments[j];
-
-                const uploadedDocument = await uploadToS3({
-                    file,
-                    folder: `auctions/lots/${i + 1}/documents`,
-                });
-
-
+            uploadedDocs.forEach((result, j) => {
+                const file = docFiles[j];
+                const meta = documentMeta[j] || {};
                 lot.documents.push({
-                    documentType: "OTHER",
-
-                    fileUrl: uploadedDocument.url,
-
-                    fileName: uploadedDocument.fileName,
-
+                    documentType: meta.documentType || "OTHER",
+                    fileUrl: result.url,
+                    fileName: file.originalname,
                     mimeType: file.mimetype,
-
                     fileSize: file.size,
-
-                    description: null,
+                    description: meta.description || null,
                 });
-            }
+            });
+
+            delete lot.mediaMeta;
+            delete lot.documentMeta;
         }
 
+        body.createdBy = req.user.userId; // service converts to BigInt
 
-        // -----------------------------------
-        // Set authenticated user
-        // -----------------------------------
-
-        body.createdBy = Number(
-            req.user.userId
-        );
-
-
-        // -----------------------------------
-        // Create auction
-        // -----------------------------------
-
-        const auction = await createAuctionService(
-            body
-        );
-
-
-        // -----------------------------------
-        // Send success response
-        // -----------------------------------
+        const auction = await createAuctionService(body);
 
         return res.status(201).json({
             success: true,
-
-            message: "Auction created successfully",
-
+            message:
+                auction.status === "DRAFT"
+                    ? "Auction saved as draft"
+                    : "Auction created successfully",
             data: serializeBigInt(auction),
         });
-
     } catch (error) {
-        console.error(
-            "Create auction error:",
-            error
-        );
+        console.error("Create auction error:", error);
 
+        // Roll back S3 uploads so failed requests don't leave orphaned files
+        if (uploadedKeys.length > 0) {
+            await Promise.allSettled(uploadedKeys.map((key) => deleteFromS3(key)));
+        }
 
-        return res.status(400).json({
+        const status = statusFromError(error);
+        return res.status(status).json({
             success: false,
-
-            message:
-                error.message ||
-                "Failed to create auction",
+            message: messageFromError(error, status),
         });
     }
 };
 
-
-
-
-
-
-
+// -----------------------------------------------------------------
+// Get Auctions
+// -----------------------------------------------------------------
 
 export const getAuction = async (req, res) => {
     try {
-        const {
-            search,
-            status,
-            auctionType,
-        } = req.query;
+        const { search, status, auctionType, categoryUuid, visibility } = req.query;
 
         const result = await getAuctionService({
             search,
             status,
             auctionType,
+            categoryUuid,
+            visibility,
         });
 
         return res.status(200).json(result);
-
     } catch (error) {
         console.error("Get auction error:", error);
-
-        return res.status(500).json({
+        return res.status(error.statusCode || 500).json({
             success: false,
             message: error.message || "Failed to fetch auctions",
         });
     }
 };
 
+// -----------------------------------------------------------------
+// Get Lots by Auction
+// -----------------------------------------------------------------
 
 export const getLotByAuctionIdController = async (req, res) => {
     try {
         const { auctionUuid } = req.params;
-
-        const result = await getLotByAuctionId({
-            auctionUuid,
-        });
-
+        const result = await getLotByAuctionId({ auctionUuid });
         return res.status(200).json(result);
     } catch (error) {
         console.error("Get lots by auction ID error:", error);
-
-        if (error.message === "Auction UUID is required") {
-            return res.status(400).json({
-                success: false,
-                message: error.message,
-            });
-        }
-
-        if (error.message === "Auction not found") {
-            return res.status(404).json({
-                success: false,
-                message: error.message,
-            });
-        }
-
-        return res.status(500).json({
+        const status = error.statusCode || 500;
+        return res.status(status).json({
             success: false,
-            message: "Failed to fetch lots",
+            message: status === 500 ? "Failed to fetch lots" : error.message,
         });
     }
 };

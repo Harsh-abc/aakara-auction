@@ -1,15 +1,14 @@
-
 import type {
     AuctionType,
-    AuctionStatus,
     ShippingStrategy,
     AuctionVisibility,
     FeeType,
     FeeCalculationType,
     LotStatus,
     DocumentType,
-} from '../types/auction.types'
-
+    DimensionUnit,
+    EditionType,
+} from "./auction.types";
 
 // ============================================================
 // BASIC INFO
@@ -18,10 +17,7 @@ import type {
 export interface BasicInfoForm {
     auctionName: string;
 
-    /**
-     * UI/business field.
-     * The current create-auction API does not store this separately.
-     */
+    /** Optional reference. Used as the slug if provided (backend makes it unique). */
     auctionId: string;
 
     auctionType: AuctionType;
@@ -32,23 +28,24 @@ export interface BasicInfoForm {
     categoryUuid: string;
     subCategoryUuid: string;
 
+    /** Used as the venue if shipping.venue is empty. */
     auctionLocation: string;
 
     auctionTags: string[];
 
+    /** Auction stores ONE currency — the first selected one is sent. */
     currency: string[];
 
     coverImage: File | null;
 }
-
 
 // ============================================================
 // AUCTION SCHEDULE
 // ============================================================
 
 export interface AuctionScheduleForm {
-    startDate: string;
-    startTime: string;
+    startDate: string; // "yyyy-MM-dd"
+    startTime: string; // "HH:mm" (12h "hh:mm AM" also accepted)
 
     endDate: string;
     endTime: string;
@@ -62,13 +59,9 @@ export interface AuctionScheduleForm {
 
     timezone: string;
 
-    /**
-     * Currently not part of the create-auction API payload.
-     * Can be used later for AuctionExtension.
-     */
+    /** Not sent yet — reserved for AuctionRule EXTENSION_TRIGGER. */
     auctionExtensionTime: number | null;
 }
-
 
 // ============================================================
 // AUCTION FEES
@@ -76,20 +69,13 @@ export interface AuctionScheduleForm {
 
 export interface AuctionFeeForm {
     feeType: FeeType;
-
     name: string;
-
     calculationType: FeeCalculationType;
-
     value: number | null;
-
     description: string;
-
     isActive: boolean;
-
     sortOrder: number;
 }
-
 
 // ============================================================
 // AUCTION SHIPPING
@@ -97,14 +83,12 @@ export interface AuctionFeeForm {
 
 export interface AuctionShippingForm {
     shippingStrategy: ShippingStrategy;
-
     isOnline: boolean;
-
     venue: string;
 
+    /** Copied to every lot that has no shippingInfo of its own. */
     shippingInfo: string;
 }
-
 
 // ============================================================
 // AUCTION VISIBILITY
@@ -112,10 +96,8 @@ export interface AuctionShippingForm {
 
 export interface AuctionVisibilityForm {
     visibility: AuctionVisibility;
-
     termsAndConditions: string;
 }
-
 
 // ============================================================
 // LOT MEDIA
@@ -124,24 +106,17 @@ export interface AuctionVisibilityForm {
 export interface LotImageFile {
     file: File;
 
-    /**
-     * Used only for frontend preview.
-     * Not sent to backend.
-     */
+    /** Object URL for preview only — never sent to backend. */
     preview: string;
 
     isPrimary?: boolean;
 }
 
-
 export interface LotDocumentFile {
     file: File;
-
     documentType: DocumentType;
-
     description: string;
 }
-
 
 // ============================================================
 // LOT DETAILS
@@ -149,42 +124,31 @@ export interface LotDocumentFile {
 
 export interface LotDetailsForm {
     title: string;
-
     artist: string;
 
-    /**
-     * UI/business field.
-     * Current AuctionItem API does not have an artworkId field.
-     */
+    /** UI-only. AuctionItem has no artworkId column. */
     artworkId: string;
 
-    /**
-     * Currently the create-auction backend uses the auction's
-     * categoryUuid for the lot.
-     */
+    /** UI-only for now. Backend uses the auction's category for every lot. */
     categoryUuid: string;
 
     medium: string;
-
     yearCreated: string;
 
     dimensions: {
         width: number | null;
         height: number | null;
         depth: number | null;
-        unit: string;
+        unit: DimensionUnit;
     };
 
-    /**
-     * Current backend AuctionItem schema does not have weight.
-     */
+    /** Saved to AuctionItemDimension.weight (unit KG). */
     weight: number | null;
 
-    editionType: "UNIQUE" | "LIMITED" | "OPEN";
+    editionType: EditionType;
 
     description: string;
 }
-
 
 // ============================================================
 // LOT PRICING
@@ -192,34 +156,24 @@ export interface LotDetailsForm {
 
 export interface LotPricingForm {
     startingPrice: number | null;
-
     reservePrice: number | null;
 
-    /**
-     * Current create-auction backend does not use minimumPrice.
-     */
+    /** UI-only. No column in AuctionItem. */
     minimumPrice: number | null;
 
     estimateFrom: number | null;
-
     estimateTo: number | null;
 
     insuranceDeclaredValue: number | null;
 
+    /** UI-only. Lots use the auction's currency. */
     currency: string;
 
     gstRate: number | null;
 
-    /**
-     * Keep as string in the form because HSN is normally an
-     * identifier/code rather than a calculated number.
-     *
-     * The current backend schema expects Decimal, so the
-     * transformer will convert this when creating the API payload.
-     */
+    /** Kept as a string; backend strips spaces/dots before saving. */
     hsnCode: string;
 }
-
 
 // ============================================================
 // LOT CONDITION
@@ -227,14 +181,10 @@ export interface LotPricingForm {
 
 export interface LotConditionForm {
     overallCondition: string;
-
     frameCondition: string;
-
     detailedConditionNotes: string;
-
     restorationHistory: string;
 }
-
 
 // ============================================================
 // LOT PROVENANCE
@@ -242,14 +192,10 @@ export interface LotConditionForm {
 
 export interface LotProvenanceForm {
     previousOwner: string;
-
     acquisitionMethod: string;
-
-    acquisitionDate: string;
-
+    acquisitionDate: string; // "yyyy-MM-dd"
     exhibitionHistory: string;
 }
-
 
 // ============================================================
 // LOT AUTHENTICATION
@@ -257,10 +203,8 @@ export interface LotProvenanceForm {
 
 export interface LotAuthenticationForm {
     authenticatedBy: string;
-
-    authenticatedDate: string;
+    authenticatedDate: string; // "yyyy-MM-dd"
 }
-
 
 // ============================================================
 // COMPLETE LOT FORM
@@ -268,30 +212,16 @@ export interface LotAuthenticationForm {
 
 export interface AuctionLotForm {
     status: LotStatus;
-
     details: LotDetailsForm;
-
-    /**
-     * Files selected from the frontend.
-     * These are uploaded separately as multipart/form-data.
-     */
     images: LotImageFile[];
-
     pricing: LotPricingForm;
-
     condition: LotConditionForm;
-
     provenance: LotProvenanceForm;
-
     authentication: LotAuthenticationForm;
-
     documents: LotDocumentFile[];
-
     isFeatured: boolean;
-
     shippingInfo: string;
 }
-
 
 // ============================================================
 // COMPLETE AUCTION FORM
@@ -299,14 +229,9 @@ export interface AuctionLotForm {
 
 export interface AuctionFormData {
     basicInfo: BasicInfoForm;
-
     schedule: AuctionScheduleForm;
-
     lots: AuctionLotForm[];
-
     fees: AuctionFeeForm[];
-
     shipping: AuctionShippingForm;
-
     visibility: AuctionVisibilityForm;
 }

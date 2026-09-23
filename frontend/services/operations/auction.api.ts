@@ -3,212 +3,110 @@ import axios from "axios";
 
 import { apiConnector } from "../apiConnector";
 import { auctionEndPoints } from "../api";
-import { CreateAuctionResponse, GetAuctionsLotsParams, GetAuctionsParams, GetAuctionsResponse } from "@/lib/types/auction.types";
+import {
+    CreateAuctionResponse,
+    GetAuctionLotsResponse,
+    GetAuctionsLotsParams,
+    GetAuctionsParams,
+    GetAuctionsResponse,
+} from "@/lib/types/auction.types";
 import { RootState } from "@/redux/store";
 
-export const createAuction = createAsyncThunk<
-    CreateAuctionResponse,
-    FormData,
-    {
-        state: RootState;
-        rejectValue: string;
+type ThunkConfig = {
+    state: RootState;
+    rejectValue: string;
+};
+
+// =====================================================================
+// HELPERS
+// =====================================================================
+
+/** Pulls the backend's `message` out of any error shape. */
+const toErrorMessage = (error: unknown, fallback: string): string => {
+    if (axios.isAxiosError(error)) {
+        if (!error.response) return "Cannot reach the server. Check your connection.";
+        return (error.response.data as { message?: string })?.message || fallback;
     }
->(
+    return error instanceof Error ? error.message : fallback;
+};
+
+const authHeader = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+// =====================================================================
+// CREATE AUCTION (multipart/form-data)
+// Don't set Content-Type yourself — axios adds the multipart boundary.
+// =====================================================================
+
+export const createAuction = createAsyncThunk<CreateAuctionResponse, FormData, ThunkConfig>(
     "auction/createAuction",
-
     async (formData, { getState, rejectWithValue }) => {
+        const token = getState().auth.accessToken;
+        if (!token) return rejectWithValue("Authentication token not found");
+
         try {
-            const state = getState();
-
-            const token = state.auth.accessToken;
-
-            if (!token) {
-                return rejectWithValue(
-                    "Authentication token not found"
-                );
-            }
-
-            const response =
-                await apiConnector<CreateAuctionResponse>({
-                    method: "POST",
-
-                    url:
-                        auctionEndPoints
-                            .CREATE_AUCTION_API,
-
-                    body: formData,
-
-                    header: {
-                        Authorization:
-                            `Bearer ${token}`,
-                    },
-                });
-
+            const response = await apiConnector<CreateAuctionResponse>({
+                method: "POST",
+                url: auctionEndPoints.CREATE_AUCTION_API,
+                body: formData,
+                header: authHeader(token),
+            });
             return response.data;
-
         } catch (error) {
-
-            if (axios.isAxiosError(error)) {
-                return rejectWithValue(
-                    error.response?.data?.message ||
-                    "Failed to create auction"
-                );
-            }
-
-            return rejectWithValue(
-                error instanceof Error
-                    ? error.message
-                    : "Failed to create auction"
-            );
+            return rejectWithValue(toErrorMessage(error, "Failed to create auction"));
         }
     }
 );
 
+// =====================================================================
+// GET AUCTIONS
+// =====================================================================
 
-
-
-
-export const getAuctions = createAsyncThunk<
-    GetAuctionsResponse,
-    GetAuctionsParams | undefined,
-    {
-        state: RootState;
-        rejectValue: string;
-    }
->(
+export const getAuctions = createAsyncThunk<GetAuctionsResponse, GetAuctionsParams | undefined, ThunkConfig>(
     "auction/getAuctions",
-
     async (params, { getState, rejectWithValue }) => {
+        const token = getState().auth.accessToken;
+        if (!token) return rejectWithValue("Authentication token not found");
+
         try {
-            const state = getState();
-
-            const token = state.auth.accessToken;
-
-            if (!token) {
-                return rejectWithValue(
-                    "Authentication token not found"
-                );
-            }
-
-            const response =
-                await apiConnector<GetAuctionsResponse>({
-                    method: "GET",
-
-                    url: auctionEndPoints.GET_AUCTION_API,
-
-                    params: {
-                        search: params?.search || undefined,
-                        status: params?.status || undefined,
-                        auctionType:
-                            params?.auctionType || undefined,
-                    },
-
-                    header: {
-                        Authorization:
-                            `Bearer ${token}`,
-                    },
-                });
-
+            const response = await apiConnector<GetAuctionsResponse>({
+                method: "GET",
+                url: auctionEndPoints.GET_AUCTION_API,
+                params: {
+                    search: params?.search || undefined,
+                    status: params?.status || undefined,
+                    auctionType: params?.auctionType || undefined,
+                    categoryUuid: params?.categoryUuid || undefined,
+                    visibility: params?.visibility || undefined,
+                },
+                header: authHeader(token),
+            });
             return response.data;
-
         } catch (error) {
-
-            if (axios.isAxiosError(error)) {
-                return rejectWithValue(
-                    error.response?.data?.message ||
-                    "Failed to fetch auctions"
-                );
-            }
-
-            return rejectWithValue(
-                error instanceof Error
-                    ? error.message
-                    : "Failed to fetch auctions"
-            );
+            return rejectWithValue(toErrorMessage(error, "Failed to fetch auctions"));
         }
     }
 );
 
-// export const getLotsByAuction = createAsyncThunk(
-//     "auction/getLotsByAuction",
-//     async (auctionUuid: string, { rejectWithValue }) => {
-//         try {
-//             const response = await apiConnector(
-//                 method : "GET",
-//                 url: auctionEndPoints.GET_LOTS_BY_AUCTION(auctionUuid)
-//             );
+// =====================================================================
+// GET LOTS BY AUCTION
+// =====================================================================
 
-//             return response.data;
-//         } catch (error: any) {
-//             return rejectWithValue(
-//                 error.response?.data?.message ||
-//                 "Failed to fetch lots"
-//             );
-//         }
-//     }
-// );
-
-
-export const getLotsByAuction = createAsyncThunk<
-    GetAuctionsResponse,
-    GetAuctionsLotsParams,
-    {
-        state: RootState;
-        rejectValue: string;
-    }
->(
+export const getLotsByAuction = createAsyncThunk<GetAuctionLotsResponse, GetAuctionsLotsParams, ThunkConfig>(
     "auction/getLotsByAuction",
+    async ({ auctionUuid }, { getState, rejectWithValue }) => {
+        const token = getState().auth.accessToken;
+        if (!token) return rejectWithValue("Authentication token not found");
+        if (!auctionUuid) return rejectWithValue("Auction UUID is required");
 
-    async (params, { getState, rejectWithValue }) => {
         try {
-            const state = getState();
-
-            const token = state.auth.accessToken;
-
-            if (!token) {
-                return rejectWithValue(
-                    "Authentication token not found"
-                );
-            }
-
-            // Extract auctionUuid from params
-            const { auctionUuid } = params;
-
-            if (!auctionUuid) {
-                return rejectWithValue(
-                    "Auction UUID is required"
-                );
-            }
-
-            const response =
-                await apiConnector<GetAuctionsResponse>({
-                    method: "GET",
-
-                    url: auctionEndPoints.GET_LOTS_BY_AUCTION(
-                        auctionUuid
-                    ),
-
-                    header: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
+            const response = await apiConnector<GetAuctionLotsResponse>({ // was GetAuctionsResponse
+                method: "GET",
+                url: auctionEndPoints.GET_LOTS_BY_AUCTION(auctionUuid),
+                header: authHeader(token),
+            });
             return response.data;
-
         } catch (error) {
-
-            if (axios.isAxiosError(error)) {
-                return rejectWithValue(
-                    error.response?.data?.message ||
-                    "Failed to fetch lots"
-                );
-            }
-
-            return rejectWithValue(
-                error instanceof Error
-                    ? error.message
-                    : "Failed to fetch lots"
-            );
+            return rejectWithValue(toErrorMessage(error, "Failed to fetch lots"));
         }
     }
 );

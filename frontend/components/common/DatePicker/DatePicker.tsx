@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,46 +19,66 @@ interface DatePickerProps {
     placeholder?: string;
     disabled?: boolean;
     className?: string;
+
+    /** Days before this are greyed out (compared by day, not time). */
+    minDate?: Date;
+
+    /** Days after this are greyed out. */
+    maxDate?: Date;
+
+    /** Month the calendar opens on when nothing is selected (e.g. the start date's month). */
+    defaultMonth?: Date;
 }
 
 export default function DatePicker({
     value,
     onChange,
-    placeholder = "",
+    placeholder = "Select a date",
     disabled = false,
     className,
+    minDate,
+    maxDate,
+    defaultMonth,
 }: DatePickerProps) {
-    return (
-        <Popover>
-            <PopoverTrigger>
-                <Button
-                    type="button"
-                    variant="outline"
-                    disabled={disabled}
-                    className={cn(
-                        "h-11 w-full justify-between px-3 text-left font-normal",
-                        !value && "text-slate-400",
-                        className
-                    )}
-                >
-                    {value ? (
-                        format(value, "dd MMM yyyy")
-                    ) : (
-                        <span>{placeholder}</span>
-                    )}
+    const [open, setOpen] = React.useState(false);
 
-                    <CalendarIcon className="h-4 w-4 text-slate-500" />
-                </Button>
+    const disabledDays = [
+        ...(minDate ? [{ before: startOfDay(minDate) }] : []),
+        ...(maxDate ? [{ after: startOfDay(maxDate) }] : []),
+    ];
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            {/* Base UI trigger renders AS the Button (no nested <button>) */}
+            <PopoverTrigger
+                disabled={disabled}
+                render={
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={disabled}
+                        className={cn(
+                            "h-11 w-full justify-start text-left font-normal",
+                            !value && "text-muted-foreground",
+                            className
+                        )}
+                    />
+                }
+            >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(value, "dd MMM yyyy") : placeholder}
             </PopoverTrigger>
 
-            <PopoverContent
-                className="w-auto p-0"
-                align="start"
-            >
+            <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                     mode="single"
                     selected={value}
-                    onSelect={onChange}
+                    defaultMonth={value ?? defaultMonth ?? minDate}
+                    disabled={disabledDays.length ? disabledDays : undefined}
+                    onSelect={(date) => {
+                        onChange?.(date);
+                        if (date) setOpen(false); // close after picking
+                    }}
                 />
             </PopoverContent>
         </Popover>

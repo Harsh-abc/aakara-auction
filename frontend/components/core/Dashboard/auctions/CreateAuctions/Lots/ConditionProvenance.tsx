@@ -1,27 +1,58 @@
-
 "use client";
+
+import { format } from "date-fns";
+import { Controller, useFormContext } from "react-hook-form";
 
 import DashboardFormText from "@/components/common/DashboardFormText";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import { Input } from "@/components/ui/input";
-import {
-    Controller,
-    useFormContext,
-} from "react-hook-form";
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 
 interface ConditionProvenanceProps {
     lotIndex: number;
 }
 
+// =====================================================================
+// OPTIONS
+// =====================================================================
+
+const CONDITION_OPTIONS = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
+
+const FRAME_CONDITION_OPTIONS = [...CONDITION_OPTIONS, "Not Applicable"];
+
+const ACQUISITION_METHODS = [
+    { value: "PURCHASE", label: "Purchase" },
+    { value: "INHERITANCE", label: "Inheritance" },
+    { value: "GIFT", label: "Gift" },
+    { value: "AUCTION", label: "Auction" },
+    { value: "COMMISSION", label: "Commission" },
+    { value: "OTHER", label: "Other" },
+];
+
+// =====================================================================
+// DATE HELPERS
+// Form stores plain "yyyy-MM-dd" strings. Parse/format in LOCAL time —
+// toISOString() converts to UTC, which shifts the date back a day in IST.
+// =====================================================================
+
+const toPickerDate = (value?: string): Date | undefined =>
+    value ? new Date(`${value}T00:00:00`) : undefined;
+
+const toFormDate = (date?: Date | null): string =>
+    date ? format(date, "yyyy-MM-dd") : "";
+
+// =====================================================================
+// COMPONENT
+// =====================================================================
+
 export default function ConditionProvenance({
     lotIndex,
 }: ConditionProvenanceProps) {
-    const { register, control } =
-        useFormContext<AuctionFormData>();
+    const { register, control } = useFormContext<AuctionFormData>();
 
     return (
         <div className="px-6">
+
             {/* ==================== CONDITION REPORT ==================== */}
             <div className="mt-10">
                 <DashboardFormText text="Condition Report" />
@@ -30,81 +61,35 @@ export default function ConditionProvenance({
 
                     {/* Overall Condition */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Overall Condition Class
-                        </label>
+                        <label className="block mb-2">Overall Condition Class</label>
 
                         <select
-                            className="w-full border rounded-md px-3 py-2"
-                            {...register(
-                                `lots.${lotIndex}.condition.overallCondition`
-                            )}
+                            className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(`lots.${lotIndex}.condition.overallCondition`)}
                         >
-                            <option value="">
-                                Select Overall Condition Class
-                            </option>
-
-                            <option value="Excellent">
-                                Excellent
-                            </option>
-
-                            <option value="Very Good">
-                                Very Good
-                            </option>
-
-                            <option value="Good">
-                                Good
-                            </option>
-
-                            <option value="Fair">
-                                Fair
-                            </option>
-
-                            <option value="Poor">
-                                Poor
-                            </option>
+                            <option value="">Select Overall Condition Class</option>
+                            {CONDITION_OPTIONS.map((option) => (
+                                <option key={option} value={option}>
+                                    {option}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
                     {/* Frame Condition */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Frame Condition
-                        </label>
+                        <label className="block mb-2">Frame Condition</label>
 
                         <select
-                            className="w-full border rounded-md px-3 py-2"
-                            {...register(
-                                `lots.${lotIndex}.condition.frameCondition`
-                            )}
+                            className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(`lots.${lotIndex}.condition.frameCondition`)}
                         >
-                            <option value="">
-                                Select Frame Condition
-                            </option>
-
-                            <option value="Excellent">
-                                Excellent
-                            </option>
-
-                            <option value="Very Good">
-                                Very Good
-                            </option>
-
-                            <option value="Good">
-                                Good
-                            </option>
-
-                            <option value="Fair">
-                                Fair
-                            </option>
-
-                            <option value="Poor">
-                                Poor
-                            </option>
-
-                            <option value="Not Applicable">
-                                Not Applicable
-                            </option>
+                            <option value="">Select Frame Condition</option>
+                            {FRAME_CONDITION_OPTIONS.map((option) => (
+                                <option key={option} value={option}>
+                                    {option}
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -112,17 +97,13 @@ export default function ConditionProvenance({
                 {/* Detailed Condition Notes */}
                 <div className="grid grid-cols-1 gap-2 w-full mt-4">
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Detailed Condition Notes
-                        </label>
+                        <label className="block mb-2">Detailed Condition Notes</label>
 
-                        <Input
-                            type="text"
-                            placeholder="Describe any micro, surface discoloration"
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(
-                                `lots.${lotIndex}.condition.detailedConditionNotes`
-                            )}
+                        <textarea
+                            rows={3}
+                            placeholder="Describe any craquelure, surface discoloration, foxing, tears or losses"
+                            className="w-full border rounded-md px-3 py-2"
+                            {...register(`lots.${lotIndex}.condition.detailedConditionNotes`)}
                         />
                     </div>
                 </div>
@@ -130,17 +111,13 @@ export default function ConditionProvenance({
                 {/* Restoration History */}
                 <div className="grid grid-cols-1 gap-2 w-full mt-4">
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Restoration & Conservation History
-                        </label>
+                        <label className="block mb-2">Restoration & Conservation History</label>
 
-                        <Input
-                            type="text"
-                            placeholder="Provide Details of any conservation treatments"
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(
-                                `lots.${lotIndex}.condition.restorationHistory`
-                            )}
+                        <textarea
+                            rows={3}
+                            placeholder="Provide details of any conservation treatments (who, when, what was done)"
+                            className="w-full border rounded-md px-3 py-2"
+                            {...register(`lots.${lotIndex}.condition.restorationHistory`)}
                         />
                     </div>
                 </div>
@@ -154,67 +131,36 @@ export default function ConditionProvenance({
 
                     {/* Previous Owner */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Previous Owner / collection
-                        </label>
+                        <label className="block mb-2">Previous Owner / Collection</label>
 
                         <Input
                             type="text"
                             placeholder="e.g. Private Collection, Mumbai"
                             className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(
-                                `lots.${lotIndex}.provenance.previousOwner`
-                            )}
+                            {...register(`lots.${lotIndex}.provenance.previousOwner`)}
                         />
                     </div>
 
                     {/* Acquisition Method */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Acquisition Method
-                        </label>
+                        <label className="block mb-2">Acquisition Method</label>
 
                         <select
-                            className="w-full border rounded-md px-3 py-2"
-                            {...register(
-                                `lots.${lotIndex}.provenance.acquisitionMethod`
-                            )}
+                            className="w-full border rounded-md px-3 py-2 h-11"
+                            {...register(`lots.${lotIndex}.provenance.acquisitionMethod`)}
                         >
-                            <option value="">
-                                Select Acquisition Method
-                            </option>
-
-                            <option value="PURCHASE">
-                                Purchase
-                            </option>
-
-                            <option value="INHERITANCE">
-                                Inheritance
-                            </option>
-
-                            <option value="GIFT">
-                                Gift
-                            </option>
-
-                            <option value="AUCTION">
-                                Auction
-                            </option>
-
-                            <option value="COMMISSION">
-                                Commission
-                            </option>
-
-                            <option value="OTHER">
-                                Other
-                            </option>
+                            <option value="">Select Acquisition Method</option>
+                            {ACQUISITION_METHODS.map((method) => (
+                                <option key={method.value} value={method.value}>
+                                    {method.label}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
                     {/* Acquisition Date */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Acquisition Date
-                        </label>
+                        <label className="block mb-2">Acquisition Date</label>
 
                         <Controller
                             name={`lots.${lotIndex}.provenance.acquisitionDate`}
@@ -222,21 +168,9 @@ export default function ConditionProvenance({
                             render={({ field }) => (
                                 <DatePicker
                                     placeholder="Select acquisition date"
-                                    className="w-95"
-                                    value={
-                                        field.value
-                                            ? new Date(field.value)
-                                            : undefined
-                                    }
-                                    onChange={(date) =>
-                                        field.onChange(
-                                            date
-                                                ? date
-                                                    .toISOString()
-                                                    .split("T")[0]
-                                                : ""
-                                        )
-                                    }
+                                    className="w-full"
+                                    value={toPickerDate(field.value)}
+                                    onChange={(date) => field.onChange(toFormDate(date))}
                                 />
                             )}
                         />
@@ -246,17 +180,13 @@ export default function ConditionProvenance({
                 {/* Exhibition History */}
                 <div className="grid grid-cols-1 gap-2 w-full mt-4">
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Exhibition History
-                        </label>
+                        <label className="block mb-2">Exhibition History</label>
 
-                        <Input
-                            type="text"
-                            placeholder="List major exhibitions, museum displays"
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(
-                                `lots.${lotIndex}.provenance.exhibitionHistory`
-                            )}
+                        <textarea
+                            rows={3}
+                            placeholder="List major exhibitions and museum displays, one per line"
+                            className="w-full border rounded-md px-3 py-2"
+                            {...register(`lots.${lotIndex}.provenance.exhibitionHistory`)}
                         />
                     </div>
                 </div>
@@ -268,27 +198,21 @@ export default function ConditionProvenance({
 
                 <div className="grid grid-cols-2 gap-2 w-full">
 
-                    {/* Authenticate By */}
+                    {/* Authenticated By */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Authenticate By
-                        </label>
+                        <label className="block mb-2">Authenticated By</label>
 
                         <Input
                             type="text"
-                            placeholder="Expert Name"
+                            placeholder="Expert or estate board name"
                             className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(
-                                `lots.${lotIndex}.authentication.authenticatedBy`
-                            )}
+                            {...register(`lots.${lotIndex}.authentication.authenticatedBy`)}
                         />
                     </div>
 
-                    {/* Authenticate Date */}
+                    {/* Authentication Date */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Authenticate Date
-                        </label>
+                        <label className="block mb-2">Authentication Date</label>
 
                         <Controller
                             name={`lots.${lotIndex}.authentication.authenticatedDate`}
@@ -296,21 +220,9 @@ export default function ConditionProvenance({
                             render={({ field }) => (
                                 <DatePicker
                                     placeholder="Select authentication date"
-                                    className="w-xl"
-                                    value={
-                                        field.value
-                                            ? new Date(field.value)
-                                            : undefined
-                                    }
-                                    onChange={(date) =>
-                                        field.onChange(
-                                            date
-                                                ? date
-                                                    .toISOString()
-                                                    .split("T")[0]
-                                                : ""
-                                        )
-                                    }
+                                    className="w-full"
+                                    value={toPickerDate(field.value)}
+                                    onChange={(date) => field.onChange(toFormDate(date))}
                                 />
                             )}
                         />
