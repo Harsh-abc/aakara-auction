@@ -24,14 +24,7 @@ import {
 } from "@/components/ui/table"
 
 import { Button } from "@/components/ui/button"
-
-import {
-    ChevronLeft,
-    ChevronRight,
-    ChevronsLeft,
-    ChevronsRight,
-    SearchIcon,
-} from "lucide-react"
+import { ChevronLeft, ChevronRight, SearchIcon, X } from "lucide-react"
 
 import {
     Select,
@@ -40,157 +33,128 @@ import {
     SelectTrigger,
     SelectValue,
     SelectGroup,
-    SelectLabel
+    SelectLabel,
 } from "@/components/ui/select"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field } from "@/components/ui/field"
 import {
     InputGroup,
     InputGroupAddon,
-    InputGroupButton,
     InputGroupInput,
 } from "@/components/ui/input-group"
 
-import { CalendarIcon } from "lucide-react"
-import { DateRange } from "react-day-picker"
-
-import { Calendar } from "@/components/ui/calendar"
-
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-
-
-
+export interface StatusFilterItem {
+    label: string
+    value: string
+}
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
     data: TData[]
-    onAddLot: () => void
+    onAddLot?: () => void
+    loading?: boolean
+    /** Options for the status dropdown (first item should be { value: "all" }) */
+    statusItems?: StatusFilterItem[]
+    /** Optional summary shown under the toolbar, e.g. "3 lots · 1 needs attention" */
+    summary?: React.ReactNode
 }
+
+const DEFAULT_STATUS_ITEMS: StatusFilterItem[] = [
+    { label: "Status : All", value: "all" },
+    { label: "Ready", value: "READY" },
+    { label: "Incomplete", value: "INCOMPLETE" },
+]
 
 export function AuctionLotsList<TData, TValue>({
     columns,
     data,
     onAddLot,
+    loading = false,
+    statusItems = DEFAULT_STATUS_ITEMS,
+    summary,
 }: DataTableProps<TData, TValue>) {
 
-    const [sorting, setSorting] =
-        React.useState<SortingState>([])
-
-    const [columnFilters, setColumnFilters] =
-        React.useState<ColumnFiltersState>([])
-
-    const [rowSelection, setRowSelection] =
-        React.useState({})
+    const [sorting, setSorting] = React.useState<SortingState>([{ id: "lotNumber", desc: false }])
+    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+    const [rowSelection, setRowSelection] = React.useState({})
+    const [globalFilter, setGlobalFilter] = React.useState("")
+    const [statusFilter, setStatusFilter] = React.useState("all")
 
     const table = useReactTable({
         data,
         columns,
-
-        state: {
-            sorting,
-            columnFilters,
-            rowSelection,
-        },
-
+        state: { sorting, columnFilters, rowSelection, globalFilter },
         enableRowSelection: true,
-
         onSortingChange: setSorting,
-
         onColumnFiltersChange: setColumnFilters,
-
         onRowSelectionChange: setRowSelection,
-
+        onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn: "includesString",
         getCoreRowModel: getCoreRowModel(),
-
         getSortedRowModel: getSortedRowModel(),
-
         getFilteredRowModel: getFilteredRowModel(),
-
         getPaginationRowModel: getPaginationRowModel(),
-
-        initialState: {
-            pagination: {
-                pageIndex: 0,
-                pageSize: 7,
-            },
-        },
+        // Don't jump back to page 1 every time a lot's value changes
+        autoResetPageIndex: false,
+        initialState: { pagination: { pageIndex: 0, pageSize: 7 } },
     })
 
-    const items = [
-        { label: "All", value: "all" },
-        { label: "Active", value: "active" },
-        { label: "Completed", value: "completed" },
-        { label: "Scheduled", value: "scheduled" },
-    ]
-
-    const [open, setOpen] = React.useState(false)
-
-    const [range, setRange] = React.useState<DateRange | undefined>()
-
-    const formatRange = () => {
-        if (!range?.from) return ""
-
-        const from = range.from.toLocaleDateString("en-US", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
+    React.useEffect(() => {
+        setColumnFilters((prev) => {
+            const rest = prev.filter((f) => f.id !== "status")
+            return statusFilter === "all" ? rest : [...rest, { id: "status", value: statusFilter }]
         })
+        table.setPageIndex(0)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [statusFilter])
 
-        if (!range.to) return from
+    // If a delete leaves the current page empty, step back a page
+    const pageCount = table.getPageCount()
+    const { pageIndex, pageSize } = table.getState().pagination
+    React.useEffect(() => {
+        if (pageIndex > 0 && pageIndex >= pageCount) table.setPageIndex(Math.max(0, pageCount - 1))
+    }, [pageIndex, pageCount, table])
 
-        const to = range.to.toLocaleDateString("en-US", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        })
-
-        return `${from} - ${to}`
-    }
+    const hasFilters = Boolean(globalFilter) || statusFilter !== "all"
+    const totalRows = table.getFilteredRowModel().rows.length
 
     return (
-        <div className="w-full bg-[#F4F4F4] px-3 rounded-[8px] h-[500px] flex flex-col">
+        <div className="w-full bg-[#F4F4F4] px-3 rounded-[8px] min-h-[500px] flex flex-col">
 
-            <div className="pb-4 flex items-center justify-between">
+            {/* ================= TOOLBAR ================= */}
+            <div className="pb-2 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 w-87.5 h-10">
                     <Field className="max-w-sm">
                         <InputGroup className="bg-white">
-                            <InputGroupInput id="inline-start-input" placeholder="Search auctions..." />
+                            <InputGroupInput
+                                placeholder="Search title, artist, medium..."
+                                value={globalFilter}
+                                onChange={(e) => {
+                                    setGlobalFilter(e.target.value)
+                                    table.setPageIndex(0)
+                                }}
+                            />
                             <InputGroupAddon align="inline-start">
                                 <SearchIcon className="text-muted-foreground" />
                             </InputGroupAddon>
                         </InputGroup>
                     </Field>
                 </div>
+
                 <div className="flex items-center gap-4">
-                    <Field className="w-34 py-4">
-                        <Select items={items}>
-                            <SelectTrigger
-                                className="
-                w-full max-w-48
-                bg-white
-                text-slate-500
-                border-slate-200
-                shadow-none
-            "
-                            >
-                                <SelectValue placeholder="Status : All" />
+                    <Field className="w-40 py-4">
+                        <Select
+                            items={statusItems}
+                            value={statusFilter}
+                            onValueChange={(value) => setStatusFilter((value as string) ?? "all")}
+                        >
+                            <SelectTrigger className="w-full bg-white text-slate-500 border-slate-200 shadow-none">
+                                <SelectValue />
                             </SelectTrigger>
-
                             <SelectContent className="bg-white">
                                 <SelectGroup>
-                                    <SelectLabel className="text-slate-500">
-                                        Status
-                                    </SelectLabel>
-
-                                    {items.map((item) => (
-                                        <SelectItem
-                                            key={item.value}
-                                            value={item.value}
-                                            className="text-slate-700"
-                                        >
+                                    <SelectLabel className="text-slate-500">Status</SelectLabel>
+                                    {statusItems.map((item) => (
+                                        <SelectItem key={item.value} value={item.value} className="text-slate-700">
                                             {item.label}
                                         </SelectItem>
                                     ))}
@@ -199,99 +163,50 @@ export function AuctionLotsList<TData, TValue>({
                         </Select>
                     </Field>
 
-                    <Field className="w-34 py-4">
-                        <Select items={items}>
-                            <SelectTrigger
-                                className="
-                w-full max-w-48
-                bg-white
-                text-slate-500
-                border-slate-200
-                shadow-none
-            "
-                            >
-                                <SelectValue placeholder="Status : All" />
-                            </SelectTrigger>
+                    {hasFilters && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-9 px-2 text-xs text-slate-500"
+                            onClick={() => {
+                                setGlobalFilter("")
+                                setStatusFilter("all")
+                            }}
+                        >
+                            <X className="mr-1 h-3.5 w-3.5" />
+                            Clear
+                        </Button>
+                    )}
 
-                            <SelectContent className="bg-white">
-                                <SelectGroup>
-                                    <SelectLabel className="text-slate-500">
-                                        Status
-                                    </SelectLabel>
-
-                                    {items.map((item) => (
-                                        <SelectItem
-                                            key={item.value}
-                                            value={item.value}
-                                            className="text-slate-700"
-                                        >
-                                            {item.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    </Field>
-
-                    <div>
+                    {onAddLot && (
                         <button
                             onClick={onAddLot}
                             type="button"
-                            className="
-                        inline-flex
-                        items-center
-                        gap-2
-                        rounded-md
-                        bg-[#F59E0B]
-                        px-4
-                        py-2.5
-                        text-[14px]
-                        font-semibold
-                        text-white
-                        shadow-sm
-                        transition
-                        hover:bg-[#DB9F49]
-                    "
+                            className="inline-flex items-center gap-2 rounded-md bg-[#F59E0B] px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm transition hover:bg-[#DB9F49]"
                         >
-                            <span className="text-[18px] leading-none">
-                                +
-                            </span>
-
+                            <span className="text-[18px] leading-none">+</span>
                             Add New Lot
                         </button>
-                    </div>
-
-
+                    )}
                 </div>
             </div>
 
-            {/* TABLE */}
-            <div className="flex-1 overflow-auto rounded-md border border-slate-200 bg-white">
+            {summary && <div className="pb-3 text-[12px] text-slate-500">{summary}</div>}
+
+            {/* ================= TABLE ================= */}
+            <div className="flex-1 overflow-auto rounded-t-md border border-slate-200 bg-white">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow
-                                key={headerGroup.id}
-                                className="hover:bg-transparent bg-slate-50"
-                            >
+                            <TableRow key={headerGroup.id} className="hover:bg-transparent bg-slate-50">
                                 {headerGroup.headers.map((header) => (
                                     <TableHead
                                         key={header.id}
-                                        className="
-                                h-9
-                                px-3
-                                text-[11px]
-                                font-medium
-                                text-slate-700
-                                whitespace-nowrap
-                            "
+                                        className="h-9 px-3 text-[11px] font-medium text-slate-700 whitespace-nowrap"
                                     >
                                         {header.isPlaceholder
                                             ? null
-                                            : flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
+                                            : flexRender(header.column.columnDef.header, header.getContext())}
                                     </TableHead>
                                 ))}
                             </TableRow>
@@ -299,47 +214,35 @@ export function AuctionLotsList<TData, TValue>({
                     </TableHeader>
 
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (
+                        {loading ? (
+                            Array.from({ length: 4 }).map((_, i) => (
+                                <TableRow key={`skeleton-${i}`} className="h-[58px]">
+                                    {columns.map((_, j) => (
+                                        <TableCell key={j} className="px-3 py-2">
+                                            <div className="h-3 w-full max-w-[110px] animate-pulse rounded bg-slate-100" />
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
+                        ) : table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
                                     key={row.id}
-                                    data-state={
-                                        row.getIsSelected()
-                                            ? "selected"
-                                            : undefined
-                                    }
-                                    className={`
-                            h-[54px]
-                            border-b
-                            border-slate-100
-                            hover:bg-slate-50
-                            transition-colors
-                            ${row.getIsSelected()
-                                            ? "bg-blue-50 ring-2 ring-inset ring-blue-500"
-                                            : ""
-                                        }
-                        `}
+                                    data-state={row.getIsSelected() ? "selected" : undefined}
+                                    className={`h-[58px] border-b border-slate-100 hover:bg-slate-50 transition-colors ${row.getIsSelected() ? "bg-blue-50 ring-2 ring-inset ring-blue-500" : ""
+                                        }`}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className="px-3 py-2"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
+                                        <TableCell key={cell.id} className="px-3 py-2">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No lots found.
+                                <TableCell colSpan={columns.length} className="h-24 text-center text-slate-500">
+                                    {hasFilters ? "No lots match these filters." : "No lots found."}
                                 </TableCell>
                             </TableRow>
                         )}
@@ -347,27 +250,9 @@ export function AuctionLotsList<TData, TValue>({
                 </Table>
             </div>
 
-
-            {/* PAGINATION FOOTER */}
-            <div
-                className="
-        shrink-0
-        flex
-        items-center
-        justify-between
-        border-x
-        border-b
-        border-slate-200
-        bg-white
-        px-4
-        py-2
-        rounded-b-md
-        min-h-[48px]
-    "
-            >
-                {/* LEFT - Pagination */}
+            {/* ================= FOOTER ================= */}
+            <div className="shrink-0 flex items-center justify-between border-x border-b border-slate-200 bg-white px-4 py-2 rounded-b-md min-h-[48px] mb-3">
                 <div className="flex items-center gap-1">
-
                     <Button
                         variant="outline"
                         className="h-7 px-2 text-xs"
@@ -378,34 +263,21 @@ export function AuctionLotsList<TData, TValue>({
                         Back
                     </Button>
 
-                    {Array.from(
-                        { length: table.getPageCount() },
-                        (_, index) => (
-                            <Button
-                                key={index}
-                                variant={
-                                    table.getState().pagination.pageIndex === index
-                                        ? "default"
-                                        : "outline"
-                                }
-                                size="icon"
-                                className={
-                                    table.getState().pagination.pageIndex === index
-                                        ? `
-                                h-7 w-7
-                                bg-[#7b365d]
-                                hover:bg-[#672b4d]
-                                text-white
-                                text-xs
-                            `
-                                        : "h-7 w-7 text-xs"
-                                }
-                                onClick={() => table.setPageIndex(index)}
-                            >
-                                {index + 1}
-                            </Button>
-                        )
-                    )}
+                    {Array.from({ length: pageCount }, (_, index) => (
+                        <Button
+                            key={index}
+                            variant={pageIndex === index ? "default" : "outline"}
+                            size="icon"
+                            className={
+                                pageIndex === index
+                                    ? "h-7 w-7 bg-[#7b365d] hover:bg-[#672b4d] text-white text-xs"
+                                    : "h-7 w-7 text-xs"
+                            }
+                            onClick={() => table.setPageIndex(index)}
+                        >
+                            {index + 1}
+                        </Button>
+                    ))}
 
                     <Button
                         variant="outline"
@@ -416,26 +288,20 @@ export function AuctionLotsList<TData, TValue>({
                         Next
                         <ChevronRight className="h-3 w-3" />
                     </Button>
-
                 </div>
 
-                {/* RIGHT - Result per page */}
+                <span className="text-[11px] text-slate-500">
+                    {totalRows === 0
+                        ? "0 lots"
+                        : `${pageIndex * pageSize + 1}–${Math.min((pageIndex + 1) * pageSize, totalRows)} of ${totalRows}`}
+                </span>
+
                 <div className="flex items-center gap-2">
-
-                    <span className="text-[11px] font-bold text-black whitespace-nowrap">
-                        Result per page
-                    </span>
-
-                    <Select
-                        value={`${table.getState().pagination.pageSize}`}
-                        onValueChange={(value) => {
-                            table.setPageSize(Number(value))
-                        }}
-                    >
+                    <span className="text-[11px] font-bold text-black whitespace-nowrap">Result per page</span>
+                    <Select value={`${pageSize}`} onValueChange={(value) => table.setPageSize(Number(value))}>
                         <SelectTrigger className="h-7 w-[65px] bg-white text-xs">
                             <SelectValue />
                         </SelectTrigger>
-
                         <SelectContent className="bg-white">
                             <SelectItem value="7">7</SelectItem>
                             <SelectItem value="10">10</SelectItem>
@@ -443,11 +309,8 @@ export function AuctionLotsList<TData, TValue>({
                             <SelectItem value="50">50</SelectItem>
                         </SelectContent>
                     </Select>
-
                 </div>
             </div>
-
         </div>
     )
 }
-

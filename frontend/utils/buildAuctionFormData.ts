@@ -324,6 +324,11 @@ export const validateAuctionForm = (
             errors.push(`Lot ${n}: starting price is required`);
         }
 
+        const hasImage = (lot.images ?? []).some((m) => m?.file?.type?.startsWith("image/"));
+        if (status === "SCHEDULED" && !hasImage) {
+            errors.push(`Lot ${n}: add at least one image`);
+        }
+
         const low = num(lot.pricing.estimateFrom);
         const high = num(lot.pricing.estimateTo);
         if (low !== null && high !== null && low > high) {

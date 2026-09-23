@@ -74,7 +74,7 @@ export default function AddLots({
                     width: null,
                     height: null,
                     depth: null,
-                    unit: "cm",
+                    unit: "CM",
                 },
 
                 weight: null,
