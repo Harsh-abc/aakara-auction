@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useFormContext } from "react-hook-form";
@@ -12,15 +11,10 @@ import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
 import TagsInput from "@/components/common/Tags/TagsInput";
 import DashboardFormText from "@/components/common/DashboardFormText";
 
-import {
-    getCategories,
-    getSubCategories,
-} from "@/services/operations/category.api";
 
-import {
-    Category,
-    SubCategory,
-} from "@/lib/types/category.types";
+import { getCategories, getSubCategories } from "@/services/operations/category.api";
+import { Category, SubCategory } from "@/lib/types/category.types";
+import CurrencySelector from "@/components/common/CurrencySelector";
 
 export default function BasicInfo() {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -32,8 +26,7 @@ export default function BasicInfo() {
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
 
     const [categoriesLoading, setCategoriesLoading] = useState(false);
-    const [subCategoriesLoading, setSubCategoriesLoading] =
-        useState(false);
+    const [subCategoriesLoading, setSubCategoriesLoading] = useState(false);
 
     const {
         register,
@@ -41,8 +34,6 @@ export default function BasicInfo() {
         watch,
         formState: { errors },
     } = useFormContext<AuctionFormData>();
-
-
 
     /* =====================================================
        WATCH FORM VALUES
@@ -52,96 +43,79 @@ export default function BasicInfo() {
     const auctionType = watch("basicInfo.auctionType");
     const categoryUuid = watch("basicInfo.categoryUuid");
     const coverImage = watch("basicInfo.coverImage");
+    const primaryCurrency = watch("basicInfo.primaryCurrency"); // ✅ NEW (preview card)
+
+    // ✅ Show the category NAME in the preview card (was showing the UUID)
+    const categoryName = categories.find((c) => c.uuid === categoryUuid)?.name;
 
     /* =====================================================
        COVER IMAGE
     ===================================================== */
 
+    // ✅ Rebuild the preview when coming back to this step (file is still in the form)
+    useEffect(() => {
+        if (coverImage instanceof File && coverImage.type.startsWith("image/")) {
+            const url = URL.createObjectURL(coverImage);
+            setPreview(url);
+            return () => URL.revokeObjectURL(url);
+        }
+        setPreview(null);
+    }, [coverImage]);
+
     const handleFile = (file: File) => {
         if (!file) return;
 
-        // 50MB validation
         if (file.size > 50 * 1024 * 1024) {
             alert("File size must be less than 50MB.");
             return;
         }
 
-        // Store file inside React Hook Form
+        if (!file.type.startsWith("image/")) {
+            alert("Cover must be an image (JPG, PNG or WEBP).");
+            return;
+        }
+
+        // Preview is created by the effect above
         setValue("basicInfo.coverImage", file, {
             shouldDirty: true,
             shouldTouch: true,
             shouldValidate: true,
         });
-
-        // Remove previous object URL if required
-        if (preview) {
-            URL.revokeObjectURL(preview);
-        }
-
-        // Create preview
-        if (file.type.startsWith("image/")) {
-            const url = URL.createObjectURL(file);
-            setPreview(url);
-        }
     };
 
-    const handleInputChange = (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-
-        if (file) {
-            handleFile(file);
-        }
+        if (file) handleFile(file);
     };
 
-    const handleDrop = (
-        e: React.DragEvent<HTMLDivElement>
-    ) => {
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
-
         setIsDragging(false);
-
         const file = e.dataTransfer.files?.[0];
-
-        if (file) {
-            handleFile(file);
-        }
+        if (file) handleFile(file);
     };
 
     const removeFile = () => {
-        setPreview(null);
-
         setValue("basicInfo.coverImage", null, {
             shouldDirty: true,
             shouldTouch: true,
             shouldValidate: true,
         });
-
-        if (inputRef.current) {
-            inputRef.current.value = "";
-        }
+        if (inputRef.current) inputRef.current.value = "";
     };
 
     /* =====================================================
-       RENDER
+       CATEGORIES
     ===================================================== */
 
     useEffect(() => {
         const fetchCategories = async () => {
             try {
                 setCategoriesLoading(true);
-
                 const response = await getCategories();
-
-                if (response.success) {
-                    setCategories(response.data);
-                }
+                if (response.success) setCategories(response.data);
             } catch (error) {
-                console.error(
-                    "Failed to fetch categories:",
-                    error
-                );
+                console.error("Failed to fetch categories:", error);
             } finally {
                 setCategoriesLoading(false);
             }
@@ -153,34 +127,17 @@ export default function BasicInfo() {
     useEffect(() => {
         if (!categoryUuid) {
             setSubCategories([]);
-
-            setValue(
-                "basicInfo.subCategoryUuid",
-                "",
-                {
-                    shouldDirty: true,
-                }
-            );
-
+            setValue("basicInfo.subCategoryUuid", "", { shouldDirty: true });
             return;
         }
 
         const fetchSubCategories = async () => {
             try {
                 setSubCategoriesLoading(true);
-
-                const response =
-                    await getSubCategories(categoryUuid);
-
-                if (response.success) {
-                    setSubCategories(response.data);
-                }
+                const response = await getSubCategories(categoryUuid);
+                if (response.success) setSubCategories(response.data);
             } catch (error) {
-                console.error(
-                    "Failed to fetch subcategories:",
-                    error
-                );
-
+                console.error("Failed to fetch subcategories:", error);
                 setSubCategories([]);
             } finally {
                 setSubCategoriesLoading(false);
@@ -190,55 +147,37 @@ export default function BasicInfo() {
         fetchSubCategories();
     }, [categoryUuid, setValue]);
 
+    /* =====================================================
+       RENDER
+    ===================================================== */
+
     return (
         <div className="space-y-60">
-
             <div className="flex items-start justify-between gap-4 pb-10">
 
-                {/* =================================================
-                    LEFT SIDE
-                ================================================= */}
-
+                {/* ================= LEFT SIDE ================= */}
                 <div className="flex-2 w-182.5 px-7 py-7 bg-dashboardFormBg rounded-[8px]">
 
                     <DashboardFormText text="Auction Details" />
 
-                    {/* =================================================
-                        AUCTION NAME
-                    ================================================= */}
-
+                    {/* AUCTION NAME */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Auction Name
-                        </label>
-
+                        <label className="block mb-2">Auction Name</label>
                         <Input
                             {...register("basicInfo.auctionName")}
                             type="text"
                             placeholder="e.g. Modern Master of Mumbai : Autumn Collections"
                             className="w-full border rounded-md px-3 py-2 h-11"
                         />
-
                         {errors.basicInfo?.auctionName && (
-                            <p className="text-red-500 text-sm mt-1">
-                                Auction name is required
-                            </p>
+                            <p className="text-red-500 text-sm mt-1">Auction name is required</p>
                         )}
                     </div>
 
-                    {/* =================================================
-                        AUCTION ID + AUCTION TYPE
-                    ================================================= */}
-
+                    {/* AUCTION ID + TYPE */}
                     <div className="grid grid-cols-2 gap-4">
-
-                        {/* Auction ID */}
-
                         <div className="input-wrapper">
-                            <label className="block mb-2">
-                                Auction ID / Reference
-                            </label>
-
+                            <label className="block mb-2">Auction ID / Reference</label>
                             <Input
                                 {...register("basicInfo.auctionId")}
                                 type="text"
@@ -247,134 +186,76 @@ export default function BasicInfo() {
                             />
                         </div>
 
-                        {/* Auction Type */}
-
                         <div className="input-wrapper">
-                            <label className="block mb-2">
-                                Auction Type
-                            </label>
-
+                            <label className="block mb-2">Auction Type</label>
                             <select
                                 {...register("basicInfo.auctionType")}
                                 className="w-full border rounded-md px-3 py-2 h-11"
                             >
-                                <option value="">
-                                    Select auction type
-                                </option>
-
-                                <option value="LIVE">
-                                    Live Auction
-                                </option>
-
-                                <option value="FLOOR">
-                                    Floor Auction
-                                </option>
-
-                                <option value="HYBRID">
-                                    Hybrid Auction
-                                </option>
+                                <option value="">Select auction type</option>
+                                <option value="LIVE">Live Auction</option>
+                                <option value="FLOOR">Floor Auction</option>
+                                <option value="HYBRID">Hybrid Auction</option>
                             </select>
-
                             {errors.basicInfo?.auctionType && (
-                                <p className="text-red-500 text-sm mt-1">
-                                    Auction type is required
-                                </p>
+                                <p className="text-red-500 text-sm mt-1">Auction type is required</p>
                             )}
                         </div>
-
                     </div>
 
-                    {/* =================================================
-                        SHORT DESCRIPTION
-                    ================================================= */}
-
+                    {/* SHORT DESCRIPTION */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Short Description
-                        </label>
-
+                        <label className="block mb-2">Short Description</label>
                         <textarea
-                            {...register(
-                                "basicInfo.shortDescription"
-                            )}
+                            {...register("basicInfo.shortDescription")}
                             rows={3}
                             placeholder="Enter short auction description"
                             className="w-full border rounded-md px-3 py-2"
                         />
                     </div>
 
-                    {/* =================================================
-                        DETAILED DESCRIPTION
-                    ================================================= */}
-
+                    {/* DETAILED DESCRIPTION */}
                     <div className="input-wrapper">
-                        <label className="block mb-2">
-                            Detailed Description
-                        </label>
-
+                        <label className="block mb-2">Detailed Description</label>
                         <RichTextEditor
-                            value={watch(
-                                "basicInfo.description"
-                            )}
+                            value={watch("basicInfo.description")}
                             onChange={(value: string) => {
-                                setValue(
-                                    "basicInfo.description",
-                                    value,
-                                    {
-                                        shouldDirty: true,
-                                        shouldTouch: true,
-                                        shouldValidate: true,
-                                    }
-                                );
+                                setValue("basicInfo.description", value, {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                    shouldValidate: true,
+                                });
                             }}
                         />
                     </div>
 
-                    {/* =================================================
-                        AUCTION COVER IMAGE
-                    ================================================= */}
-
+                    {/* COVER IMAGE */}
                     <div className="input-wrapper">
-
-                        <label className="block mb-2">
-                            Auction Cover Image
-                        </label>
+                        <label className="block mb-2">Auction Cover Image</label>
 
                         <div
-                            className={`relative flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-white transition ${isDragging
-                                ? "border-[#7A3D5E] bg-[#fdf5f9]"
-                                : "border-slate-300"
+                            className={`relative flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-white transition ${isDragging ? "border-[#7A3D5E] bg-[#fdf5f9]" : "border-slate-300"
                                 }`}
                             onDragOver={(e) => {
                                 e.preventDefault();
                                 setIsDragging(true);
                             }}
-                            onDragLeave={() => {
-                                setIsDragging(false);
-                            }}
+                            onDragLeave={() => setIsDragging(false)}
                             onDrop={handleDrop}
-                            onClick={() =>
-                                inputRef.current?.click()
-                            }
+                            onClick={() => inputRef.current?.click()}
                         >
-
                             <input
                                 ref={inputRef}
                                 type="file"
-                                accept="image/*"
+                                accept="image/jpeg,image/png,image/webp"
                                 className="hidden"
                                 onChange={handleInputChange}
                             />
 
                             {preview ? (
                                 <div className="relative h-[220px] w-full overflow-hidden rounded-lg">
-
-                                    <img
-                                        src={preview}
-                                        alt="Auction cover preview"
-                                        className="h-full w-full object-cover"
-                                    />
-
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={preview} alt="Auction cover preview" className="h-full w-full object-cover" />
                                     <button
                                         type="button"
                                         onClick={(e) => {
@@ -385,86 +266,47 @@ export default function BasicInfo() {
                                     >
                                         <X className="h-4 w-4" />
                                     </button>
-
                                 </div>
                             ) : (
                                 <>
                                     <Upload className="mb-3 h-8 w-8 text-slate-400" />
-
-                                    <p className="text-sm font-medium text-slate-700">
-                                        Upload Auction Cover Image
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-slate-400">
-                                        Drag & drop or click to upload
-                                    </p>
-
-                                    <p className="mt-1 text-xs text-slate-400">
-                                        Maximum file size: 50MB
-                                    </p>
+                                    <p className="text-sm font-medium text-slate-700">Upload Auction Cover Image</p>
+                                    <p className="mt-1 text-xs text-slate-400">Drag & drop or click to upload</p>
+                                    <p className="mt-1 text-xs text-slate-400">JPG, PNG or WEBP · max 50MB</p>
                                 </>
                             )}
-
                         </div>
-
                     </div>
 
-                    {/* =================================================
-                        CATEGORY + SUBCATEGORY
-                    ================================================= */}
-
+                    {/* CATEGORY + SUBCATEGORY */}
                     <div className="grid grid-cols-2 gap-4">
-
-                        {/* Category */}
-
                         <div className="input-wrapper">
-                            <label className="block mb-2">
-                                Category
-                            </label>
-
+                            <label className="block mb-2">Category</label>
                             <select
-                                {...register("basicInfo.categoryUuid", {
-                                    required: "Category is required",
-                                })}
+                                {...register("basicInfo.categoryUuid", { required: "Category is required" })}
                                 className="w-full border rounded-md px-3 py-2 h-11"
                             >
                                 <option value="">
-                                    {categoriesLoading
-                                        ? "Loading categories..."
-                                        : "Select category"}
+                                    {categoriesLoading ? "Loading categories..." : "Select category"}
                                 </option>
-
                                 {categories.map((category) => (
-                                    <option
-                                        key={category.uuid}
-                                        value={category.uuid}
-                                    >
+                                    <option key={category.uuid} value={category.uuid}>
                                         {category.name}
                                     </option>
                                 ))}
                             </select>
-
                             {errors.basicInfo?.categoryUuid && (
                                 <p className="text-red-500 text-sm mt-1">
-                                    {errors.basicInfo.categoryUuid.message ||
-                                        "Category is required"}
+                                    {errors.basicInfo.categoryUuid.message || "Category is required"}
                                 </p>
                             )}
                         </div>
 
-                        {/* SubCategory */}
-
                         <div className="input-wrapper">
-                            <label className="block mb-2">
-                                SubCategory
-                            </label>
-
+                            <label className="block mb-2">SubCategory</label>
                             <select
                                 {...register("basicInfo.subCategoryUuid")}
-                                disabled={
-                                    !categoryUuid ||
-                                    subCategoriesLoading
-                                }
+                                disabled={!categoryUuid || subCategoriesLoading}
                                 className="w-full border rounded-md px-3 py-2 h-11 disabled:bg-slate-100 disabled:cursor-not-allowed"
                             >
                                 <option value="">
@@ -474,217 +316,74 @@ export default function BasicInfo() {
                                             ? "Loading subcategories..."
                                             : "Select subcategory"}
                                 </option>
-
                                 {subCategories.map((subCategory) => (
-                                    <option
-                                        key={subCategory.uuid}
-                                        value={subCategory.uuid}
-                                    >
+                                    <option key={subCategory.uuid} value={subCategory.uuid}>
                                         {subCategory.name}
                                     </option>
                                 ))}
                             </select>
                         </div>
-
                     </div>
 
-                    {/* =================================================
-                        AUCTION LOCATION
-                    ================================================= */}
-
+                    {/* AUCTION LOCATION */}
                     <div className="grid grid-cols-1 gap-4">
-
                         <div className="input-wrapper">
-
-                            <label className="block mb-2">
-                                Auction Location
-                            </label>
-
+                            <label className="block mb-2">Auction Location</label>
                             <Input
-                                {...register(
-                                    "basicInfo.auctionLocation"
-                                )}
+                                {...register("basicInfo.auctionLocation")}
                                 type="text"
                                 placeholder="Enter Location"
                                 className="w-full border rounded-md px-3 py-2 h-11"
                             />
-
                         </div>
-
                     </div>
 
-                    {/* =================================================
-                        AUCTION TAGS
-                    ================================================= */}
-
+                    {/* AUCTION TAGS */}
                     <div className="input-wrapper">
-
-                        <label className="block mb-2">
-                            Auction Tags
-                        </label>
-
+                        <label className="block mb-2">Auction Tags</label>
                         <TagsInput
-                            value={
-                                watch(
-                                    "basicInfo.auctionTags"
-                                ) ?? []
-                            }
+                            value={watch("basicInfo.auctionTags") ?? []}
                             onChange={(tags: string[]) => {
-                                setValue(
-                                    "basicInfo.auctionTags",
-                                    tags,
-                                    {
-                                        shouldDirty: true,
-                                        shouldTouch: true,
-                                    }
-                                );
+                                setValue("basicInfo.auctionTags", tags, {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                });
                             }}
                         />
-
                     </div>
 
-                    {/* =================================================
-                        CURRENCY
-                    ================================================= */}
-
-                    <div className="mt-6">
-                        <label className="block mb-2 text-sm font-medium">
-                            Auction Currencies
-                        </label>
-
-                        <p className="mb-4 text-sm text-slate-500">
-                            Select the currencies that can be used for lots in this auction.
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-3">
-
-                            {[
-                                {
-                                    value: "INR",
-                                    label: "INR - Indian Rupee",
-                                },
-                                {
-                                    value: "USD",
-                                    label: "USD - US Dollar",
-                                },
-                                {
-                                    value: "EUR",
-                                    label: "EUR - Euro",
-                                },
-                                {
-                                    value: "GBP",
-                                    label: "GBP - British Pound",
-                                },
-                                {
-                                    value: "JPY",
-                                    label: "JPY - Japanese Yen",
-                                },
-                            ].map((currency) => {
-                                const selectedCurrencies =
-                                    watch("basicInfo.currency") ?? [];
-
-                                const isSelected =
-                                    selectedCurrencies.includes(currency.value);
-
-                                return (
-                                    <label
-                                        key={currency.value}
-                                        className={`flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-md border px-4 py-3 transition ${isSelected
-                                            ? "border-[#7A3D5E] bg-[#fdf5f9]"
-                                            : "border-slate-200 bg-white"
-                                            }`}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={(e) => {
-                                                const current =
-                                                    watch("basicInfo.currency") ?? [];
-
-                                                const updated = e.target.checked
-                                                    ? [...current, currency.value]
-                                                    : current.filter(
-                                                        (value) =>
-                                                            value !== currency.value
-                                                    );
-
-                                                setValue(
-                                                    "basicInfo.currency",
-                                                    updated,
-                                                    {
-                                                        shouldDirty: true,
-                                                        shouldTouch: true,
-                                                        shouldValidate: true,
-                                                    }
-                                                );
-                                            }}
-                                            className="h-4 w-4 shrink-0"
-                                        />
-
-                                        <span className="text-sm text-slate-700">
-                                            {currency.label}
-                                        </span>
-                                    </label>
-                                );
-                            })}
-
-                        </div>
-
-                        {errors.basicInfo?.currency && (
-                            <p className="mt-2 text-sm text-red-500">
-                                Please select at least one currency.
-                            </p>
-                        )}
-                    </div>
-
+                    {/* ✅ CURRENCIES — loaded from the `currencies` table, with a primary */}
+                    <CurrencySelector />
                 </div>
 
-                {/* =================================================
-                    RIGHT SIDE PREVIEW
-                ================================================= */}
-
+                {/* ================= RIGHT SIDE PREVIEW ================= */}
                 <div className="flex-1 w-93">
-
                     <div className="w-full max-w-[330px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
-                        {/* Cover Preview */}
-
                         <div className="h-[176px] w-full overflow-hidden">
-
-                            {coverImage instanceof File ? (
-                                preview ? (
-                                    <img
-                                        src={preview}
-                                        alt="Auction cover"
-                                        className="h-full w-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
-                                        No cover image
-                                    </div>
-                                )
+                            {preview ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={preview} alt="Auction cover" className="h-full w-full object-cover" />
                             ) : (
                                 <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
                                     No cover image
                                 </div>
                             )}
-
                         </div>
 
-                        {/* Preview Details */}
-
                         <div className="p-4">
-
-                            <div className="mb-3 flex items-center gap-2">
-
+                            <div className="mb-3 flex flex-wrap items-center gap-2">
                                 <span className="rounded bg-[#fce8f1] px-2 py-1 text-[11px] font-medium text-[#833b61]">
                                     {auctionType || "Auction Type"}
                                 </span>
-
                                 <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
-                                    {categoryUuid || "Category"}
+                                    {categoryName || "Category"}
                                 </span>
-
+                                {primaryCurrency && (
+                                    <span className="rounded bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
+                                        {primaryCurrency}
+                                    </span>
+                                )}
                             </div>
 
                             <h3 className="min-h-[40px] text-[15px] font-semibold leading-5 text-slate-700">
@@ -694,37 +393,20 @@ export default function BasicInfo() {
                             <div className="my-3 border-t border-slate-200" />
 
                             <div className="flex items-center justify-between text-[12px]">
-
-                                <span className="text-slate-500">
-                                    Artworks
-                                </span>
-
+                                <span className="text-slate-500">Artworks</span>
                                 <span className="font-semibold text-slate-700">
-                                    0 Items
+                                    {watch("lots")?.length ?? 0} Items
                                 </span>
-
                             </div>
 
                             <div className="mt-3 flex items-center justify-between text-[12px]">
-
-                                <span className="text-slate-500">
-                                    Status
-                                </span>
-
-                                <span className="font-semibold text-slate-700">
-                                    Draft
-                                </span>
-
+                                <span className="text-slate-500">Status</span>
+                                <span className="font-semibold text-slate-700">Draft</span>
                             </div>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
-
         </div>
     );
 }

@@ -26,3 +26,7 @@ export const categoryEndPoints = {
     GET_CATEGORY_SUBCATEGORIES_API: (uuid: string) =>
         `${BASE_URL}/api/category/get-category/${uuid}/subcategories`,
 };
+
+export const currencyEndPoints = {
+    GET_CURRENCIES_API: `${BASE_URL}/api/currency`,
+};

@@ -96,21 +96,38 @@ const slugify = (text) =>
         .replace(/^-+|-+$/g, "")
         .slice(0, 180);
 
-/** Currency can arrive as "INR", ["INR"] or the JSON string '["INR"]' */
-const resolveCurrencyCode = (currency) => {
-    let value = currency;
-    if (typeof value === "string" && value.trim().startsWith("[")) {
+/**
+ * ✅ NEW — allowed currencies + primary.
+ *   currencies:      ["INR","USD"] | '["INR","USD"]' | "INR"   (allowed list)
+ *   primaryCurrency: "INR"                                     (must be in the list)
+ * Falls back to the old single `currency` field so older clients still work.
+ */
+const resolveCurrencies = ({ currencies, primaryCurrency, currency }) => {
+    let list = currencies ?? currency;
+    if (typeof list === "string" && list.trim().startsWith("[")) {
         try {
-            value = JSON.parse(value);
+            list = JSON.parse(list);
         } catch {
-            /* fall through */
+            throw httpError("Invalid currencies list");
         }
     }
-    if (Array.isArray(value)) value = value[0];
-    if (typeof value !== "string" || !value.trim()) {
-        throw httpError("Valid currency code is required");
+    if (!Array.isArray(list)) list = list ? [list] : [];
+
+    const codes = [
+        ...new Set(
+            list
+                .map((c) => (typeof c === "string" ? c.trim().toUpperCase() : ""))
+                .filter(Boolean)
+        ),
+    ];
+    if (codes.length === 0) throw httpError("Select at least one currency");
+
+    const primary = (toStr(primaryCurrency) || codes[0]).toUpperCase();
+    if (!codes.includes(primary)) {
+        throw httpError(`Primary currency ${primary} must be one of the selected currencies`);
     }
-    return value.trim().toUpperCase();
+
+    return { codes, primary };
 };
 
 /** HSN codes are digits; the column is Decimal, so strip spaces/dots. */
@@ -251,6 +268,8 @@ const normalizeLot = (lot, index, { isDraft }) => {
         scheduledEndAt: toDate(lot.scheduledEndAt, label("scheduled end")),
         shippingInfo: toStr(lot.shippingInfo),
         isFeatured: toBool(lot.isFeatured, false),
+        // ✅ NEW — lot's currency code; turned into a currencyId inside the transaction
+        currencyCode: toStr(lot.currency)?.toUpperCase() ?? null,
         dimension,
         images,
         documents,
@@ -315,7 +334,9 @@ export const createAuctionService = async (data) => {
         registrationStarts,
         registrationDeadline,
         timezone,
-        currency,
+        currency,          // legacy single currency (still accepted)
+        currencies,        // ✅ NEW — allowed list
+        primaryCurrency,   // ✅ NEW — primary / settlement
         isOnline,
         venue,
         termsAndConditions,
@@ -368,10 +389,25 @@ export const createAuctionService = async (data) => {
         throw httpError("Add at least one lot before publishing the auction");
     }
 
-    const currencyCode = resolveCurrencyCode(currency);
+    // ✅ NEW — allowed currencies + primary
+    const { codes: currencyCodes, primary: primaryCode } = resolveCurrencies({
+        currencies,
+        primaryCurrency,
+        currency,
+    });
+
     const normalizedTags = normalizeTags(tags);
     const normalizedFees = normalizeFees(fees);
     const normalizedLots = lots.map((lot, i) => normalizeLot(lot, i, { isDraft }));
+
+    // ✅ NEW — every lot must use one of the auction's currencies
+    normalizedLots.forEach((lot, i) => {
+        if (lot.currencyCode && !currencyCodes.includes(lot.currencyCode)) {
+            throw httpError(
+                `Lot ${i + 1}: currency ${lot.currencyCode} is not allowed for this auction (allowed: ${currencyCodes.join(", ")})`
+            );
+        }
+    });
 
     const itemNumbers = normalizedLots.map((l) => l.itemNumber);
     if (new Set(itemNumbers).size !== itemNumbers.length) {
@@ -393,10 +429,16 @@ export const createAuctionService = async (data) => {
                 }
             }
 
-            const currencyRecord = await tx.currency.findUnique({ where: { code: currencyCode } });
-            if (!currencyRecord || !currencyRecord.isActive) {
-                throw httpError(`Invalid currency: ${currencyCode}`);
+            // ✅ NEW — load every selected currency (must exist + be active in `currencies`)
+            const currencyRecords = await tx.currency.findMany({
+                where: { code: { in: currencyCodes }, isActive: true },
+            });
+            const currencyByCode = new Map(currencyRecords.map((c) => [c.code, c]));
+            const missing = currencyCodes.filter((code) => !currencyByCode.has(code));
+            if (missing.length) {
+                throw httpError(`Invalid or inactive currency: ${missing.join(", ")}`);
             }
+            const primaryRecord = currencyByCode.get(primaryCode);
 
             const slug = await uniqueAuctionSlug(tx, toStr(rawSlug) || title);
 
@@ -429,11 +471,21 @@ export const createAuctionService = async (data) => {
                         "shipping strategy"
                     ),
                     visibility: pickEnum(visibility, ENUMS.visibility, "REGISTERED_USERS_ONLY", "visibility"),
-                    currency: { connect: { id: currencyRecord.id } },
+                    // ✅ CHANGED — auctions.currencyId = PRIMARY currency
+                    currency: { connect: { id: primaryRecord.id } },
                     category: { connect: { id: category.id } },
                     ...(subCategory && { subCategory: { connect: { id: subCategory.id } } }),
                     creator: { connect: { id: BigInt(createdBy) } },
                 },
+            });
+
+            // ✅ NEW — every allowed currency, primary flagged
+            await tx.auctionCurrency.createMany({
+                data: currencyCodes.map((code) => ({
+                    auctionId: auction.id,
+                    currencyId: currencyByCode.get(code).id,
+                    isPrimary: code === primaryCode,
+                })),
             });
 
             // status history (first entry)
@@ -469,7 +521,9 @@ export const createAuctionService = async (data) => {
 
             // ---------------- lots ----------------
             for (const lot of normalizedLots) {
-                const { dimension, images, documents, ...itemData } = lot;
+                // ✅ CHANGED — pull out currencyCode (not a DB column)
+                const { dimension, images, documents, currencyCode, ...itemData } = lot;
+                const lotCurrency = currencyByCode.get(currencyCode ?? primaryCode);
 
                 const item = await tx.auctionItem.create({
                     data: {
@@ -477,7 +531,7 @@ export const createAuctionService = async (data) => {
                         auctionId: auction.id,
                         categoryId: category.id,
                         subCategoryId: subCategory?.id ?? null,
-                        currencyId: currencyRecord.id,
+                        currencyId: lotCurrency.id, // ✅ CHANGED — lot's own currency
                         ...(dimension && { dimension: { create: dimension } }),
                     },
                 });
@@ -501,10 +555,16 @@ export const createAuctionService = async (data) => {
                     category: true,
                     subCategory: true,
                     currency: true,
+                    // ✅ NEW
+                    auctionCurrencies: {
+                        include: { currency: true },
+                        orderBy: { isPrimary: "desc" },
+                    },
                     tags: { include: { tag: true } },
                     auctionFees: { orderBy: { sortOrder: "asc" } },
                     items: {
                         include: {
+                            currency: true, // ✅ NEW — lot currency
                             dimension: true,
                             images: { orderBy: { sortOrder: "asc" } },
                             documents: true,
@@ -523,7 +583,7 @@ export const createAuctionService = async (data) => {
 };
 
 // =====================================================================
-// GET AUCTIONS (unchanged behaviour, tags now include tag details)
+// GET AUCTIONS
 // =====================================================================
 
 export const getAuctionService = async (data = {}) => {
@@ -556,6 +616,11 @@ export const getAuctionService = async (data = {}) => {
         orderBy: { createdAt: "desc" },
         include: {
             currency: true,
+            // ✅ NEW
+            auctionCurrencies: {
+                include: { currency: true },
+                orderBy: { isPrimary: "desc" },
+            },
             category: true,
             subCategory: true,
             creator: { select: { id: true, uuid: true, username: true, email: true } },
@@ -609,7 +674,9 @@ export const getLotByAuctionId = async ({ auctionUuid }) => {
     };
 };
 
-
+// =====================================================================
+// DELETE AUCTION (DRAFT only)
+// =====================================================================
 
 export const deleteAuctionService = async ({ auctionUuid, deletedBy }) => {
     if (!auctionUuid) throw httpError("Auction UUID is required");
@@ -645,6 +712,7 @@ export const deleteAuctionService = async ({ auctionUuid, deletedBy }) => {
             await tx.auctionFee.deleteMany({ where: { auctionId: auction.id } });
             await tx.auctionRule.deleteMany({ where: { auctionId: auction.id } });
             await tx.auctionStatusHistory.deleteMany({ where: { auctionId: auction.id } });
+            await tx.auctionCurrency.deleteMany({ where: { auctionId: auction.id } }); // ✅ NEW
 
             const { count: deletedLots } = await tx.auctionItem.deleteMany({
                 where: { auctionId: auction.id },

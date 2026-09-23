@@ -57,7 +57,7 @@ function FormLotsList({
     // LIVE values — `fields` from useFieldArray is only a snapshot taken
     // when the lot was appended (all empty), which is why data was missing.
     const liveLots = useWatch({ control, name: "lots" });
-    const auctionCurrency = useWatch({ control, name: "basicInfo.currency" })?.[0] ?? "INR";
+    const auctionCurrency = useWatch({ control, name: "basicInfo.primaryCurrency" }) || "INR";
 
     const rows: LotRow[] = React.useMemo(
         () =>

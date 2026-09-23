@@ -294,6 +294,7 @@ model Auction {
   auctionFees          AuctionFee[]
   shippingStrategy     ShippingStrategy       @default(SHIPPING_CALCULATED_SEPARATELY)
   visibility           AuctionVisibility      @default(REGISTERED_USERS_ONLY)
+  auctionCurrencies    AuctionCurrency[]
 
   @@index([status])
   @@index([startTime])
@@ -313,8 +314,9 @@ model Currency {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  auctions     Auction[]
-  auctionItems AuctionItem[]
+  auctions          Auction[]
+  auctionItems      AuctionItem[]
+  auctionCurrencies AuctionCurrency[]
 
   @@map("currencies")
 }
@@ -605,6 +607,20 @@ model AuctionWinner {
   @@index([winnerId])
   @@index([paymentStatus])
   @@map("auction_winners")
+}
+
+model AuctionCurrency {
+  auctionId  BigInt
+  currencyId BigInt
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  auction  Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  currency Currency @relation(fields: [currencyId], references: [id])
+
+  @@id([auctionId, currencyId])
+  @@index([currencyId])
+  @@map("auction_currencies")
 }
 
 model Bid {

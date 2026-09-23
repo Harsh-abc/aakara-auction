@@ -35,6 +35,7 @@ export interface BasicInfoForm {
 
     /** Auction stores ONE currency — the first selected one is sent. */
     currency: string[];
+    primaryCurrency: string;
 
     coverImage: File | null;
 }

@@ -108,7 +108,13 @@ export const buildAuctionFormData = (
     appendIfPresent(formData, "subCategoryUuid", basicInfo.subCategoryUuid);
 
     // Auction model stores ONE currency — send the first selected as a plain string
-    formData.append("currency", basicInfo.currency?.[0] ?? "INR");
+    // formData.append("currency", basicInfo.currency?.[0] ?? "INR");
+    const allowedCurrencies = basicInfo.currency?.length ? basicInfo.currency : ["INR"];
+    const primaryCurrency = allowedCurrencies.includes(basicInfo.primaryCurrency)
+        ? basicInfo.primaryCurrency
+        : allowedCurrencies[0];
+    formData.append("currencies", JSON.stringify(allowedCurrencies));
+    formData.append("primaryCurrency", primaryCurrency);
 
     if (basicInfo.coverImage instanceof File) {
         formData.append("coverImage", basicInfo.coverImage);
@@ -233,7 +239,7 @@ export const buildAuctionFormData = (
             insureanceValue: num(pricing.insuranceDeclaredValue),
             gstRate: num(pricing.gstRate),
             hsnCode: str(pricing.hsnCode), // backend strips spaces/dots
-
+            currency: allowedCurrencies.includes(pricing.currency) ? pricing.currency : primaryCurrency,
             status: lot.status || "DRAFT",
             shippingInfo: str(lot.shippingInfo) ?? str(shipping.shippingInfo),
             isFeatured: Boolean(lot.isFeatured),
@@ -287,6 +293,10 @@ export const validateAuctionForm = (
     if (!basicInfo.categoryUuid) errors.push("Category is required");
     if (!basicInfo.currency?.length) errors.push("Select at least one currency");
 
+    if (basicInfo.currency?.length && !basicInfo.currency.includes(basicInfo.primaryCurrency)) {
+        errors.push("Choose a primary currency from the selected currencies");
+    }
+
     const start = combineDateTime(schedule.startDate, schedule.startTime);
     const end = combineDateTime(schedule.endDate, schedule.endTime);
     if (!start) errors.push("Auction start date and time are required");
@@ -322,6 +332,11 @@ export const validateAuctionForm = (
         const starting = num(lot.pricing.startingPrice);
         if (status === "SCHEDULED" && (starting === null || starting <= 0)) {
             errors.push(`Lot ${n}: starting price is required`);
+        }
+
+        const lotCurrency = lot.pricing.currency;
+        if (lotCurrency && !basicInfo.currency?.includes(lotCurrency)) {
+            errors.push(`Lot ${n}: currency ${lotCurrency} is not enabled for this auction`);
         }
 
         const hasImage = (lot.images ?? []).some((m) => m?.file?.type?.startsWith("image/"));
