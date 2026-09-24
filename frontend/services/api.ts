@@ -35,4 +35,5 @@ export const currencyEndPoints = {
 export const userEndPoints = {
     GET_ALL_USERS_API: `${BASE_URL}/api/users/get-all-users`,
     GET_USER_BY_ID_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}`,
+    UPLOAD_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc`
 };

@@ -77,3 +77,38 @@ export interface GetUserByIdResponse {
     message: string;
     data: User;
 }
+
+export type KycType = "INDIVIDUAL" | "BUSINESS";
+
+export type DocumentType =
+    | "PASSPORT"
+    | "DRIVERS_LICENSE"
+    | "NATIONAL_ID"
+    | "AADHAAR"
+    | "PAN_CARD"
+    | "UTILITY_BILL"
+    | "BANK_STATEMENT"
+    | "BUSINESS_REGISTRATION";
+
+export interface KycDocumentInput {
+    documentType: DocumentType;
+    documentNumber?: string;
+    file: File;
+}
+
+export interface UploadUserKycPayload {
+    uuid: string;
+    kycType: KycType;
+    documents: KycDocumentInput[];
+    onProgress?: (percent: number) => void;
+}
+
+export interface UploadUserKycResponse {
+    success: boolean;
+    message: string;
+    data: {
+        kycType: KycType;
+        status: string;
+        documentsUploaded: number;
+    };
+}
