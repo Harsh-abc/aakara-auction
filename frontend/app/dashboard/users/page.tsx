@@ -9,14 +9,25 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { auctionData, users } from "@/lib/data";
+import { auctionData } from "@/lib/data";
+import { AppDispatch, RootState } from "@/redux/store";
+import { getAllUsers } from "@/services/operations/user.api";
 // import { auctionData } from "@/lib/data";
 import { Plus, Search, SearchIcon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function Users() {
     const [search, setSearch] = useState("")
+
+    const dispatch = useDispatch<AppDispatch>();
+    const { users, loading, error } = useSelector((state: RootState) => state.user);
+
+    useEffect(() => {
+        dispatch(getAllUsers({ page: 1, limit: 100 }));
+    }, [dispatch]);
+
 
     const items = [
         { label: "All", value: "all" },

@@ -1,29 +1,23 @@
-
 'use client'
 import { columns } from "@/components/core/Dashboard/users/users-columns";
 import { UsersTable } from "@/components/core/Dashboard/users/users-table";
-
-import UserStats from "@/components/core/Dashboard/users/UserStats";
-import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { users } from "@/lib/data";
-// import { auctionData } from "@/lib/data";
-import { Plus, Search, SearchIcon } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { SearchIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
+import { getAllUsers } from "@/services/operations/user.api";
 
 export default function AllUsers() {
     const [search, setSearch] = useState("")
 
-    const items = [
-        { label: "All", value: "all" },
-        { label: "Active", value: "active" },
-        { label: "Completed", value: "completed" },
-        { label: "Scheduled", value: "scheduled" },
-    ]
+    const dispatch = useDispatch<AppDispatch>();
+    const { users, loading, error } = useSelector((state: RootState) => state.user);
+
+    useEffect(() => {
+        dispatch(getAllUsers({ page: 1, limit: 100 }));
+    }, [dispatch]);
 
     return (
         <div className="px-8 py-8">
@@ -31,7 +25,6 @@ export default function AllUsers() {
             <div className="">
                 <h1 className="text-[24px] font-bold">All Users</h1>
             </div>
-
 
             <div className="w-full rounded-[8px] pb-4">
                 <div className="pb-4 flex items-center justify-between mt-3.5">
@@ -46,11 +39,15 @@ export default function AllUsers() {
                             </InputGroup>
                         </Field>
                     </div>
-
                 </div>
 
-
-                <UsersTable columns={columns} data={users} search={search} />
+                {loading ? (
+                    <p className="text-sm text-muted-foreground">Loading users...</p>
+                ) : error ? (
+                    <p className="text-sm text-red-500">{error}</p>
+                ) : (
+                    <UsersTable columns={columns} data={users} search={search} />
+                )}
 
             </div>
         </div>

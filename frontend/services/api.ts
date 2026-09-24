@@ -30,3 +30,9 @@ export const categoryEndPoints = {
 export const currencyEndPoints = {
     GET_CURRENCIES_API: `${BASE_URL}/api/currency`,
 };
+
+
+export const userEndPoints = {
+    GET_ALL_USERS_API: `${BASE_URL}/api/users/get-all-users`,
+    GET_USER_BY_ID_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}`,
+};

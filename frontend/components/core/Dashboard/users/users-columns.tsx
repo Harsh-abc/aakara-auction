@@ -8,7 +8,29 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-import { User } from "@/lib/data"
+import { User } from "@/lib/types/user.types"
+
+// Works out the badge text from user status + kyc
+const getAccountStatus = (user: User) => {
+    if (user.status === "ACTIVE") return "Active"
+    if (user.status === "SUSPENDED") return "Suspended"
+    if (user.status === "PENDING_VERIFICATION") return "Pending Verification"
+    return user.status
+}
+
+const getKycStatus = (user: User) => {
+    if (!user.kyc) return "Not Uploaded"
+    return user.kyc.status   // shows exactly what's in the DB
+}
+
+const getFullName = (user: User) => {
+    const userName = user.username
+    const firstName = user.profile?.firstName ?? ""
+    const lastName = user.profile?.lastName ?? ""
+    const fullName = `${firstName} ${lastName}`.trim()
+
+    return fullName || userName
+}
 
 export const columns: ColumnDef<User>[] = [
     {
@@ -42,13 +64,14 @@ export const columns: ColumnDef<User>[] = [
     },
 
     {
-        accessorKey: "fullName",
+        id: "fullName",
+        accessorFn: (user) => getFullName(user),
 
         header: "Full Name",
 
         cell: ({ row }) => (
             <span className="font-medium">
-                {row.original.fullName}
+                {getFullName(row.original)}
             </span>
         ),
     },
@@ -66,57 +89,81 @@ export const columns: ColumnDef<User>[] = [
     },
 
     {
-        accessorKey: "contactNo",
+        accessorKey: "phone",
 
         header: "Contact no.",
 
         cell: ({ row }) => (
             <span>
-                {row.original.contactNo}
+                {row.original.phone ?? "-"}
             </span>
         ),
     },
 
     {
-        accessorKey: "createdOn",
+        accessorKey: "createdAt",
 
         header: "Created on",
 
         cell: ({ row }) => (
             <span className="text-muted-foreground">
-                {row.original.createdOn}
+                {new Date(row.original.createdAt).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                })}
             </span>
         ),
     },
 
     {
-        accessorKey: "status",
+        id: "status",
+        accessorFn: (user) => getAccountStatus(user),
 
         header: "Status",
 
         cell: ({ row }) => {
-            const status = row.original.status
+            const status = getAccountStatus(row.original)
 
-            const statusClass = {
-                Verified:
-                    "bg-green-50 text-green-600 border-green-100",
-
-                Suspended:
-                    "bg-red-50 text-red-500 border-red-100",
-
-                "Pending Verification":
-                    "bg-orange-50 text-orange-500 border-orange-100",
-
-                "KYC Not Uploaded":
-                    "bg-gray-100 text-gray-600 border-gray-200",
-            }[status]
+            const statusClass: Record<string, string> = {
+                Active: "bg-green-50 text-green-600 border-green-100",
+                Suspended: "bg-red-50 text-red-500 border-red-100",
+                "Pending Verification": "bg-orange-50 text-orange-500 border-orange-100",
+            }
 
             return (
                 <Badge
                     variant="outline"
-                    className={`rounded-full px-3 py-1 text-xs font-normal ${statusClass}`}
+                    className={`rounded-full px-3 py-1 text-xs font-normal ${statusClass[status] ?? ""}`}
                 >
                     {status}
+                </Badge>
+            )
+        },
+    },
+
+    {
+        id: "kyc",
+        accessorFn: (user) => getKycStatus(user),
+
+        header: "KYC",
+
+        cell: ({ row }) => {
+            const kyc = getKycStatus(row.original)
+
+            const kycClass: Record<string, string> = {
+                VERIFIED: "bg-green-50 text-green-600 border-green-100",
+                PENDING: "bg-orange-50 text-orange-500 border-orange-100",
+                REJECTED: "bg-red-50 text-red-500 border-red-100",
+                "Not Uploaded": "bg-gray-100 text-gray-600 border-gray-200",
+            }
+
+            return (
+                <Badge
+                    variant="outline"
+                    className={`rounded-full px-3 py-1 text-xs font-normal ${kycClass[kyc] ?? ""}`}
+                >
+                    {kyc}
                 </Badge>
             )
         },
@@ -128,7 +175,7 @@ export const columns: ColumnDef<User>[] = [
         header: "Actions",
 
         cell: ({ row }) => {
-            const userId = row.original.id
+            const userId = row.original.uuid
 
             return (
                 <Button
