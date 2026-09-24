@@ -11,6 +11,7 @@ import uploadRouter from "./src/routes/upload.routes.js";
 import categoryRouter from "./src/routes/category.routes.js";
 import auctionRouter from "./src/routes/auction.routes.js";
 import currencyRouter from "./src/routes/currency.routes.js";
+import userRouter from "./src/routes/user.routes.js";
 
 
 const app = express();
@@ -61,6 +62,7 @@ app.use('/api/image', uploadRouter)
 app.use('/api/category', categoryRouter)
 app.use('/api/auction', auctionRouter)
 app.use('/api/currency', currencyRouter)
+app.use('/api/users', userRouter)
 
 const PORT = process.env.PORT || 8080;
 

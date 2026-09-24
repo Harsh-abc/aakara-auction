@@ -1,0 +1,9 @@
+import { Router } from 'express';
+import { getAllUsers } from '../controllers/user.controller.js';
+
+const userRouter = Router();
+
+// GET ALL USERS (admin only)
+userRouter.get('/get-all-users', getAllUsers);
+
+export default userRouter;
