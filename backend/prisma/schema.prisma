@@ -701,6 +701,7 @@ enum DocumentType {
   UTILITY_BILL
   BANK_STATEMENT
   BUSINESS_REGISTRATION
+  OTHERS
 }
 
 enum DocumentStatus {

@@ -122,7 +122,7 @@ export default function UserPage() {
 
             {/* No KYC yet → show upload, otherwise show profile */}
             {!user.kyc ? (
-                <KycUpload />
+                <KycUpload uuid={`${user.uuid}`} />
             ) : (
                 <UserProfile user={user} />
             )}

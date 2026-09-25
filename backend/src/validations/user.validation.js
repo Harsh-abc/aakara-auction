@@ -24,7 +24,7 @@ export const uploadUserKycSchema = z.object({
             z.object({
                 documentType: z.enum([
                     'PASSPORT', 'DRIVERS_LICENSE', 'NATIONAL_ID', 'AADHAAR',
-                    'PAN_CARD', 'UTILITY_BILL', 'BANK_STATEMENT', 'BUSINESS_REGISTRATION',
+                    'PAN_CARD', 'UTILITY_BILL', 'BANK_STATEMENT', 'BUSINESS_REGISTRATION', 'OTHERS'
                 ]),
                 documentNumber: z.string().trim().max(50).optional(),
                 expiresAt: z.coerce.date().optional(),

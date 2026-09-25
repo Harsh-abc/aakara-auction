@@ -88,7 +88,8 @@ export type DocumentType =
     | "PAN_CARD"
     | "UTILITY_BILL"
     | "BANK_STATEMENT"
-    | "BUSINESS_REGISTRATION";
+    | "BUSINESS_REGISTRATION" 
+    | "OTHERS";
 
 export interface KycDocumentInput {
     documentType: DocumentType;

@@ -1,10 +1,17 @@
 "use client"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useDispatch, useSelector } from "react-redux"
 import {
     FileText,
     CreditCard,
     MapPin,
-    UserRound,
+    Car,
+    Fingerprint,
+    Landmark,
+    Building2,
+    FilePlus,
+    Plus,
     CloudUpload,
     Check,
     Maximize,
@@ -12,67 +19,141 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { AppDispatch, RootState } from "@/redux/store"
+import { uploadUserKyc } from "@/services/operations/user.api"
+import { DocumentType } from "@/lib/types/user.types"
 
 type DocumentStatus = "empty" | "pending" | "verified" | "rejected"
 
 interface Document {
     id: string
+    documentType: DocumentType // value the backend expects
     title: string
     uploadText: string
     icon: React.ReactNode
     accept?: string
+    removable?: boolean // only "Other" cards can be removed
 }
+
+// same list as KYC_ALLOWED_TYPES on the backend
+const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"]
+const MAX_SIZE = 5 * 1024 * 1024
 
 const documents: Document[] = [
     {
         id: "passport",
+        documentType: "PASSPORT",
         title: "Government ID (Passport)",
         uploadText: "Upload Passport",
         icon: <FileText className="h-5 w-5 text-[#555]" />,
     },
     {
+        id: "drivers-license",
+        documentType: "DRIVERS_LICENSE",
+        title: "Driver's License",
+        uploadText: "Upload Driver's License",
+        icon: <Car className="h-5 w-5 text-[#555]" />,
+    },
+    {
         id: "national-id",
+        documentType: "NATIONAL_ID",
         title: "National ID Card (Front & Back)",
         uploadText: "Upload Front & Back",
         icon: <CreditCard className="h-5 w-5 text-[#555]" />,
     },
     {
+        id: "aadhaar",
+        documentType: "AADHAAR",
+        title: "Aadhaar Card (Front & Back)",
+        uploadText: "Upload Aadhaar",
+        icon: <Fingerprint className="h-5 w-5 text-[#555]" />,
+    },
+    {
+        id: "pan-card",
+        documentType: "PAN_CARD",
+        title: "PAN Card",
+        uploadText: "Upload PAN Card",
+        icon: <CreditCard className="h-5 w-5 text-[#555]" />,
+    },
+    {
         id: "address",
+        documentType: "UTILITY_BILL",
         title: "Proof of Address (Utility Bill)",
         uploadText: "Upload Utility Bill",
         icon: <MapPin className="h-5 w-5 text-[#555]" />,
     },
     {
-        id: "selfie",
-        title: "Selfie with ID",
-        uploadText: "Upload Selfie",
-        icon: <UserRound className="h-5 w-5 text-[#555]" />,
-        accept: "image/png,image/jpeg,image/jpg",
+        id: "bank-statement",
+        documentType: "BANK_STATEMENT",
+        title: "Bank Statement",
+        uploadText: "Upload Bank Statement",
+        icon: <Landmark className="h-5 w-5 text-[#555]" />,
+    },
+    {
+        id: "business-registration",
+        documentType: "BUSINESS_REGISTRATION",
+        title: "Business Registration",
+        uploadText: "Upload Registration Certificate",
+        icon: <Building2 className="h-5 w-5 text-[#555]" />,
     },
 ]
 
 interface UploadedDocument {
     file: File
-    preview: string | null
+    preview: string
     status: DocumentStatus
 }
 
+export function KycUpload({ uuid }: { uuid: string }) {
+    const router = useRouter()
+    const dispatch = useDispatch<AppDispatch>()
+    const { kycUploading, kycUploadError } = useSelector((state: RootState) => state.user)
 
-export function KycUpload() {
     const [uploadedDocuments, setUploadedDocuments] = useState<
         Record<string, UploadedDocument>
     >({})
 
+    // ids of the extra "Other" cards added by the admin
+    const [otherIds, setOtherIds] = useState<string[]>([])
+
     const [activeDocument, setActiveDocument] = useState<string | null>(null)
+    const [progress, setProgress] = useState(0)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const allDocumentsUploaded =
-        documents.every(
-            (document) => uploadedDocuments[document.id]
-        )
+    // fixed cards + any "Other" cards
+    const allCards: Document[] = [
+        ...documents,
+        ...otherIds.map((id, i) => ({
+            id,
+            documentType: "OTHERS" as DocumentType,
+            title: `Other Document ${i + 1}`,
+            uploadText: "Upload Document",
+            icon: <FilePlus className="h-5 w-5 text-[#555]" />,
+            removable: true,
+        })),
+    ]
 
+    const uploadedCount = Object.keys(uploadedDocuments).length
 
+    const hasRejected = Object.values(uploadedDocuments).some(
+        (doc) => doc.status === "rejected"
+    )
+
+    // estimated progress: climbs to 90% while uploading
+    useEffect(() => {
+        if (!kycUploading) {
+            setProgress(0)
+            return
+        }
+
+        setProgress(5)
+        const timer = setInterval(() => {
+            setProgress((p) => (p < 90 ? p + Math.max(1, (90 - p) / 10) : p))
+        }, 300)
+
+        return () => clearInterval(timer)
+    }, [kycUploading])
 
     const handleUploadClick = (
         documentId: string,
@@ -82,7 +163,7 @@ export function KycUpload() {
 
         if (fileInputRef.current) {
             fileInputRef.current.accept =
-                accept || "image/png,image/jpeg,image/jpg,application/pdf"
+                accept || "image/png,image/jpeg,image/jpg,image/webp,application/pdf"
 
             fileInputRef.current.click()
         }
@@ -92,30 +173,28 @@ export function KycUpload() {
         event: React.ChangeEvent<HTMLInputElement>
     ) => {
         const file = event.target.files?.[0]
+        event.target.value = ""
 
         if (!file || !activeDocument) return
 
-        if (file.size > 5 * 1024 * 1024) {
-            alert("File size must be less than 5MB")
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            alert("Only PDF, PNG, JPG or WEBP files are allowed")
             return
         }
 
-        let preview: string | null = null
-
-        if (file.type.startsWith("image/")) {
-            preview = URL.createObjectURL(file)
+        if (file.size > MAX_SIZE) {
+            alert("File size must be less than 5MB")
+            return
         }
 
         setUploadedDocuments((prev) => ({
             ...prev,
             [activeDocument]: {
                 file,
-                preview,
+                preview: URL.createObjectURL(file), // works for images and PDFs
                 status: "pending",
             },
         }))
-
-        event.target.value = ""
     }
 
     const handleApprove = (documentId: string) => {
@@ -154,24 +233,43 @@ export function KycUpload() {
         })
     }
 
-    const handleVerifyAll = () => {
-        setUploadedDocuments((prev) => {
-            const updated = { ...prev }
-
-            documents.forEach((document) => {
-                if (updated[document.id]) {
-                    updated[document.id] = {
-                        ...updated[document.id],
-                        status: "verified",
-                    }
-                }
-            })
-
-            return updated
-        })
+    const handleAddOther = () => {
+        setOtherIds((prev) => [...prev, `other-${Date.now()}`])
     }
 
+    // removes the whole "Other" card (and its file, if any)
+    const handleRemoveOther = (documentId: string) => {
+        handleRemove(documentId)
+        setOtherIds((prev) => prev.filter((id) => id !== documentId))
+    }
 
+    const handleVerifyAll = async () => {
+        if (uploadedCount === 0 || hasRejected || kycUploading) return
+
+        // only send the cards that have a file
+        const toUpload = allCards.filter((card) => uploadedDocuments[card.id])
+
+        try {
+            await dispatch(
+                uploadUserKyc({
+                    uuid,
+                    kycType: "INDIVIDUAL",
+                    documents: toUpload.map((card) => ({
+                        documentType: card.documentType,
+                        file: uploadedDocuments[card.id].file,
+                    })),
+                })
+            ).unwrap()
+
+            Object.values(uploadedDocuments).forEach((doc) =>
+                URL.revokeObjectURL(doc.preview)
+            )
+
+            router.push("/dashboard/users")
+        } catch {
+            // message is shown from kycUploadError below
+        }
+    }
 
     const getStatusBadge = (status: DocumentStatus) => {
         if (status === "pending") {
@@ -214,33 +312,76 @@ export function KycUpload() {
                     Submitted Documents
                 </h2>
 
-                {!allDocumentsUploaded ? (
+                <div className="flex items-center gap-2">
+
                     <Button
                         type="button"
-                        className="h-9 rounded-[6px] bg-[#F59E0B] px-4 text-[11px] font-medium text-white hover:bg-[#D97706]"
+                        variant="outline"
+                        disabled={kycUploading}
+                        onClick={handleAddOther}
+                        className="h-9 rounded-[6px] px-4 text-[11px] font-medium"
                     >
-                        Request Documents
+                        <Plus className="mr-1.5 h-3.5 w-3.5" />
+                        Add Other Document
                     </Button>
-                ) : (
-                    <Button
-                        type="button"
-                        className="h-9 rounded-[6px] bg-[#16A34A] px-4 text-[11px] font-medium text-white hover:bg-[#15803D]"
-                        onClick={() => {
-                            handleVerifyAll
-                        }}
-                    >
-                        <Check className="mr-1.5 h-3.5 w-3.5" />
-                        Verify All Documents
-                    </Button>
-                )}
+
+                    {uploadedCount === 0 ? (
+                        <Button
+                            type="button"
+                            className="h-9 rounded-[6px] bg-[#F59E0B] px-4 text-[11px] font-medium text-white hover:bg-[#D97706]"
+                        >
+                            Request Documents
+                        </Button>
+                    ) : (
+                        <Button
+                            type="button"
+                            disabled={hasRejected || kycUploading}
+                            className="h-9 rounded-[6px] bg-[#16A34A] px-4 text-[11px] font-medium text-white hover:bg-[#15803D]"
+                            onClick={handleVerifyAll}
+                        >
+                            <Check className="mr-1.5 h-3.5 w-3.5" />
+                            {kycUploading
+                                ? "Uploading..."
+                                : `Verify ${uploadedCount} Document${uploadedCount > 1 ? "s" : ""}`}
+                        </Button>
+                    )}
+
+                </div>
 
             </div>
+
+            {kycUploading && (
+                <div className="mb-4 space-y-1">
+                    <div className="h-2 w-full rounded bg-[#E5E5E5]">
+                        <div
+                            className="h-2 rounded bg-[#16A34A] transition-all duration-300"
+                            style={{ width: `${Math.round(progress)}%` }}
+                        />
+                    </div>
+                    <p className="text-[11px] text-[#777]">
+                        Uploading documents… {Math.round(progress)}%
+                    </p>
+                </div>
+            )}
+
+            {hasRejected && (
+                <p className="mb-4 text-[12px] text-red-500">
+                    Replace the rejected document before verifying.
+                </p>
+            )}
+
+            {kycUploadError && !kycUploading && (
+                <p className="mb-4 text-[12px] text-red-500">{kycUploadError}</p>
+            )}
+
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-                {documents.map((document) => {
+                {allCards.map((document) => {
 
                     const uploaded =
                         uploadedDocuments[document.id]
+
+                    const isImage = uploaded?.file.type.startsWith("image/")
 
                     return (
                         <div
@@ -281,9 +422,22 @@ export function KycUpload() {
 
                                 </div>
 
-                                {getStatusBadge(
-                                    uploaded?.status || "empty"
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {getStatusBadge(
+                                        uploaded?.status || "empty"
+                                    )}
+
+                                    {document.removable && !kycUploading && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveOther(document.id)}
+                                            className="flex h-6 w-6 items-center justify-center rounded-full text-[#777] hover:bg-[#F0F0F0]"
+                                            title="Remove this card"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                </div>
 
                             </div>
 
@@ -291,6 +445,7 @@ export function KycUpload() {
                             {!uploaded && (
                                 <button
                                     type="button"
+                                    disabled={kycUploading}
                                     onClick={() =>
                                         handleUploadClick(
                                             document.id,
@@ -313,14 +468,32 @@ export function KycUpload() {
 
                             {uploaded && (
                                 <>
-                                    {uploaded.preview ? (
-                                        <div className="relative mt-4 overflow-hidden rounded-[7px]">
+                                    <div className="relative mt-4 overflow-hidden rounded-[7px]">
+                                        {isImage ? (
                                             <img
                                                 src={uploaded.preview}
                                                 alt={document.title}
                                                 className="h-[160px] w-full object-cover"
                                             />
+                                        ) : (
+                                            <div className="flex h-[160px] items-center justify-center bg-[#F5F5F5]">
+                                                <div className="text-center">
 
+                                                    <FileText className="mx-auto mb-2 h-8 w-8 text-[#777]" />
+
+                                                    <p className="max-w-[250px] truncate text-[11px] font-medium">
+                                                        {uploaded.file.name}
+                                                    </p>
+
+                                                    <p className="text-[9px] text-[#888]">
+                                                        PDF Document
+                                                    </p>
+
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {!kycUploading && (
                                             <button
                                                 type="button"
                                                 onClick={() =>
@@ -332,39 +505,19 @@ export function KycUpload() {
                                             >
                                                 <X className="h-4 w-4" />
                                             </button>
-                                        </div>
-                                    ) : (
-                                        <div className="mt-4 flex h-[110px] items-center justify-center rounded-[7px] bg-[#F5F5F5]">
-                                            <div className="text-center">
-
-                                                <FileText className="mx-auto mb-2 h-8 w-8 text-[#777]" />
-
-                                                <p className="max-w-[250px] truncate text-[11px] font-medium">
-                                                    {uploaded.file.name}
-                                                </p>
-
-                                                <p className="text-[9px] text-[#888]">
-                                                    PDF Document
-                                                </p>
-
-                                            </div>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
 
                                     <div className="mt-3 flex items-center justify-between">
 
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                if (
-                                                    uploaded.preview
-                                                ) {
-                                                    window.open(
-                                                        uploaded.preview,
-                                                        "_blank"
-                                                    )
-                                                }
-                                            }}
+                                            onClick={() =>
+                                                window.open(
+                                                    uploaded.preview,
+                                                    "_blank"
+                                                )
+                                            }
                                             className="flex items-center gap-2 text-[10px] text-[#444]"
                                         >
                                             <Maximize className="h-5 w-5" />
@@ -410,6 +563,22 @@ export function KycUpload() {
                                                     <Check className="h-4 w-4" />
                                                     Document verified
                                                 </span>
+                                            )}
+
+                                        {uploaded.status ===
+                                            "rejected" && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        handleRemove(
+                                                            document.id
+                                                        )
+                                                    }
+                                                    className="h-8 px-4 text-[10px]"
+                                                >
+                                                    Replace
+                                                </Button>
                                             )}
 
                                     </div>
