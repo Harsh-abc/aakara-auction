@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   Collapsible,
   CollapsibleContent,
@@ -8,7 +10,6 @@ import {
 } from "@/components/ui/collapsible"
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -32,16 +33,23 @@ export function NavMain({
     }[]
   }[]
 }) {
+  const pathname = usePathname()
+
+  // NEW: only one group open at a time; start with the group of the current page open
+  const [openGroup, setOpenGroup] = useState<string | null>(
+    () => items.find((item) => item.items?.length && pathname.startsWith(item.url))?.title ?? null
+  )
+
   return (
     <SidebarGroup className="px-2">
       <SidebarMenu className="mt-4">
         {items.map((item) => {
-          // No sub-items -> render as a plain link, no collapsible needed
           if (!item.items?.length) {
             return (
               <SidebarMenuItem key={item.title} className="mb-2">
                 <SidebarMenuButton
                   tooltip={item.title}
+                  onClick={() => setOpenGroup(null)} // NEW: clicking a plain link closes any open group
                   render={
                     <Link
                       href={item.url}
@@ -57,12 +65,13 @@ export function NavMain({
             )
           }
 
-          // Has sub-items -> collapsible group
+          const isOpen = openGroup === item.title // NEW
+
           return (
             <Collapsible
               key={item.title}
-              defaultOpen={item.isActive}
-              className="group/collapsible"
+              open={isOpen} // NEW: controlled
+              onOpenChange={(open) => setOpenGroup(open ? item.title : null)} // NEW
               render={<SidebarMenuItem className="mb-2" />}
             >
               <CollapsibleTrigger
@@ -75,11 +84,13 @@ export function NavMain({
               >
                 {item.icon && <span className="w-4 h-4 shrink-0">{item.icon}</span>}
                 <span>{item.title}</span>
-                <ChevronRightIcon className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                <ChevronRightIcon
+                  className={`ml-auto size-4 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} // NEW
+                />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
-                  {item.items?.map((subItem) => (
+                  {item.items.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton
                         render={

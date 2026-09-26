@@ -260,7 +260,13 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
         throw error;
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+        where: { email }, include: {
+            profile: {
+                select: { firstName: true, lastName: true, displayName: true, avatarUrl: true },
+            },
+        },
+    });
 
     if (!user) {
         await registerIpFailure(ip);
@@ -290,7 +296,7 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
     if (!passwordValid) {
         await registerIpFailure(ip);
 
-        const failedAttempts = user.failedLoginAttempts + 1;
+        const failedAttempts = Number(user.failedLoginAttempts) + 1;
         const shouldLock = failedAttempts >= ACCOUNT_LOCK_THRESHOLD;
 
         await prisma.user.update({
@@ -347,7 +353,7 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
     await logAttempt({ userId: user.id, email, ip, userAgent, success: true });
 
     return {
-        user: { uuid: user.uuid, username: user.username, email: user.email, roleId: user.roleId.toString() },
+        user: { uuid: user.uuid, username: user.username, email: user.email, roleId: user.roleId.toString(), profile: user.profile ?? null, },
         role: roleName,
         permissions,
         accessToken,

@@ -228,8 +228,14 @@ const data = {
 
   navMain: [
     { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboard className="w-6 h-6" /> },
-    { title: "Live Auctions", url: "/dashboard/live-auctions", icon: <Gavel className="rotate-270" /> },
-    { title: "Auctions & Lots", url: "/dashboard/auctions", icon: <Layers /> },
+    // { title: "Live Auctions", url: "/dashboard/live-auctions", icon: <Gavel className="rotate-270" /> },
+    {
+      title: "Auctions & Lots", url: "/dashboard/auctions", icon: <Layers />, items: [
+        { title: "Live Auctions", url: "/dashboard/settings/general" },
+        { title: "Past Auctions", url: "/dashboard/settings/team" },
+        { title: "Upcoming Auctions", url: "/dashboard/settings/permissions" },
+      ],
+    },
     { title: "Artworks", url: "/dashboard/artworks", icon: <Gavel className="rotate-270" /> },
     { title: "Bidders", url: "/dashboard/bidders", icon: <Users /> },
     { title: "User", url: "/dashboard/users", icon: <Users /> },
@@ -238,7 +244,16 @@ const data = {
     { title: "Payment", url: "/dashboard/payment", icon: <ChartCandlestick /> },
     { title: "Shipping", url: "/dashboard/shipping", icon: <ChartCandlestick /> },
     { title: "Report", url: "/dashboard/report", icon: <Users /> },
-    { title: "Settings", url: "/dashboard/settings", icon: <Users /> },
+    {
+      title: "Settings",
+      url: "/dashboard/settings",
+      icon: <Settings2Icon />,
+      items: [
+        { title: "General Settings", url: "/dashboard/settings/general" },
+        { title: "Team", url: "/dashboard/settings/team" },
+        { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
+      ],
+    },
   ],
 
 }
@@ -254,7 +269,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

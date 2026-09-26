@@ -1,12 +1,10 @@
 import Image from "next/image";
-import Link from "next/link";
+
 
 export default function Home() {
   return (
     <div>
-      <h1 className="text-3xl font-bold underline flex items-center justify-center">Let DO AKARA AUCITON 
-        <Link href={'https://www.codekk.dev/'}>Click here for know more</Link>
-      </h1>
+      <Image src={'/logo/banner.jpg'} alt="Banner" width={1200} height={800} className="w-full h-screen object-cover" />
     </div>
   );
 }

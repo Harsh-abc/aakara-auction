@@ -1,8 +1,16 @@
+export interface AuthUserProfile {
+    firstName?: string | null
+    lastName?: string | null
+    displayName?: string | null
+    avatarUrl?: string | null
+}
+
 export interface AuthUser {
     uuid: string
     username: string
     email: string
     roleId: string
+    profile?: AuthUserProfile | null
 }
 
 export interface DecodedAccessToken {

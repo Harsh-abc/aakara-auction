@@ -37,3 +37,8 @@ export const userEndPoints = {
     GET_USER_BY_ID_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}`,
     UPLOAD_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc`
 };
+
+export const profileEndpoints = {
+    GET_MY_PROFILE_API: `${BASE_URL}/api/users/me/profile`,
+    UPDATE_MY_PROFILE_API: `${BASE_URL}/api/users/me/update-profile`,
+}
