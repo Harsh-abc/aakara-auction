@@ -1,10 +1,16 @@
 import { Router } from 'express';
-import { getAllUsers, getUserById, uploadUserKyc } from '../controllers/user.controller.js';
+import { getAllUsers, getMyProfile, getUserById, updateMyProfile, uploadUserKyc } from '../controllers/user.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from '../middleware/upload.middleware.js';
 
 const userRouter = Router();
+
+
+// USER PROFILE
+userRouter.get('/me/profile', authenticate, getMyProfile);
+userRouter.patch('/me/update-profile', authenticate, uploadAny, updateMyProfile);
+
 
 // GET ALL USERS (admin only)
 userRouter.get('/get-all-users', getAllUsers);

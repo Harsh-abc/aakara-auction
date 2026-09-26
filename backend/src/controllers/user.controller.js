@@ -1,5 +1,5 @@
-import { getAllUsersService, getUserByIdService, uploadUserKycService } from '../services/user.services.js';
-import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema } from '../validations/user.validation.js';
+import { getAllUsersService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService } from '../services/user.services.js';
+import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema } from '../validations/user.validation.js';
 
 
 
@@ -65,6 +65,57 @@ export const uploadUserKyc = async (req, res) => {
             success: true,
             message: 'KYC uploaded and verified successfully',
             data: result,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+
+
+
+export const getMyProfile = async (req, res) => {
+    try {
+        const user = await getMyProfileService({ userId: BigInt(req.user.userId) });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Profile fetched successfully',
+            data: user,
+        });
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const updateMyProfile = async (req, res) => {
+    try {
+        const data = updateMyProfileSchema.parse(req.body ?? {});
+        const avatarFile = (req.files ?? []).find((f) => f.fieldname === 'avatar');
+
+        if (Object.keys(data).length === 0 && !avatarFile) {
+            return res.status(400).json({ success: false, message: 'Send at least one field or an avatar to update' });
+        }
+
+        const profile = await updateMyProfileService({
+            userId: BigInt(req.user.userId),
+            data,
+            avatarFile,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Profile updated successfully',
+            data: profile,
         });
     } catch (err) {
         if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }

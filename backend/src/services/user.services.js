@@ -256,3 +256,112 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
         throw err;
     }
 };
+
+
+
+
+export const getMyProfileService = async ({ userId }) => {
+    const user = await prisma.user.findFirst({
+        where: { id: userId, deletedAt: null },
+        select: {
+            uuid: true,
+            username: true,
+            email: true,
+            phone: true,
+            status: true,
+            emailVerified: true,
+            phoneVerified: true,
+            createdAt: true,
+            role: { select: { name: true } },
+            profile: {
+                select: {
+                    firstName: true, lastName: true, displayName: true, avatarUrl: true, bio: true,
+                    dateOfBirth: true, gender: true, address: true, city: true, state: true,
+                    country: true, pincode: true, createdAt: true, updatedAt: true,
+                }
+            },
+            kyc: { select: { kycType: true, status: true, verifiedAt: true, rejectionReason: true } },
+        },
+    });
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return user;
+};
+
+
+const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const AVATAR_MAX_SIZE = 1 * 1024 * 1024;
+
+
+const getS3KeyFromUrl = (url) => {
+    try {
+        return decodeURIComponent(new URL(url).pathname.slice(1));
+    } catch {
+        return null;
+    }
+};
+
+export const updateMyProfileService = async ({ userId, data, avatarFile }) => {
+    const user = await prisma.user.findFirst({
+        where: { id: userId, deletedAt: null },
+        select: { id: true, uuid: true, profile: { select: { avatarUrl: true } } },
+    });
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (avatarFile) {
+        if (!AVATAR_ALLOWED_TYPES.includes(avatarFile.mimetype)) {
+            const error = new Error('Avatar must be JPG, PNG or WEBP');
+            error.statusCode = 400;
+            throw error;
+        }
+        if (avatarFile.size > AVATAR_MAX_SIZE) {
+            const error = new Error('Avatar must be 2 MB or smaller');
+            error.statusCode = 400;
+            throw error;
+        }
+    }
+
+    const oldAvatarUrl = user.profile?.avatarUrl ?? null;
+    let newAvatarKey = null;
+
+    try {
+        const profileData = { ...data };
+
+        if (avatarFile) {
+            const result = await uploadToS3({ file: avatarFile, folder: `avatars/${user.uuid}` });
+            newAvatarKey = result.key;
+            profileData.avatarUrl = result.url;
+        }
+
+        const profile = await prisma.userProfile.upsert({
+            where: { userId: user.id },
+            create: { userId: user.id, ...profileData },
+            update: profileData,
+            select: {
+                firstName: true, lastName: true, displayName: true, avatarUrl: true, bio: true,
+                dateOfBirth: true, gender: true, address: true, city: true, state: true,
+                country: true, pincode: true, createdAt: true, updatedAt: true,
+            },
+        });
+
+        if (newAvatarKey && oldAvatarUrl) {
+            const oldKey = getS3KeyFromUrl(oldAvatarUrl);
+            if (oldKey) await deleteFromS3(oldKey).catch(() => { });
+        }
+
+        return profile;
+    } catch (err) {
+        if (newAvatarKey) await deleteFromS3(newAvatarKey).catch(() => { });
+        throw err;
+    }
+};
