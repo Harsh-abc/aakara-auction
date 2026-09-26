@@ -4,7 +4,7 @@ import { setSignupEmail } from "@/redux/slices/authSlice";
 import { apiConnector } from "../apiConnector";
 
 import { createAsyncThunk } from "@reduxjs/toolkit";
-const { LOGIN_API, REGISTER_API, VERIFY_OTP_API } = authEndPoints;
+const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, LOGOUT_API } = authEndPoints;
 
 
 // import { jwtDecode } from "jwt-decode"
@@ -144,3 +144,12 @@ export const loginUser = createAsyncThunk<
         }
     }
 );
+
+
+export const logoutUser = createAsyncThunk("auth/logout", async () => {
+    try {
+        await apiConnector({ method: "POST", url: LOGOUT_API })
+    } catch {
+
+    }
+})
