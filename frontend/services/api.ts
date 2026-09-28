@@ -18,6 +18,7 @@ export const auctionEndPoints = {
         `${BASE_URL}/api/auction/getLots/${auctionUuid}/lots`,
     DELETE_AUCTION_API: (auctionUuid: string) =>
         `${BASE_URL}/api/auction/delete-auction/${auctionUuid}`,
+    UPDATE_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/update-auction/${auctionUuid}`
 };
 
 

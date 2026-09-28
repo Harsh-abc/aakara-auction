@@ -10,6 +10,8 @@ import {
     GetAuctionsLotsParams,
     GetAuctionsParams,
     GetAuctionsResponse,
+    UpdateAuctionParams,
+    UpdateAuctionResponse,
 } from "@/lib/types/auction.types";
 import { RootState } from "@/redux/store";
 
@@ -131,6 +133,30 @@ export const deleteAuction = createAsyncThunk<DeleteAuctionResponse, { auctionUu
             return response.data;
         } catch (error) {
             return rejectWithValue(toErrorMessage(error, "Failed to delete auction"));
+        }
+    }
+);
+
+
+
+
+export const updateAuction = createAsyncThunk<UpdateAuctionResponse, UpdateAuctionParams, ThunkConfig>(
+    "auction/updateAuction",
+    async ({ auctionUuid, formData }, { getState, rejectWithValue }) => {
+        const token = getState().auth.accessToken;
+        if (!token) return rejectWithValue("Authentication token not found");
+        if (!auctionUuid) return rejectWithValue("Auction UUID is required");
+
+        try {
+            const response = await apiConnector<UpdateAuctionResponse>({
+                method: "PUT",
+                url: auctionEndPoints.UPDATE_AUCTION_API(auctionUuid),
+                body: formData,
+                header: authHeader(token),
+            });
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(toErrorMessage(error, "Failed to update auction"));
         }
     }
 );

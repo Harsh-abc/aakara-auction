@@ -4,7 +4,8 @@ import {
     createAuction,
     getAuctions,
     getLotsByAuction,
-    deleteAuction
+    deleteAuction,
+    updateAuction
 } from "@/services/operations/auction.api";
 import type {
     Auction,
@@ -42,6 +43,11 @@ interface AuctionState {
     deletingUuid: string | null;
     deleteError: string | null;
 
+    // update
+    updating: boolean;
+    updateError: string | null;
+    updateSuccess: boolean;
+
 }
 
 const initialState: AuctionState = {
@@ -61,6 +67,10 @@ const initialState: AuctionState = {
 
     deletingUuid: null,
     deleteError: null,
+
+    updating: false,
+    updateError: null,
+    updateSuccess: false,
 };
 
 const auctionSlice = createSlice({
@@ -84,6 +94,12 @@ const auctionSlice = createSlice({
 
         clearDeleteError: (state) => {
             state.deleteError = null;
+        },
+
+        clearUpdateState: (state) => {
+            state.updating = false;
+            state.updateError = null;
+            state.updateSuccess = false;
         },
 
     },
@@ -161,10 +177,37 @@ const auctionSlice = createSlice({
             .addCase(deleteAuction.rejected, (state, action) => {
                 state.deletingUuid = null;
                 state.deleteError = action.payload ?? action.error.message ?? "Failed to delete auction";
-            });
+            })
+
+            // ---------------- UPDATE ----------------
+            .addCase(updateAuction.pending, (state) => {
+                state.updating = true;
+                state.updateError = null;
+                state.updateSuccess = false;
+            })
+            .addCase(updateAuction.fulfilled, (state, action) => {
+                const updated = action.payload.data;
+                state.updating = false;
+                state.updateSuccess = true;
+                state.auction = updated;
+
+                // Replace it in the list without refetching
+                if (updated) {
+                    state.auctions = state.auctions.map((a) => (a.uuid === updated.uuid ? updated : a));
+                }
+
+                // Keep the lots view in sync if it's showing this auction
+                if (updated && state.lotsAuction?.uuid === updated.uuid) {
+                    state.lots = updated.items ?? state.lots;
+                }
+            })
+            .addCase(updateAuction.rejected, (state, action) => {
+                state.updating = false;
+                state.updateSuccess = false;
+                state.updateError = action.payload ?? action.error.message ?? "Failed to update auction";
+            })
     },
 });
-
-export const { clearAuctionState, clearLots, clearDeleteError } = auctionSlice.actions;
+export const { clearAuctionState, clearLots, clearDeleteError, clearUpdateState } = auctionSlice.actions;
 
 export default auctionSlice.reducer;

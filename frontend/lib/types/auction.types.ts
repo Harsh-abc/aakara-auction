@@ -327,3 +327,11 @@ export interface DeleteAuctionResponse {
     message: string;
     data: { uuid: string; deletedLots: number };
 }
+
+
+export type UpdateAuctionResponse = CreateAuctionResponse;
+
+export interface UpdateAuctionParams {
+    auctionUuid: string;
+    formData: FormData;
+}
