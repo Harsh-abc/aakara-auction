@@ -1,5 +1,5 @@
 import express from 'express'
-import { createAuction, deleteAuction, getAuction, getLotByAuctionIdController } from '../controllers/auction.controller.js';
+import { createAuction, deleteAuction, getAuction, getLotByAuctionIdController, updateAuction } from '../controllers/auction.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from "../middleware/upload.middleware.js";
@@ -23,5 +23,7 @@ auctionRouter.get('/getLots/:auctionUuid/lots', authenticate, getLotByAuctionIdC
 
 auctionRouter.delete('/delete-auction/:auctionUuid', authenticate, requireRole("SUPER_ADMIN", "ADMIN"), deleteAuction)
 
+
+auctionRouter.put("/update-auction/:auctionUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), uploadAny, updateAuction);
 
 export default auctionRouter;

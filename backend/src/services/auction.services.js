@@ -731,3 +731,435 @@ export const deleteAuctionService = async ({ auctionUuid, deletedBy }) => {
 
     return result;
 };
+
+
+
+
+
+export const updateAuctionService = async (data) => {
+    const {
+        auctionUuid,
+        updatedBy,
+        title: rawTitle,
+        slug: rawSlug,
+        description,
+        short_description,
+        coverImageUrl,
+        removeCoverImage,
+        auctionType,
+        status,
+        startTime,
+        endTime,
+        startDate,
+        endDate,
+        previewStartAt,
+        registrationRequired,
+        registrationStarts,
+        registrationDeadline,
+        timezone,
+        currency,
+        currencies,
+        primaryCurrency,
+        isOnline,
+        venue,
+        termsAndConditions,
+        categoryUuid,
+        subCategoryUuid,
+        shippingStrategy,
+        visibility,
+        tags = [],
+        fees = [],
+        lots = [],
+    } = data;
+
+    // ---------------- validation (same rules as create) ----------------
+    if (!auctionUuid) throw httpError("Auction UUID is required");
+    if (!updatedBy) throw httpError("Authenticated user is required", 401);
+    if (!Array.isArray(tags)) throw httpError("Tags must be an array");
+    if (!Array.isArray(fees)) throw httpError("Fees must be an array");
+    if (!Array.isArray(lots)) throw httpError("Lots must be an array");
+
+    const title = toStr(rawTitle);
+    if (!title) throw httpError("Auction title is required");
+    if (!toStr(categoryUuid)) throw httpError("Category is required");
+
+    const auctionStatus = pickEnum(status, ENUMS.auctionStatus, "DRAFT", "auction status");
+    const isDraft = auctionStatus === "DRAFT";
+
+    const start = toDate(startTime, "Start time");
+    const end = toDate(endTime, "End time");
+    if (!start) throw httpError("Auction start date and time are required");
+    if (!end) throw httpError("Auction end date and time are required");
+    if (end <= start) throw httpError("Auction end time must be after the start time");
+    if (!isDraft && start.getTime() < Date.now() - 60_000) {
+        throw httpError("Auction start time cannot be in the past");
+    }
+
+    const regStarts = toDate(registrationStarts, "Registration start");
+    const regDeadline = toDate(registrationDeadline, "Registration deadline");
+    if (regStarts && regDeadline && regDeadline < regStarts) {
+        throw httpError("Registration deadline must be after registration start");
+    }
+
+    if (!isDraft && lots.length === 0) {
+        throw httpError("Add at least one lot before publishing the auction");
+    }
+
+    const { codes: currencyCodes, primary: primaryCode } = resolveCurrencies({
+        currencies,
+        primaryCurrency,
+        currency,
+    });
+
+    const normalizedTags = normalizeTags(tags);
+    const normalizedFees = normalizeFees(fees);
+    const normalizedLots = lots.map((lot, i) => normalizeLot(lot, i, { isDraft }));
+
+    normalizedLots.forEach((lot, i) => {
+        if (lot.currencyCode && !currencyCodes.includes(lot.currencyCode)) {
+            throw httpError(
+                `Lot ${i + 1}: currency ${lot.currencyCode} is not allowed for this auction (allowed: ${currencyCodes.join(", ")})`
+            );
+        }
+    });
+
+    const itemNumbers = normalizedLots.map((l) => l.itemNumber);
+    if (new Set(itemNumbers).size !== itemNumbers.length) {
+        throw httpError("Lot item numbers must be unique");
+    }
+
+    // existing lot uuids sent by the client (null = new lot)
+    const lotUuids = lots.map((lot) => toStr(lot.uuid));
+    const sentUuids = lotUuids.filter(Boolean);
+    if (new Set(sentUuids).size !== sentUuids.length) {
+        throw httpError("The same lot was sent more than once");
+    }
+
+    // ---------------- transaction ----------------
+    return prisma.$transaction(
+        async (tx) => {
+            const existing = await tx.auction.findUnique({
+                where: { uuid: auctionUuid },
+                select: {
+                    id: true,
+                    slug: true,
+                    status: true,
+                    publishedAt: true,
+                    deletedAt: true,
+                    coverImageUrl: true,
+                    items: {
+                        select: {
+                            id: true,
+                            uuid: true,
+                            images: {
+                                select: { url: true, thumbnailUrl: true, caption: true, isPrimary: true, mediaType: true },
+                                orderBy: { sortOrder: "asc" },
+                            },
+                            documents: {
+                                select: {
+                                    documentType: true,
+                                    fileUrl: true,
+                                    fileName: true,
+                                    mimeType: true,
+                                    fileSize: true,
+                                    description: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!existing || existing.deletedAt) throw httpError("Auction not found", 404);
+            if (!["DRAFT", "SCHEDULED"].includes(existing.status)) {
+                throw httpError(
+                    `Only draft or scheduled auctions can be edited (current status: ${existing.status})`,
+                    409
+                );
+            }
+
+            // every lot uuid sent must belong to THIS auction
+            const itemByUuid = new Map(existing.items.map((item) => [item.uuid, item]));
+            lotUuids.forEach((uuid, i) => {
+                if (uuid && !itemByUuid.has(uuid)) {
+                    throw httpError(`Lot ${i + 1} does not belong to this auction`);
+                }
+            });
+
+            // ---- category ----
+            const category = await tx.category.findUnique({ where: { uuid: categoryUuid } });
+            if (!category || !category.isActive) throw httpError("Invalid category");
+
+            let subCategory = null;
+            if (toStr(subCategoryUuid)) {
+                subCategory = await tx.subCategory.findUnique({ where: { uuid: subCategoryUuid } });
+                if (!subCategory || !subCategory.isActive) throw httpError("Invalid subcategory");
+                if (subCategory.categoryId !== category.id) {
+                    throw httpError("Subcategory does not belong to selected category");
+                }
+            }
+
+            // ---- currencies ----
+            const currencyRecords = await tx.currency.findMany({
+                where: { code: { in: currencyCodes }, isActive: true },
+            });
+            const currencyByCode = new Map(currencyRecords.map((c) => [c.code, c]));
+            const missing = currencyCodes.filter((code) => !currencyByCode.has(code));
+            if (missing.length) throw httpError(`Invalid or inactive currency: ${missing.join(", ")}`);
+            const primaryRecord = currencyByCode.get(primaryCode);
+
+            // ---- slug: keep current unless a different one is asked for ----
+            let slug = existing.slug;
+            if (toStr(rawSlug) && slugify(rawSlug) !== existing.slug) {
+                slug = await uniqueAuctionSlug(tx, rawSlug);
+            }
+
+            // ---- cover: new upload > remove flag > keep current ----
+            let cover = existing.coverImageUrl;
+            if (toStr(coverImageUrl)) cover = toStr(coverImageUrl);
+            else if (toBool(removeCoverImage, false)) cover = null;
+
+            // ---------------- auction ----------------
+            await tx.auction.update({
+                where: { id: existing.id },
+                data: {
+                    title,
+                    slug,
+                    description: toStr(description),
+                    short_description: toStr(short_description),
+                    coverImageUrl: cover,
+                    auctionType: pickEnum(auctionType, ENUMS.auctionType, "FLOOR", "auction type"),
+                    status: auctionStatus,
+                    startTime: start,
+                    endTime: end,
+                    startDate: toDate(startDate, "Start date") ?? start,
+                    endDate: toDate(endDate, "End date") ?? end,
+                    previewStartAt: toDate(previewStartAt, "Preview start"),
+                    registrationRequired: toBool(registrationRequired, true),
+                    registrationStarts: regStarts,
+                    registrationDeadline: regDeadline,
+                    timezone: toStr(timezone) || "Asia/Kolkata",
+                    isOnline: toBool(isOnline, true),
+                    venue: toStr(venue),
+                    termsAndConditions: toStr(termsAndConditions),
+                    // keep the first publish date; moving back to draft clears it
+                    publishedAt: isDraft ? null : existing.publishedAt ?? new Date(),
+                    shippingStrategy: pickEnum(
+                        shippingStrategy,
+                        ENUMS.shippingStrategy,
+                        "SHIPPING_CALCULATED_SEPARATELY",
+                        "shipping strategy"
+                    ),
+                    visibility: pickEnum(visibility, ENUMS.visibility, "REGISTERED_USERS_ONLY", "visibility"),
+                    currency: { connect: { id: primaryRecord.id } },
+                    category: { connect: { id: category.id } },
+                    subCategory: subCategory ? { connect: { id: subCategory.id } } : { disconnect: true },
+                },
+            });
+
+            if (existing.status !== auctionStatus) {
+                await tx.auctionStatusHistory.create({
+                    data: {
+                        auctionId: existing.id,
+                        fromStatus: existing.status,
+                        toStatus: auctionStatus,
+                        changedBy: BigInt(updatedBy),
+                        reason: isDraft ? "Moved back to draft" : "Auction published",
+                    },
+                });
+            }
+
+            // ---------------- currencies: replace ----------------
+            await tx.auctionCurrency.deleteMany({ where: { auctionId: existing.id } });
+            await tx.auctionCurrency.createMany({
+                data: currencyCodes.map((code) => ({
+                    auctionId: existing.id,
+                    currencyId: currencyByCode.get(code).id,
+                    isPrimary: code === primaryCode,
+                })),
+            });
+
+            // ---------------- tags: replace ----------------
+            await tx.auctionTagRelation.deleteMany({ where: { auctionId: existing.id } });
+            for (const { slug: tagSlug, name } of normalizedTags) {
+                const tag = await tx.auctionTag.upsert({
+                    where: { slug: tagSlug },
+                    update: {},
+                    create: { name, slug: tagSlug },
+                });
+                if (!tag.isActive) throw httpError(`Tag "${name}" is disabled`);
+                await tx.auctionTagRelation.create({ data: { auctionId: existing.id, tagId: tag.id } });
+            }
+
+            // ---------------- fees: replace ----------------
+            await tx.auctionFee.deleteMany({ where: { auctionId: existing.id } });
+            if (normalizedFees.length > 0) {
+                await tx.auctionFee.createMany({
+                    data: normalizedFees.map((fee) => ({ ...fee, auctionId: existing.id })),
+                });
+            }
+
+            // ---------------- lots: delete removed ----------------
+            const keptUuids = new Set(sentUuids);
+            const removedIds = existing.items
+                .filter((item) => !keptUuids.has(item.uuid))
+                .map((item) => item.id);
+
+            if (removedIds.length) {
+                await tx.auctionImage.deleteMany({ where: { itemId: { in: removedIds } } });
+                await tx.auctionDocument.deleteMany({ where: { itemId: { in: removedIds } } });
+                await tx.auctionItemDimension.deleteMany({ where: { auctionItemId: { in: removedIds } } });
+                await tx.auctionItem.deleteMany({ where: { id: { in: removedIds } } });
+            }
+
+            // Park kept lots on temporary numbers so re-ordering
+            // (e.g. swapping lot 1 and 2) can't clash on itemNumber
+            let temp = -1;
+            for (const uuid of keptUuids) {
+                await tx.auctionItem.update({
+                    where: { id: itemByUuid.get(uuid).id },
+                    data: { itemNumber: temp-- },
+                });
+            }
+
+            // ---------------- lots: create / update ----------------
+            for (let i = 0; i < normalizedLots.length; i++) {
+                const raw = lots[i];
+                const uuid = lotUuids[i];
+                const { dimension, images, documents, currencyCode, ...itemData } = normalizedLots[i];
+
+                const lotData = {
+                    ...itemData,
+                    categoryId: category.id,
+                    subCategoryId: subCategory?.id ?? null,
+                    currencyId: currencyByCode.get(currencyCode ?? primaryCode).id,
+                };
+
+                // new uploads: use the client's isPrimary (normalizeLot forces one on its own)
+                const newImages = images.map((img, j) => ({
+                    ...img,
+                    isPrimary: Boolean(raw.images?.[j]?.isPrimary),
+                }));
+
+                let itemId;
+                let allImages;
+                let allDocs;
+
+                if (!uuid) {
+                    // ---- NEW lot ----
+                    const item = await tx.auctionItem.create({
+                        data: {
+                            ...lotData,
+                            auctionId: existing.id,
+                            ...(dimension && { dimension: { create: dimension } }),
+                        },
+                    });
+                    itemId = item.id;
+                    allImages = newImages;
+                    allDocs = documents;
+                } else {
+                    // ---- EXISTING lot ----
+                    const current = itemByUuid.get(uuid);
+                    itemId = current.id;
+
+                    await tx.auctionItem.update({ where: { id: itemId }, data: lotData });
+
+                    // dimension: replace
+                    await tx.auctionItemDimension.deleteMany({ where: { auctionItemId: itemId } });
+                    if (dimension) {
+                        await tx.auctionItemDimension.create({ data: { ...dimension, auctionItemId: itemId } });
+                    }
+
+                    // kept images — only URLs this lot already owns
+                    const oldImageByUrl = new Map(current.images.map((img) => [img.url, img]));
+                    const keptImages = Array.isArray(raw.keepMedia)
+                        ? raw.keepMedia
+                            .filter((m) => m && oldImageByUrl.has(m.url))
+                            .map((m) => ({
+                                ...oldImageByUrl.get(m.url),
+                                caption: toStr(m.caption),
+                                isPrimary: Boolean(m.isPrimary),
+                            }))
+                        : current.images;
+
+                    // kept documents — only URLs this lot already owns
+                    const oldDocByUrl = new Map(current.documents.map((doc) => [doc.fileUrl, doc]));
+                    const keptDocs = Array.isArray(raw.keepDocuments)
+                        ? raw.keepDocuments
+                            .filter((d) => d && oldDocByUrl.has(d.fileUrl))
+                            .map((d) => {
+                                const old = oldDocByUrl.get(d.fileUrl);
+                                return {
+                                    ...old,
+                                    documentType: pickEnum(
+                                        d.documentType,
+                                        ENUMS.documentType,
+                                        old.documentType,
+                                        "document type"
+                                    ),
+                                    description: toStr(d.description),
+                                };
+                            })
+                        : current.documents;
+
+                    await tx.auctionImage.deleteMany({ where: { itemId } });
+                    await tx.auctionDocument.deleteMany({ where: { itemId } });
+
+                    allImages = [...keptImages, ...newImages];
+                    allDocs = [...keptDocs, ...documents];
+                }
+
+                // exactly one primary IMAGE, sortOrder = array order
+                const primaryIdx = allImages.findIndex((img) => img.isPrimary && img.mediaType === "IMAGE");
+                const chosen =
+                    primaryIdx !== -1 ? primaryIdx : allImages.findIndex((img) => img.mediaType === "IMAGE");
+
+                if (allImages.length > 0) {
+                    await tx.auctionImage.createMany({
+                        data: allImages.map((img, j) => ({
+                            ...img,
+                            sortOrder: j,
+                            isPrimary: j === chosen,
+                            itemId,
+                        })),
+                    });
+                }
+
+                if (allDocs.length > 0) {
+                    await tx.auctionDocument.createMany({
+                        data: allDocs.map((doc) => ({ ...doc, itemId })),
+                    });
+                }
+            }
+
+            return tx.auction.findUnique({
+                where: { id: existing.id },
+                include: {
+                    category: true,
+                    subCategory: true,
+                    currency: true,
+                    auctionCurrencies: {
+                        include: { currency: true },
+                        orderBy: { isPrimary: "desc" },
+                    },
+                    tags: { include: { tag: true } },
+                    auctionFees: { orderBy: { sortOrder: "asc" } },
+                    items: {
+                        include: {
+                            currency: true,
+                            dimension: true,
+                            images: { orderBy: { sortOrder: "asc" } },
+                            documents: true,
+                        },
+                        orderBy: { itemNumber: "asc" },
+                    },
+                },
+            });
+        },
+        {
+            // Supabase pooler + many lots can exceed Prisma's 5s default
+            maxWait: 10_000,
+            timeout: 60_000,
+        }
+    );
+};

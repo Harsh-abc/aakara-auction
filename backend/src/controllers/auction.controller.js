@@ -3,6 +3,7 @@ import {
     deleteAuctionService,
     getAuctionService,
     getLotByAuctionId,
+    updateAuctionService,
 } from "../services/auction.services.js";
 
 import { uploadToS3, deleteFromS3 } from "../services/s3.services.js";
@@ -280,6 +281,158 @@ export const deleteAuction = async (req, res) => {
         return res.status(status).json({
             success: false,
             message: status === 500 ? "Failed to delete auction" : error.message,
+        });
+    }
+};
+
+
+// -----------------------------------------------------------------
+// Update Auction   PUT /api/auction/:auctionUuid
+//
+// Same multipart fields as create, plus:
+//   removeCoverImage       "true" to clear the cover (when no new coverImage)
+//   lots[i].uuid           existing lot -> update; no uuid -> new lot
+//   lots[i].keepMedia      [{ url, isPrimary, caption }] existing media to keep
+//   lots[i].keepDocuments  [{ fileUrl, documentType, description }]
+// -----------------------------------------------------------------
+
+export const updateAuction = async (req, res) => {
+    const uploadedKeys = []; // for rollback if the DB write fails
+
+    const upload = async (file, folder) => {
+        const result = await uploadToS3({ file, folder });
+        uploadedKeys.push(result.key);
+        return result;
+    };
+
+    try {
+        if (!req.user?.userId) {
+            return res.status(401).json({ success: false, message: "Authenticated user not found" });
+        }
+
+        const body = { ...req.body };
+
+        body.tags = parseJsonField(body.tags, [], "tags");
+        body.fees = parseJsonField(body.fees, [], "fees");
+        body.lots = parseJsonField(body.lots, [], "lots");
+
+        for (const key of ["tags", "fees", "lots"]) {
+            if (!Array.isArray(body[key])) {
+                return res.status(400).json({ success: false, message: `${key} must be an array` });
+            }
+        }
+
+        // Cheap validation BEFORE uploading anything to S3
+        if (!body.title?.trim()) {
+            return res.status(400).json({ success: false, message: "Auction title is required" });
+        }
+        if (!body.categoryUuid) {
+            return res.status(400).json({ success: false, message: "Category is required" });
+        }
+        if (!body.startTime || !body.endTime) {
+            return res.status(400).json({
+                success: false,
+                message: "Auction start and end date/time are required",
+            });
+        }
+
+        const files = Array.isArray(req.files) ? req.files : [];
+        const filesFor = (fieldname) => files.filter((f) => f.fieldname === fieldname);
+
+        // ------------------ cover image ------------------
+        delete body.coverImageUrl; // never trust a client-supplied URL
+        const coverImage = files.find((f) => f.fieldname === "coverImage");
+        if (coverImage) {
+            if (!coverImage.mimetype.startsWith("image/")) {
+                return res.status(400).json({ success: false, message: "Cover image must be an image file" });
+            }
+            const uploaded = await upload(coverImage, "auctions/covers");
+            body.coverImageUrl = uploaded.url;
+        }
+
+        // ------------------ lots (new files only) ------------------
+        const batchFolder = `auctions/${Date.now()}`;
+
+        for (let i = 0; i < body.lots.length; i++) {
+            const lot = body.lots[i];
+            const mediaMeta = Array.isArray(lot.mediaMeta) ? lot.mediaMeta : [];
+            const documentMeta = Array.isArray(lot.documentMeta) ? lot.documentMeta : [];
+
+            // Never trust client-supplied URLs (existing files come via keepMedia / keepDocuments)
+            lot.images = [];
+            lot.documents = [];
+
+            const mediaFiles = [
+                ...filesFor(`lotMedia_${i}`),
+                ...filesFor(`lotImages_${i}`),
+                ...filesFor(`lotVideos_${i}`),
+            ];
+
+            const uploadedMedia = await Promise.all(
+                mediaFiles.map((file) => {
+                    const isVideo = file.mimetype.startsWith("video/");
+                    return upload(file, `${batchFolder}/lot-${i + 1}/${isVideo ? "videos" : "images"}`);
+                })
+            );
+
+            uploadedMedia.forEach((result, j) => {
+                const file = mediaFiles[j];
+                const meta = mediaMeta[j] || {};
+                const isVideo = file.mimetype.startsWith("video/");
+                lot.images.push({
+                    url: result.url,
+                    thumbnailUrl: null,
+                    caption: meta.caption || null,
+                    sortOrder: j,
+                    isPrimary: !isVideo && Boolean(meta.isPrimary),
+                    mediaType: isVideo ? "VIDEO" : "IMAGE",
+                });
+            });
+
+            const docFiles = filesFor(`lotDocuments_${i}`);
+            const uploadedDocs = await Promise.all(
+                docFiles.map((file) => upload(file, `${batchFolder}/lot-${i + 1}/documents`))
+            );
+
+            uploadedDocs.forEach((result, j) => {
+                const file = docFiles[j];
+                const meta = documentMeta[j] || {};
+                lot.documents.push({
+                    documentType: meta.documentType || "OTHER",
+                    fileUrl: result.url,
+                    fileName: file.originalname,
+                    mimeType: file.mimetype,
+                    fileSize: file.size,
+                    description: meta.description || null,
+                });
+            });
+
+            delete lot.mediaMeta;
+            delete lot.documentMeta;
+        }
+
+        const auction = await updateAuctionService({
+            ...body,
+            auctionUuid: req.params.auctionUuid,
+            updatedBy: req.user.userId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: auction.status === "DRAFT" ? "Draft updated" : "Auction updated successfully",
+            data: serializeBigInt(auction),
+        });
+    } catch (error) {
+        console.error("Update auction error:", error);
+
+        if (uploadedKeys.length > 0) {
+            await Promise.allSettled(uploadedKeys.map((key) => deleteFromS3(key)));
+        }
+
+        const status = statusFromError(error);
+        return res.status(status).json({
+            success: false,
+            message: status === 500 ? "Failed to update auction" : messageFromError(error, status),
         });
     }
 };

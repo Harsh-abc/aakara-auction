@@ -230,7 +230,8 @@ const data = {
     { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboard className="w-6 h-6" /> },
     // { title: "Live Auctions", url: "/dashboard/live-auctions", icon: <Gavel className="rotate-270" /> },
     {
-      title: "Auctions & Lots", url: "/dashboard/auctions", icon: <Layers />, items: [
+      title: "Auctions & Lots", url: "/", icon: <Layers />, items: [
+        { title: "Create Auctions", url: "/dashboard/auctions" },
         { title: "Live Auctions", url: "/dashboard/settings/general" },
         { title: "Past Auctions", url: "/dashboard/settings/team" },
         { title: "Upcoming Auctions", url: "/dashboard/settings/permissions" },
