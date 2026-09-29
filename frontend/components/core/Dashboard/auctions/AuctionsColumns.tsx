@@ -81,6 +81,7 @@ const SortHeader = ({ label, onClick }: { label: string; onClick: () => void }) 
 export const columns: ColumnDef<Auction>[] = [
     {
         accessorKey: "title",
+        size: 300,
         header: ({ column }) => (
             <SortHeader
                 label="Auction"
@@ -90,15 +91,15 @@ export const columns: ColumnDef<Auction>[] = [
         cell: ({ row }) => {
             const a = row.original;
             return (
-                <div className="flex min-w-[220px] items-center gap-3">
+                <div className="flex w-full min-w-0 items-center gap-3">
                     <div className="h-9 w-12 shrink-0 overflow-hidden rounded-md bg-slate-100">
                         {a.coverImageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={a.coverImageUrl} alt="" className="h-full w-full object-cover" />
                         ) : null}
                     </div>
-                    <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold text-slate-800">{a.title}</p>
+                    <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-slate-800" title={a.title}>{a.title}</p>
                         <p className="truncate text-[11px] text-slate-400">{a.slug}</p>
                     </div>
                 </div>
@@ -107,6 +108,7 @@ export const columns: ColumnDef<Auction>[] = [
     },
     {
         accessorKey: "auctionType",
+        size: 80,
         header: "Type",
         filterFn: "equals",
         cell: ({ row }) => (
@@ -119,15 +121,21 @@ export const columns: ColumnDef<Auction>[] = [
         id: "category",
         accessorFn: (a) => a.category?.name ?? "",
         header: "Category",
+        size: 180,
         cell: ({ row }) => (
-            <span className="text-[12px] text-slate-600">
-                {row.original.category?.name ?? "—"}
-                {row.original.subCategory?.name ? ` / ${row.original.subCategory.name}` : ""}
-            </span>
+            <div className="flex flex-col">
+                <p className="text-[12px] text-slate-600">
+                    {row.original.category?.name ?? "—"}
+                </p>
+                <p className="text-[12px] text-slate-600">
+                    {row.original.subCategory?.name ? ` / ${row.original.subCategory.name}` : ""}
+                </p>
+            </div>
         ),
     },
     {
         id: "lots",
+        size: 60,
         accessorFn: (a) => a._count?.items ?? 0,
         enableGlobalFilter: false,
         header: ({ column }) => (
@@ -142,6 +150,7 @@ export const columns: ColumnDef<Auction>[] = [
     },
     {
         accessorKey: "startTime",
+        size: 115,
         enableGlobalFilter: false,
         sortingFn: "datetime",
         header: ({ column }) => (
@@ -169,6 +178,7 @@ export const columns: ColumnDef<Auction>[] = [
     },
     {
         accessorKey: "endTime",
+        size: 115,
         header: "Ends",
         enableGlobalFilter: false,
         cell: ({ row }) => (
@@ -180,6 +190,7 @@ export const columns: ColumnDef<Auction>[] = [
     },
     {
         accessorKey: "status",
+        size: 105,
         header: "Status",
         filterFn: "equals",
         enableGlobalFilter: false,
@@ -200,22 +211,23 @@ export const columns: ColumnDef<Auction>[] = [
             );
         },
     },
-    {
-        accessorKey: "visibility",
-        header: "Visibility",
-        enableGlobalFilter: false,
-        cell: ({ row }) => (
-            <span className="text-[11px] text-slate-500">
-                {row.original.visibility === "PUBLIC"
-                    ? "Public"
-                    : row.original.visibility === "PRIVATE_INVITE_ONLY"
-                        ? "Invite only"
-                        : "Registered"}
-            </span>
-        ),
-    },
+    // {
+    //     accessorKey: "visibility",
+    //     header: "Visibility",
+    //     enableGlobalFilter: false,
+    //     cell: ({ row }) => (
+    //         <span className="text-[11px] text-slate-500">
+    //             {row.original.visibility === "PUBLIC"
+    //                 ? "Public"
+    //                 : row.original.visibility === "PRIVATE_INVITE_ONLY"
+    //                     ? "Invite only"
+    //                     : "Registered"}
+    //         </span>
+    //     ),
+    // },
     {
         id: "actions",
+        size: 110,
         header: "Actions",
         enableSorting: false,
         enableGlobalFilter: false,

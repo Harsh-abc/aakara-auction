@@ -335,14 +335,15 @@ export function AuctionDataTable<TData, TValue>({
 
             {/* ================= TABLE ================= */}
             <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
-                <Table>
+                <Table className="w-full table-fixed">
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id} className="hover:bg-transparent bg-slate-50">
                                 {headerGroup.headers.map((header) => (
                                     <TableHead
                                         key={header.id}
-                                        className="h-9 px-3 text-[11px] font-medium text-slate-700 whitespace-nowrap"
+                                        style={{ width: header.getSize() }}
+                                        className="h-9 px-3 text-[11px] font-medium text-slate-700 whitespace-normal"
                                     >
                                         {header.isPlaceholder
                                             ? null
@@ -357,10 +358,10 @@ export function AuctionDataTable<TData, TValue>({
                         {loading ? (
                             // Skeleton rows
                             Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={`skeleton-${i}`} className="h-[54px] border-b border-slate-100">
+                                <TableRow key={`skeleton-${i}`} className="h-13.5 border-b border-slate-100">
                                     {columns.map((_, j) => (
-                                        <TableCell key={j} className="px-3 py-2">
-                                            <div className="h-3 w-full max-w-[110px] animate-pulse rounded bg-slate-100" />
+                                        <TableCell key={j} className="px-3 py-2 whitespace-normal wrap-break-word">
+                                            <div className="h-3 w-full max-w-27.5 animate-pulse rounded bg-slate-100" />
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -370,7 +371,7 @@ export function AuctionDataTable<TData, TValue>({
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() ? "selected" : undefined}
-                                    className={`h-[54px] border-b border-slate-100 hover:bg-slate-50 transition-colors ${row.getIsSelected() ? "bg-blue-50 ring-2 ring-inset ring-blue-500" : ""
+                                    className={`h-13.5 border-b border-slate-100 hover:bg-slate-50 transition-colors ${row.getIsSelected() ? "bg-blue-50 ring-2 ring-inset ring-blue-500" : ""
                                         }`}
                                 >
                                     {row.getVisibleCells().map((cell) => (
@@ -455,7 +456,7 @@ export function AuctionDataTable<TData, TValue>({
                         value={`${pageSize}`}
                         onValueChange={(value) => table.setPageSize(Number(value))}
                     >
-                        <SelectTrigger className="h-7 w-[65px] bg-white text-xs">
+                        <SelectTrigger className="h-7 w-16.25 bg-white text-xs">
                             <SelectValue />
                         </SelectTrigger>
 
