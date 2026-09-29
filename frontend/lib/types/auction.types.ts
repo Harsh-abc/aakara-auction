@@ -234,15 +234,23 @@ export interface Auction {
 
     startTime: string;
     endTime: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    previewStartAt?: string | null;
     registrationRequired?: boolean;
+    registrationStarts?: string | null;
     registrationDeadline?: string | null;
+    timezone?: string | null;
     isOnline?: boolean;
     venue?: string | null;
+    termsAndConditions?: string | null;
     publishedAt?: string | null;
 
     category?: { uuid: string; name: string; slug?: string };
     subCategory?: { uuid: string; name: string; slug?: string } | null;
     currency?: { code: string; name: string; symbol?: string | null };
+    /** Allowed currencies, primary first */
+    auctionCurrencies?: { isPrimary: boolean; currency: { code: string; name?: string; symbol?: string | null } }[];
     creator?: { uuid: string; username: string; email: string };
 
     tags?: { tag: { name: string; slug: string } }[];
@@ -272,6 +280,24 @@ export interface AuctionLot {
     currentBid?: string | null;
     bidCount?: string | number;
     isFeatured: boolean;
+
+    insureanceValue?: string | null; // spelling matches Prisma
+    gstRate?: string | null;
+    hsnCode?: string | null;
+    shippingInfo?: string | null;
+
+    overallCondition?: string | null;
+    frameCondition?: string | null;
+    detailedConditionNotes?: string | null;
+    restorationHistory?: string | null;
+
+    previousOwner?: string | null;
+    acquisitionMethod?: string | null;
+    acquisitionDate?: string | null; // "yyyy-MM-dd" (String column)
+    exhibitionHistory?: string | null;
+
+    authenticateBy?: string | null;
+    auctheticateDate?: string | null; // spelling matches Prisma
 
     dimension?: AuctionDimension | null;
 

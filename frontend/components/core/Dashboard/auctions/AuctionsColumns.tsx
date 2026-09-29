@@ -223,6 +223,7 @@ export const columns: ColumnDef<Auction>[] = [
             const auction = row.original;
             const meta = table.options.meta as AuctionTableMeta | undefined;
             const canDelete = auction.status === "DRAFT";
+            const canEdit = auction.status === "DRAFT" || auction.status === "SCHEDULED";
 
             return (
                 <div className="flex items-center gap-1">
@@ -231,8 +232,9 @@ export const columns: ColumnDef<Auction>[] = [
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        title="Edit"
+                        title={canEdit ? "Edit" : "Only draft or scheduled auctions can be edited"}
                         aria-label="Edit auction"
+                        disabled={!canEdit}
                         onClick={() => meta?.onEdit?.(auction)}
                     >
                         <Pencil className="h-3.5 w-3.5" />

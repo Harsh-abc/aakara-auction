@@ -8,6 +8,7 @@ import type {
     DocumentType,
     DimensionUnit,
     EditionType,
+    MediaType,
 } from "./auction.types";
 
 // ============================================================
@@ -37,7 +38,11 @@ export interface BasicInfoForm {
     currency: string[];
     primaryCurrency: string;
 
+    /** New cover picked in this session. */
     coverImage: File | null;
+
+    /** Edit only: the saved cover. "" = none / removed (sends removeCoverImage). */
+    coverImageUrl: string;
 }
 
 // ============================================================
@@ -104,17 +109,36 @@ export interface AuctionVisibilityForm {
 // LOT MEDIA
 // ============================================================
 
+/**
+ * Either a NEW upload (`file` set) or media already SAVED on the lot
+ * (`url` set, edit only — sent back as keepMedia).
+ */
 export interface LotImageFile {
-    file: File;
+    file?: File;
 
-    /** Object URL for preview only — never sent to backend. */
+    /** Saved media URL (edit only). */
+    url?: string;
+    mediaType?: MediaType;
+    caption?: string | null;
+
+    /** Object URL for new files, or the saved URL — never sent to backend. */
     preview: string;
 
     isPrimary?: boolean;
 }
 
+/**
+ * Either a NEW upload (`file` set) or a document already SAVED on the lot
+ * (`fileUrl` set, edit only — sent back as keepDocuments).
+ */
 export interface LotDocumentFile {
-    file: File;
+    file?: File;
+
+    /** Saved document (edit only). */
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+
     documentType: DocumentType;
     description: string;
 }
@@ -212,6 +236,9 @@ export interface LotAuthenticationForm {
 // ============================================================
 
 export interface AuctionLotForm {
+    /** Edit only: saved lot uuid. Missing = new lot. */
+    uuid?: string;
+
     status: LotStatus;
     details: LotDetailsForm;
     images: LotImageFile[];

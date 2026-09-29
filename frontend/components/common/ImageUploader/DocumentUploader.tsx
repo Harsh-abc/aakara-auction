@@ -10,6 +10,7 @@ import {
 import {
     LotDocumentFile,
 } from "../../../lib/types/AuctionsFormData"
+import { getDocumentName, getDocumentSize } from "@/utils/lotMedia";
 
 interface DocumentUploaderProps {
     value?: LotDocumentFile[];
@@ -179,26 +180,37 @@ export default function DocumentUploader({
             {/* Documents */}
             {value.length > 0 && (
                 <div className="mt-6 space-y-4">
-                    {value.map((document, index) => (
+                    {value.map((document, index) => {
+                        const name = getDocumentName(document);
+                        const size = getDocumentSize(document);
+
+                        return (
                         <div
-                            key={`${document.file.name}-${index}`}
+                            key={`${document.fileUrl ?? name}-${index}`}
                             className="border rounded-lg p-4"
                         >
                             <div className="flex items-start gap-4">
                                 <FileText className="w-6 h-6 mt-1" />
 
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-medium truncate">
-                                        {document.file.name}
-                                    </p>
+                                    {document.fileUrl ? (
+                                        <a
+                                            href={document.fileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block font-medium truncate hover:underline"
+                                        >
+                                            {name}
+                                        </a>
+                                    ) : (
+                                        <p className="font-medium truncate">
+                                            {name}
+                                        </p>
+                                    )}
 
                                     <p className="text-sm text-muted-foreground">
-                                        {(
-                                            document.file.size /
-                                            1024 /
-                                            1024
-                                        ).toFixed(2)}{" "}
-                                        MB
+                                        {size !== null && `${(size / 1024 / 1024).toFixed(2)} MB`}
+                                        {document.fileUrl && `${size !== null ? " · " : ""}Saved`}
                                     </p>
 
                                     <div className="grid grid-cols-2 gap-4 mt-4">
@@ -269,7 +281,8 @@ export default function DocumentUploader({
                                 </button>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

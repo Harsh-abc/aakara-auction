@@ -10,6 +10,12 @@ import {
 
 import { cn } from "@/lib/utils";
 import { LotImageFile } from "@/lib/types/AuctionsFormData";
+import {
+    getMediaName,
+    isImageMedia,
+    isVideoMedia,
+    revokeMediaPreview,
+} from "@/utils/lotMedia";
 
 interface MediaUploaderProps {
     value?: LotImageFile[];
@@ -135,9 +141,7 @@ export default function MediaUploader({
 
         if (!hasPrimary) {
             const firstImageIndex =
-                newFiles.findIndex((item) =>
-                    item.file.type.startsWith("image/")
-                );
+                newFiles.findIndex(isImageMedia);
 
             if (firstImageIndex !== -1) {
                 newFiles[firstImageIndex].isPrimary =
@@ -195,11 +199,7 @@ export default function MediaUploader({
 
         const fileToRemove = value[index];
 
-        if (fileToRemove?.preview) {
-            URL.revokeObjectURL(
-                fileToRemove.preview
-            );
-        }
+        revokeMediaPreview(fileToRemove);
 
         const updatedFiles =
             value.filter(
@@ -216,14 +216,15 @@ export default function MediaUploader({
             updatedFiles.length > 0
         ) {
             const firstImageIndex =
-                updatedFiles.findIndex((item) =>
-                    item.file.type.startsWith("image/")
-                );
+                updatedFiles.findIndex(isImageMedia);
 
             if (firstImageIndex !== -1) {
                 updatedFiles[
                     firstImageIndex
-                ].isPrimary = true;
+                ] = {
+                    ...updatedFiles[firstImageIndex],
+                    isPrimary: true,
+                };
             }
         }
 
@@ -242,11 +243,7 @@ export default function MediaUploader({
         /*
          * Videos cannot be primary artwork.
          */
-        if (
-            !selected.file.type.startsWith(
-                "image/"
-            )
-        ) {
+        if (!isImageMedia(selected)) {
             return;
         }
 
@@ -265,13 +262,7 @@ export default function MediaUploader({
      */
     useEffect(() => {
         return () => {
-            value.forEach((item) => {
-                if (item.preview) {
-                    URL.revokeObjectURL(
-                        item.preview
-                    );
-                }
-            });
+            value.forEach(revokeMediaPreview);
         };
     }, []);
 
@@ -362,18 +353,17 @@ export default function MediaUploader({
                     {value.map(
                         (media, index) => {
                             const isImage =
-                                media.file.type.startsWith(
-                                    "image/"
-                                );
+                                isImageMedia(media);
 
                             const isVideo =
-                                media.file.type.startsWith(
-                                    "video/"
-                                );
+                                isVideoMedia(media);
+
+                            const name =
+                                getMediaName(media);
 
                             return (
                                 <div
-                                    key={`${media.file.name}-${index}`}
+                                    key={`${media.url ?? name}-${index}`}
                                     className="relative overflow-hidden rounded-lg border border-slate-200 bg-white"
                                 >
 
@@ -386,9 +376,7 @@ export default function MediaUploader({
                                                 src={
                                                     media.preview
                                                 }
-                                                alt={
-                                                    media.file.name
-                                                }
+                                                alt={name}
                                                 className="h-full w-full object-cover"
                                             />
                                         )}
@@ -427,13 +415,9 @@ export default function MediaUploader({
 
                                         <p
                                             className="truncate text-xs font-medium text-slate-700"
-                                            title={
-                                                media.file.name
-                                            }
+                                            title={name}
                                         >
-                                            {
-                                                media.file.name
-                                            }
+                                            {name}
                                         </p>
 
                                         <p className="mt-1 text-[10px] uppercase text-slate-400">
@@ -442,6 +426,7 @@ export default function MediaUploader({
                                                 : isVideo
                                                     ? "VIDEO"
                                                     : "FILE"}
+                                            {media.url && " · Saved"}
                                         </p>
 
                                     </div>

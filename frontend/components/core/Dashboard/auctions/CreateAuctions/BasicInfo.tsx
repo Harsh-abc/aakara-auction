@@ -31,6 +31,7 @@ export default function BasicInfo() {
     const {
         register,
         setValue,
+        getValues,
         watch,
         formState: { errors },
     } = useFormContext<AuctionFormData>();
@@ -43,6 +44,7 @@ export default function BasicInfo() {
     const auctionType = watch("basicInfo.auctionType");
     const categoryUuid = watch("basicInfo.categoryUuid");
     const coverImage = watch("basicInfo.coverImage");
+    const savedCoverUrl = watch("basicInfo.coverImageUrl"); // edit: cover already on the auction
     const primaryCurrency = watch("basicInfo.primaryCurrency"); // ✅ NEW (preview card)
 
     // ✅ Show the category NAME in the preview card (was showing the UUID)
@@ -59,8 +61,8 @@ export default function BasicInfo() {
             setPreview(url);
             return () => URL.revokeObjectURL(url);
         }
-        setPreview(null);
-    }, [coverImage]);
+        setPreview(savedCoverUrl || null);
+    }, [coverImage, savedCoverUrl]);
 
     const handleFile = (file: File) => {
         if (!file) return;
@@ -101,6 +103,8 @@ export default function BasicInfo() {
             shouldTouch: true,
             shouldValidate: true,
         });
+        // Edit: removing the saved cover sends removeCoverImage
+        setValue("basicInfo.coverImageUrl", "", { shouldDirty: true });
         if (inputRef.current) inputRef.current.value = "";
     };
 
@@ -113,7 +117,12 @@ export default function BasicInfo() {
             try {
                 setCategoriesLoading(true);
                 const response = await getCategories();
-                if (response.success) setCategories(response.data);
+                if (response.success) {
+                    setCategories(response.data);
+                    // The <select> mounted before its options existed — re-apply
+                    // the saved value (edit / revisiting this step)
+                    setTimeout(() => setValue("basicInfo.categoryUuid", getValues("basicInfo.categoryUuid")));
+                }
             } catch (error) {
                 console.error("Failed to fetch categories:", error);
             } finally {
@@ -122,7 +131,7 @@ export default function BasicInfo() {
         };
 
         fetchCategories();
-    }, []);
+    }, [getValues, setValue]);
 
     useEffect(() => {
         if (!categoryUuid) {
@@ -135,7 +144,15 @@ export default function BasicInfo() {
             try {
                 setSubCategoriesLoading(true);
                 const response = await getSubCategories(categoryUuid);
-                if (response.success) setSubCategories(response.data);
+                if (response.success) {
+                    setSubCategories(response.data);
+                    // Keep the saved subcategory only if it belongs to this category
+                    const current = getValues("basicInfo.subCategoryUuid");
+                    const stillValid = (response.data as SubCategory[]).some((s) => s.uuid === current);
+                    setTimeout(() =>
+                        setValue("basicInfo.subCategoryUuid", stillValid ? current : "", { shouldDirty: !stillValid })
+                    );
+                }
             } catch (error) {
                 console.error("Failed to fetch subcategories:", error);
                 setSubCategories([]);
@@ -145,7 +162,7 @@ export default function BasicInfo() {
         };
 
         fetchSubCategories();
-    }, [categoryUuid, setValue]);
+    }, [categoryUuid, setValue, getValues]);
 
     /* =====================================================
        RENDER

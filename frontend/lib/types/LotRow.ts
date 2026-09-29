@@ -1,5 +1,6 @@
 import type { AuctionLotForm } from "@/lib/types/AuctionsFormData";
 import type { AuctionLot, LotStatus, EditionType } from "@/lib/types/auction.types";
+import { isImageMedia, isVideoMedia } from "@/utils/lotMedia";
 
 // =====================================================================
 // One row shape for the lots table — works for:
@@ -61,8 +62,8 @@ export const fromFormLot = (
     const pricing = lot?.pricing;
     const media = lot?.images ?? [];
 
-    const images = media.filter((m) => m?.file?.type?.startsWith("image/"));
-    const videos = media.filter((m) => m?.file?.type?.startsWith("video/"));
+    const images = media.filter(isImageMedia);
+    const videos = media.filter(isVideoMedia);
     const primary = images.find((m) => m.isPrimary) ?? images[0];
 
     const startingPrice = num(pricing?.startingPrice);

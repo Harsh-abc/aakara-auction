@@ -191,9 +191,16 @@ const auctionSlice = createSlice({
                 state.updateSuccess = true;
                 state.auction = updated;
 
-                // Replace it in the list without refetching
+                // Replace it in the list without refetching. The response has no
+                // creator/_count, so merge over the list row and recount lots.
                 if (updated) {
-                    state.auctions = state.auctions.map((a) => (a.uuid === updated.uuid ? updated : a));
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const { items, ...auctionOnly } = updated;
+                    state.auctions = state.auctions.map((a) =>
+                        a.uuid === updated.uuid
+                            ? { ...a, ...auctionOnly, _count: { items: items?.length ?? a._count?.items ?? 0 } }
+                            : a
+                    );
                 }
 
                 // Keep the lots view in sync if it's showing this auction

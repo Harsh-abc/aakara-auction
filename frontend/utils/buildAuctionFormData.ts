@@ -1,5 +1,6 @@
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import type { AuctionStatus } from "@/lib/types/auction.types";
+import { isImageMedia } from "@/utils/lotMedia";
 
 // ============================================================
 // HELPERS
@@ -81,11 +82,18 @@ const appendIfPresent = (formData: FormData, key: string, value: unknown) => {
 
 // ============================================================
 // BUILD AUCTION FORM DATA
+//
+// isEdit = true (PUT /update-auction) additionally sends:
+//   removeCoverImage       when the saved cover was removed
+//   lots[i].uuid           saved lot -> update; missing -> new lot
+//   lots[i].keepMedia      saved media still on the lot
+//   lots[i].keepDocuments  saved documents still on the lot
 // ============================================================
 
 export const buildAuctionFormData = (
     data: AuctionFormData,
-    status: Extract<AuctionStatus, "DRAFT" | "SCHEDULED"> = "DRAFT"
+    status: Extract<AuctionStatus, "DRAFT" | "SCHEDULED"> = "DRAFT",
+    { isEdit = false }: { isEdit?: boolean } = {}
 ): FormData => {
     const formData = new FormData();
     const { basicInfo, schedule, lots, fees, shipping, visibility } = data;
@@ -118,6 +126,8 @@ export const buildAuctionFormData = (
 
     if (basicInfo.coverImage instanceof File) {
         formData.append("coverImage", basicInfo.coverImage);
+    } else if (isEdit && !basicInfo.coverImageUrl) {
+        formData.append("removeCoverImage", "true");
     }
 
     formData.append("tags", JSON.stringify(basicInfo.auctionTags ?? []));
@@ -196,7 +206,30 @@ export const buildAuctionFormData = (
         const media = (lot.images ?? []).filter((m) => m?.file instanceof File);
         const docs = (lot.documents ?? []).filter((d) => d?.file instanceof File);
 
+        // Saved lot: backend keeps only the saved files listed here (always
+        // send the array — omitting it would keep every old file)
+        const savedLot = isEdit && lot.uuid
+            ? {
+                uuid: lot.uuid,
+                keepMedia: (lot.images ?? [])
+                    .filter((m) => !m?.file && m?.url)
+                    .map((m) => ({
+                        url: m.url,
+                        isPrimary: Boolean(m.isPrimary),
+                        caption: m.caption ?? null,
+                    })),
+                keepDocuments: (lot.documents ?? [])
+                    .filter((d) => !d?.file && d?.fileUrl)
+                    .map((d) => ({
+                        fileUrl: d.fileUrl,
+                        documentType: d.documentType || "OTHER",
+                        description: str(d.description),
+                    })),
+            }
+            : {};
+
         return {
+            ...savedLot,
             itemNumber: index + 1,
             title: details.title,
             description: str(details.description),
@@ -339,7 +372,7 @@ export const validateAuctionForm = (
             errors.push(`Lot ${n}: currency ${lotCurrency} is not enabled for this auction`);
         }
 
-        const hasImage = (lot.images ?? []).some((m) => m?.file?.type?.startsWith("image/"));
+        const hasImage = (lot.images ?? []).some(isImageMedia);
         if (status === "SCHEDULED" && !hasImage) {
             errors.push(`Lot ${n}: add at least one image`);
         }
