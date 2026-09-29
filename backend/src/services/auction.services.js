@@ -301,6 +301,42 @@ const normalizeFees = (fees) =>
         };
     });
 
+/** Bids placed in the last N minutes of an auction trigger an extension. */
+const EXTENSION_TRIGGER_WINDOW_MINUTES = 2;
+
+/** Extension used when the creator doesn't set their own. */
+const DEFAULT_EXTENSION_MINUTES = 2;
+
+/**
+ * Extended bidding -> AuctionRule (EXTENSION_TRIGGER, value = minutes).
+ * Every auction gets one:
+ *   allowExtendedBidding on  -> extensionMinutes (1 - 60, required)
+ *   allowExtendedBidding off -> DEFAULT_EXTENSION_MINUTES
+ */
+const normalizeExtensionRule = ({ allowExtendedBidding, extensionMinutes }) => {
+    const custom = toNum(extensionMinutes, "Extension duration");
+    const isCustom = toBool(allowExtendedBidding, custom !== null);
+
+    if (isCustom && custom === null) {
+        throw httpError("Extension duration is required when extended bidding is on");
+    }
+    const minutes = isCustom ? custom : DEFAULT_EXTENSION_MINUTES;
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
+        throw httpError("Extension duration must be a whole number of minutes between 1 and 60");
+    }
+
+    return {
+        ruleType: "EXTENSION_TRIGGER",
+        valueType: "FIXED",
+        value: minutes,
+        description: `Bids in the last ${EXTENSION_TRIGGER_WINDOW_MINUTES} minutes extend the auction by ${minutes} minute${minutes === 1 ? "" : "s"}`,
+    };
+};
+
+const EXTENSION_RULE_INCLUDE = {
+    where: { ruleType: "EXTENSION_TRIGGER", isActive: true },
+};
+
 const normalizeTags = (tags) => {
     const seen = new Map();
     for (const raw of tags) {
@@ -344,6 +380,8 @@ export const createAuctionService = async (data) => {
         subCategoryUuid,
         shippingStrategy,
         visibility,
+        allowExtendedBidding,
+        extensionMinutes,
         tags = [],
         fees = [],
         lots = [],
@@ -398,6 +436,7 @@ export const createAuctionService = async (data) => {
 
     const normalizedTags = normalizeTags(tags);
     const normalizedFees = normalizeFees(fees);
+    const extensionRule = normalizeExtensionRule({ allowExtendedBidding, extensionMinutes });
     const normalizedLots = lots.map((lot, i) => normalizeLot(lot, i, { isDraft }));
 
     // ✅ NEW — every lot must use one of the auction's currencies
@@ -519,6 +558,11 @@ export const createAuctionService = async (data) => {
                 });
             }
 
+            // ---------------- extended bidding (custom or default) ----------------
+            await tx.auctionRule.create({
+                data: { ...extensionRule, auctionId: auction.id },
+            });
+
             // ---------------- lots ----------------
             for (const lot of normalizedLots) {
                 // ✅ CHANGED — pull out currencyCode (not a DB column)
@@ -562,6 +606,7 @@ export const createAuctionService = async (data) => {
                     },
                     tags: { include: { tag: true } },
                     auctionFees: { orderBy: { sortOrder: "asc" } },
+                    rules: EXTENSION_RULE_INCLUDE,
                     items: {
                         include: {
                             currency: true, // ✅ NEW — lot currency
@@ -626,6 +671,7 @@ export const getAuctionService = async (data = {}) => {
             creator: { select: { id: true, uuid: true, username: true, email: true } },
             tags: { include: { tag: true } },
             auctionFees: true,
+            rules: EXTENSION_RULE_INCLUDE,
             _count: { select: { items: true } },
         },
     });
@@ -767,6 +813,8 @@ export const updateAuctionService = async (data) => {
         subCategoryUuid,
         shippingStrategy,
         visibility,
+        allowExtendedBidding,
+        extensionMinutes,
         tags = [],
         fees = [],
         lots = [],
@@ -813,6 +861,7 @@ export const updateAuctionService = async (data) => {
 
     const normalizedTags = normalizeTags(tags);
     const normalizedFees = normalizeFees(fees);
+    const extensionRule = normalizeExtensionRule({ allowExtendedBidding, extensionMinutes });
     const normalizedLots = lots.map((lot, i) => normalizeLot(lot, i, { isDraft }));
 
     normalizedLots.forEach((lot, i) => {
@@ -999,6 +1048,14 @@ export const updateAuctionService = async (data) => {
                 });
             }
 
+            // ---------------- extended bidding: replace ----------------
+            await tx.auctionRule.deleteMany({
+                where: { auctionId: existing.id, ruleType: "EXTENSION_TRIGGER" },
+            });
+            await tx.auctionRule.create({
+                data: { ...extensionRule, auctionId: existing.id },
+            });
+
             // ---------------- lots: delete removed ----------------
             const keptUuids = new Set(sentUuids);
             const removedIds = existing.items
@@ -1144,6 +1201,7 @@ export const updateAuctionService = async (data) => {
                     },
                     tags: { include: { tag: true } },
                     auctionFees: { orderBy: { sortOrder: "asc" } },
+                    rules: EXTENSION_RULE_INCLUDE,
                     items: {
                         include: {
                             currency: true,

@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 
 import type { Auction, AuctionLot, LotStatus } from "@/lib/types/auction.types";
+import { DEFAULT_EXTENSION_MINUTES } from "@/lib/types/AuctionsFormData";
 import type { AuctionFormData, AuctionLotForm } from "@/lib/types/AuctionsFormData";
 
 // ============================================================
@@ -131,6 +132,13 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
 
     const categoryUuid = auction.category?.uuid ?? "";
 
+    // Default minutes (or no rule on older auctions) -> toggle off
+    const extensionMinutes = num(
+        auction.rules?.find((rule) => rule.ruleType === "EXTENSION_TRIGGER")?.value
+    );
+    const hasCustomExtension =
+        extensionMinutes !== null && extensionMinutes !== DEFAULT_EXTENSION_MINUTES;
+
     return {
         basicInfo: {
             auctionName: auction.title,
@@ -159,7 +167,8 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
             registrationStarts: toFormDate(auction.registrationStarts),
             registrationDeadline: toFormDate(auction.registrationDeadline),
             timezone: auction.timezone || "Asia/Kolkata",
-            auctionExtensionTime: null,
+            allowExtendedBidding: hasCustomExtension,
+            auctionExtensionTime: hasCustomExtension ? extensionMinutes : null,
         },
 
         lots: lots.map((lot) => toLotForm(lot, categoryUuid, sharedShippingInfo)),

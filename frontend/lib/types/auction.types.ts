@@ -255,6 +255,8 @@ export interface Auction {
 
     tags?: { tag: { name: string; slug: string } }[];
     auctionFees?: (AuctionFee & { uuid: string })[];
+    /** Only the EXTENSION_TRIGGER rule is returned; value = minutes (Decimal string) */
+    rules?: { ruleType: string; value: string | number; isActive?: boolean; description?: string | null }[];
     _count?: { items: number };
 
     createdAt: string;

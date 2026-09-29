@@ -49,6 +49,9 @@ export interface BasicInfoForm {
 // AUCTION SCHEDULE
 // ============================================================
 
+/** Mirrors DEFAULT_EXTENSION_MINUTES in the backend auction service. */
+export const DEFAULT_EXTENSION_MINUTES = 2;
+
 export interface AuctionScheduleForm {
     startDate: string; // "yyyy-MM-dd"
     startTime: string; // "HH:mm" (12h "hh:mm AM" also accepted)
@@ -65,7 +68,14 @@ export interface AuctionScheduleForm {
 
     timezone: string;
 
-    /** Not sent yet — reserved for AuctionRule EXTENSION_TRIGGER. */
+    /**
+     * On  -> auctionExtensionTime is used.
+     * Off -> backend applies DEFAULT_EXTENSION_MINUTES.
+     * Saved as an AuctionRule (EXTENSION_TRIGGER) either way.
+     */
+    allowExtendedBidding: boolean;
+
+    /** Custom extension duration in minutes (1 - 60). */
     auctionExtensionTime: number | null;
 }
 

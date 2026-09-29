@@ -45,6 +45,7 @@ export const EMPTY_AUCTION_FORM: AuctionFormData = {
         registrationStarts: "",
         registrationDeadline: "",
         timezone: "Asia/Kolkata",
+        allowExtendedBidding: false,
         auctionExtensionTime: null,
     },
     lots: [],

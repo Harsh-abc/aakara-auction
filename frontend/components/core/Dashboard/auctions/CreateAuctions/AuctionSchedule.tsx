@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { format, differenceInMinutes } from "date-fns";
 
-import { AuctionFormData } from "@/lib/types/AuctionsFormData";
+import { AuctionFormData, DEFAULT_EXTENSION_MINUTES } from "@/lib/types/AuctionsFormData";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import TimePicker from "@/components/common/DatePicker/TimePicker";
 import { Input } from "@/components/ui/input";
@@ -43,10 +43,8 @@ export default function AuctionSchedule() {
     const endTime = watch("schedule.endTime");
     const registrationStarts = watch("schedule.registrationStarts");
 
-    // Keep the toggle in sync with the form when revisiting the step
-    const [extensionEnabled, setExtensionEnabled] = useState(
-        () => getValues("schedule.auctionExtensionTime") != null
-    );
+    // Lives in form state so it survives step changes and loads on edit
+    const extensionEnabled = watch("schedule.allowExtendedBidding");
 
     // ---------------- live duration preview ----------------
     const start = combine(startDate, startTime);
@@ -242,9 +240,7 @@ export default function AuctionSchedule() {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const next = !extensionEnabled;
-                                    setExtensionEnabled(next);
-                                    setValue("schedule.auctionExtensionTime", next ? 5 : null, {
+                                    setValue("schedule.allowExtendedBidding", !extensionEnabled, {
                                         shouldDirty: true,
                                     });
                                 }}
@@ -266,6 +262,8 @@ export default function AuctionSchedule() {
                             <Input
                                 type="number"
                                 min={1}
+                                max={60}
+                                step={1}
                                 placeholder="eg. 5"
                                 className="w-full bg-white rounded-md px-3 py-2 h-11"
                                 disabled={!extensionEnabled}
@@ -275,7 +273,9 @@ export default function AuctionSchedule() {
                             />
 
                             <span className="text-[13px] font-normal">
-                                *Bids in the last 2 minutes extend the auction by this many minutes to prevent sniping.
+                                {extensionEnabled
+                                    ? "*Bids in the last 2 minutes extend the auction by this many minutes to prevent sniping."
+                                    : `*Off: bids in the last 2 minutes extend the auction by the default ${DEFAULT_EXTENSION_MINUTES} minutes. Turn on to set your own duration.`}
                             </span>
                         </div>
                     </div>

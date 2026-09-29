@@ -147,6 +147,12 @@ export const buildAuctionFormData = (
     appendIfPresent(formData, "registrationDeadline", dateOnlyToIso(schedule.registrationDeadline));
     formData.append("timezone", schedule.timezone || "Asia/Kolkata");
 
+    // Always sent so an edit can switch it off (backend replaces the rule)
+    formData.append("allowExtendedBidding", String(Boolean(schedule.allowExtendedBidding)));
+    if (schedule.allowExtendedBidding) {
+        appendIfPresent(formData, "extensionMinutes", num(schedule.auctionExtensionTime));
+    }
+
     // ========================================================
     // SHIPPING + VENUE
     // ========================================================
@@ -348,6 +354,15 @@ export const validateAuctionForm = (
     }
     if (regEnd && schedule.startDate && regEnd > schedule.startDate) {
         errors.push("Registration deadline should be on or before the auction start date");
+    }
+
+    if (schedule.allowExtendedBidding) {
+        const minutes = num(schedule.auctionExtensionTime);
+        if (minutes === null) {
+            errors.push("Enter an extension duration, or turn off extended bidding");
+        } else if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
+            errors.push("Extension duration must be a whole number of minutes between 1 and 60");
+        }
     }
 
     if (!data.shipping.isOnline && !data.shipping.venue?.trim()) {
