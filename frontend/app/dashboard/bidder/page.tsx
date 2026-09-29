@@ -11,34 +11,27 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppDispatch, RootState } from "@/redux/store";
 import { getAllUsers } from "@/services/operations/user.api";
-// import { newUsers } from "@/lib/data";
+// import { suspended } from "@/lib/data";
 // import { auctionData } from "@/lib/data";
 import { Plus, Search, SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-export default function NewUsers() {
+export default function BidderUsers() {
     const [search, setSearch] = useState("")
-    const NEW_USER_DAYS = 10;
 
     const dispatch = useDispatch<AppDispatch>();
     const { users, loading, error } = useSelector((state: RootState) => state.user);
 
-    const newUsers = useMemo(() => {
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - NEW_USER_DAYS);
-        cutoff.setHours(0, 0, 0, 0);
-
-        return (users ?? [])
-            .filter((u) => u.createdAt && new Date(u.createdAt) >= cutoff)
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [users]);
+    const suspendedUsers = useMemo(
+        () => (users ?? []).filter((u) => u.status === "ACTIVE"),
+        [users]
+    );
 
     useEffect(() => {
         dispatch(getAllUsers({ page: 1, limit: 100 }));
     }, [dispatch]);
-
 
     const items = [
         { label: "All", value: "all" },
@@ -51,7 +44,7 @@ export default function NewUsers() {
         <div className="px-8 py-8">
 
             <div className="">
-                <h1 className="text-[24px] font-bold">New Users</h1>
+                <h1 className="text-[24px] font-bold">All Bidders</h1>
             </div>
 
 
@@ -72,7 +65,7 @@ export default function NewUsers() {
                 </div>
 
 
-                <UsersTable columns={columns} data={newUsers} search={search} />
+                <UsersTable columns={columns} data={suspendedUsers} search={search} />
 
             </div>
         </div>

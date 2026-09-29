@@ -15,7 +15,7 @@ import { getAllUsers } from "@/services/operations/user.api";
 // import { auctionData } from "@/lib/data";
 import { Plus, Search, SearchIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function SuspendedUsers() {
@@ -23,6 +23,11 @@ export default function SuspendedUsers() {
 
     const dispatch = useDispatch<AppDispatch>();
     const { users, loading, error } = useSelector((state: RootState) => state.user);
+
+    const suspendedUsers = useMemo(
+        () => (users ?? []).filter((u) => u.status === "SUSPENDED"),
+        [users]
+    );
 
     useEffect(() => {
         dispatch(getAllUsers({ page: 1, limit: 100 }));
@@ -60,7 +65,7 @@ export default function SuspendedUsers() {
                 </div>
 
 
-                <UsersTable columns={columns} data={users} search={search} />
+                <UsersTable columns={columns} data={suspendedUsers} search={search} />
 
             </div>
         </div>
