@@ -210,10 +210,10 @@ export default function AddLots({
                 )}
 
                 {currentLotStep === 6 && (
-                    renderLotStep(
-                        ReviewSubmit,
-                        selectedLotIndex
-                    )
+                    <ReviewSubmit
+                        lotIndex={selectedLotIndex}
+                        onEditStep={setCurrentLotStep}
+                    />
                 )}
 
             </div>

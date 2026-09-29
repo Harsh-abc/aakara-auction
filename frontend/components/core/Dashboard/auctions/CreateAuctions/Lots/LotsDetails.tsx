@@ -19,7 +19,7 @@ interface LotsDetailProps {
 
 
 
-function useAuctionCategoryName(categoryUuid?: string, subCategoryUuid?: string) {
+export function useAuctionCategoryName(categoryUuid?: string, subCategoryUuid?: string) {
     const [categoryName, setCategoryName] = useState<string | null>(null);
     const [subCategoryName, setSubCategoryName] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);

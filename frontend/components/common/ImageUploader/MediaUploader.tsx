@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
     Upload,
     X,
@@ -258,13 +258,10 @@ export default function MediaUploader({
     };
 
     /*
-     * Cleanup preview URLs on unmount
+     * Preview URLs are NOT revoked on unmount: they live in form state
+     * and are reused when the user returns to this step or reaches
+     * Review & Submit. They're revoked in removeFile instead.
      */
-    useEffect(() => {
-        return () => {
-            value.forEach(revokeMediaPreview);
-        };
-    }, []);
 
     return (
         <div
