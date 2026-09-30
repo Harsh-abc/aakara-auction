@@ -1,3 +1,5 @@
+import { AuctionLot } from "./types/auction.types"
+
 export type Auction = {
     id: number
     auctionName: string
@@ -428,3 +430,396 @@ export const auctionData: Auction[] = [
 //         status: "Suspended",
 //     },
 // ]
+
+
+export interface LiveAuction {
+    id: number;
+    title: string;
+    status: "LIVE" | "UPCOMING" | "PAST";
+    currentLot: number;
+    activeBidders: number;
+    estimatedTotal: string;
+    auctioneer: string;
+    image: string;
+}
+
+export const liveAuctions: LiveAuction[] = [
+    {
+        id: 1,
+        title: "Contemporary Evening Sale",
+        status: "LIVE",
+        currentLot: 2,
+        activeBidders: 1204,
+        estimatedTotal: "$14.2M",
+        auctioneer: "J. Smith",
+        image: "/images/auction-artwork.jpg",
+    },
+    {
+        id: 2,
+        title: "Modern Masters Auction",
+        status: "LIVE",
+        currentLot: 8,
+        activeBidders: 856,
+        estimatedTotal: "$8.6M",
+        auctioneer: "A. Sharma",
+        image: "/images/modern-artwork.jpg",
+    },
+    {
+        id: 3,
+        title: "Fine Art & Collectibles",
+        status: "LIVE",
+        currentLot: 12,
+        activeBidders: 642,
+        estimatedTotal: "$5.4M",
+        auctioneer: "R. Mehta",
+        image: "/images/fine-artwork.jpg",
+    },
+    {
+        id: 4,
+        title: "Indian Contemporary Art",
+        status: "LIVE",
+        currentLot: 5,
+        activeBidders: 978,
+        estimatedTotal: "$11.8M",
+        auctioneer: "P. Kapoor",
+        image: "/images/indian-artwork.jpg",
+    },
+];
+
+
+
+
+
+export const auctionLots: AuctionLot[] = [
+    {
+        id: "lot-001",
+        uuid: "a1000001-0000-4000-8000-000000000001",
+        itemNumber: 1,
+        title: "Untitled - Abstract Composition",
+        description: "An expressive abstract artwork with layered colors.",
+        artistName: "Rameshwar Broota",
+        medium: "Acrylic on Canvas",
+        yearCreated: "2020",
+        editionType: "UNIQUE",
+        status: "ACTIVE",
+
+        startingPrice: "250000",
+        reservePrice: "300000",
+        estimateLow: "300000",
+        estimateHigh: "450000",
+        currentBid: "325000",
+        bidCount: 12,
+        isFeatured: true,
+
+        insureanceValue: "350000",
+        gstRate: "12",
+        hsnCode: "97019100",
+        shippingInfo: "Professional art packing and insured shipping.",
+
+        overallCondition: "Excellent",
+        frameCondition: "Good",
+        detailedConditionNotes: "Minor signs of handling; artwork is well preserved.",
+        restorationHistory: "No known restoration.",
+
+        previousOwner: "Private Collector",
+        acquisitionMethod: "Private Collection",
+        acquisitionDate: "2022-05-10",
+        exhibitionHistory: "Contemporary Art Exhibition, Mumbai",
+
+        authenticateBy: "Gallery Authentication Department",
+        auctheticateDate: "2024-01-15",
+
+        dimension: null,
+
+        images: [
+            {
+                id: "img-001",
+                url: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400",
+                mediaType: "IMAGE",
+                isPrimary: true,
+            },
+        ],
+        documents: [],
+
+        currency: {
+            code: "INR",
+            symbol: "₹",
+        },
+    },
+    {
+        id: "lot-002",
+        uuid: "a1000002-0000-4000-8000-000000000002",
+        itemNumber: 2,
+        title: "The Blue Horizon",
+        description: "A contemporary painting featuring blue and earthy tones.",
+        artistName: "Anjolie Ela Menon",
+        medium: "Oil on Canvas",
+        yearCreated: "2018",
+        editionType: "UNIQUE",
+        status: "ACTIVE",
+
+        startingPrice: "180000",
+        reservePrice: "220000",
+        estimateLow: "220000",
+        estimateHigh: "350000",
+        currentBid: "245000",
+        bidCount: 8,
+        isFeatured: false,
+
+        insureanceValue: "275000",
+        gstRate: "12",
+        hsnCode: "97019100",
+        shippingInfo: "Insured shipping available across India.",
+
+        overallCondition: "Very Good",
+        frameCondition: "Excellent",
+        detailedConditionNotes: "Well-maintained with no visible major damage.",
+        restorationHistory: null,
+
+        previousOwner: "Art Collector",
+        acquisitionMethod: "Gallery Purchase",
+        acquisitionDate: "2021-08-20",
+        exhibitionHistory: "Modern Indian Art Showcase",
+
+        authenticateBy: "Independent Art Expert",
+        auctheticateDate: "2023-11-05",
+
+        dimension: null,
+
+        images: [
+            {
+                id: "img-002",
+                url: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400",
+                mediaType: "IMAGE",
+                isPrimary: true,
+            },
+        ],
+        documents: [],
+
+        currency: {
+            code: "INR",
+            symbol: "₹",
+        },
+    },
+    {
+        id: "lot-003",
+        uuid: "a1000003-0000-4000-8000-000000000003",
+        itemNumber: 3,
+        title: "Village Life",
+        description: "A colorful composition inspired by everyday life.",
+        artistName: "M. F. Husain",
+        medium: "Mixed Media on Canvas",
+        yearCreated: "2005",
+        editionType: "UNIQUE",
+        status: "ACTIVE",
+
+        startingPrice: "500000",
+        reservePrice: "600000",
+        estimateLow: "600000",
+        estimateHigh: "900000",
+        currentBid: "675000",
+        bidCount: 21,
+        isFeatured: true,
+
+        insureanceValue: "750000",
+        gstRate: "12",
+        hsnCode: "97019100",
+        shippingInfo: "Specialist packing recommended.",
+
+        overallCondition: "Good",
+        frameCondition: "Good",
+        detailedConditionNotes: "Light wear consistent with age.",
+        restorationHistory: "Professionally inspected.",
+
+        previousOwner: "Private Art Collection",
+        acquisitionMethod: "Auction Purchase",
+        acquisitionDate: "2019-03-12",
+        exhibitionHistory: "Indian Modernism Retrospective",
+
+        authenticateBy: "Authorized Art Specialist",
+        auctheticateDate: "2022-06-18",
+
+        dimension: null,
+
+        images: [
+            {
+                id: "img-003",
+                url: "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=400",
+                mediaType: "IMAGE",
+                isPrimary: true,
+            },
+        ],
+        documents: [],
+
+        currency: {
+            code: "INR",
+            symbol: "₹",
+        },
+    },
+    {
+        id: "lot-004",
+        uuid: "a1000004-0000-4000-8000-000000000004",
+        itemNumber: 4,
+        title: "Serenity in Nature",
+        description: "A landscape artwork inspired by nature.",
+        artistName: "A. Ramachandran",
+        medium: "Oil on Canvas",
+        yearCreated: "2016",
+        editionType: "UNIQUE",
+        status: "SCHEDULED",
+
+        startingPrice: "350000",
+        reservePrice: "400000",
+        estimateLow: "400000",
+        estimateHigh: "550000",
+        currentBid: null,
+        bidCount: 0,
+        isFeatured: false,
+
+        insureanceValue: "400000",
+        gstRate: "12",
+        hsnCode: "97019100",
+        shippingInfo: "Shipping arranged after auction completion.",
+
+        overallCondition: "Excellent",
+        frameCondition: "Excellent",
+        detailedConditionNotes: "No visible damage.",
+        restorationHistory: null,
+
+        previousOwner: "Private Collector",
+        acquisitionMethod: "Estate Acquisition",
+        acquisitionDate: "2020-10-10",
+        exhibitionHistory: null,
+
+        authenticateBy: "Gallery Authentication Department",
+        auctheticateDate: "2024-03-20",
+
+        dimension: null,
+
+        images: [
+            {
+                id: "img-004",
+                url: "https://images.unsplash.com/photo-1549490349-8643362247b5?w=400",
+                mediaType: "IMAGE",
+                isPrimary: true,
+            },
+        ],
+        documents: [],
+
+        currency: {
+            code: "INR",
+            symbol: "₹",
+        },
+    },
+    {
+        id: "lot-005",
+        uuid: "a1000005-0000-4000-8000-000000000005",
+        itemNumber: 5,
+        title: "Golden Reflections",
+        description: "An abstract work with warm golden tones.",
+        artistName: "V. S. Gaitonde",
+        medium: "Oil on Canvas",
+        yearCreated: "1990",
+        editionType: "UNIQUE",
+        status: "SOLD",
+
+        startingPrice: "750000",
+        reservePrice: "800000",
+        estimateLow: "800000",
+        estimateHigh: "1200000",
+        currentBid: "920000",
+        bidCount: 17,
+        isFeatured: true,
+
+        insureanceValue: "1000000",
+        gstRate: "12",
+        hsnCode: "97019100",
+        shippingInfo: "Insured shipping arranged with the buyer.",
+
+        overallCondition: "Very Good",
+        frameCondition: "Good",
+        detailedConditionNotes: "Well-preserved artwork.",
+        restorationHistory: "Condition reviewed by an art specialist.",
+
+        previousOwner: "Private Collector",
+        acquisitionMethod: "Private Sale",
+        acquisitionDate: "2017-07-25",
+        exhibitionHistory: "Modern Masters Exhibition",
+
+        authenticateBy: "Independent Art Expert",
+        auctheticateDate: "2021-09-14",
+
+        dimension: null,
+
+        images: [
+            {
+                id: "img-005",
+                url: "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400",
+                mediaType: "IMAGE",
+                isPrimary: true,
+            },
+        ],
+        documents: [],
+
+        currency: {
+            code: "INR",
+            symbol: "₹",
+        },
+    },
+    {
+        id: "lot-006",
+        uuid: "a1000006-0000-4000-8000-000000000006",
+        itemNumber: 6,
+        title: "Modern Landscape",
+        description: "A modern interpretation of the natural landscape.",
+        artistName: "S. H. Raza",
+        medium: "Acrylic on Canvas",
+        yearCreated: "2012",
+        editionType: "UNIQUE",
+        status: "UNSOLD",
+
+        startingPrice: "120000",
+        reservePrice: "150000",
+        estimateLow: "150000",
+        estimateHigh: "200000",
+        currentBid: "145000",
+        bidCount: 5,
+        isFeatured: false,
+
+        insureanceValue: "160000",
+        gstRate: "12",
+        hsnCode: "97019100",
+        shippingInfo: "Shipping subject to buyer arrangements.",
+
+        overallCondition: "Good",
+        frameCondition: "Fair",
+        detailedConditionNotes: "Minor frame wear.",
+        restorationHistory: null,
+
+        previousOwner: "Private Collection",
+        acquisitionMethod: "Gallery Purchase",
+        acquisitionDate: "2018-02-14",
+        exhibitionHistory: null,
+
+        authenticateBy: "Gallery Authentication Department",
+        auctheticateDate: "2020-12-01",
+
+        dimension: null,
+
+        images: [
+            {
+                id: "img-006",
+                url: "https://images.unsplash.com/photo-1577083288073-40892c0860a4?w=400",
+                mediaType: "IMAGE",
+                isPrimary: true,
+            },
+        ],
+        documents: [],
+
+        currency: {
+            code: "INR",
+            symbol: "₹",
+        },
+    },
+];
+

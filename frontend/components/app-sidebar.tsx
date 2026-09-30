@@ -232,9 +232,9 @@ const data = {
     {
       title: "Auctions & Lots", url: "/", icon: <Layers />, items: [
         { title: "Create Auctions", url: "/dashboard/auctions" },
-        { title: "Live Auctions", url: "/dashboard/settings/general" },
-        { title: "Past Auctions", url: "/dashboard/settings/team" },
-        { title: "Upcoming Auctions", url: "/dashboard/settings/permissions" },
+        { title: "Live Auctions", url: "/dashboard/auctions/live-auctions" },
+        { title: "Past Auctions", url: "/dashboard/auctions/past-auctions" },
+        { title: "Upcoming Auctions", url: "/dashboard/auctions/upcoming-auctions" },
       ],
     },
     { title: "Artworks", url: "/dashboard/artworks", icon: <Gavel className="rotate-270" /> },
