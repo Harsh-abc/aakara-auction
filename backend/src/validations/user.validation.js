@@ -62,3 +62,16 @@ export const updateMyProfileSchema = z
         pincode: emptyToNull(z.string().trim().regex(/^\d{6}$/, 'Pincode must be 6 digits').nullable().optional()),
     })
     .strict();
+
+
+
+
+
+export const createUserSchema = z.object({
+    email: z.string().trim().toLowerCase().email("Invalid email"),
+    phone: z.string().trim().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number"),
+    password: z
+        .string()
+        .min(8, "Password must be at least 8 characters")
+        .max(72, "Password too long"),
+});
