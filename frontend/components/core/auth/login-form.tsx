@@ -26,6 +26,7 @@ import { toast } from "sonner"
 
 import type { AppDispatch, RootState } from "@/redux/store"
 import { loginUser } from "@/services/operations/auth.api"
+import { canAccessDashboard } from "@/lib/constants/roles"
 
 export function LoginForm({
     className,
@@ -109,15 +110,8 @@ export function LoginForm({
                 response.message || "Login successful!"
             )
 
-            const role = response.data.user.roleId
-            // router.push("/dashboard") }
-            // console.log(role)
-
-            if (role == "1") {
-                return router.push('/')
-            }
-
-            router.push("/dashboard")
+            // only staff roles go to the dashboard; BIDDER (and anything else) goes home
+            router.push(canAccessDashboard(response.data.role) ? "/dashboard" : "/")
         } catch (error) {
             toast.error(
                 typeof error === "string"

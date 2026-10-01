@@ -65,7 +65,10 @@ export interface RefreshTokenApiResponse {
     success: boolean
     message?: string
     data: {
+        user: AuthUser
         accessToken: string
+        role: string | null
+        permissions: string[]
     }
 }
 

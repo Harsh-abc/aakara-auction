@@ -113,3 +113,25 @@ export interface UploadUserKycResponse {
         documentsUploaded: number;
     };
 }
+
+export interface CreateUserPayload {
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+}
+
+export interface CreateUserResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        username: string;
+        email: string;
+        phone: string;
+        role: string;
+        status: string;
+        kycStatus: string;
+        createdAt: string;
+    };
+}

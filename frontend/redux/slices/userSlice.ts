@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getAllUsers, getUserById, uploadUserKyc } from "@/services/operations/user.api";
+import { createUser, getAllUsers, getUserById, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -13,6 +13,9 @@ interface UserState {
 
     kycUploading: boolean;
     kycUploadError: string | null;
+
+    creatingUser: boolean;
+    createUserError: string | null;
 }
 
 const initialState: UserState = {
@@ -26,6 +29,9 @@ const initialState: UserState = {
 
     kycUploading: false,
     kycUploadError: null,
+
+    creatingUser: false,
+    createUserError: null,
 };
 
 const userSlice = createSlice({
@@ -72,6 +78,18 @@ const userSlice = createSlice({
             .addCase(uploadUserKyc.rejected, (state, action) => {
                 state.kycUploading = false;
                 state.kycUploadError = action.payload || "Something went wrong";
+            })
+
+            .addCase(createUser.pending, (state) => {
+                state.creatingUser = true;
+                state.createUserError = null;
+            })
+            .addCase(createUser.fulfilled, (state) => {
+                state.creatingUser = false;
+            })
+            .addCase(createUser.rejected, (state, action) => {
+                state.creatingUser = false;
+                state.createUserError = action.payload || "Something went wrong";
             });
     },
 });

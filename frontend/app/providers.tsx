@@ -4,7 +4,9 @@ import { Provider } from "react-redux"
 import { PersistGate } from "redux-persist/integration/react"
 import { store, persistor } from "@/redux/store"
 import React from "react"
-// import DashboardGuard from "./DashboardGuard"
+import { setupAuthInterceptors } from "@/services/authSession"
+
+setupAuthInterceptors()
 
 interface ProviderProps {
     children: React.ReactNode;

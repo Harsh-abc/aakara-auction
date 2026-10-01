@@ -68,6 +68,7 @@ export const updateMyProfileSchema = z
 
 
 export const createUserSchema = z.object({
+    fullName: z.string().trim().min(1, "Full name is required").max(100, "Full name too long"),
     email: z.string().trim().toLowerCase().email("Invalid email"),
     phone: z.string().trim().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number"),
     password: z

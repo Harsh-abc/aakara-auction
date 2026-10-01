@@ -1,10 +1,12 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { userEndPoints } from "../api";
+import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
+import { CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
 const { GET_ALL_USERS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API } = userEndPoints;
+
+const { CREATE_USER_API } = adminEndPoints;
 
 
 
@@ -120,6 +122,42 @@ export const uploadUserKyc = createAsyncThunk<
                 error?.response?.data?.message ||
                 error?.message ||
                 "Could not upload KYC. Try again.";
+
+            return rejectWithValue(message);
+        }
+    }
+);
+
+export const createUser = createAsyncThunk<
+    CreateUserResponse,
+    CreateUserPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/createUser",
+    async (payload, { getState, dispatch, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<CreateUserResponse>({
+                method: "POST",
+                url: CREATE_USER_API,
+                body: payload,
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not create user");
+            }
+
+            // refresh the users table with the new user
+            dispatch(getAllUsers({ page: 1, limit: 100 }));
+
+            return response.data;
+        } catch (error: any) {
+            const message =
+                error?.response?.data?.message ||
+                error?.message ||
+                "Could not create user. Try again.";
 
             return rejectWithValue(message);
         }

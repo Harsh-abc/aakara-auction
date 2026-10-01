@@ -2,13 +2,14 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useDispatch, useSelector } from "react-redux"
 import toast from "react-hot-toast"
 
-import { logout } from "@/redux/slices/authSlice"
-import type { RootState } from "@/redux/store"
+import { useAppSelector } from "@/hooks/redux"
+import { canAccessDashboard } from "@/lib/constants/roles"
+import { refreshSession, SESSION_EXPIRED_EVENT } from "@/services/authSession"
 
-const ALLOWED_ROLES = ["SUPER_ADMIN", "ADMIN", "STAFF"]
+// refresh this long before the access token actually expires
+const REFRESH_LEEWAY_MS = 60 * 1000
 
 // read "exp" from the JWT payload (no library needed)
 const getTokenExpiry = (token: string): number | null => {
@@ -23,52 +24,44 @@ const getTokenExpiry = (token: string): number | null => {
 
 export default function DashboardGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter()
-    const dispatch = useDispatch()
-    const token = useSelector((state: RootState) => state.auth.accessToken)
-    const role = useSelector((state: RootState) => state.auth.role)
+    const token = useAppSelector((state) => state.auth.accessToken)
+    const role = useAppSelector((state) => state.auth.role)
 
-    const expiresAt = token ? getTokenExpiry(token) : null
-    const isValidToken = !!expiresAt && expiresAt > Date.now()
-    const hasRole = !!role && ALLOWED_ROLES.includes(role)
+    const hasAccess = canAccessDashboard(role)
 
+    // 1. refresh token rejected (expired / revoked) → back to login
     useEffect(() => {
-        const endSession = (message?: string) => {
-            dispatch(logout())
-            if (message) toast.error(message)
+        const onSessionExpired = () => {
+            toast.error("Session expired. Please log in again.")
             router.replace("/login")
         }
+        window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+        return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+    }, [router])
 
-        // 1. no token or already expired
-        if (!isValidToken || !expiresAt) {
-            endSession(token ? "Session expired. Please log in again." : undefined)
-            return
-        }
+    // 2. keep the access token fresh: refresh now if missing/expired/unreadable,
+    //    otherwise just before it expires. failures are handled via SESSION_EXPIRED_EVENT.
+    useEffect(() => {
+        const expiresAt = token ? getTokenExpiry(token) : null
+        const delay = expiresAt ? Math.max(expiresAt - Date.now() - REFRESH_LEEWAY_MS, 0) : 0
 
-        // 2. logged in but not staff
-        if (!hasRole) {
+        const timer = setTimeout(() => {
+            refreshSession().catch(() => {})
+        }, delay)
+
+        return () => clearTimeout(timer)
+    }, [token])
+
+    // 3. logged in, but role isn't allowed in the dashboard (e.g. BIDDER)
+    useEffect(() => {
+        if (token && role && !hasAccess) {
             toast.error("You don't have access to the dashboard")
             router.replace("/")
-            return
         }
+    }, [token, role, hasAccess, router])
 
-        // 3. auto-logout at the exact moment the token expires
-        const timer = setTimeout(
-            () => endSession("Session expired. Please log in again."),
-            expiresAt - Date.now()
-        )
-
-        // 4. any API 401 (fired from apiConnector)
-        const onUnauthorized = () => endSession("Session expired. Please log in again.")
-        window.addEventListener("auth:unauthorized", onUnauthorized)
-
-        return () => {
-            clearTimeout(timer)
-            window.removeEventListener("auth:unauthorized", onUnauthorized)
-        }
-    }, [token, role, isValidToken, hasRole, expiresAt, dispatch, router])
-
-    // render nothing while redirecting, so protected content never flashes
-    if (!isValidToken || !hasRole) return null
+    // render nothing until we have a session with a dashboard role, so protected content never flashes
+    if (!token || !hasAccess) return null
 
     return <>{children}</>
 }

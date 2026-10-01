@@ -8,6 +8,7 @@ export const authEndPoints = {
     REGISTER_API: `${BASE_URL}/api/auth/register`,
     VERIFY_OTP_API: `${BASE_URL}/api/auth/verify-otp`,
     LOGOUT_API: `${BASE_URL}/api/auth/logout`,
+    REFRESH_API: `${BASE_URL}/api/auth/refresh`,
 
 }
 
@@ -37,10 +38,16 @@ export const currencyEndPoints = {
 export const userEndPoints = {
     GET_ALL_USERS_API: `${BASE_URL}/api/users/get-all-users`,
     GET_USER_BY_ID_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}`,
-    UPLOAD_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc`
+    UPLOAD_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc`,
+
 };
 
 export const profileEndpoints = {
     GET_MY_PROFILE_API: `${BASE_URL}/api/users/me/profile`,
     UPDATE_MY_PROFILE_API: `${BASE_URL}/api/users/me/update-profile`,
+}
+
+
+export const adminEndPoints = {
+    CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
 }

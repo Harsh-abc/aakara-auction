@@ -55,7 +55,7 @@ export const changeUserRoleService = async ({ actorUserId, targetUUuid, newRoleN
 
 
 
-export const createUserByAdminService = async ({ email, phone, password }, creatorId) => {
+export const createUserByAdminService = async ({ fullName, email, phone, password }, creatorId) => {
     const existing = await prisma.user.findFirst({
         where: { OR: [{ email }, { phone }] },
         select: { email: true },
@@ -95,6 +95,16 @@ export const createUserByAdminService = async ({ email, phone, password }, creat
                     phoneVerifiedAt: now,
                     passwordChangedAt: now,
                     createdById: adminId,
+                },
+            });
+
+            const [firstName, ...rest] = fullName.split(/\s+/);
+            await tx.userProfile.create({
+                data: {
+                    userId: user.id,
+                    firstName,
+                    lastName: rest.join(" ") || null,
+                    displayName: fullName,
                 },
             });
 
