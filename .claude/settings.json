@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(try { $r = Invoke-WebRequest -Uri http://localhost:8080/api/auth/login -Method OPTIONS -Headers @{Origin='http://localhost:3000';'Access-Control-Request-Method'='POST';'Access-Control-Request-Headers'='content-type'} -UseBasicParsing; $r.StatusCode; $r.Headers | Out-String } catch { $_.Exception.Message; if \\($_.Exception.Response\\) { $_.Exception.Response.Headers | Out-String } }; Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object OwningProcess | ForEach-Object { Get-Process -Id $_.OwningProcess | Select-Object Id,ProcessName,Path })",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"ProcessId=24568\")",
+      "PowerShell($env:PORT='8099'; $p = Start-Process node -ArgumentList 'index.js' -WorkingDirectory backend -PassThru -WindowStyle Hidden; Start-Sleep 4; try { $r = Invoke-WebRequest -Uri http://localhost:8099/api/auth/login -Method OPTIONS -Headers @{Origin='http://localhost:3000';'Access-Control-Request-Method'='POST';'Access-Control-Request-Headers'='content-type'} -UseBasicParsing; $r.StatusCode; $r.Headers | Out-String } catch { $_.Exception.Message }; Stop-Process -Id $p.Id -Force)",
+      "PowerShell(Get-ChildItem backend\\\\prisma\\\\migrations -Directory | Select-Object -Last 1 | ForEach-Object { Get-Content \"$\\($_.FullName\\)\\\\migration.sql\" }; Get-Item backend\\\\node_modules\\\\.prisma\\\\client\\\\index.js, backend\\\\node_modules\\\\.prisma\\\\client\\\\schema.prisma | Select-Object Name, LastWriteTime; Select-String -Path backend\\\\node_modules\\\\.prisma\\\\client\\\\schema.prisma -Pattern \"createdBy\"; cd backend; npx prisma -v | Select-Object -First 3)",
+      "PowerShell(npx prisma migrate status)",
+      "PowerShell(npx prisma generate)",
+      "PowerShell(cd ..; git show --stat HEAD~0 | Select-Object -First 30; git show --stat HEAD~1 | Select-Object -First 30; Get-ChildItem frontend\\\\app\\\\dashboard -Recurse -Filter page.tsx | % { $_.FullName.Replace\\(\\(Get-Location\\).Path + '\\\\',''\\) }; Select-String -Path backend\\\\src\\\\app.js,backend\\\\src\\\\index.js,backend\\\\src\\\\server.js -Pattern \"adminRouter|app.use\" -ErrorAction SilentlyContinue)",
+      "PowerShell(cd frontend; npx tsc --noEmit -p . 2>&1 | Select-String -Pattern \"settings|user.api|userSlice|roles.ts|user.types|api.ts\" ; \"exit: $LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit -p . 2>&1 | Select-String \"error TS\" | % { \\($_ -split '\\\\\\('\\)[0] } | Sort-Object -Unique)",
+      "PowerShell(node --check ..\\\\backend\\\\src\\\\controllers\\\\admin.controller.js)",
+      "PowerShell(node --check ..\\\\backend\\\\src\\\\services\\\\admin.services.js)",
+      "PowerShell(node --check ..\\\\backend\\\\src\\\\services\\\\admin.services.js; npx tsc --noEmit -p . 2>&1 | Select-String \"error TS\" | % { \\($_ -split '\\\\\\('\\)[0] } | Sort-Object -Unique)",
+      "PowerShell(git -C .. log --oneline -5 -- frontend/redux frontend/app/dashboard/auctions/page.tsx frontend/components/core/Dashboard/auctions/AuctionDataTable.tsx backend/src/services/auction.services.js)",
+      "PowerShell(git -C .. status --short)"
+    ]
+  }
+}

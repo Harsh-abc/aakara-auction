@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { createUser, getAllUsers, getUserById, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, createUser, getAllUsers, getUserById, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -16,6 +16,9 @@ interface UserState {
 
     creatingUser: boolean;
     createUserError: string | null;
+
+    // uuid of the user whose role is being changed
+    changingRoleFor: string | null;
 }
 
 const initialState: UserState = {
@@ -32,6 +35,8 @@ const initialState: UserState = {
 
     creatingUser: false,
     createUserError: null,
+
+    changingRoleFor: null,
 };
 
 const userSlice = createSlice({
@@ -90,6 +95,21 @@ const userSlice = createSlice({
             .addCase(createUser.rejected, (state, action) => {
                 state.creatingUser = false;
                 state.createUserError = action.payload || "Something went wrong";
+            })
+
+            .addCase(changeUserRole.pending, (state, action) => {
+                state.changingRoleFor = action.meta.arg.uuid;
+            })
+            .addCase(changeUserRole.fulfilled, (state, action) => {
+                state.changingRoleFor = null;
+                // update the row in place instead of refetching the list
+                const { uuid, roleName } = action.payload.data;
+                const user = state.users.find((u) => u.uuid === uuid);
+                if (user) user.role = { name: roleName };
+                if (state.selectedUser?.uuid === uuid) state.selectedUser.role = { name: roleName };
+            })
+            .addCase(changeUserRole.rejected, (state) => {
+                state.changingRoleFor = null;
             });
     },
 });

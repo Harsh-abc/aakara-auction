@@ -4,19 +4,33 @@ import { changeUserRoleService, createUserByAdminService } from '../services/adm
 import { createUserSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
 
-export const changeUserRole = async (req, res, next) => {
+export const changeUserRole = async (req, res) => {
     try {
         const { uuid } = req.params;
         const { roleName } = changeRoleSchema.parse(req.body);
 
         const updatedUser = await changeUserRoleService({
-            actorUserId: req.user.userId,
+            actorUuid: req.user.uuid,
             targetUUuid: uuid,
             newRoleName: roleName,
         });
-        res.status(200).json({ message: 'User role updated successfully', user: updatedUser });
+
+        return res.status(200).json({
+            success: true,
+            message: 'User role updated successfully',
+            data: updatedUser,
+        });
     } catch (error) {
-        next(error);
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: error.issues?.[0]?.message || "Validation failed",
+            });
+        }
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Internal server error",
+        });
     }
 }
 

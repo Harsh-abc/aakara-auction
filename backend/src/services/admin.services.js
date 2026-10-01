@@ -2,8 +2,10 @@ import prisma from '../libs/prisma.js';
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 
+const MAX_SUPER_ADMINS = 3;
 
-export const changeUserRoleService = async ({ actorUserId, targetUUuid, newRoleName }) => {
+
+export const changeUserRoleService = async ({ actorUuid, targetUUuid, newRoleName }) => {
     const targetUser = await prisma.user.findUnique({ where: { uuid: targetUUuid } });
 
     if (!targetUser) {
@@ -12,7 +14,8 @@ export const changeUserRoleService = async ({ actorUserId, targetUUuid, newRoleN
         throw error;
     }
 
-    if (targetUser.id === actorUserId) {
+    // compare uuids — targetUser.id is a BigInt while the JWT userId is a string
+    if (targetUser.uuid === actorUuid) {
         const error = new Error('You cannot change your own role');
         error.statusCode = 400;
         throw error;
@@ -32,16 +35,39 @@ export const changeUserRoleService = async ({ actorUserId, targetUUuid, newRoleN
         throw error;
     }
 
-    const updatedUser = await prisma.$transaction(async (tx) => {
-        const updated = await tx.user.update({
-            where: { id: targetUser.id },
-            data: { roleId: newRole.id },
-        });
+    let updatedUser;
+    try {
+        // Serializable so two concurrent promotions can't both pass the limit check
+        updatedUser = await prisma.$transaction(async (tx) => {
+            if (newRole.name === 'SUPER_ADMIN') {
+                const superAdminCount = await tx.user.count({
+                    where: { roleId: newRole.id, deletedAt: null },
+                });
+                if (superAdminCount >= MAX_SUPER_ADMINS) {
+                    const error = new Error(`Only ${MAX_SUPER_ADMINS} Super Admins are allowed. Change another Super Admin's role first.`);
+                    error.statusCode = 409;
+                    throw error;
+                }
+            }
 
-        await tx.userSession.deleteMany({ where: { userId: targetUser.id } });
+            const updated = await tx.user.update({
+                where: { id: targetUser.id },
+                data: { roleId: newRole.id },
+            });
 
-        return updated;
-    });
+            await tx.userSession.deleteMany({ where: { userId: targetUser.id } });
+
+            return updated;
+        }, { isolationLevel: 'Serializable' });
+    } catch (error) {
+        // P2034 = serialization conflict with another concurrent role change
+        if (error.code === 'P2034') {
+            const err = new Error('Another role change is in progress. Please try again.');
+            err.statusCode = 409;
+            throw err;
+        }
+        throw error;
+    }
 
     return {
         uuid: updatedUser.uuid,

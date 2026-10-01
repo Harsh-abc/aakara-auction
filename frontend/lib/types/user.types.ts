@@ -121,6 +121,22 @@ export interface CreateUserPayload {
     password: string;
 }
 
+export interface ChangeUserRolePayload {
+    uuid: string;
+    roleName: string;
+}
+
+export interface ChangeUserRoleResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        email: string;
+        roleId: string;
+        roleName: string;
+    };
+}
+
 export interface CreateUserResponse {
     success: boolean;
     message: string;

@@ -50,4 +50,5 @@ export const profileEndpoints = {
 
 export const adminEndPoints = {
     CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
+    CHANGE_USER_ROLE_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/role`,
 }

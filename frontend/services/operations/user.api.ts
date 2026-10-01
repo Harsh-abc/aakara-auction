@@ -1,12 +1,12 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
+import { ChangeUserRolePayload, ChangeUserRoleResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
 const { GET_ALL_USERS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API } = userEndPoints;
 
-const { CREATE_USER_API } = adminEndPoints;
+const { CREATE_USER_API, CHANGE_USER_ROLE_API } = adminEndPoints;
 
 
 
@@ -158,6 +158,39 @@ export const createUser = createAsyncThunk<
                 error?.response?.data?.message ||
                 error?.message ||
                 "Could not create user. Try again.";
+
+            return rejectWithValue(message);
+        }
+    }
+);
+
+export const changeUserRole = createAsyncThunk<
+    ChangeUserRoleResponse,
+    ChangeUserRolePayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/changeUserRole",
+    async ({ uuid, roleName }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<ChangeUserRoleResponse>({
+                method: "PATCH",
+                url: CHANGE_USER_ROLE_API(uuid),
+                body: { roleName },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not change role");
+            }
+
+            return response.data;
+        } catch (error: any) {
+            const message =
+                error?.response?.data?.message ||
+                error?.message ||
+                "Could not change role. Try again.";
 
             return rejectWithValue(message);
         }

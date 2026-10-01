@@ -8,7 +8,13 @@ import rootReducer from "./reducer/rootReducers";
 const persistConfig = {
     key: 'root',
     storage,
-    version: 1
+    version: 2,
+    // only the login session survives a reload; auction/user data is always refetched,
+    // so a stale saved copy can't be missing fields the current slices expect
+    whitelist: ['auth'],
+    // drop auction/user data saved by older versions so it isn't rehydrated
+    migrate: (state: any) =>
+        Promise.resolve(state ? { _persist: state._persist, auth: state.auth } : state),
 }
 
 const persistedReducer = persistReducer(
