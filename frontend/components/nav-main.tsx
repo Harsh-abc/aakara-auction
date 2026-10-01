@@ -78,7 +78,7 @@ export function NavMain({
                 render={
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    className="flex items-center gap-2 rounded-md px-3 py-4 transition-colors text-white hover:bg-[#491B3A] hover:text-white active:bg-[#491B3A] active:text-white data-open:hover:bg-[#491B3A] data-open:hover:text-white"
                   />
                 }
               >
@@ -96,9 +96,10 @@ export function NavMain({
                         render={
                           <Link
                             href={subItem.url}
-                            className="rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            className="rounded-md transition-colors"
                           />
                         }
+                        className="text-white hover:bg-[#491B3A] hover:text-white active:bg-[#491B3A] active:text-white data-active:bg-[#491B3A] data-active:text-white"
                       >
                         <span>{subItem.title}</span>
                       </SidebarMenuSubButton>

@@ -60,6 +60,7 @@ export interface GetAllUsersParams {
     search?: string;
     emailVerified?: "true" | "false";
     kycStatus?: string;
+    role?: string;
 }
 
 export interface GetAllUsersResponse {

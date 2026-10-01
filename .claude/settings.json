@@ -14,7 +14,8 @@
       "PowerShell(node --check ..\\\\backend\\\\src\\\\services\\\\admin.services.js)",
       "PowerShell(node --check ..\\\\backend\\\\src\\\\services\\\\admin.services.js; npx tsc --noEmit -p . 2>&1 | Select-String \"error TS\" | % { \\($_ -split '\\\\\\('\\)[0] } | Sort-Object -Unique)",
       "PowerShell(git -C .. log --oneline -5 -- frontend/redux frontend/app/dashboard/auctions/page.tsx frontend/components/core/Dashboard/auctions/AuctionDataTable.tsx backend/src/services/auction.services.js)",
-      "PowerShell(git -C .. status --short)"
+      "PowerShell(git -C .. status --short)",
+      "Bash(npx tsc *)"
     ]
   }
 }

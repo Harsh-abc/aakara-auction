@@ -4,11 +4,12 @@ import { uploadToS3, deleteFromS3 } from "../services/s3.services.js"
 
 const KYC_ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
 
-export const getAllUsersService = async ({ page, limit, search, emailVerified, kycStatus }) => {
+export const getAllUsersService = async ({ page, limit, search, emailVerified, kycStatus, role }) => {
     const where = {
         deletedAt: null,
         ...(emailVerified && { emailVerified: emailVerified === 'true' }),
         ...(kycStatus && { kyc: { status: kycStatus } }),
+        ...(role && { role: { name: role } }),
         ...(search && {
             OR: [
                 { username: { contains: search, mode: 'insensitive' } },

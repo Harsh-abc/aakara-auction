@@ -30,7 +30,7 @@ export default function UserStats() {
                 description="Currently Online"
                 image={"/admin/statscard06.png"}
                 imageClassName="text-emerald-500"
-                href={'/dashboard/bidder'}
+                href={'/dashboard/bidders'}
             />
 
 
