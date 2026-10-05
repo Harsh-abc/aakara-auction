@@ -1,4 +1,8 @@
-import { AuctionFormData } from "@/lib/types/AuctionsFormData";
+import type {
+    AuctionFormData,
+    AuctionScheduleForm,
+    LotScheduleForm,
+} from "@/lib/types/AuctionsFormData";
 import type { AuctionStatus } from "@/lib/types/auction.types";
 import { isImageMedia } from "@/utils/lotMedia";
 
@@ -45,11 +49,49 @@ const normalizeTime = (time: string): string | null => {
  * "2026-10-12" + "10:00" (in the admin's local timezone) -> ISO UTC string.
  * Returns "" if either part is missing so the backend can report it.
  */
-const combineDateTime = (date: string, time: string): string => {
+export const combineDateTime = (date: string, time: string): string => {
     const hhmm = normalizeTime(time);
     if (!date || !hhmm) return "";
     const d = new Date(`${date}T${hhmm}:00`);
     return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+};
+
+/**
+ * Lot window problems vs the auction window, or null if OK.
+ * A side left fully blank inherits the auction's start / end.
+ * Mirrors applyLotSchedule in the backend auction service.
+ */
+export const getLotScheduleError = (
+    lot: LotScheduleForm | undefined,
+    auction: AuctionScheduleForm
+): string | null => {
+    const side = (date = "", time = "", label: string) => {
+        if (!date && !time) return { iso: "" };
+        const iso = combineDateTime(date, time);
+        return iso ? { iso } : { error: `${label}: pick both a date and a time` };
+    };
+
+    const lotStart = side(lot?.startDate, lot?.startTime, "Lot start");
+    if (lotStart.error) return lotStart.error;
+    const lotEnd = side(lot?.endDate, lot?.endTime, "Lot end");
+    if (lotEnd.error) return lotEnd.error;
+
+    const auctionStart = combineDateTime(auction.startDate, auction.startTime);
+    const auctionEnd = combineDateTime(auction.endDate, auction.endTime);
+
+    const start = lotStart.iso || auctionStart;
+    const end = lotEnd.iso || auctionEnd;
+
+    if (auctionStart && start && new Date(start) < new Date(auctionStart)) {
+        return "Lot start cannot be before the auction start";
+    }
+    if (auctionEnd && end && new Date(end) > new Date(auctionEnd)) {
+        return "Lot end cannot be after the auction end";
+    }
+    if (start && end && new Date(end) <= new Date(start)) {
+        return "Lot end must be after the lot start";
+    }
+    return null;
 };
 
 /** "2026-10-12" -> local midnight as ISO (avoids UTC off-by-one in IST). */
@@ -147,9 +189,10 @@ export const buildAuctionFormData = (
     appendIfPresent(formData, "registrationDeadline", dateOnlyToIso(schedule.registrationDeadline));
     formData.append("timezone", schedule.timezone || "Asia/Kolkata");
 
-    // Always sent so an edit can switch it off (backend replaces the rule)
-    formData.append("allowExtendedBidding", String(Boolean(schedule.allowExtendedBidding)));
-    if (schedule.allowExtendedBidding) {
+    // LIVE auctions only. Always sent so an edit can switch it off (backend replaces the rule)
+    const extendedBidding = basicInfo.auctionType === "LIVE" && Boolean(schedule.allowExtendedBidding);
+    formData.append("allowExtendedBidding", String(extendedBidding));
+    if (extendedBidding) {
         appendIfPresent(formData, "extensionMinutes", num(schedule.auctionExtensionTime));
     }
 
@@ -280,6 +323,11 @@ export const buildAuctionFormData = (
             hsnCode: str(pricing.hsnCode), // backend strips spaces/dots
             currency: allowedCurrencies.includes(pricing.currency) ? pricing.currency : primaryCurrency,
             status: lot.status || "DRAFT",
+
+            // null -> backend uses the auction's start / end
+            scheduledStartAt: combineDateTime(lot.schedule?.startDate ?? "", lot.schedule?.startTime ?? "") || null,
+            scheduledEndAt: combineDateTime(lot.schedule?.endDate ?? "", lot.schedule?.endTime ?? "") || null,
+
             shippingInfo: str(lot.shippingInfo) ?? str(shipping.shippingInfo),
             isFeatured: Boolean(lot.isFeatured),
 
@@ -323,7 +371,12 @@ export const buildAuctionFormData = (
 
 export const validateAuctionForm = (
     data: AuctionFormData,
-    status: "DRAFT" | "SCHEDULED"
+    status: "DRAFT" | "SCHEDULED",
+    /**
+     * Saved start (ISO) of an already-published auction being edited.
+     * If the start is unchanged it may be in the past (mirrors the backend).
+     */
+    { publishedStart = "" }: { publishedStart?: string } = {}
 ): string[] => {
     const errors: string[] = [];
     const { basicInfo, schedule, lots } = data;
@@ -343,7 +396,8 @@ export const validateAuctionForm = (
     if (start && end && new Date(end) <= new Date(start)) {
         errors.push("Auction end must be after the start");
     }
-    if (status === "SCHEDULED" && start && new Date(start).getTime() < Date.now()) {
+    const startMoved = start !== publishedStart;
+    if (status === "SCHEDULED" && start && startMoved && new Date(start).getTime() < Date.now()) {
         errors.push("Auction start cannot be in the past");
     }
 
@@ -356,7 +410,7 @@ export const validateAuctionForm = (
         errors.push("Registration deadline should be on or before the auction start date");
     }
 
-    if (schedule.allowExtendedBidding) {
+    if (basicInfo.auctionType === "LIVE" && schedule.allowExtendedBidding) {
         const minutes = num(schedule.auctionExtensionTime);
         if (minutes === null) {
             errors.push("Enter an extension duration, or turn off extended bidding");
@@ -376,6 +430,9 @@ export const validateAuctionForm = (
     lots.forEach((lot, i) => {
         const n = i + 1;
         if (!lot.details.title?.trim()) errors.push(`Lot ${n}: title is required`);
+
+        const scheduleError = getLotScheduleError(lot.schedule, schedule);
+        if (scheduleError) errors.push(`Lot ${n}: ${scheduleError}`);
 
         const starting = num(lot.pricing.startingPrice);
         if (status === "SCHEDULED" && (starting === null || starting <= 0)) {

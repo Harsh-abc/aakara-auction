@@ -1,7 +1,8 @@
 import prisma from '../src/libs/prisma.js';
 
 const roles = [
-    { name: 'BIDDER', description: 'Default role for registered users', isSystemRole: true },
+    { name: 'USER', description: 'Default role for registered users, pending KYC approval', isSystemRole: true },
+    { name: 'BIDDER', description: 'KYC-approved user who can place bids', isSystemRole: true },
     { name: 'AUCTIONEER', description: 'Runs live/floor auctions, manages bids on the floor', isSystemRole: true },
     { name: 'ADMIN', description: 'Full platform access', isSystemRole: true },
     { name: 'SUPER_ADMIN', description: 'Full system access', isSystemRole: true },
@@ -52,6 +53,7 @@ const rolePermissionMap = {
     BIDDER: [
         'bid:place', 'bid:cancel',
     ],
+    USER: [],
 };
 
 const categories = [

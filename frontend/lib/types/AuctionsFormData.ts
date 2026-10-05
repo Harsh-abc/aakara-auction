@@ -49,9 +49,6 @@ export interface BasicInfoForm {
 // AUCTION SCHEDULE
 // ============================================================
 
-/** Mirrors DEFAULT_EXTENSION_MINUTES in the backend auction service. */
-export const DEFAULT_EXTENSION_MINUTES = 2;
-
 export interface AuctionScheduleForm {
     startDate: string; // "yyyy-MM-dd"
     startTime: string; // "HH:mm" (12h "hh:mm AM" also accepted)
@@ -69,9 +66,8 @@ export interface AuctionScheduleForm {
     timezone: string;
 
     /**
-     * On  -> auctionExtensionTime is used.
-     * Off -> backend applies DEFAULT_EXTENSION_MINUTES.
-     * Saved as an AuctionRule (EXTENSION_TRIGGER) either way.
+     * LIVE auctions only. On -> auctionExtensionTime is saved as an
+     * AuctionRule (EXTENSION_TRIGGER). Off / non-LIVE -> no extension.
      */
     allowExtendedBidding: boolean;
 
@@ -242,6 +238,21 @@ export interface LotAuthenticationForm {
 }
 
 // ============================================================
+// LOT SCHEDULE
+// ============================================================
+
+/**
+ * Lot bidding window — must sit inside the auction's start/end.
+ * A side left fully blank inherits the auction's start / end.
+ */
+export interface LotScheduleForm {
+    startDate: string; // "yyyy-MM-dd"
+    startTime: string; // "HH:mm"
+    endDate: string;
+    endTime: string;
+}
+
+// ============================================================
 // COMPLETE LOT FORM
 // ============================================================
 
@@ -250,6 +261,7 @@ export interface AuctionLotForm {
     uuid?: string;
 
     status: LotStatus;
+    schedule: LotScheduleForm;
     details: LotDetailsForm;
     images: LotImageFile[];
     pricing: LotPricingForm;

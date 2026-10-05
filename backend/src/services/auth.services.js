@@ -131,10 +131,11 @@ export const verifyOtpService = async ({ email, otp }) => {
         throw error;
     }
 
-    const defaultRole = await prisma.role.findFirst({ where: { name: 'BIDDER' } });
+    // new users start as USER and are promoted to BIDDER once their KYC is approved
+    const defaultRole = await prisma.role.findFirst({ where: { name: 'USER' } });
 
     if (!defaultRole) {
-        const error = new Error("Default BIDDER role is not configured.");
+        const error = new Error("Default USER role is not configured.");
         error.statusCode = 500;
         throw error;
     }

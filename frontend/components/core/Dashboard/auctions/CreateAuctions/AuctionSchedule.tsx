@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { format, differenceInMinutes } from "date-fns";
 
-import { AuctionFormData, DEFAULT_EXTENSION_MINUTES } from "@/lib/types/AuctionsFormData";
+import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import DatePicker from "@/components/common/DatePicker/DatePicker";
 import TimePicker from "@/components/common/DatePicker/TimePicker";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,9 @@ export default function AuctionSchedule() {
 
     // Lives in form state so it survives step changes and loads on edit
     const extensionEnabled = watch("schedule.allowExtendedBidding");
+
+    // Extended bidding applies to LIVE auctions only
+    const isLiveAuction = watch("basicInfo.auctionType") === "LIVE";
 
     // ---------------- live duration preview ----------------
     const start = combine(startDate, startTime);
@@ -232,53 +235,55 @@ export default function AuctionSchedule() {
                         </div>
                     </div>
 
-                    {/* ================= EXTENDED BIDDING ================= */}
-                    <div className="p-4 bg-[#EFE2E9] mt-8 rounded-[8px]">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-bold">Allow Extended Bidding</p>
+                    {/* ================= EXTENDED BIDDING (LIVE only) ================= */}
+                    {isLiveAuction && (
+                        <div className="p-4 bg-[#EFE2E9] mt-8 rounded-[8px]">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm font-bold">Allow Extended Bidding</p>
 
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setValue("schedule.allowExtendedBidding", !extensionEnabled, {
-                                        shouldDirty: true,
-                                    });
-                                }}
-                                className={`relative flex h-[18px] w-[30px] items-center rounded-full transition-colors cursor-pointer duration-200 ${extensionEnabled ? "bg-[#7A3D5E]" : "bg-[#d1d5db]"
-                                    }`}
-                                aria-pressed={extensionEnabled}
-                                aria-label="Toggle extended bidding"
-                            >
-                                <span
-                                    className={`absolute h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ${extensionEnabled ? "translate-x-[14px]" : "translate-x-[2px]"
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setValue("schedule.allowExtendedBidding", !extensionEnabled, {
+                                            shouldDirty: true,
+                                        });
+                                    }}
+                                    className={`relative flex h-[18px] w-[30px] items-center rounded-full transition-colors cursor-pointer duration-200 ${extensionEnabled ? "bg-[#7A3D5E]" : "bg-[#d1d5db]"
                                         }`}
+                                    aria-pressed={extensionEnabled}
+                                    aria-label="Toggle extended bidding"
+                                >
+                                    <span
+                                        className={`absolute h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ${extensionEnabled ? "translate-x-[14px]" : "translate-x-[2px]"
+                                            }`}
+                                    />
+                                </button>
+                            </div>
+
+                            <div className="py-3">
+                                <p className="text-[13px] font-bold pb-1.5">Extension Duration (minutes)</p>
+
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={60}
+                                    step={1}
+                                    placeholder="eg. 5"
+                                    className="w-full bg-white rounded-md px-3 py-2 h-11"
+                                    disabled={!extensionEnabled}
+                                    {...register("schedule.auctionExtensionTime", {
+                                        setValueAs: (v) => (v === "" || v === null ? null : Number(v)),
+                                    })}
                                 />
-                            </button>
+
+                                <span className="text-[13px] font-normal">
+                                    {extensionEnabled
+                                        ? "*Bids in the last 2 minutes extend the auction by this many minutes to prevent sniping."
+                                        : "*Off: the auction ends exactly at its end time. Turn on to extend it when bids come in during the last 2 minutes."}
+                                </span>
+                            </div>
                         </div>
-
-                        <div className="py-3">
-                            <p className="text-[13px] font-bold pb-1.5">Extension Duration (minutes)</p>
-
-                            <Input
-                                type="number"
-                                min={1}
-                                max={60}
-                                step={1}
-                                placeholder="eg. 5"
-                                className="w-full bg-white rounded-md px-3 py-2 h-11"
-                                disabled={!extensionEnabled}
-                                {...register("schedule.auctionExtensionTime", {
-                                    setValueAs: (v) => (v === "" || v === null ? null : Number(v)),
-                                })}
-                            />
-
-                            <span className="text-[13px] font-normal">
-                                {extensionEnabled
-                                    ? "*Bids in the last 2 minutes extend the auction by this many minutes to prevent sniping."
-                                    : `*Off: bids in the last 2 minutes extend the auction by the default ${DEFAULT_EXTENSION_MINUTES} minutes. Turn on to set your own duration.`}
-                            </span>
-                        </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* ================= DURATION PREVIEW ================= */}

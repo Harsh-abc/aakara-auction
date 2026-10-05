@@ -7,7 +7,9 @@ import { useParams } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Loader2, Pencil } from "lucide-react";
 
 import AuctionView from "@/components/core/Dashboard/auctions/AuctionView";
+import AuctionStatusControl from "@/components/core/Dashboard/auctions/AuctionStatusControl";
 import { buttonVariants } from "@/components/ui/button";
+import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus";
 import { cn } from "@/lib/utils";
 
 import type { Auction, AuctionLot, AuctionStatus } from "@/lib/types/auction.types";
@@ -24,6 +26,7 @@ export default function ViewAuction() {
     const dispatch = useDispatch<AppDispatch>();
 
     const { auctions } = useSelector((state: RootState) => state.auction);
+    const isSuperAdmin = useSelector((state: RootState) => state.auth.role) === "SUPER_ADMIN";
 
     // Tagged with the uuid it was loaded for, so a different uuid reads as "loading"
     const [loaded, setLoaded] = useState<
@@ -128,18 +131,38 @@ export default function ViewAuction() {
                     <h3 className="truncate text-2xl font-bold">{auction.title}</h3>
                 </div>
 
-                {canEdit && (
-                    <Link
-                        href={`/dashboard/auctions/${auction.uuid}/edit`}
-                        className={cn(
-                            buttonVariants(),
-                            "flex items-center gap-2 bg-dashboardButton px-4 text-[14px] hover:bg-amber-500"
-                        )}
-                    >
-                        <Pencil className="h-4 w-4" />
-                        Edit Auction
-                    </Link>
-                )}
+                <div className="flex items-center gap-3">
+                    {isSuperAdmin && (
+                        <AuctionStatusControl
+                            auction={auction}
+                            badge={
+                                <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-600">
+                                    Status: <b className="text-slate-800">{AUCTION_STATUS_LABELS[auction.status]}</b>
+                                </span>
+                            }
+                            onChanged={({ status, publishedAt, updatedAt }) =>
+                                setLoaded((prev) =>
+                                    prev?.auction
+                                        ? { ...prev, auction: { ...prev.auction, status, publishedAt, updatedAt } }
+                                        : prev
+                                )
+                            }
+                        />
+                    )}
+
+                    {canEdit && (
+                        <Link
+                            href={`/dashboard/auctions/${auction.uuid}/edit`}
+                            className={cn(
+                                buttonVariants(),
+                                "flex items-center gap-2 bg-dashboardButton px-4 text-[14px] hover:bg-amber-500"
+                            )}
+                        >
+                            <Pencil className="h-4 w-4" />
+                            Edit Auction
+                        </Link>
+                    )}
+                </div>
             </div>
 
             <AuctionView auction={auction} lots={lots} />

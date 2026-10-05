@@ -81,7 +81,15 @@ export const changeUserRoleService = async ({ actorUuid, targetUUuid, newRoleNam
 
 
 
-export const createUserByAdminService = async ({ fullName, email, phone, password }, creatorId) => {
+/**
+ * `afterCreate(tx, user)` runs inside the same transaction once the user,
+ * profile and KYC exist (e.g. to add them to a lot). If it throws, nothing is created.
+ */
+export const createUserByAdminService = async (
+    { fullName, email, phone, password },
+    creatorId,
+    { afterCreate } = {}
+) => {
     const existing = await prisma.user.findFirst({
         where: { OR: [{ email }, { phone }] },
         select: { email: true },
@@ -144,6 +152,8 @@ export const createUserByAdminService = async ({ fullName, email, phone, passwor
                     verifiedBy: adminId,
                 },
             });
+
+            if (afterCreate) await afterCreate(tx, user);
 
             return {
                 uuid: user.uuid,

@@ -1,6 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 import { Pencil, Eye, Trash2, ImageIcon, Film, FileText, AlertCircle, ArrowUpDown } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,6 +39,23 @@ const SortHeader = ({ label, onClick }: { label: string; onClick: () => void }) 
         <ArrowUpDown className="h-3 w-3" />
     </button>
 );
+
+/** ISO -> date over time, in the admin's local timezone */
+const DateTimeCell = ({ iso }: { iso: string | null }) => {
+    const date = iso ? new Date(iso) : null;
+    if (!date || Number.isNaN(date.getTime())) {
+        return <span className="text-[12px] text-slate-400">—</span>;
+    }
+    return (
+        <div className="text-[12px] leading-tight whitespace-nowrap">
+            <p className="text-slate-700">{format(date, "dd MMM yyyy")}</p>
+            <p className="text-[11px] text-muted-foreground">{format(date, "hh:mm a")}</p>
+        </div>
+    );
+};
+
+/** Sort by time; unset dates go last */
+const toTime = (iso: string | null) => (iso ? new Date(iso).getTime() : Number.MAX_SAFE_INTEGER);
 
 export const getColumns = ({
     onEdit,
@@ -206,6 +224,28 @@ export const getColumns = ({
                     </span>
                 );
             },
+        },
+
+        // LOT START
+        {
+            id: "startsAt",
+            accessorFn: (r) => toTime(r.startsAt),
+            header: ({ column }) => (
+                <SortHeader label="Starts" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
+            ),
+            enableGlobalFilter: false,
+            cell: ({ row }) => <DateTimeCell iso={row.original.startsAt} />,
+        },
+
+        // LOT END
+        {
+            id: "endsAt",
+            accessorFn: (r) => toTime(r.endsAt),
+            header: ({ column }) => (
+                <SortHeader label="Ends" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} />
+            ),
+            enableGlobalFilter: false,
+            cell: ({ row }) => <DateTimeCell iso={row.original.endsAt} />,
         },
 
         // STATUS / READINESS

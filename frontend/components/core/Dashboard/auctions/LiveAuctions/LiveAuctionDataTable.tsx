@@ -44,17 +44,20 @@ import {
 } from "@/components/ui/input-group"
 
 import type { AuctionLot } from "@/lib/types/auction.types"
-import { columns } from "./LiveAuctionsColumns"
+import { columns, type LiveLotTableMeta } from "./LiveAuctionsColumns"
 import DashboardFormText from "@/components/common/DashboardFormText"
 
 interface LiveAuctionDataTableProps {
     data: AuctionLot[]
     loading?: boolean
+    /** Start / stop controls read by the Controls column */
+    meta?: LiveLotTableMeta
 }
 
 // Values must match the backend LotStatus enum
 const statusItems = [
     { label: "Status : All", value: "all" },
+    { label: "Draft", value: "DRAFT" },
     { label: "Scheduled", value: "SCHEDULED" },
     { label: "Active", value: "ACTIVE" },
     { label: "Sold", value: "SOLD" },
@@ -91,7 +94,7 @@ const getPageNumbers = (current: number, total: number): (number | "ellipsis")[]
     return pages
 }
 
-export function LiveAuctionDataTable({ data, loading = false }: LiveAuctionDataTableProps) {
+export function LiveAuctionDataTable({ data, loading = false, meta }: LiveAuctionDataTableProps) {
 
     const [sorting, setSorting] =
         React.useState<SortingState>([{ id: "lot", desc: false }])
@@ -105,6 +108,7 @@ export function LiveAuctionDataTable({ data, loading = false }: LiveAuctionDataT
     const table = useReactTable({
         data,
         columns,
+        meta,
 
         state: {
             sorting,

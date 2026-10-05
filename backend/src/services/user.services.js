@@ -154,7 +154,7 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
 
     const user = await prisma.user.findFirst({
         where: { uuid, deletedAt: null },
-        select: { id: true },
+        select: { id: true, role: { select: { name: true } } },
     });
 
     if (!user) {
@@ -162,6 +162,19 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
         error.statusCode = 404;
         throw error;
     }
+
+    // approving KYC promotes a USER to BIDDER; other roles are left untouched
+    const shouldPromote = user.role.name === 'USER';
+    const bidderRole = shouldPromote
+        ? await prisma.role.findUnique({ where: { name: 'BIDDER' } })
+        : null;
+
+    if (shouldPromote && !bidderRole) {
+        const error = new Error('BIDDER role is not configured.');
+        error.statusCode = 500;
+        throw error;
+    }
+
     const docsWithFiles = documents.map((doc, i) => {
         const file = files.find((f) => f.fieldname === `document_${i}`);
 
@@ -244,6 +257,14 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
                 });
             }
 
+            // the user's next token refresh picks up the new role and its permissions
+            if (shouldPromote) {
+                await tx.user.update({
+                    where: { id: user.id },
+                    data: { roleId: bidderRole.id },
+                });
+            }
+
             return userKyc;
         }, { timeout: 30000 });
 
@@ -251,6 +272,7 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
             kycType: kyc.kycType,
             status: kyc.status,
             documentsUploaded: uploaded.length,
+            role: shouldPromote ? 'BIDDER' : user.role.name,
         };
     } catch (err) {
         await Promise.allSettled(uploadedKeys.map((key) => deleteFromS3(key)));

@@ -1,8 +1,12 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 import {
+    changeAuctionStatus,
     createAuction,
     getAuctions,
+    getAuctionTimeline,
+    getLiveAuctions,
+    setLotLive,
     getLotsByAuction,
     deleteAuction,
     updateAuction
@@ -10,7 +14,10 @@ import {
 import type {
     Auction,
     AuctionLot,
+    AuctionTimelineType,
     GetAuctionLotsResponse,
+    GetAuctionTimelineResponse,
+    LiveAuctionSummary,
     DeleteAuctionResponse
 } from "@/lib/types/auction.types";
 
@@ -48,6 +55,21 @@ interface AuctionState {
     updateError: string | null;
     updateSuccess: boolean;
 
+    // uuid of the auction whose status is being changed
+    changingStatusUuid: string | null;
+
+    // live floor
+    liveAuctions: LiveAuctionSummary[];
+    liveAuctionsLoading: boolean;
+    liveAuctionsError: string | null;
+
+    // uuid of the lot being started / stopped
+    lotControlUuid: string | null;
+
+    // past / upcoming pages (tagged with the type so pages don't show each other's data)
+    timeline: (GetAuctionTimelineResponse["data"] & { type: AuctionTimelineType }) | null;
+    timelineLoading: boolean;
+    timelineError: string | null;
 }
 
 const initialState: AuctionState = {
@@ -71,6 +93,18 @@ const initialState: AuctionState = {
     updating: false,
     updateError: null,
     updateSuccess: false,
+
+    changingStatusUuid: null,
+
+    liveAuctions: [],
+    liveAuctionsLoading: false,
+    liveAuctionsError: null,
+
+    lotControlUuid: null,
+
+    timeline: null,
+    timelineLoading: false,
+    timelineError: null,
 };
 
 const auctionSlice = createSlice({
@@ -212,6 +246,70 @@ const auctionSlice = createSlice({
                 state.updating = false;
                 state.updateSuccess = false;
                 state.updateError = action.payload ?? action.error.message ?? "Failed to update auction";
+            })
+
+            // ---------------- CHANGE STATUS ----------------
+            .addCase(changeAuctionStatus.pending, (state, action) => {
+                state.changingStatusUuid = action.meta.arg.auctionUuid;
+            })
+            .addCase(changeAuctionStatus.fulfilled, (state, action) => {
+                const { uuid, status, publishedAt, updatedAt } = action.payload.data;
+                state.changingStatusUuid = null;
+
+                // Update the list row in place (edit / delete buttons follow the status)
+                state.auctions = state.auctions.map((a) =>
+                    a.uuid === uuid ? { ...a, status, publishedAt, updatedAt } : a
+                );
+                if (state.lotsAuction?.uuid === uuid) state.lotsAuction.status = status;
+            })
+            .addCase(changeAuctionStatus.rejected, (state) => {
+                // error is shown by the caller (toast)
+                state.changingStatusUuid = null;
+            })
+
+            // ---------------- LIVE FLOOR ----------------
+            .addCase(getLiveAuctions.pending, (state) => {
+                state.liveAuctionsLoading = true;
+                state.liveAuctionsError = null;
+            })
+            .addCase(getLiveAuctions.fulfilled, (state, action) => {
+                state.liveAuctionsLoading = false;
+                state.liveAuctions = action.payload.data ?? [];
+            })
+            .addCase(getLiveAuctions.rejected, (state, action) => {
+                state.liveAuctionsLoading = false;
+                state.liveAuctionsError = action.payload ?? action.error.message ?? "Failed to fetch live auctions";
+            })
+
+            .addCase(setLotLive.pending, (state, action) => {
+                state.lotControlUuid = action.meta.arg.lotUuid;
+            })
+            .addCase(setLotLive.fulfilled, (state, action) => {
+                const { uuid, status, currentBid, bidCount } = action.payload.data;
+                state.lotControlUuid = null;
+                // update the lot row in place (the page refetches floor stats)
+                state.lots = state.lots.map((lot) =>
+                    lot.uuid === uuid ? { ...lot, status, currentBid, bidCount } : lot
+                );
+            })
+            .addCase(setLotLive.rejected, (state) => {
+                // error is shown by the caller (toast)
+                state.lotControlUuid = null;
+            })
+
+            // ---------------- PAST / UPCOMING ----------------
+            .addCase(getAuctionTimeline.pending, (state, action) => {
+                state.timelineLoading = true;
+                state.timelineError = null;
+                if (state.timeline?.type !== action.meta.arg.type) state.timeline = null;
+            })
+            .addCase(getAuctionTimeline.fulfilled, (state, action) => {
+                state.timelineLoading = false;
+                state.timeline = { ...action.payload.data, type: action.meta.arg.type };
+            })
+            .addCase(getAuctionTimeline.rejected, (state, action) => {
+                state.timelineLoading = false;
+                state.timelineError = action.payload ?? action.error.message ?? "Failed to fetch auctions";
             })
     },
 });

@@ -8,6 +8,8 @@ import type { Auction, AuctionStatus } from "@/lib/types/auction.types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button"; // shadcn wrapper, NOT "@base-ui/react"
 
+import AuctionStatusControl from "./AuctionStatusControl";
+
 // =====================================================================
 // ROW ACTION HANDLERS (passed from the page via table `meta`)
 // =====================================================================
@@ -196,7 +198,7 @@ export const columns: ColumnDef<Auction>[] = [
         enableGlobalFilter: false,
         cell: ({ row }) => {
             const status = row.original.status;
-            return (
+            const badge = (
                 <span
                     className={cn(
                         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium",
@@ -209,6 +211,9 @@ export const columns: ColumnDef<Auction>[] = [
                     {toTitle(status)}
                 </span>
             );
+
+            // SUPER_ADMIN gets a dropdown; everyone else sees the badge
+            return <AuctionStatusControl auction={row.original} badge={badge} />;
         },
     },
     // {

@@ -46,6 +46,8 @@ model User {
   createdById               BigInt?
   createdBy                 User?                  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   usersCreated              User[]                 @relation("UserCreatedBy")
+  lotBidders                LotBidder[]            @relation("LotBidderUser")
+  lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
 
   @@index([roleId])
   @@index([status])
@@ -420,8 +422,10 @@ model AuctionItem {
   currentBidderId        BigInt?
   bidCount               BigInt                @default(0)
   status                 ItemStatus            @default(DRAFT)
-  scheduledStartAt       DateTime?
-  scheduledEndAt         DateTime?
+  // Lot bidding window — always inside the auction's startTime..endTime
+  // (enforced in auction.services.js; end > start is a DB CHECK constraint)
+  scheduledStartAt       DateTime
+  scheduledEndAt         DateTime
   shippingInfo           String?
   isFeatured             Boolean               @default(false)
   createdAt              DateTime              @default(now())
@@ -442,11 +446,14 @@ model AuctionItem {
   subCategoryId BigInt?
   currency      Currency?      @relation(fields: [currencyId], references: [id])
   currencyId    BigInt?
+  bidders       LotBidder[]
 
   @@unique([auctionId, itemNumber])
   @@index([auctionId])
   @@index([status])
   @@index([currentBidderId])
+  @@index([scheduledStartAt])
+  @@index([scheduledEndAt])
   @@map("auction_items")
 }
 
@@ -551,6 +558,32 @@ model AuctionParticipant {
   @@index([userId])
   @@index([status])
   @@map("auction_participants")
+}
+
+/// Who may bid on a lot. A row exists once a user registers for the lot
+/// (SELF_REGISTERED) or a super admin verifies a dashboard-created user
+/// (ADDED_BY_ADMIN). Only VERIFIED rows are allowed to bid.
+model LotBidder {
+  id           BigInt          @id @default(autoincrement())
+  uuid         String          @unique @default(uuid()) @db.Uuid
+  itemId       BigInt
+  userId       BigInt
+  source       LotBidderSource @default(SELF_REGISTERED)
+  status       LotBidderStatus @default(PENDING)
+  registeredAt DateTime        @default(now())
+  verifiedAt   DateTime?
+  verifiedBy   BigInt?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  item         AuctionItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user         User            @relation("LotBidderUser", fields: [userId], references: [id])
+  verifier     User?           @relation("LotBidderVerifier", fields: [verifiedBy], references: [id])
+
+  @@unique([itemId, userId])
+  @@index([itemId])
+  @@index([userId])
+  @@index([status])
+  @@map("lot_bidders")
 }
 
 model AuctionStatusHistory {
@@ -738,6 +771,16 @@ enum AuctionStatus {
   ENDED
   SETTLED
   CANCELLED
+}
+
+enum LotBidderStatus {
+  PENDING
+  VERIFIED
+}
+
+enum LotBidderSource {
+  SELF_REGISTERED
+  ADDED_BY_ADMIN
 }
 
 enum ItemStatus {

@@ -1,4 +1,7 @@
+import { ZodError } from "zod";
+
 import {
+    changeAuctionStatusService,
     createAuctionService,
     deleteAuctionService,
     getAuctionService,
@@ -8,6 +11,7 @@ import {
 
 import { uploadToS3, deleteFromS3 } from "../services/s3.services.js";
 import { serializeBigInt } from "../utils/serialize.js";
+import { changeAuctionStatusSchema } from "../validations/auction.validation.js";
 
 // -----------------------------------------------------------------
 // Helpers
@@ -285,6 +289,43 @@ export const deleteAuction = async (req, res) => {
     }
 };
 
+
+// -----------------------------------------------------------------
+// Change Auction Status   PATCH /api/auction/change-status/:auctionUuid
+// SUPER_ADMIN only. Body: { status, reason? }
+// -----------------------------------------------------------------
+
+export const changeAuctionStatus = async (req, res) => {
+    try {
+        const { status, reason } = changeAuctionStatusSchema.parse(req.body);
+
+        const auction = await changeAuctionStatusService({
+            auctionUuid: req.params.auctionUuid,
+            status,
+            reason,
+            changedBy: req.user.userId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `"${auction.title}" is now ${auction.status}`,
+            data: serializeBigInt(auction),
+        });
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: error.issues?.[0]?.message || "Validation failed",
+            });
+        }
+        console.error("Change auction status error:", error);
+        const status = statusFromError(error);
+        return res.status(status).json({
+            success: false,
+            message: status === 500 ? "Failed to change auction status" : error.message,
+        });
+    }
+};
 
 // -----------------------------------------------------------------
 // Update Auction   PUT /api/auction/:auctionUuid

@@ -15,7 +15,16 @@
       "PowerShell(node --check ..\\\\backend\\\\src\\\\services\\\\admin.services.js; npx tsc --noEmit -p . 2>&1 | Select-String \"error TS\" | % { \\($_ -split '\\\\\\('\\)[0] } | Sort-Object -Unique)",
       "PowerShell(git -C .. log --oneline -5 -- frontend/redux frontend/app/dashboard/auctions/page.tsx frontend/components/core/Dashboard/auctions/AuctionDataTable.tsx backend/src/services/auction.services.js)",
       "PowerShell(git -C .. status --short)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(sed -n '/createUserSchema/,/^}\\)/p')",
+      "Bash(sed -n '/export const createUserByAdminService/,/^};/p' backend/src/services/admin.services.js)",
+      "Bash(python - src/services/admin.services.js)",
+      "Bash(python - redux/slices/lotBidderSlice.ts)",
+      "Bash(grep -n \"{/\\\\* Header \\\\*/}\" -A 12 \"app/dashboard/auctions/[auctionUuid]/lots/[lotUuid]/bidders/page.tsx\")",
+      "Bash(grep -n \"addingBidder\\\\|const { lot, lotError\" \"app/dashboard/auctions/[auctionUuid]/lots/[lotUuid]/bidders/page.tsx\")",
+      "Bash(python - components/core/Dashboard/auctions/LiveAuctions/LiveAuctionDataTable.tsx)",
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(python -)"
     ]
   }
 }

@@ -1,6 +1,7 @@
-import type { AuctionLotForm } from "@/lib/types/AuctionsFormData";
+import type { AuctionLotForm, AuctionScheduleForm } from "@/lib/types/AuctionsFormData";
 import type { AuctionLot, LotStatus, EditionType } from "@/lib/types/auction.types";
 import { isImageMedia, isVideoMedia } from "@/utils/lotMedia";
+import { combineDateTime, getLotScheduleError } from "@/utils/buildAuctionFormData";
 
 // =====================================================================
 // One row shape for the lots table — works for:
@@ -34,6 +35,10 @@ export interface LotRow {
     estimateHigh: number | null;
     currency: string;
 
+    /** Lot bidding window as ISO; null = not set yet */
+    startsAt: string | null;
+    endsAt: string | null;
+
     status: LotStatus;
 
     /** Fields still needed before the lot can be published (form lots only) */
@@ -56,10 +61,12 @@ export const fromFormLot = (
     lot: AuctionLotForm | undefined,
     index: number,
     key: string,
-    auctionCurrency = "INR"
+    auctionCurrency = "INR",
+    auctionSchedule?: AuctionScheduleForm
 ): LotRow => {
     const details = lot?.details;
     const pricing = lot?.pricing;
+    const schedule = lot?.schedule;
     const media = lot?.images ?? [];
 
     const images = media.filter(isImageMedia);
@@ -72,6 +79,19 @@ export const fromFormLot = (
     if (!details?.title?.trim()) missing.push("Title");
     if (startingPrice === null || startingPrice <= 0) missing.push("Starting bid");
     if (images.length === 0) missing.push("Image");
+    if (auctionSchedule && getLotScheduleError(schedule, auctionSchedule)) {
+        missing.push("Valid schedule");
+    }
+
+    // A blank side inherits the auction's start / end (same as the backend)
+    const startsAt =
+        combineDateTime(schedule?.startDate ?? "", schedule?.startTime ?? "") ||
+        combineDateTime(auctionSchedule?.startDate ?? "", auctionSchedule?.startTime ?? "") ||
+        null;
+    const endsAt =
+        combineDateTime(schedule?.endDate ?? "", schedule?.endTime ?? "") ||
+        combineDateTime(auctionSchedule?.endDate ?? "", auctionSchedule?.endTime ?? "") ||
+        null;
 
     return {
         key,
@@ -94,6 +114,9 @@ export const fromFormLot = (
         estimateLow: num(pricing?.estimateFrom),
         estimateHigh: num(pricing?.estimateTo),
         currency: pricing?.currency || auctionCurrency,
+
+        startsAt,
+        endsAt,
 
         status: lot?.status ?? "DRAFT",
         missing,
@@ -131,6 +154,9 @@ export const fromApiLot = (lot: AuctionLot, index: number): LotRow => {
         estimateLow: num(lot.estimateLow),
         estimateHigh: num(lot.estimateHigh),
         currency: lot.currency?.code ?? "INR",
+
+        startsAt: lot.scheduledStartAt ?? null,
+        endsAt: lot.scheduledEndAt ?? null,
 
         status: lot.status,
         missing: [],

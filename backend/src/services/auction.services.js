@@ -276,6 +276,30 @@ const normalizeLot = (lot, index, { isDraft }) => {
     };
 };
 
+/**
+ * Every lot runs inside the auction window:
+ *   auction.startTime <= lot.scheduledStartAt < lot.scheduledEndAt <= auction.endTime
+ * A lot without its own start/end inherits the auction's.
+ */
+const applyLotSchedule = (lots, auctionStart, auctionEnd) => {
+    lots.forEach((lot, i) => {
+        const label = (msg) => `Lot ${i + 1}: ${msg}`;
+
+        lot.scheduledStartAt = lot.scheduledStartAt ?? auctionStart;
+        lot.scheduledEndAt = lot.scheduledEndAt ?? auctionEnd;
+
+        if (lot.scheduledStartAt < auctionStart) {
+            throw httpError(label("start cannot be before the auction start"));
+        }
+        if (lot.scheduledEndAt > auctionEnd) {
+            throw httpError(label("end cannot be after the auction end"));
+        }
+        if (lot.scheduledEndAt <= lot.scheduledStartAt) {
+            throw httpError(label("end must be after the start"));
+        }
+    });
+};
+
 const normalizeFees = (fees) =>
     fees.map((fee, i) => {
         const name = toStr(fee.name);
@@ -304,23 +328,21 @@ const normalizeFees = (fees) =>
 /** Bids placed in the last N minutes of an auction trigger an extension. */
 const EXTENSION_TRIGGER_WINDOW_MINUTES = 2;
 
-/** Extension used when the creator doesn't set their own. */
-const DEFAULT_EXTENSION_MINUTES = 2;
-
 /**
  * Extended bidding -> AuctionRule (EXTENSION_TRIGGER, value = minutes).
- * Every auction gets one:
- *   allowExtendedBidding on  -> extensionMinutes (1 - 60, required)
- *   allowExtendedBidding off -> DEFAULT_EXTENSION_MINUTES
+ * Only LIVE auctions, and only when the creator turns it on:
+ *   LIVE + allowExtendedBidding on -> extensionMinutes (1 - 60, required)
+ *   anything else                  -> null (no rule, no extension)
  */
-const normalizeExtensionRule = ({ allowExtendedBidding, extensionMinutes }) => {
-    const custom = toNum(extensionMinutes, "Extension duration");
-    const isCustom = toBool(allowExtendedBidding, custom !== null);
+const normalizeExtensionRule = ({ auctionType, allowExtendedBidding, extensionMinutes }) => {
+    if (auctionType !== "LIVE") return null;
 
-    if (isCustom && custom === null) {
+    const minutes = toNum(extensionMinutes, "Extension duration");
+    if (!toBool(allowExtendedBidding, minutes !== null)) return null;
+
+    if (minutes === null) {
         throw httpError("Extension duration is required when extended bidding is on");
     }
-    const minutes = isCustom ? custom : DEFAULT_EXTENSION_MINUTES;
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 60) {
         throw httpError("Extension duration must be a whole number of minutes between 1 and 60");
     }
@@ -400,6 +422,7 @@ export const createAuctionService = async (data) => {
 
     const auctionStatus = pickEnum(status, ENUMS.auctionStatus, "DRAFT", "auction status");
     const isDraft = auctionStatus === "DRAFT";
+    const type = pickEnum(auctionType, ENUMS.auctionType, "FLOOR", "auction type");
 
     const start = toDate(startTime, "Start time");
     const end = toDate(endTime, "End time");
@@ -436,8 +459,9 @@ export const createAuctionService = async (data) => {
 
     const normalizedTags = normalizeTags(tags);
     const normalizedFees = normalizeFees(fees);
-    const extensionRule = normalizeExtensionRule({ allowExtendedBidding, extensionMinutes });
+    const extensionRule = normalizeExtensionRule({ auctionType: type, allowExtendedBidding, extensionMinutes });
     const normalizedLots = lots.map((lot, i) => normalizeLot(lot, i, { isDraft }));
+    applyLotSchedule(normalizedLots, start, end);
 
     // ✅ NEW — every lot must use one of the auction's currencies
     normalizedLots.forEach((lot, i) => {
@@ -488,7 +512,7 @@ export const createAuctionService = async (data) => {
                     description: toStr(description),
                     short_description: toStr(short_description),
                     coverImageUrl: toStr(coverImageUrl),
-                    auctionType: pickEnum(auctionType, ENUMS.auctionType, "FLOOR", "auction type"),
+                    auctionType: type,
                     status: auctionStatus,
                     startTime: start,
                     endTime: end,
@@ -558,10 +582,12 @@ export const createAuctionService = async (data) => {
                 });
             }
 
-            // ---------------- extended bidding (custom or default) ----------------
-            await tx.auctionRule.create({
-                data: { ...extensionRule, auctionId: auction.id },
-            });
+            // ---------------- extended bidding (LIVE + switched on only) ----------------
+            if (extensionRule) {
+                await tx.auctionRule.create({
+                    data: { ...extensionRule, auctionId: auction.id },
+                });
+            }
 
             // ---------------- lots ----------------
             for (const lot of normalizedLots) {
@@ -692,7 +718,7 @@ export const getLotByAuctionId = async ({ auctionUuid }) => {
 
     const auction = await prisma.auction.findUnique({
         where: { uuid: auctionUuid },
-        select: { id: true, uuid: true, title: true, slug: true, status: true },
+        select: { id: true, uuid: true, title: true, slug: true, status: true, startTime: true, endTime: true },
     });
     if (!auction) throw httpError("Auction not found", 404);
 
@@ -718,6 +744,99 @@ export const getLotByAuctionId = async ({ auctionUuid }) => {
             lots: serializeBigInt(lots),
         },
     };
+};
+
+// =====================================================================
+// CHANGE AUCTION STATUS (SUPER_ADMIN)
+// =====================================================================
+
+/**
+ * Status changes a SUPER_ADMIN may make, by current status.
+ * Mirrored in frontend/lib/constants/auctionStatus.ts — keep in sync.
+ */
+export const AUCTION_STATUS_TRANSITIONS = {
+    DRAFT: ["SCHEDULED", "CANCELLED"],
+    SCHEDULED: ["DRAFT", "PREVIEW", "LIVE", "CANCELLED"],
+    PREVIEW: ["SCHEDULED", "LIVE", "CANCELLED"],
+    LIVE: ["PAUSED", "ENDED", "CANCELLED"],
+    PAUSED: ["LIVE", "ENDED", "CANCELLED"],
+    ENDED: ["SETTLED"],
+    SETTLED: [],
+    CANCELLED: ["DRAFT"],
+};
+
+export const changeAuctionStatusService = async ({ auctionUuid, status, reason, changedBy }) => {
+    if (!auctionUuid) throw httpError("Auction UUID is required");
+    if (!changedBy) throw httpError("Authenticated user is required", 401);
+
+    return prisma.$transaction(
+        async (tx) => {
+            const auction = await tx.auction.findUnique({
+                where: { uuid: auctionUuid },
+                select: {
+                    id: true,
+                    status: true,
+                    publishedAt: true,
+                    deletedAt: true,
+                    items: { select: { startingPrice: true } },
+                },
+            });
+            if (!auction || auction.deletedAt) throw httpError("Auction not found", 404);
+
+            const from = auction.status;
+            if (from === status) throw httpError(`Auction is already ${status}`, 409);
+
+            const allowed = AUCTION_STATUS_TRANSITIONS[from] ?? [];
+            if (!allowed.includes(status)) {
+                throw httpError(
+                    `Cannot change status from ${from} to ${status}` +
+                        (allowed.length ? ` (allowed: ${allowed.join(", ")})` : ""),
+                    409
+                );
+            }
+
+            // Publishing a draft needs the same as publishing from the form
+            if (from === "DRAFT" && status === "SCHEDULED") {
+                if (auction.items.length === 0) {
+                    throw httpError("Add at least one lot before publishing the auction");
+                }
+                if (auction.items.some((item) => !(Number(item.startingPrice) > 0))) {
+                    throw httpError("Every lot needs a starting price before publishing");
+                }
+            }
+
+            // Back to draft clears the publish date; publishing sets it once
+            const publishedAt =
+                status === "DRAFT"
+                    ? null
+                    : auction.publishedAt ?? (status === "CANCELLED" ? null : new Date());
+
+            // Only update if nobody changed the status in the meantime
+            const { count } = await tx.auction.updateMany({
+                where: { id: auction.id, status: from },
+                data: { status, publishedAt },
+            });
+            if (count === 0) {
+                throw httpError("The auction status was changed by someone else. Refresh and try again.", 409);
+            }
+
+            await tx.auctionStatusHistory.create({
+                data: {
+                    auctionId: auction.id,
+                    fromStatus: from,
+                    toStatus: status,
+                    changedBy: BigInt(changedBy),
+                    reason: toStr(reason) ?? "Status changed by super admin",
+                },
+            });
+
+            return tx.auction.findUnique({
+                where: { id: auction.id },
+                select: { uuid: true, title: true, status: true, publishedAt: true, updatedAt: true },
+            });
+        },
+        { maxWait: 10_000, timeout: 30_000 }
+    );
 };
 
 // =====================================================================
@@ -833,15 +952,14 @@ export const updateAuctionService = async (data) => {
 
     const auctionStatus = pickEnum(status, ENUMS.auctionStatus, "DRAFT", "auction status");
     const isDraft = auctionStatus === "DRAFT";
+    const type = pickEnum(auctionType, ENUMS.auctionType, "FLOOR", "auction type");
 
     const start = toDate(startTime, "Start time");
     const end = toDate(endTime, "End time");
     if (!start) throw httpError("Auction start date and time are required");
     if (!end) throw httpError("Auction end date and time are required");
     if (end <= start) throw httpError("Auction end time must be after the start time");
-    if (!isDraft && start.getTime() < Date.now() - 60_000) {
-        throw httpError("Auction start time cannot be in the past");
-    }
+    // "Start in the past" is checked inside the transaction, against the saved start
 
     const regStarts = toDate(registrationStarts, "Registration start");
     const regDeadline = toDate(registrationDeadline, "Registration deadline");
@@ -861,8 +979,9 @@ export const updateAuctionService = async (data) => {
 
     const normalizedTags = normalizeTags(tags);
     const normalizedFees = normalizeFees(fees);
-    const extensionRule = normalizeExtensionRule({ allowExtendedBidding, extensionMinutes });
+    const extensionRule = normalizeExtensionRule({ auctionType: type, allowExtendedBidding, extensionMinutes });
     const normalizedLots = lots.map((lot, i) => normalizeLot(lot, i, { isDraft }));
+    applyLotSchedule(normalizedLots, start, end);
 
     normalizedLots.forEach((lot, i) => {
         if (lot.currencyCode && !currencyCodes.includes(lot.currencyCode)) {
@@ -893,6 +1012,7 @@ export const updateAuctionService = async (data) => {
                     id: true,
                     slug: true,
                     status: true,
+                    startTime: true,
                     publishedAt: true,
                     deletedAt: true,
                     coverImageUrl: true,
@@ -925,6 +1045,15 @@ export const updateAuctionService = async (data) => {
                     `Only draft or scheduled auctions can be edited (current status: ${existing.status})`,
                     409
                 );
+            }
+
+            // Publishing a draft, or moving the start, can't put it in the past (1 min grace).
+            // Re-saving a scheduled auction whose start is unchanged is fine — e.g. to
+            // edit lots after the start time has passed.
+            const publishing = existing.status === "DRAFT";
+            const startMoved = existing.startTime.getTime() !== start.getTime();
+            if (!isDraft && (publishing || startMoved) && start.getTime() < Date.now() - 60_000) {
+                throw httpError("Auction start time cannot be in the past");
             }
 
             // every lot uuid sent must belong to THIS auction
@@ -977,7 +1106,7 @@ export const updateAuctionService = async (data) => {
                     description: toStr(description),
                     short_description: toStr(short_description),
                     coverImageUrl: cover,
-                    auctionType: pickEnum(auctionType, ENUMS.auctionType, "FLOOR", "auction type"),
+                    auctionType: type,
                     status: auctionStatus,
                     startTime: start,
                     endTime: end,
@@ -1048,13 +1177,15 @@ export const updateAuctionService = async (data) => {
                 });
             }
 
-            // ---------------- extended bidding: replace ----------------
+            // ---------------- extended bidding: replace (or clear) ----------------
             await tx.auctionRule.deleteMany({
                 where: { auctionId: existing.id, ruleType: "EXTENSION_TRIGGER" },
             });
-            await tx.auctionRule.create({
-                data: { ...extensionRule, auctionId: existing.id },
-            });
+            if (extensionRule) {
+                await tx.auctionRule.create({
+                    data: { ...extensionRule, auctionId: existing.id },
+                });
+            }
 
             // ---------------- lots: delete removed ----------------
             const keptUuids = new Set(sentUuids);

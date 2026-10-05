@@ -502,6 +502,8 @@ export const auctionLots: AuctionLot[] = [
         yearCreated: "2020",
         editionType: "UNIQUE",
         status: "ACTIVE",
+        scheduledStartAt: "2026-10-12T04:30:00.000Z",
+        scheduledEndAt: "2026-10-15T12:30:00.000Z",
 
         startingPrice: "250000",
         reservePrice: "300000",
@@ -557,6 +559,8 @@ export const auctionLots: AuctionLot[] = [
         yearCreated: "2018",
         editionType: "UNIQUE",
         status: "ACTIVE",
+        scheduledStartAt: "2026-10-12T04:30:00.000Z",
+        scheduledEndAt: "2026-10-15T12:30:00.000Z",
 
         startingPrice: "180000",
         reservePrice: "220000",
@@ -612,6 +616,8 @@ export const auctionLots: AuctionLot[] = [
         yearCreated: "2005",
         editionType: "UNIQUE",
         status: "ACTIVE",
+        scheduledStartAt: "2026-10-12T04:30:00.000Z",
+        scheduledEndAt: "2026-10-15T12:30:00.000Z",
 
         startingPrice: "500000",
         reservePrice: "600000",
@@ -667,6 +673,8 @@ export const auctionLots: AuctionLot[] = [
         yearCreated: "2016",
         editionType: "UNIQUE",
         status: "SCHEDULED",
+        scheduledStartAt: "2026-10-12T04:30:00.000Z",
+        scheduledEndAt: "2026-10-15T12:30:00.000Z",
 
         startingPrice: "350000",
         reservePrice: "400000",
@@ -722,6 +730,8 @@ export const auctionLots: AuctionLot[] = [
         yearCreated: "1990",
         editionType: "UNIQUE",
         status: "SOLD",
+        scheduledStartAt: "2026-10-12T04:30:00.000Z",
+        scheduledEndAt: "2026-10-15T12:30:00.000Z",
 
         startingPrice: "750000",
         reservePrice: "800000",
@@ -777,6 +787,8 @@ export const auctionLots: AuctionLot[] = [
         yearCreated: "2012",
         editionType: "UNIQUE",
         status: "UNSOLD",
+        scheduledStartAt: "2026-10-12T04:30:00.000Z",
+        scheduledEndAt: "2026-10-15T12:30:00.000Z",
 
         startingPrice: "120000",
         reservePrice: "150000",

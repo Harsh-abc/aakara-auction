@@ -47,7 +47,7 @@ export default function AddLots({
     setCurrentLotStep,
 }: AddLotsProps) {
 
-    const { control } = useFormContext<AuctionFormData>();
+    const { control, getValues } = useFormContext<AuctionFormData>();
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -58,9 +58,18 @@ export default function AddLots({
     const handleAddNewLot = () => {
         const newLotIndex = fields.length;
 
+        // New lots start with the full auction window; admin can narrow it
+        const auctionSchedule = getValues("schedule");
 
         append({
             status: "DRAFT",
+
+            schedule: {
+                startDate: auctionSchedule.startDate,
+                startTime: auctionSchedule.startTime,
+                endDate: auctionSchedule.endDate,
+                endTime: auctionSchedule.endTime,
+            },
 
             details: {
                 title: "",

@@ -1,11 +1,56 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, ImageIcon } from "lucide-react";
+import { ArrowUpDown, ImageIcon, Loader2, Play, Square } from "lucide-react";
 
-import type { AuctionLot, LotStatus } from "@/lib/types/auction.types";
+import { Button } from "@/components/ui/button";
+import type { AuctionLot, AuctionStatus, LotStatus } from "@/lib/types/auction.types";
 import { formatMoney } from "@/lib/types/LotRow";
 import { cn } from "@/lib/utils";
+
+// =====================================================================
+// ROW CONTROLS (passed from the page via table `meta`)
+// =====================================================================
+
+export interface LiveLotTableMeta {
+    /** Status of the auction these lots belong to (lots start only when LIVE) */
+    auctionStatus?: AuctionStatus;
+    /** Can the viewer start / stop lots */
+    canControl?: boolean;
+    /** The auction's live lot — only one at a time */
+    liveLot?: { uuid: string; itemNumber: string } | null;
+    /** Lot being started / stopped */
+    controllingUuid?: string | null;
+    onStart?: (lot: AuctionLot) => void;
+    onStop?: (lot: AuctionLot) => void;
+}
+
+/** Mirrors STARTABLE_LOT_STATUSES in backend/src/services/liveAuction.services.js */
+const STARTABLE: LotStatus[] = ["DRAFT", "SCHEDULED", "UNSOLD"];
+
+// IST, like the other auction tables
+const dateFmt = new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+});
+const timeFmt = new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+});
+
+const DateTimeCell = ({ iso }: { iso?: string | null }) =>
+    iso ? (
+        <div className="whitespace-nowrap text-[12px]">
+            <p className="text-slate-700">{dateFmt.format(new Date(iso))}</p>
+            <p className="text-slate-400">{timeFmt.format(new Date(iso))}</p>
+        </div>
+    ) : (
+        <span className="text-[12px] text-slate-400">—</span>
+    );
 
 // =====================================================================
 // HELPERS
@@ -159,6 +204,32 @@ export const columns: ColumnDef<AuctionLot>[] = [
         },
     },
     {
+        id: "startsAt",
+        size: 115,
+        accessorFn: (l) => new Date(l.scheduledStartAt).getTime() || 0,
+        enableGlobalFilter: false,
+        header: ({ column }) => (
+            <SortHeader
+                label="Starts"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            />
+        ),
+        cell: ({ row }) => <DateTimeCell iso={row.original.scheduledStartAt} />,
+    },
+    {
+        id: "endsAt",
+        size: 115,
+        accessorFn: (l) => new Date(l.scheduledEndAt).getTime() || 0,
+        enableGlobalFilter: false,
+        header: ({ column }) => (
+            <SortHeader
+                label="Ends"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            />
+        ),
+        cell: ({ row }) => <DateTimeCell iso={row.original.scheduledEndAt} />,
+    },
+    {
         accessorKey: "status",
         size: 105,
         header: "Status",
@@ -178,6 +249,63 @@ export const columns: ColumnDef<AuctionLot>[] = [
                     )}
                     {toTitle(status)}
                 </span>
+            );
+        },
+    },
+    {
+        id: "controls",
+        size: 120,
+        header: "Controls",
+        enableSorting: false,
+        enableGlobalFilter: false,
+        cell: ({ row, table }) => {
+            const lot = row.original;
+            const meta = table.options.meta as LiveLotTableMeta | undefined;
+            if (!meta?.canControl) return <span className="text-[11px] text-slate-400">—</span>;
+
+            const busy = meta.controllingUuid === lot.uuid;
+            const anyBusy = Boolean(meta.controllingUuid);
+
+            // Live lot -> Stop
+            if (lot.status === "ACTIVE") {
+                return (
+                    <Button
+                        type="button"
+                        className="h-8 gap-1.5 bg-red-600 px-3 text-xs text-white hover:bg-red-700"
+                        disabled={anyBusy}
+                        onClick={() => meta.onStop?.(lot)}
+                    >
+                        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Square className="h-3 w-3 fill-current" />}
+                        Stop
+                    </Button>
+                );
+            }
+
+            if (!STARTABLE.includes(lot.status)) {
+                return <span className="text-[11px] text-slate-400">Closed</span>;
+            }
+
+            // One live lot per auction, and only while the auction is LIVE
+            const auctionLive = meta.auctionStatus === "LIVE";
+            const otherLive = meta.liveLot && meta.liveLot.uuid !== lot.uuid ? meta.liveLot : null;
+            const blockedReason = !auctionLive
+                ? `The auction is ${toTitle(meta.auctionStatus ?? "not live")} — set it to Live to start lots`
+                : otherLive
+                    ? `Lot #${otherLive.itemNumber} is live — stop it first`
+                    : undefined;
+
+            return (
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 gap-1.5 border-emerald-300 px-3 text-xs text-emerald-700 hover:bg-emerald-50 disabled:border-slate-200 disabled:text-slate-400"
+                    title={blockedReason ?? "Make this lot live"}
+                    disabled={Boolean(blockedReason) || anyBusy}
+                    onClick={() => meta.onStart?.(lot)}
+                >
+                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+                    Start
+                </Button>
             );
         },
     },

@@ -1,7 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { FileText, ImageOff, Star } from "lucide-react";
+import Link from "next/link";
+import { FileText, ImageOff, Star, UserPlus } from "lucide-react";
+
+import { useAppSelector } from "@/hooks/redux";
 
 import type {
     Auction,
@@ -215,7 +218,18 @@ const PlainText = ({ text }: { text?: string | null }) =>
 // LOT CARD
 // =====================================================================
 
-const LotCard = ({ lot, fallbackCurrency }: { lot: AuctionLot; fallbackCurrency: string }) => {
+const LotCard = ({
+    lot,
+    auctionUuid,
+    fallbackCurrency,
+}: {
+    lot: AuctionLot;
+    auctionUuid: string;
+    fallbackCurrency: string;
+}) => {
+    const role = useAppSelector((state) => state.auth.role);
+    // Admins can see the list; only a super admin can verify (enforced by the API)
+    const canSeeBidders = role === "SUPER_ADMIN" || role === "ADMIN";
     const currency = lot.currency?.code ?? fallbackCurrency;
     const images = [...(lot.images ?? [])].sort(
         (a, b) => Number(b.isPrimary) - Number(a.isPrimary) || Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0)
@@ -243,12 +257,32 @@ const LotCard = ({ lot, fallbackCurrency }: { lot: AuctionLot; fallbackCurrency:
                         </Pill>
                     )}
                 </div>
-                <Pill className={LOT_STATUS_STYLES[lot.status] ?? "bg-slate-100 text-slate-600"}>
-                    {toTitle(lot.status)}
-                </Pill>
+                <div className="flex items-center gap-3">
+                    {canSeeBidders && (
+                        <Link
+                            href={`/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/bidders`}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            {role === "SUPER_ADMIN" ? "Add Bidders" : "Bidders"}
+                        </Link>
+                    )}
+                    <Pill className={LOT_STATUS_STYLES[lot.status] ?? "bg-slate-100 text-slate-600"}>
+                        {toTitle(lot.status)}
+                    </Pill>
+                </div>
             </div>
 
             <div className="space-y-6 p-5">
+                {/* Schedule (inside the auction window) */}
+                <div>
+                    <h5 className="mb-3 text-[13px] font-semibold text-slate-700">Lot Schedule</h5>
+                    <FieldGrid>
+                        <Field label="Starts" value={formatDateTime(lot.scheduledStartAt)} />
+                        <Field label="Ends" value={formatDateTime(lot.scheduledEndAt)} />
+                    </FieldGrid>
+                </div>
+
                 {/* Media */}
                 {images.length > 0 ? (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
@@ -484,6 +518,8 @@ export default function AuctionView({ auction, lots }: AuctionViewProps) {
                                         : null
                                 }
                             />
+                            <Field label="Starts" value={formatDateTime(auction.startTime)} />
+                            <Field label="Ends" value={formatDateTime(auction.endTime)} />
                             <Field label="Lots" value={String(auction._count?.items ?? lots.length)} />
                             <Field
                                 label="Currencies"
@@ -539,7 +575,12 @@ export default function AuctionView({ auction, lots }: AuctionViewProps) {
                 {sortedLots.length > 0 ? (
                     <div className="space-y-5">
                         {sortedLots.map((lot) => (
-                            <LotCard key={lot.uuid} lot={lot} fallbackCurrency={primaryCurrency} />
+                            <LotCard
+                                key={lot.uuid}
+                                lot={lot}
+                                auctionUuid={auction.uuid}
+                                fallbackCurrency={primaryCurrency}
+                            />
                         ))}
                     </div>
                 ) : (

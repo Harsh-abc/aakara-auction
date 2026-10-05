@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 
 import type { Auction, AuctionLot, LotStatus } from "@/lib/types/auction.types";
-import { DEFAULT_EXTENSION_MINUTES } from "@/lib/types/AuctionsFormData";
 import type { AuctionFormData, AuctionLotForm } from "@/lib/types/AuctionsFormData";
 
 // ============================================================
@@ -43,6 +42,13 @@ const toLotForm = (
     return {
         uuid: lot.uuid,
         status: lot.status as LotStatus,
+
+        schedule: {
+            startDate: toFormDate(lot.scheduledStartAt),
+            startTime: toFormTime(lot.scheduledStartAt),
+            endDate: toFormDate(lot.scheduledEndAt),
+            endTime: toFormTime(lot.scheduledEndAt),
+        },
 
         details: {
             title: text(lot.title),
@@ -132,12 +138,11 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
 
     const categoryUuid = auction.category?.uuid ?? "";
 
-    // Default minutes (or no rule on older auctions) -> toggle off
+    // A rule exists only when extended bidding was switched on (LIVE auctions)
     const extensionMinutes = num(
         auction.rules?.find((rule) => rule.ruleType === "EXTENSION_TRIGGER")?.value
     );
-    const hasCustomExtension =
-        extensionMinutes !== null && extensionMinutes !== DEFAULT_EXTENSION_MINUTES;
+    const hasExtension = auction.auctionType === "LIVE" && extensionMinutes !== null;
 
     return {
         basicInfo: {
@@ -167,8 +172,8 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
             registrationStarts: toFormDate(auction.registrationStarts),
             registrationDeadline: toFormDate(auction.registrationDeadline),
             timezone: auction.timezone || "Asia/Kolkata",
-            allowExtendedBidding: hasCustomExtension,
-            auctionExtensionTime: hasCustomExtension ? extensionMinutes : null,
+            allowExtendedBidding: hasExtension,
+            auctionExtensionTime: hasExtension ? extensionMinutes : null,
         },
 
         lots: lots.map((lot) => toLotForm(lot, categoryUuid, sharedShippingInfo)),

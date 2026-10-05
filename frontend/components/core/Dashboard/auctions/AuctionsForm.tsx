@@ -15,7 +15,7 @@ import ShippingInfo from "@/components/core/Dashboard/auctions/CreateAuctions/Sh
 import AuctionVisibility from "@/components/core/Dashboard/auctions/CreateAuctions/AuctionVisbility";
 import { Button } from "@/components/ui/button";
 
-import { validateAuctionForm } from "@/utils/buildAuctionFormData";
+import { combineDateTime, validateAuctionForm } from "@/utils/buildAuctionFormData";
 
 export type AuctionSubmitStatus = "DRAFT" | "SCHEDULED";
 
@@ -142,7 +142,15 @@ export default function AuctionsForm({
      */
     const submit = async (status: AuctionSubmitStatus) => {
         const data = form.getValues();
-        const problems = validateAuctionForm(data, status);
+
+        // Editing an already-published auction (its saves are SCHEDULED): an
+        // unchanged start may have passed. Create / draft edits always check it.
+        const publishedStart =
+            saveStatus === "SCHEDULED"
+                ? combineDateTime(defaultValues.schedule.startDate, defaultValues.schedule.startTime)
+                : "";
+
+        const problems = validateAuctionForm(data, status, { publishedStart });
         setValidationErrors(problems);
         if (problems.length > 0) return;
 

@@ -58,13 +58,14 @@ function FormLotsList({
     // when the lot was appended (all empty), which is why data was missing.
     const liveLots = useWatch({ control, name: "lots" });
     const auctionCurrency = useWatch({ control, name: "basicInfo.primaryCurrency" }) || "INR";
+    const auctionSchedule = useWatch({ control, name: "schedule" });
 
     const rows: LotRow[] = React.useMemo(
         () =>
             fields.map((field, index) =>
-                fromFormLot(liveLots?.[index], index, field.id, auctionCurrency)
+                fromFormLot(liveLots?.[index], index, field.id, auctionCurrency, auctionSchedule)
             ),
-        [fields, liveLots, auctionCurrency]
+        [fields, liveLots, auctionCurrency, auctionSchedule]
     );
 
     const columns = React.useMemo(
@@ -155,7 +156,7 @@ function SavedLotsList({ auctionUuid }: { auctionUuid: string }) {
 // =====================================================================
 
 function EmptyLots({ onAddLot }: { onAddLot?: () => void }) {
-    const headers = ["Lot", "Artwork", "Medium / Edition", "Media", "Starting Bid", "Reserve", "Estimate", "Status"];
+    const headers = ["Lot", "Artwork", "Medium / Edition", "Media", "Starting Bid", "Reserve", "Estimate", "Starts", "Ends", "Status"];
 
     return (
         <div className="w-full bg-[#F4F4F4] px-3 py-4 rounded-[8px]">

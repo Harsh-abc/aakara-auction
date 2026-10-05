@@ -64,6 +64,10 @@ const titleCase = (value?: string) =>
 const formatDate = (value?: string) =>
     value ? format(new Date(`${value}T00:00:00`), "dd MMM yyyy") : EMPTY;
 
+/** Blank lot side -> inherits the auction's start / end. */
+const formatDateTime = (date?: string, time?: string) =>
+    date && time ? format(new Date(`${date}T${time}:00`), "dd MMM yyyy, hh:mm a") : "Auction timing";
+
 // =====================================================================
 // COMPONENT
 // =====================================================================
@@ -188,6 +192,7 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
     const { control } = useFormContext<AuctionFormData>();
 
     const details = useWatch({ control, name: `lots.${lotIndex}.details` });
+    const schedule = useWatch({ control, name: `lots.${lotIndex}.schedule` });
     const categoryUuid = useWatch({ control, name: "basicInfo.categoryUuid" });
     const subCategoryUuid = useWatch({ control, name: "basicInfo.subCategoryUuid" });
 
@@ -222,6 +227,8 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
         ["Artist Name", text(details?.artist)],
         ["Artwork ID", text(details?.artworkId)],
         ["Category", category],
+        ["Lot Starts", formatDateTime(schedule?.startDate, schedule?.startTime)],
+        ["Lot Ends", formatDateTime(schedule?.endDate, schedule?.endTime)],
         ["Medium", text(details?.medium)],
         ["Year of Creation", text(details?.yearCreated)],
         ["Dimensions (W × H × D)", dimensions],

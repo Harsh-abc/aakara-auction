@@ -8,10 +8,10 @@ import { Field } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { ALL_ROLES, ROLE_LABELS } from "@/lib/constants/roles";
+import { ALL_ROLES, DASHBOARD_ROLES, ROLE_LABELS } from "@/lib/constants/roles";
 import { getAllUsers } from "@/services/operations/user.api";
 
-// "TEAM" = everyone except bidders
+// "TEAM" = everyone with dashboard access (excludes bidders and users)
 const roleFilters = [
     { value: "TEAM", label: "Team members" },
     { value: "ALL", label: "All users" },
@@ -31,7 +31,7 @@ export default function TeamSettings() {
 
     const filteredUsers = useMemo(() => {
         if (roleFilter === "ALL") return users;
-        if (roleFilter === "TEAM") return users.filter((u) => u.role.name !== "BIDDER");
+        if (roleFilter === "TEAM") return users.filter((u) => DASHBOARD_ROLES.includes(u.role.name));
         return users.filter((u) => u.role.name === roleFilter);
     }, [users, roleFilter]);
 

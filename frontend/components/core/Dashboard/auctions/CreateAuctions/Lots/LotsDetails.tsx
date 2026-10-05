@@ -13,6 +13,8 @@ import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import { getCategories, getSubCategories } from "@/services/operations/category.api";
 import type { Category, SubCategory } from "@/lib/types/category.types";
 
+import LotSchedule from "./LotSchedule";
+
 interface LotsDetailProps {
     lotIndex: number;
 }
@@ -184,6 +186,12 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
                     />
                 </div>
             </div>
+
+            {/* =========================
+                SCHEDULE (inside the auction window)
+            ========================== */}
+
+            <LotSchedule lotIndex={lotIndex} />
 
             {/* =========================
                 MEASUREMENTS

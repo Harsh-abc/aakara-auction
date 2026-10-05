@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { createUser } from "@/services/operations/user.api";
+import type { CreateUserPayload } from "@/lib/types/user.types";
 
 const countryCodes = [
     { label: "India", value: "+91" },
@@ -106,9 +107,34 @@ function PasswordInput({
     );
 }
 
-export default function AddUserDialog() {
+interface AddUserDialogProps {
+    triggerLabel?: string;
+    title?: string;
+    description?: string;
+    submitLabel?: string;
+    successMessage?: string;
+
+    /**
+     * Custom create (e.g. create + add to a lot). Resolve on success, reject
+     * with a message string on failure. Default: the plain "create user" API.
+     */
+    onCreate?: (payload: CreateUserPayload) => Promise<unknown>;
+    /** Request in flight — used with `onCreate` */
+    busy?: boolean;
+}
+
+export default function AddUserDialog({
+    triggerLabel = "Add Users",
+    title = "Add New User",
+    description = "Create a website login account on behalf of a user so they can explore the platform.",
+    submitLabel = "Create User",
+    successMessage = "User created successfully",
+    onCreate,
+    busy,
+}: AddUserDialogProps = {}) {
     const dispatch = useAppDispatch();
-    const { creatingUser } = useAppSelector((state) => state.user);
+    const userSliceCreating = useAppSelector((state) => state.user.creatingUser);
+    const creatingUser = onCreate ? Boolean(busy) : userSliceCreating;
 
     const [open, setOpen] = useState(false);
     const [countryCode, setCountryCode] = useState("+91");
@@ -155,17 +181,18 @@ export default function AddUserDialog() {
             return;
         }
 
-        try {
-            await dispatch(
-                createUser({
-                    fullName: formData.fullName.trim(),
-                    email: formData.email.trim(),
-                    phone: `${countryCode}${phoneNumber}`,
-                    password: formData.password,
-                })
-            ).unwrap();
+        const payload: CreateUserPayload = {
+            fullName: formData.fullName.trim(),
+            email: formData.email.trim(),
+            phone: `${countryCode}${phoneNumber}`,
+            password: formData.password,
+        };
 
-            toast.success("User created successfully");
+        try {
+            if (onCreate) await onCreate(payload);
+            else await dispatch(createUser(payload)).unwrap();
+
+            toast.success(successMessage);
             handleOpenChange(false);
         } catch (error) {
             toast.error(typeof error === "string" ? error : "Could not create user. Try again.");
@@ -180,17 +207,15 @@ export default function AddUserDialog() {
                 }
             >
                 <Plus />
-                Add Users
+                {triggerLabel}
             </DialogTrigger>
 
             <DialogContent
                 className="gap-6 bg-white p-6 sm:max-w-md [&>[data-slot=dialog-close]]:top-5 [&>[data-slot=dialog-close]]:right-5 [&>[data-slot=dialog-close]]:rounded-md [&>[data-slot=dialog-close]]:border"
             >
                 <DialogHeader className="pr-10">
-                    <DialogTitle className="text-2xl font-bold">Add New User</DialogTitle>
-                    <DialogDescription className="text-[13px] text-[#62666F]">
-                        Create a website login account on behalf of a user so they can explore the platform.
-                    </DialogDescription>
+                    <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
+                    <DialogDescription className="text-[13px] text-[#62666F]">{description}</DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -285,7 +310,7 @@ export default function AddUserDialog() {
                             disabled={!isFilled || creatingUser}
                             className="h-11 bg-dashboardButton text-black hover:bg-amber-500 disabled:bg-[#E5E5E5] disabled:text-[#9A9A9A] disabled:opacity-100"
                         >
-                            {creatingUser ? "Creating..." : "Create User"}
+                            {creatingUser ? "Creating..." : submitLabel}
                         </Button>
                     </DialogFooter>
                 </form>

@@ -19,7 +19,16 @@ export const auctionEndPoints = {
         `${BASE_URL}/api/auction/getLots/${auctionUuid}/lots`,
     DELETE_AUCTION_API: (auctionUuid: string) =>
         `${BASE_URL}/api/auction/delete-auction/${auctionUuid}`,
-    UPDATE_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/update-auction/${auctionUuid}`
+    UPDATE_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/update-auction/${auctionUuid}`,
+    CHANGE_AUCTION_STATUS_API: (auctionUuid: string) =>
+        `${BASE_URL}/api/auction/change-status/${auctionUuid}`,
+    GET_LIVE_AUCTIONS_API: `${BASE_URL}/api/auction/live`,
+    GET_AUCTION_TIMELINE_API: `${BASE_URL}/api/auction/timeline`,
+    SET_LOT_LIVE_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/live`,
+    GET_LOT_SUMMARY_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/summary`,
+    GET_LOT_BIDDERS_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/bidders`,
+    ADD_NEW_LOT_BIDDER_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/bidders`,
+    VERIFY_LOT_BIDDERS_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/bidders/verify`,
 };
 
 

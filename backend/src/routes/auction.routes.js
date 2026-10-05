@@ -1,8 +1,10 @@
 import express from 'express'
-import { createAuction, deleteAuction, getAuction, getLotByAuctionIdController, updateAuction } from '../controllers/auction.controller.js';
+import { changeAuctionStatus, createAuction, deleteAuction, getAuction, getLotByAuctionIdController, updateAuction } from '../controllers/auction.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from "../middleware/upload.middleware.js";
+import { addNewUserToLot, getLotBidders, getLotSummary, registerForLot, verifyLotBidders } from '../controllers/lotBidder.controller.js';
+import { getAuctionTimeline, getLiveAuctions, setLotLive } from '../controllers/liveAuction.controller.js';
 
 
 const auctionRouter = express.Router()
@@ -25,5 +27,25 @@ auctionRouter.delete('/delete-auction/:auctionUuid', authenticate, requireRole("
 
 
 auctionRouter.put("/update-auction/:auctionUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), uploadAny, updateAuction);
+
+// SUPER ADMIN CAN CHANGE THE AUCTION STATUS
+auctionRouter.patch("/change-status/:auctionUuid", authenticate, requireRole("SUPER_ADMIN"), changeAuctionStatus);
+
+// LOT BIDDERS — admins can view, only super admin can verify
+auctionRouter.get("/lots/:lotUuid/summary", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), getLotSummary);
+auctionRouter.get("/lots/:lotUuid/bidders", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), getLotBidders);
+auctionRouter.patch("/lots/:lotUuid/bidders/verify", authenticate, requireRole("SUPER_ADMIN"), verifyLotBidders);
+// Super admin creates a new user and adds them to the lot in one go
+auctionRouter.post("/lots/:lotUuid/bidders", authenticate, requireRole("SUPER_ADMIN"), addNewUserToLot);
+
+// LIVE FLOOR — live/paused auctions, and start/stop a lot (one live lot per auction)
+auctionRouter.get("/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getLiveAuctions);
+
+// PAST / UPCOMING auctions (?type=past|upcoming)
+auctionRouter.get("/timeline", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionTimeline);
+auctionRouter.patch("/lots/:lotUuid/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), setLotLive);
+
+// BIDDER registers for a lot (role checked in the service)
+auctionRouter.post("/lots/:lotUuid/register", authenticate, registerForLot);
 
 export default auctionRouter;

@@ -13,6 +13,9 @@ interface TimePickerProps {
     /** Minimum time "HH:mm" (e.g. end time on the same day as the start). */
     min?: string;
 
+    /** Maximum time "HH:mm" (e.g. a lot ending on the auction's last day). */
+    max?: string;
+
     /** Show a readable "10:00 AM (morning)" hint under the input. */
     showHint?: boolean;
 }
@@ -49,6 +52,7 @@ export default function TimePicker({
     disabled = false,
     className,
     min,
+    max,
     showHint = true,
 }: TimePickerProps) {
     const hint = value ? describeTime(value) : null;
@@ -61,6 +65,7 @@ export default function TimePicker({
                 type="time"
                 value={value}
                 min={min}
+                max={max}
                 step={60}
                 disabled={disabled}
                 onChange={(e) => onChange?.(e.target.value)}

@@ -275,6 +275,9 @@ export interface AuctionLot {
     editionType: EditionType;
     status: LotStatus;
 
+    scheduledStartAt: string; // ISO, inside the auction window
+    scheduledEndAt: string;
+
     startingPrice: string;
     reservePrice?: string | null;
     estimateLow?: string | null;
@@ -362,4 +365,128 @@ export type UpdateAuctionResponse = CreateAuctionResponse;
 export interface UpdateAuctionParams {
     auctionUuid: string;
     formData: FormData;
+}
+
+// =====================================================================
+// PAST / UPCOMING AUCTIONS
+// =====================================================================
+
+export type AuctionTimelineType = "past" | "upcoming";
+
+export interface TimelineAuction {
+    uuid: string;
+    title: string;
+    slug: string;
+    status: AuctionStatus;
+    auctionType: AuctionType;
+    coverImageUrl: string | null;
+    startTime: string;
+    endTime: string;
+    previewStartAt: string | null;
+    registrationDeadline: string | null;
+    isOnline: boolean;
+    venue: string | null;
+    currency: { code: string; symbol: string | null };
+    category: { name: string } | null;
+    subCategory: { name: string } | null;
+    lotCount: number;
+
+    /** upcoming only */
+    verifiedBidders?: number;
+    estimate?: { low: number; high: number; currency: string };
+
+    /** past only — money in the auction's primary currency */
+    results?: {
+        sold: number;
+        unsold: number;
+        withdrawn: number;
+        sellThrough: number;
+        totalSold: number;
+        currency: string;
+    };
+}
+
+export interface GetAuctionTimelineParams {
+    type: AuctionTimelineType;
+    page?: number;
+    limit?: number;
+    search?: string;
+}
+
+export interface GetAuctionTimelineResponse {
+    success: boolean;
+    message: string;
+    data: {
+        auctions: TimelineAuction[];
+        summary: {
+            total: number;
+            byStatus: Partial<Record<AuctionStatus, number>>;
+            startingIn24h?: number;
+        };
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+    };
+}
+
+// =====================================================================
+// LIVE FLOOR
+// =====================================================================
+
+export interface LiveAuctionSummary {
+    uuid: string;
+    title: string;
+    status: AuctionStatus; // LIVE | PAUSED
+    auctionType: AuctionType;
+    coverImageUrl: string | null;
+    startTime: string;
+    endTime: string;
+    currency: { code: string; symbol: string | null };
+    auctioneer: string | null;
+    lotCount: number;
+    closedLots: number;
+    liveLot: { uuid: string; itemNumber: string; title: string } | null;
+    verifiedBidders: number;
+    /** Sum over lots in the auction's primary currency */
+    estimate: { low: number; high: number; currency: string };
+}
+
+export interface GetLiveAuctionsResponse {
+    success: boolean;
+    message: string;
+    data: LiveAuctionSummary[];
+}
+
+export interface SetLotLiveParams {
+    lotUuid: string;
+    action: "start" | "stop";
+}
+
+export interface SetLotLiveResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        itemNumber: string;
+        title: string;
+        status: LotStatus;
+        currentBid: string | null;
+        bidCount: string;
+    };
+}
+
+export interface ChangeAuctionStatusParams {
+    auctionUuid: string;
+    status: AuctionStatus;
+    reason?: string;
+}
+
+export interface ChangeAuctionStatusResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        title: string;
+        status: AuctionStatus;
+        publishedAt: string | null;
+        updatedAt: string;
+    };
 }
