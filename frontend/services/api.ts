@@ -25,10 +25,18 @@ export const auctionEndPoints = {
     GET_LIVE_AUCTIONS_API: `${BASE_URL}/api/auction/live`,
     GET_AUCTION_TIMELINE_API: `${BASE_URL}/api/auction/timeline`,
     SET_LOT_LIVE_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/live`,
+    DELETE_LOT_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}`,
     GET_LOT_SUMMARY_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/summary`,
     GET_LOT_BIDDERS_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/bidders`,
-    ADD_NEW_LOT_BIDDER_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/bidders`,
     VERIFY_LOT_BIDDERS_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/bidders/verify`,
+
+    // Auction registrations — POST/DELETE on the same URL add/remove existing users
+    AUCTION_PARTICIPANTS_API: (auctionUuid: string) => `${BASE_URL}/api/auction/${auctionUuid}/participants`,
+    PARTICIPANT_CANDIDATES_API: (auctionUuid: string) =>
+        `${BASE_URL}/api/auction/${auctionUuid}/participants/candidates`,
+    ADD_NEW_PARTICIPANT_API: (auctionUuid: string) => `${BASE_URL}/api/auction/${auctionUuid}/participants/new`,
+    VERIFY_PARTICIPANTS_API: (auctionUuid: string) =>
+        `${BASE_URL}/api/auction/${auctionUuid}/participants/verify`,
 };
 
 

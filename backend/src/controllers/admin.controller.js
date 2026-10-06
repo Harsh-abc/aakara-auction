@@ -1,7 +1,7 @@
 
 import { changeRoleSchema } from '../validations/role.validation.js'
 import { changeUserRoleService, createUserByAdminService } from '../services/admin.services.js'
-import { createUserSchema } from '../validations/user.validation.js';
+import { createUserWithRoleSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
 
 export const changeUserRole = async (req, res) => {
@@ -38,12 +38,12 @@ export const changeUserRole = async (req, res) => {
 
 export const createUserByAdmin = async (req, res) => {
     try {
-        const data = createUserSchema.parse(req.body);
+        const data = createUserWithRoleSchema.parse(req.body);
         const user = await createUserByAdminService(data, req.user.userId);
 
         return res.status(201).json({
             success: true,
-            message: "User created successfully",
+            message: `${data.fullName} was added as ${user.role.replace("_", " ").toLowerCase()}`,
             data: user,
         });
     } catch (error) {

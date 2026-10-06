@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-import { addNewLotBidder, getLotBidders, getLotSummary, verifyLotBidders } from "@/services/operations/lotBidder.api";
+import { getLotBidders, getLotSummary, verifyLotBidders } from "@/services/operations/lotBidder.api";
 import type { GetLotBiddersResponse, LotBidder, LotSummary } from "@/lib/types/lotBidder.types";
 import type { Pagination } from "@/lib/types/user.types";
 
@@ -21,9 +21,6 @@ interface LotBidderState {
 
     // user uuids currently being verified / unverified
     updatingUuids: string[];
-
-    // "Add New Bidder" request in flight
-    addingBidder: boolean;
 }
 
 const initialState: LotBidderState = {
@@ -38,8 +35,6 @@ const initialState: LotBidderState = {
     error: null,
 
     updatingUuids: [],
-
-    addingBidder: false,
 };
 
 const lotBidderSlice = createSlice({
@@ -89,17 +84,6 @@ const lotBidderSlice = createSlice({
             })
 
             // the page refetches after a change, so only track what's in flight
-            .addCase(addNewLotBidder.pending, (state) => {
-                state.addingBidder = true;
-            })
-            .addCase(addNewLotBidder.fulfilled, (state) => {
-                state.addingBidder = false;
-            })
-            .addCase(addNewLotBidder.rejected, (state) => {
-                // error is shown by the dialog (toast)
-                state.addingBidder = false;
-            })
-
             .addCase(verifyLotBidders.pending, (state, action) => {
                 state.updatingUuids = [...new Set([...state.updatingUuids, ...action.meta.arg.userUuids])];
             })

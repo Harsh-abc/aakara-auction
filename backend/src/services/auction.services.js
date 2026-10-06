@@ -1,5 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
+import { syncParticipantsToLots } from "./auctionParticipant.services.js";
 
 // =====================================================================
 // Helpers
@@ -878,6 +879,8 @@ export const deleteAuctionService = async ({ auctionUuid, deletedBy }) => {
             await tx.auctionRule.deleteMany({ where: { auctionId: auction.id } });
             await tx.auctionStatusHistory.deleteMany({ where: { auctionId: auction.id } });
             await tx.auctionCurrency.deleteMany({ where: { auctionId: auction.id } }); // ✅ NEW
+            // lot_bidders rows go with the lots (ON DELETE CASCADE)
+            await tx.auctionParticipant.deleteMany({ where: { auctionId: auction.id } });
 
             const { count: deletedLots } = await tx.auctionItem.deleteMany({
                 where: { auctionId: auction.id },
@@ -900,6 +903,55 @@ export const deleteAuctionService = async ({ auctionUuid, deletedBy }) => {
 
 
 
+
+// =====================================================================
+// DELETE ONE LOT (auction DRAFT / SCHEDULED only — same rule as editing)
+// Other lots keep their numbers. Registrations on the lot (lot_bidders)
+// go with it (ON DELETE CASCADE); the users stay registered for the auction.
+// =====================================================================
+
+export const deleteLotService = async ({ lotUuid, deletedBy }) => {
+    const result = await prisma.$transaction(
+        async (tx) => {
+            const lot = await tx.auctionItem.findUnique({
+                where: { uuid: lotUuid },
+                select: {
+                    id: true,
+                    uuid: true,
+                    itemNumber: true,
+                    title: true,
+                    auction: { select: { uuid: true, status: true, deletedAt: true } },
+                    _count: { select: { bids: true, autoBids: true } },
+                    winner: { select: { id: true } },
+                },
+            });
+
+            if (!lot || lot.auction.deletedAt) throw httpError("Lot not found", 404);
+            if (!["DRAFT", "SCHEDULED"].includes(lot.auction.status)) {
+                throw httpError(
+                    `Lots can only be deleted from draft or scheduled auctions (current status: ${lot.auction.status})`,
+                    409
+                );
+            }
+            if (lot._count.bids > 0 || lot._count.autoBids > 0 || lot.winner) {
+                throw httpError(`Lot #${lot.itemNumber} already has bids and can't be deleted`, 409);
+            }
+
+            await tx.auctionImage.deleteMany({ where: { itemId: lot.id } });
+            await tx.auctionDocument.deleteMany({ where: { itemId: lot.id } });
+            await tx.auctionExtension.deleteMany({ where: { itemId: lot.id } });
+            // dimension + lot_bidders cascade
+            await tx.auctionItem.delete({ where: { id: lot.id } });
+
+            return { uuid: lot.uuid, itemNumber: lot.itemNumber, title: lot.title, auctionUuid: lot.auction.uuid };
+        },
+        { maxWait: 10_000, timeout: 30_000 }
+    );
+
+    console.info(`[auction] deleted lot #${result.itemNumber} "${result.title}" (${result.uuid}) by user ${deletedBy}`);
+
+    return serializeBigInt(result);
+};
 
 export const updateAuctionService = async (data) => {
     const {
@@ -1319,6 +1371,9 @@ export const updateAuctionService = async (data) => {
                     });
                 }
             }
+
+            // ---------------- registrations: users already registered for the auction get the new lots ----------------
+            await syncParticipantsToLots(tx, existing.id);
 
             return tx.auction.findUnique({
                 where: { id: existing.id },

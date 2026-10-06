@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Loader2, Pencil } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2, Pencil, Users } from "lucide-react";
 
 import AuctionView from "@/components/core/Dashboard/auctions/AuctionView";
 import AuctionStatusControl from "@/components/core/Dashboard/auctions/AuctionStatusControl";
@@ -26,7 +26,10 @@ export default function ViewAuction() {
     const dispatch = useDispatch<AppDispatch>();
 
     const { auctions } = useSelector((state: RootState) => state.auction);
-    const isSuperAdmin = useSelector((state: RootState) => state.auth.role) === "SUPER_ADMIN";
+    const role = useSelector((state: RootState) => state.auth.role);
+    const isSuperAdmin = role === "SUPER_ADMIN";
+    // Admins can view registrations; only a super admin can change them (enforced by the API)
+    const canSeeRegistrations = isSuperAdmin || role === "ADMIN";
 
     // Tagged with the uuid it was loaded for, so a different uuid reads as "loading"
     const [loaded, setLoaded] = useState<
@@ -132,6 +135,16 @@ export default function ViewAuction() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {canSeeRegistrations && (
+                        <Link
+                            href={`/dashboard/auctions/${auction.uuid}/registrations`}
+                            className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-2 px-4 text-[14px]")}
+                        >
+                            <Users className="h-4 w-4" />
+                            Registrations
+                        </Link>
+                    )}
+
                     {isSuperAdmin && (
                         <AuctionStatusControl
                             auction={auction}
@@ -165,7 +178,21 @@ export default function ViewAuction() {
                 </div>
             </div>
 
-            <AuctionView auction={auction} lots={lots} />
+            <AuctionView
+                auction={auction}
+                lots={lots}
+                onLotDeleted={(lotUuid) =>
+                    setLoaded((prev) => {
+                        if (!prev?.auction) return prev;
+                        const remaining = prev.lots.filter((lot) => lot.uuid !== lotUuid);
+                        return {
+                            ...prev,
+                            lots: remaining,
+                            auction: { ...prev.auction, _count: { ...prev.auction._count, items: remaining.length } },
+                        };
+                    })
+                }
+            />
         </div>
     );
 }

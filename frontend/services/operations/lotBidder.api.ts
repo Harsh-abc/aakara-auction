@@ -4,8 +4,6 @@ import axios from "axios";
 import { apiConnector } from "../apiConnector";
 import { auctionEndPoints } from "../api";
 import type {
-    AddNewLotBidderParams,
-    AddNewLotBidderResponse,
     GetLotBiddersParams,
     GetLotBiddersResponse,
     GetLotSummaryResponse,
@@ -54,7 +52,7 @@ export const getLotSummary = createAsyncThunk<GetLotSummaryResponse, { lotUuid: 
 );
 
 // =====================================================================
-// GET LOT BIDDERS (users who can be verified for the lot)
+// GET LOT BIDDERS (users registered for the lot via its auction)
 // =====================================================================
 
 export const getLotBidders = createAsyncThunk<GetLotBiddersResponse, GetLotBiddersParams, ThunkConfig>(
@@ -78,31 +76,6 @@ export const getLotBidders = createAsyncThunk<GetLotBiddersResponse, GetLotBidde
             return response.data;
         } catch (error) {
             return rejectWithValue(toErrorMessage(error, "Failed to fetch lot bidders"));
-        }
-    }
-);
-
-// =====================================================================
-// ADD A NEW USER TO A LOT (SUPER_ADMIN only)
-// Creates the account (like "Add User") and verifies them for the lot
-// =====================================================================
-
-export const addNewLotBidder = createAsyncThunk<AddNewLotBidderResponse, AddNewLotBidderParams, ThunkConfig>(
-    "lotBidder/addNewLotBidder",
-    async ({ lotUuid, ...user }, { getState, rejectWithValue }) => {
-        const token = getState().auth.accessToken;
-        if (!token) return rejectWithValue("Authentication token not found");
-
-        try {
-            const response = await apiConnector<AddNewLotBidderResponse>({
-                method: "POST",
-                url: auctionEndPoints.ADD_NEW_LOT_BIDDER_API(lotUuid),
-                body: user,
-                header: authHeader(token),
-            });
-            return response.data;
-        } catch (error) {
-            return rejectWithValue(toErrorMessage(error, "Failed to add user to lot"));
         }
     }
 );

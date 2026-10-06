@@ -1,10 +1,32 @@
 "use client";
 
-import type { ReactNode } from "react";
-import Link from "next/link";
-import { FileText, ImageOff, Star, UserPlus } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { Eye, FileText, ImageOff, Loader2, MoreVertical, Pencil, Star, Trash2, Users } from "lucide-react";
 
-import { useAppSelector } from "@/hooks/redux";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { deleteLot } from "@/services/operations/auction.api";
 
 import type {
     Auction,
@@ -101,6 +123,13 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "Asia/Kolkata",
+});
+
+const timeFmt = new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
     timeZone: "Asia/Kolkata",
 });
 
@@ -215,25 +244,16 @@ const PlainText = ({ text }: { text?: string | null }) =>
     );
 
 // =====================================================================
-// LOT CARD
+// LOT DETAILS (opened from the lots table's "View lot")
 // =====================================================================
 
-const LotCard = ({
-    lot,
-    auctionUuid,
-    fallbackCurrency,
-}: {
-    lot: AuctionLot;
-    auctionUuid: string;
-    fallbackCurrency: string;
-}) => {
-    const role = useAppSelector((state) => state.auth.role);
-    // Admins can see the list; only a super admin can verify (enforced by the API)
-    const canSeeBidders = role === "SUPER_ADMIN" || role === "ADMIN";
-    const currency = lot.currency?.code ?? fallbackCurrency;
-    const images = [...(lot.images ?? [])].sort(
+const sortedImages = (lot: AuctionLot) =>
+    [...(lot.images ?? [])].sort(
         (a, b) => Number(b.isPrimary) - Number(a.isPrimary) || Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0)
     );
+
+const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) => {
+    const images = sortedImages(lot);
     const dim = lot.dimension;
     const dimensions = dim
         ? [dim.width, dim.height, dim.depth].filter((v) => toNumber(v) !== null).join(" × ")
@@ -242,38 +262,7 @@ const LotCard = ({
     const estimateHigh = formatMoney(lot.estimateHigh, currency);
 
     return (
-        <article className="rounded-[8px] border border-slate-200">
-            {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                    <span className="rounded bg-[#fce8f1] px-2 py-1 text-[11px] font-semibold text-[#833b61]">
-                        Lot {lot.itemNumber}
-                    </span>
-                    <p className="truncate text-sm font-semibold text-slate-800">{lot.title}</p>
-                    {lot.isFeatured && (
-                        <Pill className="bg-amber-50 text-amber-700">
-                            <Star className="h-3 w-3 fill-current" />
-                            Featured
-                        </Pill>
-                    )}
-                </div>
-                <div className="flex items-center gap-3">
-                    {canSeeBidders && (
-                        <Link
-                            href={`/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/bidders`}
-                            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-50"
-                        >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            {role === "SUPER_ADMIN" ? "Add Bidders" : "Bidders"}
-                        </Link>
-                    )}
-                    <Pill className={LOT_STATUS_STYLES[lot.status] ?? "bg-slate-100 text-slate-600"}>
-                        {toTitle(lot.status)}
-                    </Pill>
-                </div>
-            </div>
-
-            <div className="space-y-6 p-5">
+            <div className="space-y-6">
                 {/* Schedule (inside the auction window) */}
                 <div>
                     <h5 className="mb-3 text-[13px] font-semibold text-slate-700">Lot Schedule</h5>
@@ -285,7 +274,7 @@ const LotCard = ({
 
                 {/* Media */}
                 {images.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                         {images.map((img, i) => (
                             <figure
                                 key={img.id ?? img.url}
@@ -448,7 +437,301 @@ const LotCard = ({
                     </div>
                 )}
             </div>
-        </article>
+    );
+};
+
+// =====================================================================
+// LOTS TABLE — one row per lot, actions in a ⋮ menu
+// =====================================================================
+
+/** Mirrors the backend: lots can be edited / deleted only on draft or scheduled auctions */
+const LOT_EDITABLE_AUCTION_STATUSES: AuctionStatus[] = ["DRAFT", "SCHEDULED"];
+
+const MenuHint = ({ children }: { children: string }) => (
+    <span className="ml-auto pl-2 text-[10px] text-slate-400">{children}</span>
+);
+
+const DateTime = ({ iso }: { iso?: string | null }) => {
+    if (!iso) return <span className="text-slate-400">—</span>;
+    const d = new Date(iso);
+    return (
+        <div className="whitespace-nowrap text-[12px] leading-tight">
+            <p className="text-slate-700">{dateFmt.format(d)}</p>
+            <p className="text-[11px] text-slate-400">{timeFmt.format(d)}</p>
+        </div>
+    );
+};
+
+const LotsTable = ({
+    auction,
+    lots,
+    fallbackCurrency,
+    onLotDeleted,
+}: {
+    auction: Auction;
+    lots: AuctionLot[];
+    fallbackCurrency: string;
+    onLotDeleted?: (lotUuid: string) => void;
+}) => {
+    const router = useRouter();
+    const dispatch = useAppDispatch();
+    const role = useAppSelector((state) => state.auth.role);
+
+    const [viewing, setViewing] = useState<AuctionLot | null>(null);
+    const [confirmDelete, setConfirmDelete] = useState<AuctionLot | null>(null);
+    const [deletingUuid, setDeletingUuid] = useState<string | null>(null);
+
+    // Registrations: admins can view, only a super admin can verify (enforced by the API)
+    const canSeeRegistrations = role === "SUPER_ADMIN" || role === "ADMIN";
+    const canChangeLots = LOT_EDITABLE_AUCTION_STATUSES.includes(auction.status);
+    const canDeleteLots = canChangeLots && canSeeRegistrations; // delete is admin-only on the API
+    const lotPath = (lot: AuctionLot) => `/dashboard/auctions/${auction.uuid}/lots/${lot.uuid}`;
+
+    const handleDelete = async () => {
+        if (!confirmDelete) return;
+        const lot = confirmDelete;
+        setDeletingUuid(lot.uuid);
+        try {
+            const res = await dispatch(deleteLot({ lotUuid: lot.uuid })).unwrap();
+            toast.success(res.message);
+            setConfirmDelete(null);
+            onLotDeleted?.(lot.uuid);
+        } catch (err) {
+            toast.error(typeof err === "string" ? err : "Could not delete the lot. Try again.");
+        } finally {
+            setDeletingUuid(null);
+        }
+    };
+
+    if (lots.length === 0) {
+        return <p className="text-[13px] text-slate-400">No lots added to this auction yet.</p>;
+    }
+
+    return (
+        <>
+            <div className="overflow-x-auto rounded-md border border-slate-200">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-slate-50 hover:bg-slate-50">
+                            {["Lot", "Artwork", "Medium", "Starting bid", "Estimate", "Starts", "Ends", "Status", ""].map(
+                                (h, i) => (
+                                    <TableHead
+                                        key={i}
+                                        className="h-9 px-3 text-[11px] font-medium whitespace-nowrap text-slate-700"
+                                    >
+                                        {h}
+                                    </TableHead>
+                                )
+                            )}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {lots.map((lot) => {
+                            const currency = lot.currency?.code ?? fallbackCurrency;
+                            const thumb = sortedImages(lot).find((img) => img.mediaType === "IMAGE");
+                            const low = formatMoney(lot.estimateLow, currency);
+                            const high = formatMoney(lot.estimateHigh, currency);
+                            const deleting = deletingUuid === lot.uuid;
+
+                            return (
+                                <TableRow key={lot.uuid}>
+                                    <TableCell className="px-3">
+                                        <span className="rounded bg-[#fce8f1] px-2 py-1 text-[11px] font-semibold text-[#833b61]">
+                                            #{String(lot.itemNumber).padStart(2, "0")}
+                                        </span>
+                                    </TableCell>
+
+                                    <TableCell className="px-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewing(lot)}
+                                            className="flex min-w-60 cursor-pointer items-center gap-3 text-left"
+                                        >
+                                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border bg-slate-50">
+                                                {thumb ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img
+                                                        src={thumb.thumbnailUrl || thumb.url}
+                                                        alt=""
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full items-center justify-center text-slate-300">
+                                                        <ImageOff className="h-4 w-4" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="flex items-center gap-1.5 truncate text-[13px] font-medium text-slate-800 hover:underline">
+                                                    {lot.title}
+                                                    {lot.isFeatured && (
+                                                        <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />
+                                                    )}
+                                                </p>
+                                                <p className="truncate text-[11px] text-slate-500">
+                                                    {[lot.artistName, lot.yearCreated].filter(Boolean).join(" · ") || "—"}
+                                                </p>
+                                            </div>
+                                        </button>
+                                    </TableCell>
+
+                                    <TableCell className="max-w-40 truncate px-3 text-[12px] text-slate-600" title={lot.medium ?? ""}>
+                                        {lot.medium || "—"}
+                                    </TableCell>
+                                    <TableCell className="px-3 text-[12px] font-medium whitespace-nowrap text-slate-800">
+                                        {formatMoney(lot.startingPrice, currency) ?? "—"}
+                                    </TableCell>
+                                    <TableCell className="px-3 text-[12px] whitespace-nowrap text-slate-600">
+                                        {low || high ? `${low ?? "—"} – ${high ?? "—"}` : "—"}
+                                    </TableCell>
+                                    <TableCell className="px-3">
+                                        <DateTime iso={lot.scheduledStartAt} />
+                                    </TableCell>
+                                    <TableCell className="px-3">
+                                        <DateTime iso={lot.scheduledEndAt} />
+                                    </TableCell>
+                                    <TableCell className="px-3">
+                                        <Pill className={LOT_STATUS_STYLES[lot.status] ?? "bg-slate-100 text-slate-600"}>
+                                            {toTitle(lot.status)}
+                                        </Pill>
+                                    </TableCell>
+
+                                    {/* Actions */}
+                                    <TableCell className="px-3 text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger
+                                                render={
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-slate-500 hover:text-slate-900 data-popup-open:bg-slate-100"
+                                                        aria-label={`Actions for lot ${lot.itemNumber}`}
+                                                    />
+                                                }
+                                            >
+                                                {deleting ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <MoreVertical className="h-4 w-4" />
+                                                )}
+                                            </DropdownMenuTrigger>
+
+                                            <DropdownMenuContent align="end" className="w-48">
+                                                <DropdownMenuItem className="py-2 text-[13px]" onClick={() => setViewing(lot)}>
+                                                    <Eye />
+                                                    View lot
+                                                </DropdownMenuItem>
+
+                                                <DropdownMenuItem
+                                                    className="py-2 text-[13px]"
+                                                    disabled={!canChangeLots}
+                                                    onClick={() =>
+                                                        router.push(`/dashboard/auctions/${auction.uuid}/edit?lot=${lot.uuid}`)
+                                                    }
+                                                >
+                                                    <Pencil />
+                                                    Edit lot
+                                                    {!canChangeLots && <MenuHint>Draft / scheduled only</MenuHint>}
+                                                </DropdownMenuItem>
+
+                                                {canSeeRegistrations && (
+                                                    <DropdownMenuItem
+                                                        className="py-2 text-[13px]"
+                                                        onClick={() => router.push(`${lotPath(lot)}/bidders`)}
+                                                    >
+                                                        <Users />
+                                                        Registrations
+                                                    </DropdownMenuItem>
+                                                )}
+
+                                                {canSeeRegistrations && (
+                                                    <>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            variant="destructive"
+                                                            className="py-2 text-[13px]"
+                                                            disabled={!canDeleteLots || deleting}
+                                                            onClick={() => setConfirmDelete(lot)}
+                                                        >
+                                                            <Trash2 />
+                                                            Delete lot
+                                                            {!canChangeLots && <MenuHint>Draft / scheduled only</MenuHint>}
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* View lot */}
+            <Sheet open={viewing !== null} onOpenChange={(open) => !open && setViewing(null)}>
+                <SheetContent side="right" className="w-full gap-0 overflow-y-auto bg-white p-0 sm:max-w-2xl">
+                    {viewing && (
+                        <>
+                            <SheetHeader className="border-b border-slate-200 px-6 py-4 pr-12">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded bg-[#fce8f1] px-2 py-1 text-[11px] font-semibold text-[#833b61]">
+                                        Lot {viewing.itemNumber}
+                                    </span>
+                                    <Pill className={LOT_STATUS_STYLES[viewing.status] ?? "bg-slate-100 text-slate-600"}>
+                                        {toTitle(viewing.status)}
+                                    </Pill>
+                                    {viewing.isFeatured && (
+                                        <Pill className="bg-amber-50 text-amber-700">
+                                            <Star className="h-3 w-3 fill-current" />
+                                            Featured
+                                        </Pill>
+                                    )}
+                                </div>
+                                <SheetTitle className="text-lg font-semibold">{viewing.title}</SheetTitle>
+                                <SheetDescription>
+                                    {[viewing.artistName, viewing.medium].filter(Boolean).join(" · ") || "—"}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <div className="px-6 py-5">
+                                <LotDetails lot={viewing} currency={viewing.currency?.code ?? fallbackCurrency} />
+                            </div>
+                        </>
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Delete lot */}
+            <AlertDialog
+                open={confirmDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open && !deletingUuid) setConfirmDelete(null);
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete lot {confirmDelete?.itemNumber}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            <b>{confirmDelete?.title}</b> and its images and documents are deleted, along with every
+                            bidder&apos;s registration and verification on this lot. Registrations for the auction
+                            itself stay. This can&apos;t be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={!!deletingUuid}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={!!deletingUuid}
+                            className="bg-red-600 text-white hover:bg-red-600/90"
+                        >
+                            {deletingUuid ? "Deleting..." : "Delete lot"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 };
 
@@ -459,10 +742,12 @@ const LotCard = ({
 interface AuctionViewProps {
     auction: Auction;
     lots: AuctionLot[];
+    /** Called after a lot is deleted from the lots table */
+    onLotDeleted?: (lotUuid: string) => void;
 }
 
 /** Read-only, single-page view of everything the create/edit wizard captures */
-export default function AuctionView({ auction, lots }: AuctionViewProps) {
+export default function AuctionView({ auction, lots, onLotDeleted }: AuctionViewProps) {
     const primaryCurrency =
         auction.auctionCurrencies?.find((c) => c.isPrimary)?.currency.code ?? auction.currency?.code ?? "INR";
     const currencies = auction.auctionCurrencies?.length
@@ -572,20 +857,12 @@ export default function AuctionView({ auction, lots }: AuctionViewProps) {
 
             {/* Lots */}
             <Section title={`Lots (${sortedLots.length})`}>
-                {sortedLots.length > 0 ? (
-                    <div className="space-y-5">
-                        {sortedLots.map((lot) => (
-                            <LotCard
-                                key={lot.uuid}
-                                lot={lot}
-                                auctionUuid={auction.uuid}
-                                fallbackCurrency={primaryCurrency}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-[13px] text-slate-400">No lots added to this auction yet.</p>
-                )}
+                <LotsTable
+                    auction={auction}
+                    lots={sortedLots}
+                    fallbackCurrency={primaryCurrency}
+                    onLotDeleted={onLotDeleted}
+                />
             </Section>
 
             {/* Fees */}

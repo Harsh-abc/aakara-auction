@@ -1,3 +1,5 @@
+import type { RoleName } from "@/lib/constants/roles";
+
 export interface UserProfile {
     firstName: string | null;
     lastName: string | null;
@@ -120,6 +122,8 @@ export interface CreateUserPayload {
     email: string;
     phone: string;
     password: string;
+    /** Settings → Team only (super admin). Omitted = BIDDER */
+    roleName?: RoleName;
 }
 
 export interface ChangeUserRolePayload {

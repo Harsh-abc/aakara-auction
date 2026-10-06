@@ -8,7 +8,8 @@ import { Field } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { ALL_ROLES, DASHBOARD_ROLES, ROLE_LABELS } from "@/lib/constants/roles";
+import { ALL_ROLES, DASHBOARD_ROLES, MAX_SUPER_ADMINS, ROLE_LABELS } from "@/lib/constants/roles";
+import AddUserDialog, { type RoleOption } from "@/components/core/Dashboard/users/AddUserDialog";
 import { getAllUsers } from "@/services/operations/user.api";
 
 // "TEAM" = everyone with dashboard access (excludes bidders and users)
@@ -24,6 +25,16 @@ export default function TeamSettings() {
 
     const dispatch = useAppDispatch();
     const { users, loading, error } = useAppSelector((state) => state.user);
+    const isSuperAdmin = useAppSelector((state) => state.auth.role) === "SUPER_ADMIN";
+
+    // Super Admin is offered only while under the limit (the API enforces it too)
+    const superAdminCount = users.filter((u) => u.role.name === "SUPER_ADMIN").length;
+    const roleOptions: RoleOption[] = ALL_ROLES.map((role) => ({
+        value: role,
+        label: ROLE_LABELS[role],
+        ...(role === "SUPER_ADMIN" &&
+            superAdminCount >= MAX_SUPER_ADMINS && { disabled: true, hint: `limit of ${MAX_SUPER_ADMINS} reached` }),
+    }));
 
     useEffect(() => {
         dispatch(getAllUsers({ page: 1, limit: 100 }));
@@ -37,11 +48,23 @@ export default function TeamSettings() {
 
     return (
         <div className="px-8 py-8">
-            <div>
-                <h1 className="text-[24px] font-bold">Team</h1>
-                <p className="text-sm text-muted-foreground">
-                    Manage who has access to the dashboard and what role they have.
-                </p>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-[24px] font-bold">Team</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Manage who has access to the dashboard and what role they have.
+                    </p>
+                </div>
+
+                {isSuperAdmin && (
+                    <AddUserDialog
+                        triggerLabel="Add User"
+                        title="Add User"
+                        description="Create an account with the role you choose. Email, phone and KYC are marked verified and the account is active, so they can log in straight away."
+                        submitLabel="Create User"
+                        roleOptions={roleOptions}
+                    />
+                )}
             </div>
 
             <div className="w-full rounded-[8px] pb-4">

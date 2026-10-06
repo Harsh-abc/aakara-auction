@@ -80,6 +80,9 @@ interface AuctionsFormProps {
 
     /** Primary button on the last step, e.g. "Publish" */
     publishLabel: string;
+
+    /** Edit only: open on the "Add Lots" step with this saved lot's form showing */
+    initialLotUuid?: string;
 }
 
 /**
@@ -94,9 +97,17 @@ export default function AuctionsForm({
     saveLabel,
     saveStatus,
     publishLabel,
+    initialLotUuid,
 }: AuctionsFormProps) {
-    const [currentStep, setCurrentStep] = useState(1);
-    const [selectedLotIndex, setSelectedLotIndex] = useState<number | null>(null);
+    // index of the lot to open first (unknown uuid -> normal start)
+    const initialLotIndex = initialLotUuid
+        ? defaultValues.lots.findIndex((lot) => lot.uuid === initialLotUuid)
+        : -1;
+
+    const [currentStep, setCurrentStep] = useState(initialLotIndex >= 0 ? 3 : 1);
+    const [selectedLotIndex, setSelectedLotIndex] = useState<number | null>(
+        initialLotIndex >= 0 ? initialLotIndex : null
+    );
     const [currentLotStep, setCurrentLotStep] = useState(1);
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 

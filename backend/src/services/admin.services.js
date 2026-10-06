@@ -82,11 +82,16 @@ export const changeUserRoleService = async ({ actorUuid, targetUUuid, newRoleNam
 
 
 /**
+ * Creates a ready-to-use account: ACTIVE, email + phone verified, KYC
+ * VERIFIED, with the given role (BIDDER unless a super admin picks another
+ * in Settings → Team). At most MAX_SUPER_ADMINS super admins, as for role changes.
+ *
  * `afterCreate(tx, user)` runs inside the same transaction once the user,
- * profile and KYC exist (e.g. to add them to a lot). If it throws, nothing is created.
+ * profile and KYC exist (e.g. to register them for an auction). If it
+ * throws, nothing is created.
  */
 export const createUserByAdminService = async (
-    { fullName, email, phone, password },
+    { fullName, email, phone, password, roleName = "BIDDER" },
     creatorId,
     { afterCreate } = {}
 ) => {
@@ -100,10 +105,10 @@ export const createUserByAdminService = async (
         throw err;
     }
 
-    const bidderRole = await prisma.role.findUnique({ where: { name: "BIDDER" } });
-    if (!bidderRole) {
-        const err = new Error("BIDDER role not found");
-        err.statusCode = 500;
+    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    if (!role) {
+        const err = new Error(`${roleName} role not found`);
+        err.statusCode = roleName === "BIDDER" ? 500 : 400;
         throw err;
     }
 
@@ -115,13 +120,22 @@ export const createUserByAdminService = async (
 
     try {
         return await prisma.$transaction(async (tx) => {
+            if (role.name === "SUPER_ADMIN") {
+                const superAdminCount = await tx.user.count({ where: { roleId: role.id, deletedAt: null } });
+                if (superAdminCount >= MAX_SUPER_ADMINS) {
+                    const err = new Error(`Only ${MAX_SUPER_ADMINS} Super Admins are allowed. Pick another role.`);
+                    err.statusCode = 409;
+                    throw err;
+                }
+            }
+
             const user = await tx.user.create({
                 data: {
                     username,
                     email,
                     phone,
                     passwordHash,
-                    roleId: bidderRole.id,
+                    roleId: role.id,
                     status: "ACTIVE",
                     emailVerified: true,
                     emailVerifiedAt: now,
@@ -160,17 +174,24 @@ export const createUserByAdminService = async (
                 username: user.username,
                 email: user.email,
                 phone: user.phone,
-                role: "BIDDER",
+                role: role.name,
                 status: user.status,
                 emailVerified: user.emailVerified,
                 phoneVerified: user.phoneVerified,
                 kycStatus: kyc.status,
                 createdAt: user.createdAt,
             };
-        });
+            // Serializable so two concurrent super admin creations can't both pass the limit check
+        }, role.name === "SUPER_ADMIN" ? { isolationLevel: "Serializable" } : undefined);
     } catch (error) {
         if (error.code === "P2002") {
             const err = new Error("Email, phone or username already in use");
+            err.statusCode = 409;
+            throw err;
+        }
+        // P2034 = serialization conflict with another concurrent super admin change
+        if (error.code === "P2034") {
+            const err = new Error("Another Super Admin change is in progress. Please try again.");
             err.statusCode = 409;
             throw err;
         }

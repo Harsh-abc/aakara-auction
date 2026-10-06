@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { createUser } from "@/services/operations/user.api";
 import type { CreateUserPayload } from "@/lib/types/user.types";
+import type { RoleName } from "@/lib/constants/roles";
 
 const countryCodes = [
     { label: "India", value: "+91" },
@@ -115,12 +116,28 @@ interface AddUserDialogProps {
     successMessage?: string;
 
     /**
-     * Custom create (e.g. create + add to a lot). Resolve on success, reject
-     * with a message string on failure. Default: the plain "create user" API.
+     * Custom create (e.g. create + register for an auction). Resolve on
+     * success — with a message to toast instead of `successMessage`, if
+     * given — and reject with a message string on failure. Default: the
+     * plain "create user" API.
      */
-    onCreate?: (payload: CreateUserPayload) => Promise<unknown>;
+    onCreate?: (payload: CreateUserPayload) => Promise<string | void>;
     /** Request in flight — used with `onCreate` */
     busy?: boolean;
+
+    /**
+     * Show a required role picker (Settings → Team). Without it the account
+     * is created as a bidder.
+     */
+    roleOptions?: RoleOption[];
+}
+
+export interface RoleOption {
+    value: RoleName;
+    label: string;
+    /** e.g. the Super Admin limit is reached */
+    disabled?: boolean;
+    hint?: string;
 }
 
 export default function AddUserDialog({
@@ -131,6 +148,7 @@ export default function AddUserDialog({
     successMessage = "User created successfully",
     onCreate,
     busy,
+    roleOptions,
 }: AddUserDialogProps = {}) {
     const dispatch = useAppDispatch();
     const userSliceCreating = useAppSelector((state) => state.user.creatingUser);
@@ -139,6 +157,7 @@ export default function AddUserDialog({
     const [open, setOpen] = useState(false);
     const [countryCode, setCountryCode] = useState("+91");
     const [formData, setFormData] = useState(initialForm);
+    const [role, setRole] = useState<RoleName | "">("");
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
@@ -150,10 +169,11 @@ export default function AddUserDialog({
         if (!next) {
             setFormData(initialForm);
             setCountryCode("+91");
+            setRole("");
         }
     };
 
-    const isFilled = Object.values(formData).every((v) => v.trim() !== "");
+    const isFilled = Object.values(formData).every((v) => v.trim() !== "") && (!roleOptions || role !== "");
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -181,18 +201,25 @@ export default function AddUserDialog({
             return;
         }
 
+        if (roleOptions && !role) {
+            toast.error("Please select a role");
+            return;
+        }
+
         const payload: CreateUserPayload = {
             fullName: formData.fullName.trim(),
             email: formData.email.trim(),
             phone: `${countryCode}${phoneNumber}`,
             password: formData.password,
+            ...(roleOptions && role ? { roleName: role } : {}),
         };
 
         try {
-            if (onCreate) await onCreate(payload);
-            else await dispatch(createUser(payload)).unwrap();
+            const message = onCreate
+                ? await onCreate(payload)
+                : (await dispatch(createUser(payload)).unwrap()).message;
 
-            toast.success(successMessage);
+            toast.success(message || successMessage);
             handleOpenChange(false);
         } catch (error) {
             toast.error(typeof error === "string" ? error : "Could not create user. Try again.");
@@ -272,6 +299,39 @@ export default function AddUserDialog({
                                 className="h-11 bg-white"
                             />
                         </FloatingField>
+
+                        {roleOptions && (
+                            <FloatingField id="role" label="Role">
+                                <Select
+                                    value={role}
+                                    onValueChange={(value) => value && setRole(value as RoleName)}
+                                >
+                                    <SelectTrigger id="role" className="h-11! w-full bg-white" aria-label="Role">
+                                        <SelectValue>
+                                            {role ? (
+                                                roleOptions.find((r) => r.value === role)?.label
+                                            ) : (
+                                                <span className="text-muted-foreground">Select a role</span>
+                                            )}
+                                        </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white">
+                                        <SelectGroup>
+                                            {roleOptions.map((option) => (
+                                                <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                                                    {option.label}
+                                                    {option.hint && (
+                                                        <span className="ml-2 text-[11px] text-muted-foreground">
+                                                            {option.hint}
+                                                        </span>
+                                                    )}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </FloatingField>
+                        )}
                     </div>
 
                     <div className="flex flex-col gap-5 rounded-[8px] bg-[#F4F4F4] p-4">

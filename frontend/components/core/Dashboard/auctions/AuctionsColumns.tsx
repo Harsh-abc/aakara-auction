@@ -1,12 +1,19 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpDown, Eye, Loader2, MoreVertical, Pencil, Trash2, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import type { Auction, AuctionStatus } from "@/lib/types/auction.types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button"; // shadcn wrapper, NOT "@base-ui/react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import AuctionStatusControl from "./AuctionStatusControl";
 
@@ -18,6 +25,8 @@ export interface AuctionTableMeta {
     onEdit?: (auction: Auction) => void;
     onView?: (auction: Auction) => void;
     onDelete?: (auction: Auction) => void;
+    /** Shown in the row menu only when set (super admin / admin) */
+    onRegistrations?: (auction: Auction) => void;
     deletingUuid?: string | null;
 }
 
@@ -64,6 +73,11 @@ const TYPE_LABEL: Record<Auction["auctionType"], string> = {
 };
 
 const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+
+/** Why a menu action is disabled, shown at the item's right edge */
+const MenuHint = ({ children }: { children: string }) => (
+    <span className="ml-auto pl-2 text-[10px] text-slate-400">{children}</span>
+);
 
 const SortHeader = ({ label, onClick }: { label: string; onClick: () => void }) => (
     <button
@@ -232,7 +246,7 @@ export const columns: ColumnDef<Auction>[] = [
     // },
     {
         id: "actions",
-        size: 110,
+        size: 70,
         header: "Actions",
         enableSorting: false,
         enableGlobalFilter: false,
@@ -241,51 +255,61 @@ export const columns: ColumnDef<Auction>[] = [
             const meta = table.options.meta as AuctionTableMeta | undefined;
             const canDelete = auction.status === "DRAFT";
             const canEdit = auction.status === "DRAFT" || auction.status === "SCHEDULED";
+            const deleting = meta?.deletingUuid === auction.uuid;
 
             return (
-                <div className="flex items-center gap-1">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        title={canEdit ? "Edit" : "Only draft or scheduled auctions can be edited"}
-                        aria-label="Edit auction"
-                        disabled={!canEdit}
-                        onClick={() => meta?.onEdit?.(auction)}
+                <DropdownMenu>
+                    <DropdownMenuTrigger
+                        render={
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-slate-900 data-popup-open:bg-slate-100"
+                                aria-label={`Actions for ${auction.title}`}
+                            />
+                        }
                     >
-                        <Pencil className="h-3.5 w-3.5" />
-                    </Button>
+                        {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                    </DropdownMenuTrigger>
 
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        title="View"
-                        aria-label="View auction"
-                        onClick={() => meta?.onView?.(auction)}
-                    >
-                        <Eye className="h-3.5 w-3.5" />
-                    </Button>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem className="py-2 text-[13px]" onClick={() => meta?.onView?.(auction)}>
+                            <Eye />
+                            View lots
+                        </DropdownMenuItem>
 
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-red-500 hover:text-red-600"
-                        title={canDelete ? "Delete" : "Only draft auctions can be deleted"}
-                        aria-label="Delete auction"
-                        disabled={!canDelete || meta?.deletingUuid === auction.uuid}
-                        onClick={() => meta?.onDelete?.(auction)}
-                    >
-                        {meta?.deletingUuid === auction.uuid ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
+                        {meta?.onRegistrations && (
+                            <DropdownMenuItem className="py-2 text-[13px]" onClick={() => meta.onRegistrations?.(auction)}>
+                                <Users />
+                                Registrations
+                            </DropdownMenuItem>
                         )}
-                    </Button>
-                </div>
+
+                        <DropdownMenuItem
+                            className="py-2 text-[13px]"
+                            disabled={!canEdit}
+                            onClick={() => meta?.onEdit?.(auction)}
+                        >
+                            <Pencil />
+                            Edit auction
+                            {!canEdit && <MenuHint>Draft / scheduled only</MenuHint>}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                            variant="destructive"
+                            className="py-2 text-[13px]"
+                            disabled={!canDelete || deleting}
+                            onClick={() => meta?.onDelete?.(auction)}
+                        >
+                            <Trash2 />
+                            Delete auction
+                            {!canDelete && <MenuHint>Draft only</MenuHint>}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             );
         },
     },

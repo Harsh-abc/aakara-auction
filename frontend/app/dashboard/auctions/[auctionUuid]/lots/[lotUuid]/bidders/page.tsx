@@ -15,20 +15,20 @@ import {
     RefreshCw,
     Search,
     ShieldAlert,
+    Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus";
-import { ROLE_LABELS, type RoleName } from "@/lib/constants/roles";
 import type { LotBidder, LotBidderFilter, LotSummary } from "@/lib/types/lotBidder.types";
 import { cn } from "@/lib/utils";
-import { addNewLotBidder, getLotBidders, getLotSummary, verifyLotBidders } from "@/services/operations/lotBidder.api";
-import AddUserDialog from "@/components/core/Dashboard/users/AddUserDialog";
+import { getLotBidders, getLotSummary, verifyLotBidders } from "@/services/operations/lotBidder.api";
+import { KycBadge, PaddleBadge } from "@/components/core/Dashboard/auctions/AddParticipantsDialog";
 
 const PAGE_SIZE = 20;
 
@@ -37,10 +37,8 @@ const EDITABLE_AUCTION_STATUSES = ["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAU
 
 const FILTERS: { value: LotBidderFilter; label: string }[] = [
     { value: "all", label: "All" },
-    { value: "unverified", label: "Not verified" },
+    { value: "pending", label: "Awaiting verification" },
     { value: "verified", label: "Verified" },
-    { value: "registered", label: "Registered for lot" },
-    { value: "created", label: "Added by admin" },
 ];
 
 // =====================================================================
@@ -89,7 +87,7 @@ export default function LotBiddersPage() {
     const dispatch = useAppDispatch();
 
     const isSuperAdmin = useAppSelector((state) => state.auth.role) === "SUPER_ADMIN";
-    const { lot, lotError, bidders, summary, pagination, loading, error, updatingUuids, addingBidder } = useAppSelector(
+    const { lot, lotError, bidders, summary, pagination, loading, error, updatingUuids } = useAppSelector(
         (state) => state.lotBidder
     );
 
@@ -150,8 +148,10 @@ export default function LotBiddersPage() {
     };
 
     const selectedBidders = bidders.filter((b) => selected.has(b.uuid));
-    const toVerify = selectedBidders.filter((b) => b.registration?.status !== "VERIFIED").map((b) => b.uuid);
-    const toUnverify = selectedBidders.filter((b) => b.registration?.status === "VERIFIED").map((b) => b.uuid);
+    const toVerify = selectedBidders
+        .filter((b) => b.registration.status !== "VERIFIED" && b.kycStatus === "VERIFIED")
+        .map((b) => b.uuid);
+    const toUnverify = selectedBidders.filter((b) => b.registration.status === "VERIFIED").map((b) => b.uuid);
 
     const allOnPageSelected = bidders.length > 0 && bidders.every((b) => selected.has(b.uuid));
 
@@ -195,38 +195,31 @@ export default function LotBiddersPage() {
                 <div>
                     <BackLink auctionUuid={auctionUuid} label={lot.auction.title} />
                     <h3 className="text-2xl font-bold">Lot Bidders</h3>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                        Everyone registered for the auction is registered for this lot.{" "}
                         {isSuperAdmin
-                            ? "Verify which users are allowed to bid on this lot."
-                            : "Users who can be verified to bid on this lot. Only a super admin can verify them."}
+                            ? "Verify which of them are allowed to bid on it."
+                            : "Only a super admin can verify them to bid."}
                     </p>
                 </div>
 
-                {/* New person: creates their account and verifies them for this lot */}
-                {canVerify && (
-                    <AddUserDialog
-                        triggerLabel="Add New Bidder"
-                        title="Add New Bidder"
-                        description={`Creates a login account for this person (KYC approved) and verifies them to bid on Lot ${lot.itemNumber}: ${lot.title}.`}
-                        submitLabel="Create & Add to Lot"
-                        successMessage="Bidder created and added to this lot"
-                        busy={addingBidder}
-                        onCreate={async (user) => {
-                            await dispatch(addNewLotBidder({ lotUuid, ...user })).unwrap();
-                            changeQuery({});
-                            load();
-                        }}
-                    />
-                )}
+                {/* Registration happens on the auction, not per lot */}
+                <Link
+                    href={`/dashboard/auctions/${auctionUuid}/registrations`}
+                    className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-2 px-4 text-[14px]")}
+                >
+                    <Users className="h-4 w-4" />
+                    Auction Registrations
+                </Link>
             </div>
 
             <LotSummaryCard lot={lot} />
 
             {/* Stats */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <StatCard label="Eligible users" value={summary?.eligible} />
-                <StatCard label="Verified for this lot" value={summary?.verified} tone="emerald" />
-                <StatCard label="Registrations awaiting verification" value={summary?.pendingRegistrations} tone="amber" />
+                <StatCard label="Registered for this lot" value={summary?.registered} />
+                <StatCard label="Verified to bid" value={summary?.verified} tone="emerald" />
+                <StatCard label="Awaiting verification" value={summary?.pending} tone="amber" />
             </div>
 
             {isSuperAdmin && !auctionOpen && (
@@ -244,7 +237,7 @@ export default function LotBiddersPage() {
                         <Input
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
-                            placeholder="Search name, username, email, phone"
+                            placeholder="Search paddle #, name, username, email, phone"
                             className="h-9 bg-white pl-9 text-sm"
                         />
                     </div>
@@ -314,7 +307,7 @@ export default function LotBiddersPage() {
                                     />
                                 </TableHead>
                             )}
-                            {["User", "Role", "Phone", "How they're listed", "Bidding on this lot", ...(canVerify ? [""] : [])].map(
+                            {["Paddle", "User", "KYC", "Phone", "Registered", "Bidding on this lot", ...(canVerify ? [""] : [])].map(
                                 (h, i) => (
                                     <TableHead key={i} className="h-9 px-3 text-[11px] font-medium whitespace-nowrap text-slate-700">
                                         {h}
@@ -327,17 +320,29 @@ export default function LotBiddersPage() {
                     <TableBody>
                         {loading && bidders.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-40 text-center text-sm text-slate-500">
+                                <TableCell colSpan={8} className="h-40 text-center text-sm text-slate-500">
                                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                                     Loading users...
                                 </TableCell>
                             </TableRow>
                         ) : bidders.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-40 text-center text-sm text-slate-500">
-                                    {search || filter !== "all"
-                                        ? "No users match your search."
-                                        : "No KYC-verified users yet. Users appear here once their KYC is approved."}
+                                <TableCell colSpan={8} className="h-40 text-center text-sm text-slate-500">
+                                    {search || filter !== "all" ? (
+                                        "No users match your search."
+                                    ) : (
+                                        <>
+                                            No one is registered for this lot yet. Users appear here once they register
+                                            for the auction —{" "}
+                                            <Link
+                                                href={`/dashboard/auctions/${auctionUuid}/registrations`}
+                                                className="text-[#833b61] underline-offset-2 hover:underline"
+                                            >
+                                                manage auction registrations
+                                            </Link>
+                                            .
+                                        </>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -500,7 +505,8 @@ const BidderRow = ({
     onVerify: (verified: boolean) => void;
 }) => {
     const reg = bidder.registration;
-    const isVerified = reg?.status === "VERIFIED";
+    const isVerified = reg.status === "VERIFIED";
+    const kycVerified = bidder.kycStatus === "VERIFIED";
     const initials = (bidder.name || bidder.username).slice(0, 2).toUpperCase();
 
     return (
@@ -514,6 +520,11 @@ const BidderRow = ({
                     />
                 </TableCell>
             )}
+
+            {/* Paddle */}
+            <TableCell className="px-3">
+                <PaddleBadge number={bidder.paddleNumber} />
+            </TableCell>
 
             {/* User */}
             <TableCell className="px-3">
@@ -535,28 +546,25 @@ const BidderRow = ({
                 </div>
             </TableCell>
 
-            {/* Role */}
-            <TableCell className="px-3 text-[12px] whitespace-nowrap text-slate-600">
-                {ROLE_LABELS[bidder.role as RoleName] ?? bidder.role}
+            {/* KYC — must be verified before they can be verified to bid */}
+            <TableCell className="px-3">
+                <KycBadge status={bidder.kycStatus} />
             </TableCell>
 
             {/* Phone */}
             <TableCell className="px-3 text-[12px] whitespace-nowrap text-slate-600">{bidder.phone || "—"}</TableCell>
 
-            {/* Source */}
-            <TableCell className="px-3">
-                <div className="flex flex-col items-start gap-1 text-[11px]">
-                    {reg?.source === "SELF_REGISTERED" && (
-                        <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
-                            Registered {formatDate(reg.registeredAt)}
-                        </span>
+            {/* How / when they registered for the auction */}
+            <TableCell className="px-3 text-[11px] whitespace-nowrap">
+                <span
+                    className={cn(
+                        "rounded px-2 py-0.5",
+                        reg.source === "SELF_REGISTERED" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"
                     )}
-                    {bidder.createdBy && (
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-600">
-                            Added by @{bidder.createdBy.username}
-                        </span>
-                    )}
-                </div>
+                >
+                    {reg.source === "SELF_REGISTERED" ? "Self" : "By admin"}
+                </span>
+                <p className="mt-1 text-slate-400">{formatDate(reg.registeredAt)}</p>
             </TableCell>
 
             {/* Bidding status */}
@@ -568,13 +576,13 @@ const BidderRow = ({
                             Verified
                         </Badge>
                         <p className="mt-1 text-slate-400">
-                            {reg?.verifiedBy ? `by @${reg.verifiedBy} · ` : ""}
-                            {formatDate(reg?.verifiedAt)}
+                            {reg.verifiedBy ? `by @${reg.verifiedBy} · ` : ""}
+                            {formatDate(reg.verifiedAt)}
                         </p>
                     </div>
                 ) : (
                     <Badge variant="outline" className="rounded-full text-[10px] font-medium text-slate-500">
-                        {reg ? "Awaiting verification" : "Not verified"}
+                        Awaiting verification
                     </Badge>
                 )}
             </TableCell>
@@ -589,7 +597,8 @@ const BidderRow = ({
                             "h-8 min-w-24 text-xs",
                             !isVerified && "bg-[#491B3A] text-white hover:bg-[#491B3A]/90"
                         )}
-                        disabled={busy}
+                        disabled={busy || (!isVerified && !kycVerified)}
+                        title={!isVerified && !kycVerified ? "KYC must be verified before they can bid" : undefined}
                         onClick={() => onVerify(!isVerified)}
                     >
                         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isVerified ? "Unverify" : "Verify"}

@@ -20,7 +20,7 @@ export const getLotBiddersQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().max(100).optional(),
-    filter: z.enum(["all", "verified", "unverified", "registered", "created"]).default("all"),
+    filter: z.enum(["all", "verified", "pending"]).default("all"),
 });
 
 export const verifyLotBiddersSchema = z.object({
@@ -29,6 +29,26 @@ export const verifyLotBiddersSchema = z.object({
         .min(1, "Select at least one user")
         .max(200, "You can update at most 200 users at a time"),
     verified: z.boolean({ message: "verified must be true or false" }),
+});
+
+export const auctionUuidParamSchema = z.object({
+    auctionUuid: z.uuid({ message: "Invalid auction id" }),
+});
+
+export const getAuctionParticipantsQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    search: z.string().trim().max(100).optional(),
+    filter: z.enum(["all", "awaiting", "self", "admin"]).default("all"),
+});
+
+export const participantCandidatesQuerySchema = z.object({
+    search: z.string().trim().max(100).optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+});
+
+export const participantUserUuidsSchema = z.object({
+    userUuids: verifyLotBiddersSchema.shape.userUuids,
 });
 
 export const getAuctionTimelineQuerySchema = z.object({

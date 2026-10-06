@@ -40,9 +40,16 @@ export default function Auctions() {
         dispatch(getAuctions());
     }, [dispatch]);
 
+    const role = useSelector((state: RootState) => state.auth.role);
+    // Admins can view registrations; only a super admin can change them (enforced by the API)
+    const canSeeRegistrations = role === "SUPER_ADMIN" || role === "ADMIN";
+
     const tableMeta: AuctionTableMeta = {
         onView: (auction) => router.push(`/dashboard/auctions/${auction.uuid}`),
         onEdit: (auction) => router.push(`/dashboard/auctions/${auction.uuid}/edit`),
+        onRegistrations: canSeeRegistrations
+            ? (auction) => router.push(`/dashboard/auctions/${auction.uuid}/registrations`)
+            : undefined,
         onDelete: (auction) => {
             dispatch(clearDeleteError());
             setPendingDelete(auction); // open confirm dialog

@@ -359,6 +359,12 @@ export interface DeleteAuctionResponse {
     data: { uuid: string; deletedLots: number };
 }
 
+export interface DeleteLotResponse {
+    success: boolean;
+    message: string;
+    data: { uuid: string; itemNumber: string; title: string; auctionUuid: string };
+}
+
 
 export type UpdateAuctionResponse = CreateAuctionResponse;
 

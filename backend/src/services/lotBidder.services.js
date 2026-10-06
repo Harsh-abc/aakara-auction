@@ -1,9 +1,12 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
-import { createUserByAdminService } from "./admin.services.js";
 
 // =====================================================================
-// Helpers
+// Lot bidders
+//
+// Users get a row on a lot only by registering for its auction (see
+// auctionParticipant.services.js). This page lists those rows and lets a
+// super admin verify / unverify them for this one lot.
 // =====================================================================
 
 const httpError = (message, statusCode = 400) => {
@@ -12,19 +15,14 @@ const httpError = (message, statusCode = 400) => {
     return error;
 };
 
-/** Roles that can register for a lot themselves. */
+/** Roles that can register for an auction (themselves, or be added by a super admin). */
 export const BIDDER_ROLES = ["BIDDER", "USER"];
 
-/** Users created by these roles are always listed on a lot's bidder page. */
-const CREATOR_ROLES = ["SUPER_ADMIN", "ADMIN"];
-
-const createdByAdminWhere = { createdBy: { role: { name: { in: CREATOR_ROLES } } } };
-
 /** Lot bidders can be verified / unverified until the auction is over. */
-const EDITABLE_AUCTION_STATUSES = ["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
+export const EDITABLE_AUCTION_STATUSES = ["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
 
-/** Users can register for lots only on published, unfinished auctions. */
-const REGISTRATION_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
+/** Users can register for auctions only once published and until they're over. */
+export const REGISTRATION_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
 
 const LOT_SUMMARY_SELECT = {
     id: true,
@@ -60,30 +58,25 @@ const findLot = async (lotUuid) => {
 };
 
 /**
- * Users who appear on a lot's bidder list — KYC must be VERIFIED, and:
- *   - any bidder / user account,
- *   - any user created by a super admin / admin (any role), or
- *   - a user who registered for this lot themselves
+ * Approves still-PENDING auction registrations (AuctionParticipant) — called
+ * when a super admin verifies users on a lot. `auctionWhere` filters the
+ * registration's auction, e.g. { auctionId } or { auction: { uuid } }.
+ * Unverifying a lot never undoes it; permission to bid stays per lot.
+ * (Registrations a super admin adds are approved when added.)
  */
-const eligibleUsersWhere = (itemId) => ({
-    deletedAt: null,
-    kyc: { is: { status: "VERIFIED" } },
-    OR: [
-        { role: { name: { in: BIDDER_ROLES } } },
-        createdByAdminWhere,
-        { lotBidders: { some: { itemId } } },
-    ],
-});
+export const approveRegistrations = (tx, auctionWhere, userIds, actorId) =>
+    tx.auctionParticipant.updateMany({
+        where: { ...auctionWhere, userId: { in: userIds }, status: "PENDING" },
+        data: { status: "APPROVED", approvedAt: new Date(), approvedBy: BigInt(actorId) },
+    });
 
 const FILTERS = {
-    all: () => ({}),
-    verified: (itemId) => ({ lotBidders: { some: { itemId, status: "VERIFIED" } } }),
-    unverified: (itemId) => ({ NOT: { lotBidders: { some: { itemId, status: "VERIFIED" } } } }),
-    registered: (itemId) => ({ lotBidders: { some: { itemId, source: "SELF_REGISTERED" } } }),
-    created: () => createdByAdminWhere,
+    all: {},
+    verified: { status: "VERIFIED" },
+    pending: { status: "PENDING" },
 };
 
-const searchWhere = (search) =>
+export const searchWhere = (search) =>
     search
         ? {
             OR: [
@@ -115,75 +108,82 @@ export const getLotSummaryService = async ({ lotUuid }) => {
 };
 
 // =====================================================================
-// GET LOT BIDDERS
+// GET LOT BIDDERS — users registered for this lot via its auction
 // =====================================================================
 
 export const getLotBiddersService = async ({ lotUuid, page, limit, search, filter }) => {
     const lot = await findLot(lotUuid);
     const itemId = lot.id;
 
-    const eligible = eligibleUsersWhere(itemId);
-    const where = { AND: [eligible, FILTERS[filter](itemId), searchWhere(search)] };
+    // the user's registration for this lot's auction (holds the paddle number)
+    const thisAuction = { auction: { uuid: lot.auction.uuid } };
+
+    const base = { itemId, user: { deletedAt: null } };
+    const where = {
+        AND: [
+            base,
+            FILTERS[filter],
+            // paddle number (exact) or name / username / email / phone
+            search
+                ? {
+                    OR: [
+                        { user: { auctionParticipations: { some: { ...thisAuction, paddleNumber: search } } } },
+                        { user: searchWhere(search) },
+                    ],
+                }
+                : {},
+        ],
+    };
 
     // Independent reads — Promise.all (not $transaction) so they don't share one pg client
-    const [total, users, eligibleCount, verifiedCount, pendingRegistrations] = await Promise.all([
-        prisma.user.count({ where }),
-        prisma.user.findMany({
+    const [total, rows, registeredCount, verifiedCount, pendingCount] = await Promise.all([
+        prisma.lotBidder.count({ where }),
+        prisma.lotBidder.findMany({
             where,
             select: {
-                uuid: true,
-                username: true,
-                email: true,
-                phone: true,
-                createdAt: true,
-                role: { select: { name: true } },
-                profile: { select: { firstName: true, lastName: true, displayName: true, avatarUrl: true } },
-                kyc: { select: { status: true } },
-                createdBy: { select: { username: true, role: { select: { name: true } } } },
-                lotBidders: {
-                    where: { itemId },
+                source: true,
+                status: true,
+                registeredAt: true,
+                verifiedAt: true,
+                verifier: { select: { username: true } },
+                user: {
                     select: {
-                        source: true,
-                        status: true,
-                        registeredAt: true,
-                        verifiedAt: true,
-                        verifier: { select: { username: true } },
+                        uuid: true,
+                        username: true,
+                        email: true,
+                        phone: true,
+                        createdAt: true,
+                        role: { select: { name: true } },
+                        profile: { select: { firstName: true, lastName: true, displayName: true, avatarUrl: true } },
+                        kyc: { select: { status: true } },
+                        auctionParticipations: { where: thisAuction, select: { paddleNumber: true } },
                     },
                 },
             },
-            orderBy: { createdAt: "desc" },
+            orderBy: { registeredAt: "desc" },
             skip: (page - 1) * limit,
             take: limit,
         }),
-        prisma.user.count({ where: eligible }),
-        prisma.user.count({ where: { AND: [eligible, FILTERS.verified(itemId)] } }),
-        // registrations from users whose KYC is verified (the only ones listed)
-        prisma.lotBidder.count({
-            where: { itemId, source: "SELF_REGISTERED", status: "PENDING", user: eligible },
-        }),
+        prisma.lotBidder.count({ where: base }),
+        prisma.lotBidder.count({ where: { ...base, status: "VERIFIED" } }),
+        prisma.lotBidder.count({ where: { ...base, status: "PENDING" } }),
     ]);
 
     return serializeBigInt({
-        bidders: users.map(({ profile, kyc, createdBy, lotBidders, role, ...user }) => {
+        bidders: rows.map(({ user: { profile, kyc, role, auctionParticipations, ...user }, verifier, ...registration }) => {
             const name = [profile?.firstName, profile?.lastName].filter(Boolean).join(" ");
-            const registration = lotBidders[0] ?? null;
             return {
                 ...user,
+                // null only for legacy rows without an auction registration
+                paddleNumber: auctionParticipations[0]?.paddleNumber ?? null,
                 name: profile?.displayName || name || null,
                 avatarUrl: profile?.avatarUrl ?? null,
                 role: role.name,
                 kycStatus: kyc?.status ?? "NOT_SUBMITTED",
-                createdBy: createdBy ? { username: createdBy.username, role: createdBy.role.name } : null,
-                registration: registration && {
-                    source: registration.source,
-                    status: registration.status,
-                    registeredAt: registration.registeredAt,
-                    verifiedAt: registration.verifiedAt,
-                    verifiedBy: registration.verifier?.username ?? null,
-                },
+                registration: { ...registration, verifiedBy: verifier?.username ?? null },
             };
         }),
-        summary: { eligible: eligibleCount, verified: verifiedCount, pendingRegistrations },
+        summary: { registered: registeredCount, verified: verifiedCount, pending: pendingCount },
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
 };
@@ -200,124 +200,45 @@ export const setLotBiddersVerifiedService = async ({ lotUuid, userUuids, verifie
         throw httpError(`Bidders can't be changed once the auction is ${lot.auction.status}`, 409);
     }
 
+    const itemId = lot.id;
     const uniqueUuids = [...new Set(userUuids)];
-    // Eligibility includes KYC VERIFIED, so unverified-KYC users are rejected here
+
+    // Only users registered for this lot (through the auction) can be verified on it
     const users = await prisma.user.findMany({
-        where: { uuid: { in: uniqueUuids }, ...eligibleUsersWhere(lot.id) },
-        select: { id: true },
+        where: { uuid: { in: uniqueUuids }, deletedAt: null, lotBidders: { some: { itemId } } },
+        select: { id: true, kyc: { select: { status: true } } },
     });
     if (users.length !== uniqueUuids.length) {
         const count = uniqueUuids.length - users.length;
         throw httpError(
-            `${count} selected user${count === 1 ? " is" : "s are"} not eligible to bid on this lot (KYC must be verified)`
+            `${count} selected user${count === 1 ? " is" : "s are"} not registered for this lot. Register them for the auction first.`
         );
     }
 
-    const itemId = lot.id;
+    if (verified) {
+        const noKyc = users.filter((u) => u.kyc?.status !== "VERIFIED").length;
+        if (noKyc > 0) {
+            throw httpError(
+                `${noKyc} selected user${noKyc === 1 ? "" : "s"} can't be verified until their KYC is verified`
+            );
+        }
+    }
+
     const userIds = users.map((u) => u.id);
 
     const changed = await prisma.$transaction(
         async (tx) => {
-            if (!verified) {
-                const { count } = await tx.lotBidder.updateMany({
-                    where: { itemId, userId: { in: userIds }, status: "VERIFIED" },
-                    data: { status: "PENDING", verifiedAt: null, verifiedBy: null },
-                });
-                return count;
-            }
-
-            const verifiedData = { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: BigInt(actorId) };
-
-            // Registered users: approve their pending registration
-            const { count: approved } = await tx.lotBidder.updateMany({
-                where: { itemId, userId: { in: userIds }, status: "PENDING" },
-                data: verifiedData,
+            const { count } = await tx.lotBidder.updateMany({
+                where: { itemId, userId: { in: userIds }, status: verified ? "PENDING" : "VERIFIED" },
+                data: verified
+                    ? { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: BigInt(actorId) }
+                    : { status: "PENDING", verifiedAt: null, verifiedBy: null },
             });
-
-            // Dashboard-created users with no row yet: add them as verified
-            const existing = await tx.lotBidder.findMany({
-                where: { itemId, userId: { in: userIds } },
-                select: { userId: true },
-            });
-            const hasRow = new Set(existing.map((row) => row.userId));
-            const { count: added } = await tx.lotBidder.createMany({
-                data: userIds
-                    .filter((userId) => !hasRow.has(userId))
-                    .map((userId) => ({ itemId, userId, source: "ADDED_BY_ADMIN", ...verifiedData })),
-                skipDuplicates: true,
-            });
-
-            return approved + added;
+            if (verified) await approveRegistrations(tx, { auction: { uuid: lot.auction.uuid } }, userIds, actorId);
+            return count;
         },
         { maxWait: 10_000, timeout: 30_000 }
     );
 
     return { lotUuid, verified, requested: uniqueUuids.length, changed };
-};
-
-// =====================================================================
-// ADD A NEW USER TO A LOT (SUPER_ADMIN)
-// Creates the account exactly like "Add User" (BIDDER, KYC verified,
-// createdBy = actor) and adds them to the lot as a verified bidder, in
-// one transaction.
-// =====================================================================
-
-export const addNewUserToLotService = async ({ lotUuid, user, actorId }) => {
-    if (!actorId) throw httpError("Authenticated user is required", 401);
-
-    const lot = await findLot(lotUuid);
-    if (!EDITABLE_AUCTION_STATUSES.includes(lot.auction.status)) {
-        throw httpError(`Bidders can't be added once the auction is ${lot.auction.status}`, 409);
-    }
-
-    try {
-        const created = await createUserByAdminService(user, actorId, {
-            afterCreate: (tx, newUser) =>
-                tx.lotBidder.create({
-                    data: {
-                        itemId: lot.id,
-                        userId: newUser.id,
-                        source: "ADDED_BY_ADMIN",
-                        status: "VERIFIED",
-                        verifiedAt: new Date(),
-                        verifiedBy: BigInt(actorId),
-                    },
-                }),
-        });
-
-        return serializeBigInt({ lotUuid, user: created });
-    } catch (error) {
-        // Existing account: point the admin at the list instead
-        if (error.statusCode === 409) {
-            error.message = `${error.message}. If they already have an account, find them in the list and click Verify.`;
-        }
-        throw error;
-    }
-};
-
-// =====================================================================
-// REGISTER FOR A LOT (bidder self-registration)
-// =====================================================================
-
-export const registerForLotService = async ({ lotUuid, userId, role }) => {
-    if (!userId) throw httpError("Authenticated user is required", 401);
-    if (!BIDDER_ROLES.includes(role)) throw httpError("Only bidder accounts can register for lots", 403);
-
-    const lot = await findLot(lotUuid);
-    if (!REGISTRATION_AUCTION_STATUSES.includes(lot.auction.status)) {
-        throw httpError("Registration isn't open for this auction", 409);
-    }
-    if (lot.scheduledEndAt <= new Date()) {
-        throw httpError("Bidding on this lot has already closed", 409);
-    }
-
-    // Idempotent: registering twice keeps the first registration
-    const registration = await prisma.lotBidder.upsert({
-        where: { itemId_userId: { itemId: lot.id, userId: BigInt(userId) } },
-        create: { itemId: lot.id, userId: BigInt(userId), source: "SELF_REGISTERED" },
-        update: {},
-        select: { uuid: true, status: true, registeredAt: true, verifiedAt: true },
-    });
-
-    return serializeBigInt({ lotUuid, ...registration });
 };

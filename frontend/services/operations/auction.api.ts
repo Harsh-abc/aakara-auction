@@ -8,6 +8,7 @@ import {
     ChangeAuctionStatusResponse,
     CreateAuctionResponse,
     DeleteAuctionResponse,
+    DeleteLotResponse,
     GetAuctionLotsResponse,
     GetAuctionsLotsParams,
     GetAuctionsParams,
@@ -146,6 +147,26 @@ export const deleteAuction = createAsyncThunk<DeleteAuctionResponse, { auctionUu
 
 
 
+
+// Delete one lot — auction must be draft / scheduled and the lot have no bids
+export const deleteLot = createAsyncThunk<DeleteLotResponse, { lotUuid: string }, ThunkConfig>(
+    "auction/deleteLot",
+    async ({ lotUuid }, { getState, rejectWithValue }) => {
+        const token = getState().auth.accessToken;
+        if (!token) return rejectWithValue("Authentication token not found");
+
+        try {
+            const response = await apiConnector<DeleteLotResponse>({
+                method: "DELETE",
+                url: auctionEndPoints.DELETE_LOT_API(lotUuid),
+                header: authHeader(token),
+            });
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(toErrorMessage(error, "Failed to delete lot"));
+        }
+    }
+);
 
 export const updateAuction = createAsyncThunk<UpdateAuctionResponse, UpdateAuctionParams, ThunkConfig>(
     "auction/updateAuction",

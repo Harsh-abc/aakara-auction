@@ -1,11 +1,11 @@
 import type { AuctionStatus, LotStatus } from "./auction.types";
-import type { CreateUserPayload, Pagination } from "./user.types";
+import type { Pagination } from "./user.types";
 
 export type LotBidderStatus = "PENDING" | "VERIFIED";
 export type LotBidderSource = "SELF_REGISTERED" | "ADDED_BY_ADMIN";
 
 /** Must match FILTERS in backend/src/services/lotBidder.services.js */
-export type LotBidderFilter = "all" | "verified" | "unverified" | "registered" | "created";
+export type LotBidderFilter = "all" | "verified" | "pending";
 
 export interface LotSummary {
     uuid: string;
@@ -35,18 +35,17 @@ export interface LotBidder {
     avatarUrl: string | null;
     role: string;
     kycStatus: string;
+    /** Their paddle for this lot's auction — null only for legacy rows without an auction registration */
+    paddleNumber: string | null;
 
-    /** Set when the user was created from the dashboard */
-    createdBy: { username: string; role: string } | null;
-
-    /** The user's row for THIS lot — null until they register or get verified */
+    /** The user's row for THIS lot — created when they registered for the auction */
     registration: {
         source: LotBidderSource;
         status: LotBidderStatus;
         registeredAt: string;
         verifiedAt: string | null;
         verifiedBy: string | null;
-    } | null;
+    };
 }
 
 export interface GetLotBiddersParams {
@@ -68,7 +67,7 @@ export interface GetLotBiddersResponse {
     message: string;
     data: {
         bidders: LotBidder[];
-        summary: { eligible: number; verified: number; pendingRegistrations: number };
+        summary: { registered: number; verified: number; pending: number };
         pagination: Pagination;
     };
 }
@@ -77,17 +76,6 @@ export interface VerifyLotBiddersParams {
     lotUuid: string;
     userUuids: string[];
     verified: boolean;
-}
-
-/** Same fields as "Add User" — the account is created and added to the lot */
-export interface AddNewLotBidderParams extends CreateUserPayload {
-    lotUuid: string;
-}
-
-export interface AddNewLotBidderResponse {
-    success: boolean;
-    message: string;
-    data: { lotUuid: string; user: { uuid: string; username: string; email: string } };
 }
 
 export interface VerifyLotBiddersResponse {

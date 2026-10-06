@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 
 import AuctionsForm, { AuctionSubmitStatus } from "@/components/core/Dashboard/auctions/AuctionsForm";
@@ -25,6 +25,8 @@ const EDITABLE_STATUSES: AuctionStatus[] = ["DRAFT", "SCHEDULED"];
 
 export default function EditAuction() {
     const { auctionUuid } = useParams<{ auctionUuid: string }>();
+    // ?lot=<uuid> (from "Edit lot") opens the wizard straight on that lot
+    const lotUuid = useSearchParams().get("lot") ?? undefined;
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
 
@@ -92,7 +94,8 @@ export default function EditAuction() {
     const handleSubmit = async (data: AuctionFormData, submitStatus: AuctionSubmitStatus) => {
         const formData = buildAuctionFormData(data, submitStatus, { isEdit: true });
         await dispatch(updateAuction({ auctionUuid, formData })).unwrap();
-        router.push("/dashboard/auctions");
+        // "Edit lot" from the auction page -> back to that page
+        router.push(lotUuid ? `/dashboard/auctions/${auctionUuid}` : "/dashboard/auctions");
     };
 
     // ---------------- states ----------------
@@ -145,6 +148,7 @@ export default function EditAuction() {
             saveLabel={isDraft ? "Save Draft" : "Save Changes"}
             saveStatus={isDraft ? "DRAFT" : "SCHEDULED"}
             publishLabel={isDraft ? "Publish" : "Save Changes"}
+            initialLotUuid={lotUuid}
         />
     );
 }

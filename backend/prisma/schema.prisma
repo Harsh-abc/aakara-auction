@@ -274,6 +274,8 @@ model Auction {
   registrationRequired Boolean                @default(true)
   registrationStarts   DateTime?
   registrationDeadline DateTime?
+  /// Paddle numbers issued so far — bumped (row-locked) for each new registration
+  paddleCounter        Int                    @default(0)
   timezone             String                 @default("Asia/Kolkata")
   currencyId           BigInt
   currency             Currency               @relation(fields: [currencyId], references: [id])
@@ -534,11 +536,17 @@ model AuctionRule {
   @@map("auction_rules")
 }
 
+/// Auction registration. Created when a bidder registers for the auction
+/// (SELF_REGISTERED) or a super admin adds them (ADDED_BY_ADMIN); either way
+/// the user gets a PENDING LotBidder row on every open lot of the auction.
+/// Permission to bid is approved per lot on LotBidder, not here.
+/// Each registration gets a paddle number unique within its auction (never reused).
 model AuctionParticipant {
   id              BigInt            @id @default(autoincrement())
   auctionId       BigInt
   userId          BigInt
-  paddleNumber    String?
+  source          LotBidderSource   @default(SELF_REGISTERED)
+  paddleNumber    String
   status          ParticipantStatus @default(PENDING)
   registeredAt    DateTime          @default(now())
   approvedAt      DateTime?
@@ -554,15 +562,17 @@ model AuctionParticipant {
   user            User              @relation(fields: [userId], references: [id])
 
   @@unique([auctionId, userId])
+  @@unique([auctionId, paddleNumber])
   @@index([auctionId])
   @@index([userId])
   @@index([status])
   @@map("auction_participants")
 }
 
-/// Who may bid on a lot. A row exists once a user registers for the lot
-/// (SELF_REGISTERED) or a super admin verifies a dashboard-created user
-/// (ADDED_BY_ADMIN). Only VERIFIED rows are allowed to bid.
+/// Who may bid on a lot. A row exists once a user registers for the lot or
+/// its auction (SELF_REGISTERED), or a super admin adds them to the auction
+/// or verifies a dashboard-created user (ADDED_BY_ADMIN). Only VERIFIED rows
+/// are allowed to bid.
 model LotBidder {
   id           BigInt          @id @default(autoincrement())
   uuid         String          @unique @default(uuid()) @db.Uuid

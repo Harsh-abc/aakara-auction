@@ -1,13 +1,10 @@
 import { ZodError } from "zod";
 
 import {
-    addNewUserToLotService,
     getLotBiddersService,
     getLotSummaryService,
-    registerForLotService,
     setLotBiddersVerifiedService,
 } from "../services/lotBidder.services.js";
-import { createUserSchema } from "../validations/user.validation.js";
 import {
     getLotBiddersQuerySchema,
     lotUuidParamSchema,
@@ -51,7 +48,7 @@ export const getLotSummary = async (req, res) => {
 
 // -----------------------------------------------------------------
 // GET /api/auction/lots/:lotUuid/bidders?page&limit&search&filter
-// Users who can be verified to bid on the lot
+// Users registered for the lot (via its auction)
 // -----------------------------------------------------------------
 
 export const getLotBidders = async (req, res) => {
@@ -96,55 +93,5 @@ export const verifyLotBidders = async (req, res) => {
         });
     } catch (error) {
         return handleError(res, error, "Verify lot bidders", "Failed to update lot bidders");
-    }
-};
-
-// -----------------------------------------------------------------
-// POST /api/auction/lots/:lotUuid/bidders   (SUPER_ADMIN)
-// Body: same as create-user { fullName, email, phone, password }
-// Creates the account and adds it to the lot as a verified bidder
-// -----------------------------------------------------------------
-
-export const addNewUserToLot = async (req, res) => {
-    try {
-        const { lotUuid } = lotUuidParamSchema.parse(req.params);
-        const user = createUserSchema.parse(req.body);
-
-        const result = await addNewUserToLotService({ lotUuid, user, actorId: req.user.userId });
-
-        return res.status(201).json({
-            success: true,
-            message: `${user.fullName} was created and verified to bid on this lot`,
-            data: result,
-        });
-    } catch (error) {
-        return handleError(res, error, "Add new user to lot", "Failed to add user to lot");
-    }
-};
-
-// -----------------------------------------------------------------
-// POST /api/auction/lots/:lotUuid/register   (BIDDER / USER)
-// -----------------------------------------------------------------
-
-export const registerForLot = async (req, res) => {
-    try {
-        const { lotUuid } = lotUuidParamSchema.parse(req.params);
-
-        const registration = await registerForLotService({
-            lotUuid,
-            userId: req.user.userId,
-            role: req.user.role,
-        });
-
-        return res.status(200).json({
-            success: true,
-            message:
-                registration.status === "VERIFIED"
-                    ? "You're verified to bid on this lot"
-                    : "Registered. You can bid once an admin verifies you.",
-            data: registration,
-        });
-    } catch (error) {
-        return handleError(res, error, "Register for lot", "Failed to register for lot");
     }
 };

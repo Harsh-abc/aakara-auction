@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { changeRoleSchema } from './role.validation.js';
 
 export const getAllUsersSchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -78,4 +79,9 @@ export const createUserSchema = z.object({
         .string()
         .min(8, "Password must be at least 8 characters")
         .max(72, "Password too long"),
+});
+
+// Super admin "Add User" from Settings → Team: same fields plus the role to give them
+export const createUserWithRoleSchema = createUserSchema.extend({
+    roleName: changeRoleSchema.shape.roleName.default("BIDDER"),
 });
