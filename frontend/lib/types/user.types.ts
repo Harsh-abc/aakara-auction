@@ -17,13 +17,35 @@ export interface UserProfile {
     updatedAt: string;
 }
 
+export type KycDocumentStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface UserKycDocument {
+    id: string;
+    documentType: DocumentType;
+    fileName: string;
+    fileUrl: string;
+    mimeType: string;
+    fileSize: string;
+    status: KycDocumentStatus;
+    rejectionReason: string | null;
+    verifiedAt: string | null;
+    createdAt: string;
+}
+
 export interface UserKyc {
-    kycType: string;
+    kycType: KycType;
     status: string;
     submittedAt: string | null;
     verifiedAt: string | null;
     rejectedAt: string | null;
     rejectionReason: string | null;
+    // the rest only come on GET /users/:uuid
+    // documents staff asked the user for; each drops off once uploaded
+    requestedDocuments?: DocumentType[];
+    requestNote?: string | null;
+    requestedAt?: string | null;
+    // newest document of each type; every "OTHERS" document
+    documents?: UserKycDocument[];
 }
 
 export interface User {
@@ -114,6 +136,41 @@ export interface UploadUserKycResponse {
         kycType: KycType;
         status: string;
         documentsUploaded: number;
+    };
+}
+
+export interface KycDocumentReview {
+    documentId: string;
+    action: "APPROVE" | "REJECT";
+    reason?: string;
+}
+
+export interface ReviewUserKycPayload {
+    uuid: string;
+    reviews: KycDocumentReview[];
+}
+
+export interface ReviewUserKycResponse {
+    success: boolean;
+    message: string;
+    data: {
+        kycStatus: string;
+        user: User;
+    };
+}
+
+export interface RequestKycDocumentsPayload {
+    uuid: string;
+    documentTypes: DocumentType[];
+    note?: string;
+}
+
+export interface RequestKycDocumentsResponse {
+    success: boolean;
+    message: string;
+    data: {
+        emailSent: boolean;
+        user: User;
     };
 }
 

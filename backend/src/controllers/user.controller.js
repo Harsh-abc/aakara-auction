@@ -1,5 +1,6 @@
-import { getAllUsersService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService } from '../services/user.services.js';
-import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema } from '../validations/user.validation.js';
+import { getAllUsersService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService, getMyRegistrationsService, changeMyPasswordService, getMyKycService, submitMyKycService, reviewUserKycService, requestKycDocumentsService } from '../services/user.services.js';
+import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema, changePasswordSchema, submitMyKycSchema, reviewKycSchema, requestKycDocumentsSchema } from '../validations/user.validation.js';
+import { REFRESH_COOKIE_NAME } from './auth.controller.js';
 
 
 
@@ -116,6 +117,138 @@ export const updateMyProfile = async (req, res) => {
             success: true,
             message: 'Profile updated successfully',
             data: profile,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const getMyRegistrations = async (req, res) => {
+    try {
+        const registrations = await getMyRegistrationsService({ userId: BigInt(req.user.userId) });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Registrations fetched successfully',
+            data: registrations,
+        });
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const changeMyPassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = changePasswordSchema.parse(req.body ?? {});
+
+        await changeMyPasswordService({
+            userId: BigInt(req.user.userId),
+            currentPassword,
+            newPassword,
+            currentRefreshToken: req.cookies?.[REFRESH_COOKIE_NAME],
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password updated successfully',
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+export const getMyKyc = async (req, res) => {
+    try {
+        const kyc = await getMyKycService({ userId: BigInt(req.user.userId) });
+
+        return res.status(200).json({
+            success: true,
+            message: 'KYC fetched successfully',
+            data: kyc,
+        });
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const submitMyKyc = async (req, res) => {
+    try {
+        const { kycType, documents } = submitMyKycSchema.parse(req.body ?? {});
+
+        const kyc = await submitMyKycService({
+            userId: BigInt(req.user.userId),
+            kycType,
+            documents,
+            files: req.files ?? [],
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Documents submitted for verification',
+            data: kyc,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const reviewUserKyc = async (req, res) => {
+    try {
+        const { uuid } = getUserByIdSchema.parse(req.params);
+        const { reviews } = reviewKycSchema.parse(req.body ?? {});
+
+        const result = await reviewUserKycService({ uuid, reviews, adminId: BigInt(req.user.userId) });
+
+        return res.status(200).json({
+            success: true,
+            message: result.kycStatus === 'VERIFIED' ? 'KYC verified' : 'Review saved',
+            data: result,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const requestKycDocuments = async (req, res) => {
+    try {
+        const { uuid } = getUserByIdSchema.parse(req.params);
+        const { documentTypes, note } = requestKycDocumentsSchema.parse(req.body ?? {});
+
+        const result = await requestKycDocumentsService({ uuid, documentTypes, note, adminId: BigInt(req.user.userId) });
+
+        return res.status(200).json({
+            success: true,
+            message: result.emailSent
+                ? 'Request sent to the user'
+                : 'Request saved, but the email could not be sent. The user will still see it on their profile.',
+            data: result,
         });
     } catch (err) {
         if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }

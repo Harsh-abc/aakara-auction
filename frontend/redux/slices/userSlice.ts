@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { changeUserRole, createUser, getAllUsers, getUserById, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -13,6 +13,10 @@ interface UserState {
 
     kycUploading: boolean;
     kycUploadError: string | null;
+
+    // ids of the KYC documents whose review is being saved
+    reviewingDocumentIds: string[];
+    requestingKycDocuments: boolean;
 
     creatingUser: boolean;
     createUserError: string | null;
@@ -32,6 +36,9 @@ const initialState: UserState = {
 
     kycUploading: false,
     kycUploadError: null,
+
+    reviewingDocumentIds: [],
+    requestingKycDocuments: false,
 
     creatingUser: false,
     createUserError: null,
@@ -83,6 +90,38 @@ const userSlice = createSlice({
             .addCase(uploadUserKyc.rejected, (state, action) => {
                 state.kycUploading = false;
                 state.kycUploadError = action.payload || "Something went wrong";
+            })
+
+            .addCase(reviewUserKyc.pending, (state, action) => {
+                state.reviewingDocumentIds = action.meta.arg.reviews.map((r) => r.documentId);
+            })
+            .addCase(reviewUserKyc.fulfilled, (state, action) => {
+                state.reviewingDocumentIds = [];
+                const updated = action.payload.data.user;
+                if (state.selectedUser?.uuid === updated.uuid) state.selectedUser = updated;
+                // keep the users table's KYC / role columns in step without refetching it
+                const row = state.users.find((u) => u.uuid === updated.uuid);
+                if (row) {
+                    row.kyc = updated.kyc;
+                    row.role = updated.role;
+                }
+            })
+            .addCase(reviewUserKyc.rejected, (state) => {
+                state.reviewingDocumentIds = [];
+            })
+
+            .addCase(requestKycDocuments.pending, (state) => {
+                state.requestingKycDocuments = true;
+            })
+            .addCase(requestKycDocuments.fulfilled, (state, action) => {
+                state.requestingKycDocuments = false;
+                const updated = action.payload.data.user;
+                if (state.selectedUser?.uuid === updated.uuid) state.selectedUser = updated;
+                const row = state.users.find((u) => u.uuid === updated.uuid);
+                if (row) row.kyc = updated.kyc;
+            })
+            .addCase(requestKycDocuments.rejected, (state) => {
+                state.requestingKycDocuments = false;
             })
 
             .addCase(createUser.pending, (state) => {

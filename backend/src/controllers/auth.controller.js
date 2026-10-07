@@ -36,7 +36,7 @@ export const verifyOtp = async (req, res, next) => {
 
 
 
-const REFRESH_COOKIE_NAME = 'aakara_refresh';
+export const REFRESH_COOKIE_NAME = 'aakara_refresh';
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days, matches REFRESH_TOKEN_TTL_SECONDS
 
 const normalizeIp = (ip) => {

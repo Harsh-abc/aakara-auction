@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { sendSignupOtp } from "@/services/operations/auth.api"
 import type { SignupPayload } from "@/lib/types/auth.types"
 import { cn } from "@/lib/utils"
+import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from "@/lib/constants/countryCodes"
 import {
     AuthField,
     AuthFieldError,
@@ -17,12 +18,6 @@ import {
     authLabelClass,
 } from "./AuthField"
 import { RegistrationOtpStep } from "./RegistrationOtpStep"
-
-const countryCodes = [
-    { label: "India", value: "+91" },
-    { label: "United States", value: "+1" },
-    { label: "United Kingdom", value: "+44" },
-]
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -115,7 +110,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
     const dispatch = useAppDispatch()
     const { loading } = useAppSelector((state) => state.auth)
 
-    const [countryCode, setCountryCode] = useState("+91")
+    const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE)
     const [formData, setFormData] = useState(initialFormData)
     const [errors, setErrors] = useState<FieldErrors>({})
 
@@ -266,7 +261,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                             errors.phone && authInputErrorClass
                         )}
                     >
-                        {countryCodes.map((item) => (
+                        {COUNTRY_CODES.map((item) => (
                             <option key={item.value} value={item.value}>
                                 {item.value}
                             </option>

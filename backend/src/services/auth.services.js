@@ -257,7 +257,7 @@ const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions })
     return { accessToken, refreshToken };
 };
 
-const hashToken = (token) =>
+export const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
 
 

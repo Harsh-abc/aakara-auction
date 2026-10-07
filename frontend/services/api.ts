@@ -56,12 +56,18 @@ export const userEndPoints = {
     GET_ALL_USERS_API: `${BASE_URL}/api/users/get-all-users`,
     GET_USER_BY_ID_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}`,
     UPLOAD_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc`,
+    REVIEW_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc/review`,
+    REQUEST_KYC_DOCUMENTS_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc/request`,
 
 };
 
 export const profileEndpoints = {
     GET_MY_PROFILE_API: `${BASE_URL}/api/users/me/profile`,
     UPDATE_MY_PROFILE_API: `${BASE_URL}/api/users/me/update-profile`,
+    CHANGE_MY_PASSWORD_API: `${BASE_URL}/api/users/me/change-password`,
+    GET_MY_REGISTRATIONS_API: `${BASE_URL}/api/users/me/registrations`,
+    // GET to read, POST (multipart) to submit documents
+    MY_KYC_API: `${BASE_URL}/api/users/me/kyc`,
 }
 
 

@@ -1,10 +1,11 @@
+import axios from "axios";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { ChangeUserRolePayload, ChangeUserRoleResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
+import { ChangeUserRolePayload, ChangeUserRoleResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
-const { GET_ALL_USERS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API } = userEndPoints;
+const { GET_ALL_USERS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API } = userEndPoints;
 
 const { CREATE_USER_API, CHANGE_USER_ROLE_API } = adminEndPoints;
 
@@ -122,6 +123,72 @@ export const uploadUserKyc = createAsyncThunk<
                 error?.response?.data?.message ||
                 error?.message ||
                 "Could not upload KYC. Try again.";
+
+            return rejectWithValue(message);
+        }
+    }
+);
+
+// approve / reject documents the user submitted; the response carries the refreshed user
+export const reviewUserKyc = createAsyncThunk<
+    ReviewUserKycResponse,
+    ReviewUserKycPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/reviewUserKyc",
+    async ({ uuid, reviews }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<ReviewUserKycResponse>({
+                method: "PATCH",
+                url: REVIEW_USER_KYC_API(uuid),
+                body: { reviews },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not save the review");
+            }
+
+            return response.data;
+        } catch (error) {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : "Could not save the review. Try again.";
+
+            return rejectWithValue(message);
+        }
+    }
+);
+
+// ask the user to upload specific KYC documents (emails them); the response carries the refreshed user
+export const requestKycDocuments = createAsyncThunk<
+    RequestKycDocumentsResponse,
+    RequestKycDocumentsPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/requestKycDocuments",
+    async ({ uuid, documentTypes, note }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<RequestKycDocumentsResponse>({
+                method: "POST",
+                url: REQUEST_KYC_DOCUMENTS_API(uuid),
+                body: { documentTypes, note: note || undefined },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not send the request");
+            }
+
+            return response.data;
+        } catch (error) {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : "Could not send the request. Try again.";
 
             return rejectWithValue(message);
         }

@@ -21,7 +21,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { AppDispatch, RootState } from "@/redux/store"
 import { uploadUserKyc } from "@/services/operations/user.api"
-import { DocumentType } from "@/lib/types/user.types"
+import { DocumentType, User } from "@/lib/types/user.types"
+import { KycRequestDialog, KycRequestNotice, useCanRequestKycDocuments } from "./KycRequestDialog"
 
 type DocumentStatus = "empty" | "pending" | "verified" | "rejected"
 
@@ -104,10 +105,12 @@ interface UploadedDocument {
     status: DocumentStatus
 }
 
-export function KycUpload({ uuid }: { uuid: string }) {
+export function KycUpload({ user }: { user: User }) {
+    const { uuid } = user
     const router = useRouter()
     const dispatch = useDispatch<AppDispatch>()
     const { kycUploading, kycUploadError } = useSelector((state: RootState) => state.user)
+    const canRequest = useCanRequestKycDocuments()
 
     const [uploadedDocuments, setUploadedDocuments] = useState<
         Record<string, UploadedDocument>
@@ -326,12 +329,8 @@ export function KycUpload({ uuid }: { uuid: string }) {
                     </Button>
 
                     {uploadedCount === 0 ? (
-                        <Button
-                            type="button"
-                            className="h-9 rounded-[6px] bg-[#F59E0B] px-4 text-[11px] font-medium text-white hover:bg-[#D97706]"
-                        >
-                            Request Documents
-                        </Button>
+                        // ask the user to upload them from their profile instead
+                        canRequest && <KycRequestDialog user={user} />
                     ) : (
                         <Button
                             type="button"
@@ -349,6 +348,8 @@ export function KycUpload({ uuid }: { uuid: string }) {
                 </div>
 
             </div>
+
+            <KycRequestNotice user={user} />
 
             {kycUploading && (
                 <div className="mb-4 space-y-1">
