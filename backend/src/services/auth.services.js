@@ -43,7 +43,7 @@ const ipFailKey = (ip) => `login:ip-fail:${ip}`;
 const ipBlockKey = (ip) => `login:ip-block:${ip}`;
 // LOGIN
 
-export const registerService = async ({ username, email, password, phone }) => {
+export const registerService = async ({ username, email, password, phone, city, country }) => {
 
     const existing = await prisma.user.findFirst({
         where: {
@@ -78,7 +78,12 @@ export const registerService = async ({ username, email, password, phone }) => {
 
     console.log("Generated OTP:", otp);
 
-    const pendingData = { username, email, passwordHash, phone: phone ?? null, otp };
+    const pendingData = {
+        username, email, passwordHash, otp,
+        phone: phone ?? null,
+        city: city ?? null,
+        country: country ?? null,
+    };
     await redis.set(pendingKey(email), JSON.stringify(pendingData), 'EX', PENDING_TTL);
 
     await redis.del(attemptsKey(email));
@@ -157,6 +162,9 @@ export const verifyOtpService = async ({ email, otp }) => {
         await tx.userProfile.create({
             data: {
                 userId: newUser.id,
+                // ?? null: pending signups created before city/country existed won't have them
+                city: pending.city ?? null,
+                country: pending.country ?? null,
             },
         });
 

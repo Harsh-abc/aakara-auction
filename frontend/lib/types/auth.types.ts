@@ -43,6 +43,8 @@ export interface SignupPayload {
     email: string
     password: string
     phone?: string | null
+    city?: string
+    country?: string
 }
 
 export interface VerifyOtpPayload {

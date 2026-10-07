@@ -30,7 +30,10 @@
       "Bash(node --check src/services/auctionParticipant.services.js)",
       "Bash(sed -i 's/auction and all its open lots \\(pending verification\\)/auction and all its lots \\(pending verification\\)/; s/— on all open lots/— on all lots of the auction/; s/\"verified\" : \"unverified\"} on all open lots`/\"verified\" : \"unverified\"} on all lots`/' src/controllers/auctionParticipant.controller.js)",
       "Bash(node --check src/controllers/auctionParticipant.controller.js)",
-      "Bash(node -e \"import\\('./src/routes/auction.routes.js'\\).then\\(m=>console.log\\(m.default.stack.filter\\(l=>l.route&&l.route.path.includes\\('lots/:lotUuid'\\)\\).map\\(l=>Object.keys\\(l.route.methods\\)[0].toUpperCase\\(\\)+' '+l.route.path\\).join\\('\\\\n'\\)\\)\\)\")"
+      "Bash(node -e \"import\\('./src/routes/auction.routes.js'\\).then\\(m=>console.log\\(m.default.stack.filter\\(l=>l.route&&l.route.path.includes\\('lots/:lotUuid'\\)\\).map\\(l=>Object.keys\\(l.route.methods\\)[0].toUpperCase\\(\\)+' '+l.route.path\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 60 \"http://localhost:3000/registration?tab=signup\")",
+      "Bash(node --check src/validations/auth.validation.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 60 \"http://localhost:3000/registration\")"
     ]
   }
 }
