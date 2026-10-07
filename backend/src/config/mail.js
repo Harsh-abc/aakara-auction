@@ -1,22 +1,22 @@
-import nodemailer from "nodemailer";
+import Mailgun from "mailgun.js";
 
-const transporter = nodemailer.createTransport({
-    host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT),
-    secure: process.env.MAIL_SECURE === "true",
+const domain = process.env.MAILGUN_DOMAIN;
 
-    auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
+const mg = new Mailgun(FormData).client({
+    username: "api",
+    key: process.env.MAILGUN_API_KEY,
+    url: process.env.MAILGUN_URL || "https://api.mailgun.net",
+});
+
+mg.domains.get(domain)
+    .then((info) => console.log(`Mailer ready to send emails via Mailgun (${domain}, ${info.state})`))
+    .catch((error) => console.error("Mailer connection failed:", error));
+
+const mailer = {
+    sendMail: async ({ from, to, subject, html, text }) => {
+        const res = await mg.messages.create(domain, { from, to, subject, html, text });
+        return { ...res, messageId: res.id };
     },
-});
+};
 
-transporter.verify((error) => {
-    if (error) {
-        console.error("Mailer connection failed:", error);
-    } else {
-        console.log("Mailer ready to send emails");
-    }
-});
-
-export default transporter;
+export default mailer;

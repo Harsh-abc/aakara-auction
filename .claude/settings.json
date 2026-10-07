@@ -44,7 +44,17 @@
       "PowerShell(Get-Content .env | Select-String \"^DIRECT_URL\" | ForEach-Object { if \\($_ -match \"@\\([^:/]+\\)\"\\) { \"DIRECT_URL host: \" + $Matches[1] } })",
       "PowerShell(\\(Get-Item index.js\\).LastWriteTime = Get-Date; Start-Sleep -Seconds 6; foreach \\($p in @\\(@\\(\"GET\",\"/api/users/me/kyc\"\\),@\\(\"POST\",\"/api/users/877ab820-f074-4458-930c-8a0eb761364f/kyc/request\"\\)\\)\\) { try { Invoke-WebRequest -Method $p[0] -Uri \\(\"http://localhost:8080\" + $p[1]\\) -UseBasicParsing -ErrorAction Stop | Out-Null } catch { \"$\\($p[0]\\) $\\($p[1]\\) -> $\\($_.Exception.Response.StatusCode.value__\\)\" } })",
       "Bash(timeout 60 node --input-type=module -e ' *)",
-      "PowerShell(Get-Content .env | Select-String -Pattern \"^\\(MAIL_HOST|MAIL_PORT|MAIL_SECURE|MAIL_FROM\\)=\" | ForEach-Object { $_.Line }; Get-Content .gitignore | Select-String \"env\")"
+      "PowerShell(Get-Content .env | Select-String -Pattern \"^\\(MAIL_HOST|MAIL_PORT|MAIL_SECURE|MAIL_FROM\\)=\" | ForEach-Object { $_.Line }; Get-Content .gitignore | Select-String \"env\")",
+      "PowerShell(Get-Content backend\\\\.env | Select-String -Pattern \"^\\(MAIL_|SMTP_|EMAIL_\\)\" | ForEach-Object { \\($_.Line -split \"=\",2\\)[0] + \"=\" + $\\(if \\($_.Line -match \"PASS\"\\) { \"<hidden>\" } else { \\($_.Line -split \"=\",2\\)[1] }\\) })",
+      "PowerShell(Get-Content backend\\\\.env | Select-String -Pattern \"^\\(MAIL_|MAILGUN\\)\" | ForEach-Object { $k,$v = $_.Line -split \"=\",2; if \\($k -match \"PASS|KEY\"\\) { \"$k=\" + $\\(if \\($v\\) { \"<set, $\\($v.Length\\) chars>\" } else { \"<EMPTY>\" }\\) } else { $_.Line } })",
+      "PowerShell(npm view nodemailer-mailgun-transport version time.modified dependencies peerDependencies --json)",
+      "PowerShell(npm view mailgun.js version time.modified dependencies --json)",
+      "PowerShell(npm view consolidate deprecated)",
+      "PowerShell(node --version)",
+      "PowerShell(npm i mailgun.js)",
+      "PowerShell(cd backend; $a = npm audit --json | ConvertFrom-Json; $a.vulnerabilities.PSObject.Properties | ForEach-Object { \"{0} [{1}] via: {2}\" -f $_.Name, $_.Value.severity, \\(\\($_.Value.via | ForEach-Object { if \\($_ -is [string]\\) { $_ } else { $_.title } }\\) -join '; '\\) })",
+      "PowerShell($env:MAILGUN_API_KEY = \"fake-key-for-test\"; $env:MAILGUN_DOMAIN = \"auction.akaraart.com\"; node -e \"import\\('./src/config/mail.js'\\).then\\(async m => { try { await m.default.sendMail\\({ to: 'x@example.com', subject: 't', html: 'h', from: 'a@auction.akaraart.com' }\\) } catch \\(e\\) { console.log\\('send rejected as expected:', e.status, e.message\\) } }\\)\"; Start-Sleep -Seconds 3)",
+      "PowerShell(node -e \"import\\('dotenv/config'\\).then\\(\\(\\) => { const k = process.env.MAILGUN_API_KEY || ''; console.log\\('key set:', k.length > 0, '| length:', k.length, '| domain:', process.env.MAILGUN_DOMAIN, '| url:', process.env.MAILGUN_URL\\); return import\\('./src/config/mail.js'\\); }\\)\")"
     ]
   }
 }

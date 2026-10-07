@@ -24,6 +24,7 @@
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
+    "mailgun.js": "^14.0.1",
     "multer": "^2.4.0",
     "nodemailer": "^9.0.5",
     "nodemon": "^3.1.14",
