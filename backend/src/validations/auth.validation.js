@@ -5,6 +5,8 @@ export const registerSchema = z.object({
     email: z.string().email(),
     password: z.string().min(8).max(64),
     phone: z.string().min(10).max(15).optional(),
+    city: z.string().trim().min(1).max(100).optional(),
+    country: z.string().trim().min(1).max(100).optional(),
 });
 
 export const verifyOtpSchema = z.object({

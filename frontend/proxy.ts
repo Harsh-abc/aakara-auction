@@ -8,7 +8,7 @@ const LOGIN_PATH = '/login';
 const HOME_PATH = '/';
 
 const PROTECTED_PREFIXES = ['/dashboard'];
-const AUTH_ONLY_PREFIXES = ['/login', '/signup'];
+const AUTH_ONLY_PREFIXES = ['/login', '/signup', '/registration'];
 
 function matchesPrefix(pathname: string, prefixes: string[]) {
     return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
