@@ -86,7 +86,8 @@
       "Bash(awk '{print $2}')",
       "Bash(echo \"eslint exit $?\")",
       "Bash(node -e 'let s=\"\";process.stdin.on\\(\"data\",d=>s+=d\\).on\\(\"end\",\\(\\)=>{for\\(const r of JSON.parse\\(s\\)\\)for\\(const m of r.messages\\)if\\(m.severity===2\\)console.log\\(r.filePath.replace\\(/.*frontend./,\"\"\\),m.line,m.ruleId\\)}\\)')",
-      "PowerShell(npm --prefix backend run build)"
+      "PowerShell(npm --prefix backend run build)",
+      "PowerShell(git config core.ignorecase)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
