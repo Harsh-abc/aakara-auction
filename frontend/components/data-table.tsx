@@ -21,20 +21,22 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
+  columnFilteringFeature,
+  columnVisibilityFeature,
   createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
+  createFilteredRowModel,
+  createPaginatedRowModel,
+  createSortedRowModel,
+  FlexRender,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
   type ColumnFiltersState,
+  type ColumnVisibilityState,
   type Row,
   type SortingState,
-  type VisibilityState,
 } from "@tanstack/react-table"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { toast } from "sonner"
@@ -95,6 +97,24 @@ import {
 } from "@/components/ui/tabs"
 import { GripVerticalIcon, CircleCheckIcon, LoaderIcon, EllipsisVerticalIcon, Columns3Icon, ChevronDownIcon, PlusIcon, ChevronsLeftIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsRightIcon, TrendingUpIcon } from "lucide-react"
 
+// New in v9: declare the features this table uses — anything you don't
+// register is tree-shaken out of the bundle.
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  sortedRowModel: createSortedRowModel(),
+})
+
+const columnHelper = createColumnHelper<
+  typeof features,
+  z.infer<typeof schema>
+>()
+
 export const schema = z.object({
   id: z.number(),
   header: z.string(),
@@ -104,8 +124,6 @@ export const schema = z.object({
   limit: z.string(),
   reviewer: z.string(),
 })
-
-const columnHelper = createColumnHelper<z.infer<typeof schema>>()
 
 // Create a separate component for the drag handle
 function DragHandle({ id }: { id: number }) {
@@ -125,8 +143,7 @@ function DragHandle({ id }: { id: number }) {
     </Button>
   )
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const columns: ColumnDef<z.infer<typeof schema>, any>[] = [
+const columns = columnHelper.columns([
   columnHelper.display({
     id: "drag",
     header: () => null,
@@ -303,8 +320,12 @@ const columns: ColumnDef<z.infer<typeof schema>, any>[] = [
       </DropdownMenu>
     ),
   }),
-]
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+])
+function DraggableRow({
+  row,
+}: {
+  row: Row<typeof features, z.infer<typeof schema>>
+}) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original.id,
   })
@@ -321,7 +342,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          <FlexRender cell={cell} />
         </TableCell>
       ))}
     </TableRow>
@@ -335,7 +356,7 @@ export function DataTable({
   const [data, setData] = React.useState(() => initialData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<ColumnVisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -354,7 +375,8 @@ export function DataTable({
     () => data?.map(({ id }) => id) || [],
     [data]
   )
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
     state: {
@@ -371,12 +393,6 @@ export function DataTable({
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
   })
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -491,12 +507,9 @@ export function DataTable({
                     {headerGroup.headers.map((header) => {
                       return (
                         <TableHead key={header.id} colSpan={header.colSpan}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                          {header.isPlaceholder ? null : (
+                            <FlexRender header={header} />
+                          )}
                         </TableHead>
                       )
                     })}
@@ -538,7 +551,7 @@ export function DataTable({
                 Rows per page
               </Label>
               <Select
-                value={`${table.getState().pagination.pageSize}`}
+                value={`${table.state.pagination.pageSize}`}
                 onValueChange={(value) => {
                   table.setPageSize(Number(value))
                 }}
@@ -548,7 +561,7 @@ export function DataTable({
                 }))}
               >
                 <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue placeholder={table.getState().pagination.pageSize} />
+                  <SelectValue placeholder={table.state.pagination.pageSize} />
                 </SelectTrigger>
                 <SelectContent side="top">
                   <SelectGroup>
@@ -562,7 +575,7 @@ export function DataTable({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              Page {table.state.pagination.pageIndex + 1} of{" "}
               {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">

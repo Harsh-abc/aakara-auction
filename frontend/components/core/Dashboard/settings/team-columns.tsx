@@ -1,6 +1,7 @@
 "use client"
 
-import { ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table"
+import type { AppTableFeatures } from "@/lib/table-features"
 
 import { User } from "@/lib/types/user.types"
 import ChangeRoleCell from "./ChangeRoleCell"
@@ -10,7 +11,7 @@ const getFullName = (user: User) => {
     return fullName || user.username
 }
 
-export const teamColumns: ColumnDef<User>[] = [
+export const teamColumns: ColumnDef<AppTableFeatures, User>[] = [
     {
         id: "fullName",
         accessorFn: (user) => getFullName(user),

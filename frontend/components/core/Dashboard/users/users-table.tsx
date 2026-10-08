@@ -5,11 +5,11 @@ import * as React from "react"
 import {
     ColumnDef,
     flexRender,
-    getCoreRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    useReactTable,
+    RowData,
+    useTable,
 } from "@tanstack/react-table"
+
+import { appTableFeatures, type AppTableFeatures } from "@/lib/table-features"
 
 import {
     Table,
@@ -24,17 +24,17 @@ import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from "@
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-interface UsersTableProps<TData, TValue> {
-    columns: ColumnDef<TData, TValue>[]
+interface UsersTableProps<TData extends RowData> {
+    columns: ColumnDef<AppTableFeatures, TData>[]
     data: TData[],
     search: string
 }
 
-export function UsersTable<TData, TValue>({
+export function UsersTable<TData extends RowData>({
     columns,
     data,
     search
-}: UsersTableProps<TData, TValue>) {
+}: UsersTableProps<TData>) {
 
     const [rowSelection, setRowSelection] = React.useState({})
 
@@ -43,7 +43,8 @@ export function UsersTable<TData, TValue>({
         pageSize: 7,
     })
 
-    const table = useReactTable({
+    const table = useTable({
+        features: appTableFeatures,
         data,
         columns,
 
@@ -58,12 +59,6 @@ export function UsersTable<TData, TValue>({
         onRowSelectionChange: setRowSelection,
 
         onPaginationChange: setPagination,
-
-        getCoreRowModel: getCoreRowModel(),
-
-        getFilteredRowModel: getFilteredRowModel(),
-
-        getPaginationRowModel: getPaginationRowModel(),
 
         globalFilterFn: "includesString",
     })
@@ -185,13 +180,13 @@ export function UsersTable<TData, TValue>({
                         <Button
                             key={pageIndex}
                             variant={
-                                table.getState().pagination.pageIndex === pageIndex
+                                table.state.pagination.pageIndex === pageIndex
                                     ? "default"
                                     : "outline"
                             }
                             size="icon"
                             className={
-                                table.getState().pagination.pageIndex === pageIndex
+                                table.state.pagination.pageIndex === pageIndex
                                     ? "h-7 w-7 bg-[#7b365d] hover:bg-[#672b4d] text-white text-xs"
                                     : "h-7 w-7 text-xs"
                             }
@@ -220,7 +215,7 @@ export function UsersTable<TData, TValue>({
                     </span>
 
                     <Select
-                        value={`${table.getState().pagination.pageSize}`}
+                        value={`${table.state.pagination.pageSize}`}
                         onValueChange={(value) => {
                             table.setPageSize(Number(value))
                             table.setPageIndex(0)

@@ -4,15 +4,13 @@ import * as React from "react"
 
 import {
     flexRender,
-    getCoreRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    getFilteredRowModel,
     SortingState,
     ColumnFiltersState,
     FilterFn,
-    useReactTable,
+    useTable,
 } from "@tanstack/react-table"
+
+import { appTableFeatures, type AppTableFeatures } from "@/lib/table-features"
 
 import {
     Table,
@@ -67,7 +65,7 @@ const statusItems = [
 ]
 
 /** Search matches lot number, title or artist */
-const lotSearch: FilterFn<AuctionLot> = (row, _columnId, value: string) => {
+const lotSearch: FilterFn<AppTableFeatures, AuctionLot> =(row, _columnId, value: string) => {
     const q = value.trim().toLowerCase()
     if (!q) return true
     const lot = row.original
@@ -99,13 +97,17 @@ export function LiveAuctionDataTable({ data, loading = false, meta }: LiveAuctio
     const [sorting, setSorting] =
         React.useState<SortingState>([{ id: "lot", desc: false }])
 
-    const [columnFilters, setColumnFilters] =
-        React.useState<ColumnFiltersState>([])
-
     const [globalFilter, setGlobalFilter] = React.useState("")
     const [statusFilter, setStatusFilter] = React.useState("all")
 
-    const table = useReactTable({
+    // ---------- toolbar values -> column filters ----------
+    const columnFilters = React.useMemo<ColumnFiltersState>(
+        () => (statusFilter === "all" ? [] : [{ id: "status", value: statusFilter }]),
+        [statusFilter]
+    )
+
+    const table = useTable({
+        features: appTableFeatures,
         data,
         columns,
         meta,
@@ -117,14 +119,8 @@ export function LiveAuctionDataTable({ data, loading = false, meta }: LiveAuctio
         },
 
         onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn: lotSearch,
-
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
 
         initialState: {
             pagination: {
@@ -134,14 +130,6 @@ export function LiveAuctionDataTable({ data, loading = false, meta }: LiveAuctio
         },
     })
 
-    // ---------- push toolbar values into column filters ----------
-    React.useEffect(() => {
-        setColumnFilters((prev) => {
-            const rest = prev.filter((f) => f.id !== "status")
-            return statusFilter === "all" ? rest : [...rest, { id: "status", value: statusFilter }]
-        })
-    }, [statusFilter])
-
     const hasFilters = Boolean(globalFilter) || statusFilter !== "all"
 
     const clearFilters = () => {
@@ -149,7 +137,7 @@ export function LiveAuctionDataTable({ data, loading = false, meta }: LiveAuctio
         setStatusFilter("all")
     }
 
-    const { pageIndex, pageSize } = table.getState().pagination
+    const { pageIndex, pageSize } = table.state.pagination
     const pageCount = table.getPageCount()
     const totalRows = table.getFilteredRowModel().rows.length
 

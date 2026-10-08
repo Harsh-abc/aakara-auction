@@ -1,6 +1,7 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/lib/table-features";
 import { ArrowUpDown, ImageIcon, Loader2, Play, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,7 @@ const SortHeader = ({ label, onClick }: { label: string; onClick: () => void }) 
 // COLUMNS
 // =====================================================================
 
-export const columns: ColumnDef<AuctionLot>[] = [
+export const columns: ColumnDef<AppTableFeatures, AuctionLot>[] = [
     {
         id: "lot",
         size: 220,

@@ -1,6 +1,7 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/lib/table-features";
 import { ArrowUpDown, Eye, Loader2, MoreVertical, Pencil, Trash2, Users } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -94,7 +95,7 @@ const SortHeader = ({ label, onClick }: { label: string; onClick: () => void }) 
 // COLUMNS
 // =====================================================================
 
-export const columns: ColumnDef<Auction>[] = [
+export const columns: ColumnDef<AppTableFeatures, Auction>[] = [
     {
         accessorKey: "title",
         size: 300,
@@ -168,7 +169,7 @@ export const columns: ColumnDef<Auction>[] = [
         accessorKey: "startTime",
         size: 115,
         enableGlobalFilter: false,
-        sortingFn: "datetime",
+        sortFn: "datetime",
         header: ({ column }) => (
             <SortHeader
                 label="Starts"

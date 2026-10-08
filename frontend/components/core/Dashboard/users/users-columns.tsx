@@ -1,6 +1,7 @@
 "use client"
 
-import { ColumnDef } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table"
+import type { AppTableFeatures } from "@/lib/table-features"
 import { Eye } from "lucide-react"
 import Link from "next/link"
 
@@ -32,7 +33,7 @@ const getFullName = (user: User) => {
     return fullName || userName
 }
 
-export const columns: ColumnDef<User>[] = [
+export const columns: ColumnDef<AppTableFeatures, User>[] = [
     {
         id: "select",
 

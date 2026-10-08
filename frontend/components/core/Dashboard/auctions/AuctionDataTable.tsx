@@ -5,15 +5,14 @@ import * as React from "react"
 import {
     ColumnDef,
     flexRender,
-    getCoreRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    getFilteredRowModel,
+    RowData,
     SortingState,
     ColumnFiltersState,
     TableMeta,
-    useReactTable,
+    useTable,
 } from "@tanstack/react-table"
+
+import { appTableFeatures, type AppTableFeatures } from "@/lib/table-features"
 
 import {
     Table,
@@ -59,12 +58,12 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface DataTableProps<TData, TValue> {
-    columns: ColumnDef<TData, TValue>[]
+interface DataTableProps<TData extends RowData> {
+    columns: ColumnDef<AppTableFeatures, TData>[]
     data: TData[]
     loading?: boolean
     /** Row action handlers (onEdit / onView / onDelete) read by the Actions column */
-    meta?: TableMeta<TData>
+    meta?: TableMeta<AppTableFeatures, TData>
 }
 
 // Values must match the backend enums (AuctionStatus / AuctionType)
@@ -106,18 +105,15 @@ const getPageNumbers = (current: number, total: number): (number | "ellipsis")[]
     return pages
 }
 
-export function AuctionDataTable<TData, TValue>({
+export function AuctionDataTable<TData extends RowData>({
     columns,
     data,
     loading = false,
     meta,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
 
     const [sorting, setSorting] =
         React.useState<SortingState>([{ id: "startTime", desc: true }])
-
-    const [columnFilters, setColumnFilters] =
-        React.useState<ColumnFiltersState>([])
 
     const [rowSelection, setRowSelection] =
         React.useState({})
@@ -129,7 +125,17 @@ export function AuctionDataTable<TData, TValue>({
     const [open, setOpen] = React.useState(false)
     const [range, setRange] = React.useState<DateRange | undefined>()
 
-    const table = useReactTable({
+    // ---------- toolbar values -> column filters ----------
+    const columnFilters = React.useMemo<ColumnFiltersState>(() => {
+        const filters: ColumnFiltersState = []
+        if (statusFilter !== "all") filters.push({ id: "status", value: statusFilter })
+        if (typeFilter !== "all") filters.push({ id: "auctionType", value: typeFilter })
+        if (range?.from) filters.push({ id: "startTime", value: range })
+        return filters
+    }, [statusFilter, typeFilter, range])
+
+    const table = useTable({
+        features: appTableFeatures,
         data,
         columns,
         meta,
@@ -144,15 +150,9 @@ export function AuctionDataTable<TData, TValue>({
         enableRowSelection: true,
 
         onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
         onRowSelectionChange: setRowSelection,
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn: "includesString",
-
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
 
         initialState: {
             pagination: {
@@ -161,29 +161,6 @@ export function AuctionDataTable<TData, TValue>({
             },
         },
     })
-
-    // ---------- push toolbar values into column filters ----------
-    const applyColumnFilter = React.useCallback(
-        (id: string, value: unknown) => {
-            setColumnFilters((prev) => {
-                const rest = prev.filter((f) => f.id !== id)
-                return value === undefined ? rest : [...rest, { id, value }]
-            })
-        },
-        []
-    )
-
-    React.useEffect(() => {
-        applyColumnFilter("status", statusFilter === "all" ? undefined : statusFilter)
-    }, [statusFilter, applyColumnFilter])
-
-    React.useEffect(() => {
-        applyColumnFilter("auctionType", typeFilter === "all" ? undefined : typeFilter)
-    }, [typeFilter, applyColumnFilter])
-
-    React.useEffect(() => {
-        applyColumnFilter("startTime", range?.from ? range : undefined)
-    }, [range, applyColumnFilter])
 
     const formatRange = () => {
         if (!range?.from) return ""
@@ -201,7 +178,7 @@ export function AuctionDataTable<TData, TValue>({
         setRange(undefined)
     }
 
-    const { pageIndex, pageSize } = table.getState().pagination
+    const { pageIndex, pageSize } = table.state.pagination
     const pageCount = table.getPageCount()
     const totalRows = table.getFilteredRowModel().rows.length
     const selectedCount = table.getFilteredSelectedRowModel().rows.length
