@@ -7,6 +7,7 @@ import { generateOtp } from '../utils/otp.utils.js';
 import sendEmail from '../mail/sendMail.js';
 import { otpVerificationTemplate } from '../mail/templates/otpVerifications.js';
 import { getRolePermissions } from '../libs/rolepermission.js';
+// import getRolePermissions from '../libs/rolePermission.js';
 
 
 console.log("OTP utility loaded:", generateOtp);
