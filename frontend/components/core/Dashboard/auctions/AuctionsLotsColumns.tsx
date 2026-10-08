@@ -1,6 +1,7 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/lib/table-features";
 import { format } from "date-fns";
 import { Pencil, Eye, Trash2, ImageIcon, Film, FileText, AlertCircle, ArrowUpDown } from "lucide-react";
 
@@ -61,7 +62,7 @@ export const getColumns = ({
     onEdit,
     onView,
     onDelete,
-}: ColumnsProps = {}): ColumnDef<LotRow>[] => [
+}: ColumnsProps = {}): ColumnDef<AppTableFeatures, LotRow>[] => [
         // SELECT
         {
             id: "select",

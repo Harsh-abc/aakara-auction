@@ -5,14 +5,13 @@ import * as React from "react"
 import {
     ColumnDef,
     flexRender,
-    getCoreRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    getFilteredRowModel,
+    RowData,
     SortingState,
     ColumnFiltersState,
-    useReactTable,
+    useTable,
 } from "@tanstack/react-table"
+
+import { appTableFeatures, type AppTableFeatures } from "@/lib/table-features"
 
 import {
     Table,
@@ -47,8 +46,8 @@ export interface StatusFilterItem {
     value: string
 }
 
-interface DataTableProps<TData, TValue> {
-    columns: ColumnDef<TData, TValue>[]
+interface DataTableProps<TData extends RowData> {
+    columns: ColumnDef<AppTableFeatures, TData>[]
     data: TData[]
     onAddLot?: () => void
     loading?: boolean
@@ -64,52 +63,49 @@ const DEFAULT_STATUS_ITEMS: StatusFilterItem[] = [
     { label: "Incomplete", value: "INCOMPLETE" },
 ]
 
-export function AuctionLotsList<TData, TValue>({
+export function AuctionLotsList<TData extends RowData>({
     columns,
     data,
     onAddLot,
     loading = false,
     statusItems = DEFAULT_STATUS_ITEMS,
     summary,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
 
     const [sorting, setSorting] = React.useState<SortingState>([{ id: "lotNumber", desc: false }])
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
     const [rowSelection, setRowSelection] = React.useState({})
     const [globalFilter, setGlobalFilter] = React.useState("")
     const [statusFilter, setStatusFilter] = React.useState("all")
 
-    const table = useReactTable({
+    const columnFilters = React.useMemo<ColumnFiltersState>(
+        () => (statusFilter === "all" ? [] : [{ id: "status", value: statusFilter }]),
+        [statusFilter]
+    )
+
+    const table = useTable({
+        features: appTableFeatures,
         data,
         columns,
         state: { sorting, columnFilters, rowSelection, globalFilter },
         enableRowSelection: true,
         onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
         onRowSelectionChange: setRowSelection,
         onGlobalFilterChange: setGlobalFilter,
         globalFilterFn: "includesString",
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         // Don't jump back to page 1 every time a lot's value changes
         autoResetPageIndex: false,
         initialState: { pagination: { pageIndex: 0, pageSize: 7 } },
     })
 
-    React.useEffect(() => {
-        setColumnFilters((prev) => {
-            const rest = prev.filter((f) => f.id !== "status")
-            return statusFilter === "all" ? rest : [...rest, { id: "status", value: statusFilter }]
-        })
+    // autoResetPageIndex is off, so go back to page 1 when the status filter changes
+    const changeStatusFilter = (value: string) => {
+        setStatusFilter(value)
         table.setPageIndex(0)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [statusFilter])
+    }
 
     // If a delete leaves the current page empty, step back a page
     const pageCount = table.getPageCount()
-    const { pageIndex, pageSize } = table.getState().pagination
+    const { pageIndex, pageSize } = table.state.pagination
     React.useEffect(() => {
         if (pageIndex > 0 && pageIndex >= pageCount) table.setPageIndex(Math.max(0, pageCount - 1))
     }, [pageIndex, pageCount, table])
@@ -145,7 +141,7 @@ export function AuctionLotsList<TData, TValue>({
                         <Select
                             items={statusItems}
                             value={statusFilter}
-                            onValueChange={(value) => setStatusFilter((value as string) ?? "all")}
+                            onValueChange={(value) => changeStatusFilter((value as string) ?? "all")}
                         >
                             <SelectTrigger className="w-full bg-white text-slate-500 border-slate-200 shadow-none">
                                 <SelectValue />
@@ -170,7 +166,7 @@ export function AuctionLotsList<TData, TValue>({
                             className="h-9 px-2 text-xs text-slate-500"
                             onClick={() => {
                                 setGlobalFilter("")
-                                setStatusFilter("all")
+                                changeStatusFilter("all")
                             }}
                         >
                             <X className="mr-1 h-3.5 w-3.5" />
