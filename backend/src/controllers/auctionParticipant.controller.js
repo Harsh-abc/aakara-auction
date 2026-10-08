@@ -15,6 +15,7 @@ import {
     getAuctionParticipantsQuerySchema,
     participantCandidatesQuerySchema,
     participantUserUuidsSchema,
+    registerForAuctionBodySchema,
     verifyLotBiddersSchema,
 } from "../validations/auction.validation.js";
 
@@ -178,6 +179,7 @@ export const removeAuctionParticipants = async (req, res) => {
 export const registerForAuction = async (req, res) => {
     try {
         const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
+        registerForAuctionBodySchema.parse(req.body ?? {});
 
         const registration = await registerForAuctionService({
             auctionUuid,

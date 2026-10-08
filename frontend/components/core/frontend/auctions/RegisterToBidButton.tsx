@@ -11,6 +11,7 @@ import { registerForAuction } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "../profile/ProfileUI"
 
 import { registrationWindow } from "./auctionDisplay"
+import { RegisterConfirmDialog } from "./RegisterConfirmDialog"
 
 const LOGIN_HREF = `/registration?redirect=${encodeURIComponent("/auctions")}`
 
@@ -26,6 +27,7 @@ export function RegisterToBidButton({ auction, paddleNumber, onRegistered, class
     const router = useRouter()
     const token = useAppSelector((state) => state.auth.accessToken)
     const [loading, setLoading] = useState(false)
+    const [confirmOpen, setConfirmOpen] = useState(false)
 
     const base =
         "inline-flex h-11 w-full items-center justify-center px-6 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors"
@@ -47,15 +49,21 @@ export function RegisterToBidButton({ auction, paddleNumber, onRegistered, class
         )
     }
 
-    const handleClick = async () => {
+    const handleClick = () => {
         if (!token) {
             router.push(LOGIN_HREF)
             return
         }
+        setConfirmOpen(true)
+    }
+
+    // runs once the bidder has reviewed their details and ticked the terms
+    const handleConfirm = async () => {
         setLoading(true)
         try {
             const { message, data } = await registerForAuction(auction.uuid, token)
             toast.success(message)
+            setConfirmOpen(false)
             onRegistered(auction.uuid, String(data.paddleNumber))
         } catch (err) {
             toast.error(getErrorMessage(err))
@@ -65,17 +73,27 @@ export function RegisterToBidButton({ auction, paddleNumber, onRegistered, class
     }
 
     return (
-        <button
-            type="button"
-            onClick={handleClick}
-            disabled={loading}
-            className={cn(
-                base,
-                "cursor-pointer bg-neutral-950 text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-70",
-                className
-            )}
-        >
-            {loading ? "Registering..." : "Register to bid"}
-        </button>
+        <>
+            <button
+                type="button"
+                onClick={handleClick}
+                disabled={loading}
+                className={cn(
+                    base,
+                    "cursor-pointer bg-neutral-950 text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-70",
+                    className
+                )}
+            >
+                {loading ? "Registering..." : "Register to bid"}
+            </button>
+
+            <RegisterConfirmDialog
+                auction={auction}
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                submitting={loading}
+                onConfirm={handleConfirm}
+            />
+        </>
     )
 }

@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { buttonVariants } from "@/components/ui/button"
+import { GlobeIcon } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import DashboardGuard from "../DashboardGuard"
 
@@ -39,6 +42,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             </Breadcrumb>
                         </div>
                         <div className="flex items-center gap-3 px-4">
+                            <Link href="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                                <GlobeIcon className="size-4" />
+                                <span className="hidden sm:inline">View website</span>
+                            </Link>
                             <HeaderNotifications />
                             <Separator orientation="vertical" className="data-vertical:h-6 data-vertical:self-auto" />
                             <HeaderUserMenu />
