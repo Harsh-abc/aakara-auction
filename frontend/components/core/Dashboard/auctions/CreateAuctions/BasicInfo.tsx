@@ -16,6 +16,15 @@ import { getCategories, getSubCategories } from "@/services/operations/category.
 import { Category, SubCategory } from "@/lib/types/category.types";
 import CurrencySelector from "@/components/common/CurrencySelector";
 
+// must match slugify in backend/src/services/auction.services.js
+const slugify = (text: string) =>
+    text
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 180);
+
 export default function BasicInfo() {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,8 +42,27 @@ export default function BasicInfo() {
         setValue,
         getValues,
         watch,
-        formState: { errors },
+        formState: { errors, defaultValues },
     } = useFormContext<AuctionFormData>();
+
+    /* =====================================================
+       AUCTION ID — follows the name like a slug
+    ===================================================== */
+
+    // editing keeps the saved slug; a new auction's ID follows the name until it's typed over
+    const hasSavedSlug = !!defaultValues?.basicInfo?.auctionId;
+    const auctionNameField = register("basicInfo.auctionName");
+
+    const handleAuctionNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const currentId = getValues("basicInfo.auctionId");
+        const idFollowsName = !currentId || currentId === slugify(getValues("basicInfo.auctionName"));
+
+        auctionNameField.onChange(e);
+
+        if (!hasSavedSlug && idFollowsName) {
+            setValue("basicInfo.auctionId", slugify(e.target.value), { shouldDirty: true });
+        }
+    };
 
     /* =====================================================
        WATCH FORM VALUES
@@ -181,7 +209,8 @@ export default function BasicInfo() {
                     <div className="input-wrapper">
                         <label className="block mb-2">Auction Name</label>
                         <Input
-                            {...register("basicInfo.auctionName")}
+                            {...auctionNameField}
+                            onChange={handleAuctionNameChange}
                             type="text"
                             placeholder="e.g. Modern Master of Mumbai : Autumn Collections"
                             className="w-full border rounded-md px-3 py-2 h-11"
@@ -198,7 +227,7 @@ export default function BasicInfo() {
                             <Input
                                 {...register("basicInfo.auctionId")}
                                 type="text"
-                                placeholder="Enter reference"
+                                placeholder="Filled from the auction name"
                                 className="w-full border rounded-md px-3 py-2 h-11"
                             />
                         </div>

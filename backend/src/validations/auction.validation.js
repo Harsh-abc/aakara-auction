@@ -35,6 +35,11 @@ export const auctionUuidParamSchema = z.object({
     auctionUuid: z.uuid({ message: "Invalid auction id" }),
 });
 
+// bidders tick the auction's terms in the register dialog
+export const registerForAuctionBodySchema = z.object({
+    acceptTerms: z.literal(true, { message: "Please accept the terms and conditions to register" }),
+});
+
 export const getAuctionParticipantsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),

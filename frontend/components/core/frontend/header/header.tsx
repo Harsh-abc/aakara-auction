@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AkaraLogo } from "@/components/core/frontend/akaraLogo";
 import { useAppSelector } from "@/hooks/redux";
+import { canAccessDashboard } from "@/lib/constants/roles";
 import { joinClassNames } from "@/lib/frontendHelpers";
 import { AccountDropdown } from "./nav-dropdown";
 import { MenuDrawer } from "./menu-drawer";
@@ -12,6 +13,8 @@ import { MenuDrawer } from "./menu-drawer";
 export function Header() {
     // auth is restored from storage before anything renders (PersistGate), so no "checking" state is needed
     const isLoggedIn = useAppSelector((state) => !!state.auth.user);
+    // staff roles get a shortcut back to /dashboard; BIDDER and USER don't
+    const showDashboard = useAppSelector((state) => !!state.auth.user && canAccessDashboard(state.auth.role));
     const currentPath = usePathname();
     const [hasScrolled, setHasScrolled] = useState(false);
 
@@ -37,6 +40,14 @@ export function Header() {
                 <div className="mx-auto w-full px-6 flex h-19 items-center justify-between">
                     <AkaraLogo />
                     <div className="flex items-center gap-3">
+                        {showDashboard && (
+                            <Link
+                                href="/dashboard"
+                                className="inline-flex h-11 items-center border border-[#333] px-4 text-[12px] uppercase tracking-[0.12em] text-[#0d0d0d] transition-colors duration-200 hover:border-[#d0a55d] hover:bg-[#fdedd6] sm:px-5"
+                            >
+                                Dashboard
+                            </Link>
+                        )}
                         {isLoggedIn ? (
                             <AccountDropdown />
                         ) : (

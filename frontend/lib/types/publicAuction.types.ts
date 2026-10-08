@@ -22,6 +22,8 @@ export interface PublicAuction {
     lotCount: number
     /** only on GET /public/:auctionUuid */
     description?: string | null
+    /** only on GET /public/:auctionUuid — plain text, shown before registering */
+    termsAndConditions?: string | null
 }
 
 export type LotStatus = "DRAFT" | "SCHEDULED" | "ACTIVE" | "SOLD" | "UNSOLD" | "PASSED" | "WITHDRAWN"

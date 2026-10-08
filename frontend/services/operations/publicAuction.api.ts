@@ -46,7 +46,8 @@ export async function getPublicLots({ auctionUuid, search, sort = "lot", page = 
     return response.data.data
 }
 
-// returns the backend message too — it carries the paddle number
+// returns the backend message too — it carries the paddle number.
+// only call once the bidder has ticked the terms: the server rejects it otherwise
 export async function registerForAuction(
     auctionUuid: string,
     token: string | null
@@ -54,6 +55,7 @@ export async function registerForAuction(
     const response = await apiConnector({
         method: "POST",
         url: REGISTER_FOR_AUCTION_API(auctionUuid),
+        body: { acceptTerms: true },
         header: { Authorization: `Bearer ${token}` },
     })
     return { message: response.data.message, data: response.data.data }

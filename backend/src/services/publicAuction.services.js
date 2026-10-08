@@ -14,12 +14,7 @@ const httpError = (message, statusCode = 400) => {
  */
 const LIVE_STATUSES = ["LIVE", "PAUSED"];
 const UPCOMING_STATUSES = ["SCHEDULED", "PREVIEW"];
-
-export const PUBLIC_TIMELINE = {
-    // live sales started earlier than anything still to come, so start time puts them first
-    upcoming: { statuses: [...LIVE_STATUSES, ...UPCOMING_STATUSES], orderBy: [{ startTime: "asc" }] },
-    past: { statuses: ["ENDED", "SETTLED"], orderBy: [{ endTime: "desc" }] },
-};
+const PAST_STATUSES = ["ENDED", "SETTLED"];
 
 const PUBLIC_VISIBILITIES = ["PUBLIC", "REGISTERED_USERS_ONLY"];
 
@@ -28,6 +23,35 @@ const publicWhere = (statuses) => ({
     status: { in: statuses },
     visibility: { in: PUBLIC_VISIBILITIES },
 });
+
+/**
+ * Each list is a run of buckets, shown one after another, each with its own sort.
+ * Status only changes when staff start a sale, so a SCHEDULED sale can sit past its start time —
+ * those go after the sales that genuinely open next. `hero: false` keeps a bucket out of the featured pick.
+ */
+const timelineBuckets = (type, now = new Date()) => {
+    if (type === "past") return [{ where: publicWhere(PAST_STATUSES), orderBy: [{ endTime: "desc" }] }];
+
+    return [
+        // live now: LIVE before PAUSED, then the most recently started
+        { where: publicWhere(LIVE_STATUSES), orderBy: [{ status: "asc" }, { startTime: "desc" }] },
+        // opening next, soonest first
+        { where: { ...publicWhere(UPCOMING_STATUSES), startTime: { gt: now } }, orderBy: [{ startTime: "asc" }] },
+        // overdue but still within their window, latest-starting first
+        {
+            where: { ...publicWhere(UPCOMING_STATUSES), startTime: { lte: now }, endTime: { gt: now } },
+            orderBy: [{ startTime: "desc" }],
+        },
+        // overdue and past their end time: never started, kept last
+        {
+            where: { ...publicWhere(UPCOMING_STATUSES), startTime: { lte: now }, endTime: { lte: now } },
+            orderBy: [{ endTime: "desc" }],
+            hero: false,
+        },
+    ];
+};
+
+const ALL_PUBLIC_STATUSES = [...LIVE_STATUSES, ...UPCOMING_STATUSES, ...PAST_STATUSES];
 
 const PUBLIC_AUCTION_SELECT = {
     uuid: true,
@@ -73,24 +97,16 @@ const searchWhere = (search) => {
 
 // =====================================================================
 // FEATURED (HERO) AUCTION
-// The sale that's live now, otherwise the next one to open
+// The first entry of the upcoming list: live now, otherwise the next one to open
 // =====================================================================
 
 export const getFeaturedAuctionService = async () => {
-    const live = await prisma.auction.findFirst({
-        where: publicWhere(LIVE_STATUSES),
-        // LIVE before PAUSED, then the most recently started
-        orderBy: [{ status: "asc" }, { startTime: "desc" }],
-        select: PUBLIC_AUCTION_SELECT,
-    });
-    if (live) return serializeBigInt(toPublicAuction(live));
-
-    const next = await prisma.auction.findFirst({
-        where: publicWhere(UPCOMING_STATUSES),
-        orderBy: [{ startTime: "asc" }],
-        select: PUBLIC_AUCTION_SELECT,
-    });
-    return next ? serializeBigInt(toPublicAuction(next)) : null;
+    for (const { where, orderBy, hero = true } of timelineBuckets("upcoming")) {
+        if (!hero) continue;
+        const auction = await prisma.auction.findFirst({ where, orderBy, select: PUBLIC_AUCTION_SELECT });
+        if (auction) return serializeBigInt(toPublicAuction(auction));
+    }
+    return null;
 };
 
 // =====================================================================
@@ -98,19 +114,25 @@ export const getFeaturedAuctionService = async () => {
 // =====================================================================
 
 export const getPublicAuctionsService = async ({ type, search, page, limit }) => {
-    const { statuses, orderBy } = PUBLIC_TIMELINE[type];
-    const where = { ...publicWhere(statuses), ...(search && searchWhere(search)) };
+    const searchFilter = search ? searchWhere(search) : {};
+    const buckets = timelineBuckets(type).map((bucket) => ({ ...bucket, where: { ...bucket.where, ...searchFilter } }));
 
-    const [total, auctions] = await Promise.all([
-        prisma.auction.count({ where }),
-        prisma.auction.findMany({
-            where,
-            orderBy,
-            skip: (page - 1) * limit,
-            take: limit,
-            select: PUBLIC_AUCTION_SELECT,
-        }),
-    ]);
+    const counts = await Promise.all(buckets.map(({ where }) => prisma.auction.count({ where })));
+    const total = counts.reduce((sum, count) => sum + count, 0);
+
+    // walk the buckets in order, taking this page's slice across them
+    const auctions = [];
+    let skip = (page - 1) * limit;
+    for (const [index, { where, orderBy }] of buckets.entries()) {
+        const remaining = limit - auctions.length;
+        if (remaining === 0) break;
+        if (skip >= counts[index]) {
+            skip -= counts[index];
+            continue;
+        }
+        auctions.push(...(await prisma.auction.findMany({ where, orderBy, skip, take: remaining, select: PUBLIC_AUCTION_SELECT })));
+        skip = 0;
+    }
 
     return serializeBigInt({
         auctions: auctions.map(toPublicAuction),
@@ -121,8 +143,6 @@ export const getPublicAuctionsService = async ({ type, search, page, limit }) =>
 // =====================================================================
 // ONE AUCTION + ITS LOTS (storefront auction page)
 // =====================================================================
-
-const ALL_PUBLIC_STATUSES = [...PUBLIC_TIMELINE.upcoming.statuses, ...PUBLIC_TIMELINE.past.statuses];
 
 // invite-only, draft or cancelled sales read as "not found" rather than leaking that they exist
 const findPublicAuction = async (auctionUuid, select) => {
@@ -135,7 +155,8 @@ const findPublicAuction = async (auctionUuid, select) => {
 };
 
 export const getPublicAuctionService = async ({ auctionUuid }) => {
-    const auction = await findPublicAuction(auctionUuid, { ...PUBLIC_AUCTION_SELECT, description: true });
+    // terms are shown to bidders in the register dialog
+    const auction = await findPublicAuction(auctionUuid, { ...PUBLIC_AUCTION_SELECT, description: true, termsAndConditions: true });
     return serializeBigInt(toPublicAuction(auction));
 };
 
