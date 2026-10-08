@@ -85,7 +85,8 @@
       "Bash(awk -F: '{print $NF}')",
       "Bash(awk '{print $2}')",
       "Bash(echo \"eslint exit $?\")",
-      "Bash(node -e 'let s=\"\";process.stdin.on\\(\"data\",d=>s+=d\\).on\\(\"end\",\\(\\)=>{for\\(const r of JSON.parse\\(s\\)\\)for\\(const m of r.messages\\)if\\(m.severity===2\\)console.log\\(r.filePath.replace\\(/.*frontend./,\"\"\\),m.line,m.ruleId\\)}\\)')"
+      "Bash(node -e 'let s=\"\";process.stdin.on\\(\"data\",d=>s+=d\\).on\\(\"end\",\\(\\)=>{for\\(const r of JSON.parse\\(s\\)\\)for\\(const m of r.messages\\)if\\(m.severity===2\\)console.log\\(r.filePath.replace\\(/.*frontend./,\"\"\\),m.line,m.ruleId\\)}\\)')",
+      "PowerShell(npm --prefix backend run build)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
