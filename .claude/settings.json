@@ -68,7 +68,12 @@
       "Bash(rm -f ../../scratch_unused)",
       "Bash(node --env-file=.env -e ' *)",
       "Bash(curl -s localhost:8080/api/auction/public/__TRACKED_VAR__)",
-      "Bash(curl -s \"localhost:8080/api/auction/public/00000000-0000-4000-8000-000000000000\")"
+      "Bash(curl -s \"localhost:8080/api/auction/public/00000000-0000-4000-8000-000000000000\")",
+      "Bash(node -e \"require\\('sharp'\\)\\('public/logo/banner.jpg'\\).extract\\({left:58,top:0,width:1584,height:870}\\).jpeg\\({quality:90}\\).toFile\\('public/logo/home-banner.jpg'\\).then\\(i=>console.log\\(i\\)\\)\")",
+      "Bash(curl -s -m 5 localhost:8080/api/auction/public/featured)",
+      "Bash(curl -s -m 20 -o /dev/null -w \"%{http_code}\\\\n\" localhost:3000/)",
+      "Bash(curl -s -m 20 localhost:3000/)",
+      "Bash(grep -o '<main[^>]*>.\\\\{0,600\\\\}')"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

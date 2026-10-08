@@ -1,11 +1,16 @@
-import Image from "next/image";
+import type { Metadata } from "next"
 
+import { HomePage } from "@/components/core/frontend/home/HomePage"
 
-export default function Demo() {
+export const metadata: Metadata = {
+    title: "Aakara | Fine Art Auctions",
+    description: "The live or next upcoming fine art auction at Aakara.",
+}
+
+export default function Home() {
     return (
-        <div>
-            <h1>HOME PAGE</h1>
-
+        <div className="min-h-svh bg-white">
+            <HomePage />
         </div>
-    );
+    )
 }
