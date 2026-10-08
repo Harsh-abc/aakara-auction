@@ -39,6 +39,15 @@ export const auctionEndPoints = {
         `${BASE_URL}/api/auction/${auctionUuid}/participants/verify`,
 };
 
+// storefront — no login needed, except to register
+export const publicAuctionEndPoints = {
+    GET_PUBLIC_AUCTIONS_API: `${BASE_URL}/api/auction/public`,
+    GET_FEATURED_AUCTION_API: `${BASE_URL}/api/auction/public/featured`,
+    GET_PUBLIC_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/public/${auctionUuid}`,
+    GET_PUBLIC_LOTS_API: (auctionUuid: string) => `${BASE_URL}/api/auction/public/${auctionUuid}/lots`,
+    REGISTER_FOR_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/${auctionUuid}/register`,
+};
+
 
 export const categoryEndPoints = {
     GET_ALL_CATEGORIES_API: `${BASE_URL}/api/category/get-all-category`,

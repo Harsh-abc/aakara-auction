@@ -2,6 +2,8 @@ import Link from "next/link"
 
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
 import type { KycStatus, MyAuctionRegistration } from "@/lib/types/profile.types"
+import { formatDateRange } from "@/utils/formatDateRange"
+import { auctionHref } from "../auctions/auctionDisplay"
 
 const KYC_LABELS: Record<KycStatus, string> = {
     NOT_SUBMITTED: "KYC not submitted",
@@ -9,33 +11,6 @@ const KYC_LABELS: Record<KycStatus, string> = {
     UNDER_REVIEW: "KYC under review",
     VERIFIED: "KYC verified",
     REJECTED: "KYC rejected",
-}
-
-// "12–14 September 2026", "28 September – 2 October 2026", or full dates across years,
-// in the auction's own timezone
-function formatDateRange(startIso: string, endIso: string, timeZone: string) {
-    const start = new Date(startIso)
-    const end = new Date(endIso)
-
-    const parts = (date: Date) => {
-        let formatter: Intl.DateTimeFormat
-        try {
-            formatter = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone })
-        } catch {
-            // unknown timezone name — fall back to the viewer's
-            formatter = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" })
-        }
-        const map = Object.fromEntries(formatter.formatToParts(date).map((p) => [p.type, p.value]))
-        return { day: map.day, month: map.month, year: map.year }
-    }
-
-    const s = parts(start)
-    const e = parts(end)
-
-    if (s.year !== e.year) return `${s.day} ${s.month} ${s.year} – ${e.day} ${e.month} ${e.year}`
-    if (s.month !== e.month) return `${s.day} ${s.month} – ${e.day} ${e.month} ${e.year}`
-    if (s.day !== e.day) return `${s.day}–${e.day} ${s.month} ${s.year}`
-    return `${s.day} ${s.month} ${s.year}`
 }
 
 type RegistrationCardProps = {
@@ -63,9 +38,8 @@ export function RegistrationCard({ registration, bidderName, kycStatus }: Regist
                 </p>
             </div>
 
-            {/* public sale pages don't exist yet — point at them once they do */}
             <Link
-                href="/"
+                href={auctionHref(auction)}
                 className="inline-flex h-10 shrink-0 items-center justify-center self-start bg-neutral-950 px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-neutral-800 sm:self-auto"
             >
                 Browse

@@ -58,6 +58,24 @@ export const getAuctionTimelineQuerySchema = z.object({
     search: z.string().trim().max(100).optional(),
 });
 
+// storefront list — "upcoming" also covers sales that are live right now
+export const getPublicAuctionsQuerySchema = z.object({
+    type: z.enum(["past", "upcoming"], { message: 'type must be "past" or "upcoming"' }),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+    search: z.string().trim().max(100).optional(),
+});
+
+// storefront auction page — lots of one sale
+export const PUBLIC_LOT_SORTS = ["lot", "estimate-asc", "estimate-desc", "bid-desc"];
+
+export const getPublicLotsQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(60).default(12),
+    search: z.string().trim().max(100).optional(),
+    sort: z.enum(PUBLIC_LOT_SORTS, { message: "Invalid sort" }).default("lot"),
+});
+
 export const setLotLiveSchema = z.object({
     action: z.enum(["start", "stop"], { message: 'action must be "start" or "stop"' }),
 });

@@ -54,7 +54,24 @@
       "PowerShell(npm i mailgun.js)",
       "PowerShell(cd backend; $a = npm audit --json | ConvertFrom-Json; $a.vulnerabilities.PSObject.Properties | ForEach-Object { \"{0} [{1}] via: {2}\" -f $_.Name, $_.Value.severity, \\(\\($_.Value.via | ForEach-Object { if \\($_ -is [string]\\) { $_ } else { $_.title } }\\) -join '; '\\) })",
       "PowerShell($env:MAILGUN_API_KEY = \"fake-key-for-test\"; $env:MAILGUN_DOMAIN = \"auction.akaraart.com\"; node -e \"import\\('./src/config/mail.js'\\).then\\(async m => { try { await m.default.sendMail\\({ to: 'x@example.com', subject: 't', html: 'h', from: 'a@auction.akaraart.com' }\\) } catch \\(e\\) { console.log\\('send rejected as expected:', e.status, e.message\\) } }\\)\"; Start-Sleep -Seconds 3)",
-      "PowerShell(node -e \"import\\('dotenv/config'\\).then\\(\\(\\) => { const k = process.env.MAILGUN_API_KEY || ''; console.log\\('key set:', k.length > 0, '| length:', k.length, '| domain:', process.env.MAILGUN_DOMAIN, '| url:', process.env.MAILGUN_URL\\); return import\\('./src/config/mail.js'\\); }\\)\")"
+      "PowerShell(node -e \"import\\('dotenv/config'\\).then\\(\\(\\) => { const k = process.env.MAILGUN_API_KEY || ''; console.log\\('key set:', k.length > 0, '| length:', k.length, '| domain:', process.env.MAILGUN_DOMAIN, '| url:', process.env.MAILGUN_URL\\); return import\\('./src/config/mail.js'\\); }\\)\")",
+      "Bash(timeout 60 node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/0c1a37c5-2ce6-46c1-a83d-3b4c2cb006f9/scratchpad/t.mjs\")",
+      "Bash(timeout 60 node --env-file=.env \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/0c1a37c5-2ce6-46c1-a83d-3b4c2cb006f9/scratchpad/t.mjs\")",
+      "Bash(sed -i 's/aspect-\\\\[4\\\\/5\\\\]/aspect-4\\\\/5/g; s/aspect-\\\\[16\\\\/9\\\\]/aspect-video/g; s/aspect-\\\\[21\\\\/8\\\\]/aspect-21\\\\/8/g' components/core/frontend/home/*.tsx && npx tsc --noEmit -p . 2>&1 | head -30; npx eslint components/core/frontend/home \"app/\\(frontend\\)/page.tsx\" services/operations/publicAuction.api.ts lib/types/publicAuction.types.ts utils/formatDateRange.ts components/core/frontend/profile/RegistrationCard.tsx 2>&1 | tail -30)",
+      "Bash(curl -s -o /dev/null -w \"frontend:%{http_code}\\\\n\" localhost:3000)",
+      "Bash(curl -s \"localhost:8080/api/auction/public/featured\")",
+      "Bash(curl -s \"localhost:8080/api/auction/public?type=upcoming&search=modern\")",
+      "Bash(curl -s \"localhost:8080/api/auction/public?type=past\")",
+      "Bash(curl -s \"localhost:8080/api/auction/public?type=bogus\")",
+      "Bash(curl -s -o /dev/null -w \"home:%{http_code}\\\\n\" localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"auctions:%{http_code}\\\\n\" localhost:3000/auctions)",
+      "Bash(rm -f ../../scratch_unused)",
+      "Bash(node --env-file=.env -e ' *)",
+      "Bash(curl -s localhost:8080/api/auction/public/__TRACKED_VAR__)",
+      "Bash(curl -s \"localhost:8080/api/auction/public/00000000-0000-4000-8000-000000000000\")"
+    ],
+    "additionalDirectories": [
+      "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
     ]
   }
 }

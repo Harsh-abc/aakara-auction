@@ -14,9 +14,16 @@ import {
     removeAuctionParticipants,
     verifyAuctionParticipants,
 } from '../controllers/auctionParticipant.controller.js';
+import { getFeaturedAuction, getPublicAuction, getPublicAuctions, getPublicLots } from '../controllers/publicAuction.controller.js';
 
 
 const auctionRouter = express.Router()
+
+// STOREFRONT — no login; only published, non-invite-only sales
+auctionRouter.get('/public', getPublicAuctions)
+auctionRouter.get('/public/featured', getFeaturedAuction) // before /public/:auctionUuid
+auctionRouter.get('/public/:auctionUuid', getPublicAuction)
+auctionRouter.get('/public/:auctionUuid/lots', getPublicLots)
 
 auctionRouter.post(
     "/create-auction",

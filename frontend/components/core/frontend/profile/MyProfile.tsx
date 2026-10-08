@@ -260,7 +260,7 @@ function EmptyState({ title, body }: { title: string; body: string }) {
             <p className="text-sm text-neutral-900">{title}</p>
             <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-neutral-500">{body}</p>
             <Link
-                href="/"
+                href="/auctions"
                 className="mt-5 inline-flex h-10 items-center bg-neutral-950 px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-neutral-800"
             >
                 Browse auctions
