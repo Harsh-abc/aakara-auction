@@ -4,8 +4,6 @@ import "./globals.css";
 import "./master.css";
 import Providers from "./providers";
 import { Toaster } from "react-hot-toast";
-import { Header } from "@/components/core/frontend/header/header";
-import { Footer } from "@/components/core/frontend/footer/footer";
 
 const nunitoSans = Nunito_Sans({
     variable: "--font-nunito-sans",
@@ -26,13 +24,7 @@ export default function RootLayout({
         <html lang="en" className={`${nunitoSans.variable} h-full antialiased`}>
             <body className="min-h-full flex flex-col">
                 <Providers>
-                    <div className="flex min-h-dvh flex-col">
-                        <Header />
-                        <main id="main-content" className="flex-1">
-                            {children}
-                        </main>
-                        <Footer />
-                    </div>
+                    {children}
                     <Toaster />
                 </Providers>
             </body>

@@ -73,7 +73,9 @@
       "Bash(curl -s -m 5 localhost:8080/api/auction/public/featured)",
       "Bash(curl -s -m 20 -o /dev/null -w \"%{http_code}\\\\n\" localhost:3000/)",
       "Bash(curl -s -m 20 localhost:3000/)",
-      "Bash(grep -o '<main[^>]*>.\\\\{0,600\\\\}')"
+      "Bash(grep -o '<main[^>]*>.\\\\{0,600\\\\}')",
+      "Bash(git check-ignore *)",
+      "PowerShell(Move-Item -LiteralPath \"frontend\\\\app\\\\\\(auth\\)\\\\registration\" -Destination \"frontend\\\\app\\\\\\(frontend\\)\\\\registration\")"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

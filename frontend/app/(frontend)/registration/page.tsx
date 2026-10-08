@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function RegistrationPage() {
     return (
-        <div className="min-h-svh bg-white">
+        <div className="bg-white">
             {/* Registration reads ?tab= and ?redirect= via useSearchParams, which needs a Suspense boundary */}
             <Suspense>
                 <Registration />

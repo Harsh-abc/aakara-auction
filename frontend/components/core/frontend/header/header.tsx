@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AkaraLogo } from "@/components/core/frontend/akaraLogo";
-// import { useAppSelector } from "@/store/store-hooks";
+import { useAppSelector } from "@/hooks/redux";
 import { joinClassNames } from "@/lib/frontendHelpers";
 import { AccountDropdown } from "./nav-dropdown";
 import { MenuDrawer } from "./menu-drawer";
 
 export function Header() {
-    //   const loginStatus = useAppSelector((shared) => shared.login.loginStatus);
-    const loginStatus = "logged-out";
+    // auth is restored from storage before anything renders (PersistGate), so no "checking" state is needed
+    const isLoggedIn = useAppSelector((state) => !!state.auth.user);
     const currentPath = usePathname();
     const [hasScrolled, setHasScrolled] = useState(false);
 
@@ -23,7 +23,8 @@ export function Header() {
     }, []);
 
     // After logging in, come back to the page you were on
-    const comeBackHere = currentPath && !["/login", "/signup"].includes(currentPath) ? `?next=${encodeURIComponent(currentPath)}` : "";
+    const comeBackHere =
+        currentPath && !["/login", "/signup", "/registration"].includes(currentPath) ? `?redirect=${encodeURIComponent(currentPath)}` : "";
 
     return (
         <header
@@ -36,18 +37,17 @@ export function Header() {
                 <div className="mx-auto w-full px-6 flex h-19 items-center justify-between">
                     <AkaraLogo />
                     <div className="flex items-center gap-3">
-                        {/* {loginStatus === "logged-in" && <AccountDropdown />} */}
-                        {loginStatus === "logged-out" && (
+                        {isLoggedIn ? (
+                            <AccountDropdown />
+                        ) : (
                             <Link
-                                href={`/login${comeBackHere}`}
+                                href={`/registration${comeBackHere}`}
                                 className="inline-flex h-11 items-center border border-[#333] px-4 text-[12px] uppercase tracking-[0.12em] text-[#0d0d0d] transition-colors duration-200 hover:border-[#d0a55d] hover:bg-[#fdedd6] sm:px-5"
                             >
                                 <span className="hidden sm:inline">Log in / Sign up</span>
                                 <span className="sm:hidden">Log in</span>
                             </Link>
                         )}
-                        {/* While checking the login, keep the space empty so nothing jumps */}
-                        {/* {loginStatus === "checking" && <span aria-hidden className="inline-block h-11 w-10 sm:w-41" />} */}
                         <MenuDrawer />
                     </div>
                 </div>

@@ -51,7 +51,7 @@ export function HeaderUserMenu() {
             await dispatch(logoutUser()) // POST /auth/logout → clears cookie + Redux auth
             setLogoutOpen(false)
             toast.success("Logged out")
-            router.replace("/login")
+            router.replace("/registration")
         } finally {
             setLoggingOut(false)
         }

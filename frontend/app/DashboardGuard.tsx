@@ -26,6 +26,7 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
     const router = useRouter()
     const token = useAppSelector((state) => state.auth.accessToken)
     const role = useAppSelector((state) => state.auth.role)
+    const user = useAppSelector((state) => state.auth.user)
 
     const hasAccess = canAccessDashboard(role)
 
@@ -41,7 +42,10 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
 
     // 2. keep the access token fresh: refresh now if missing/expired/unreadable,
     //    otherwise just before it expires. failures are handled via SESSION_EXPIRED_EVENT.
+    //    skipped once logged out (no user), so logging out doesn't trigger a failed refresh → "Session expired"
     useEffect(() => {
+        if (!user) return
+
         const expiresAt = token ? getTokenExpiry(token) : null
         const delay = expiresAt ? Math.max(expiresAt - Date.now() - REFRESH_LEEWAY_MS, 0) : 0
 
@@ -50,7 +54,7 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
         }, delay)
 
         return () => clearTimeout(timer)
-    }, [token])
+    }, [token, user])
 
     // 3. logged in, but role isn't allowed in the dashboard (e.g. BIDDER)
     useEffect(() => {
