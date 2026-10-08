@@ -87,7 +87,13 @@
       "Bash(echo \"eslint exit $?\")",
       "Bash(node -e 'let s=\"\";process.stdin.on\\(\"data\",d=>s+=d\\).on\\(\"end\",\\(\\)=>{for\\(const r of JSON.parse\\(s\\)\\)for\\(const m of r.messages\\)if\\(m.severity===2\\)console.log\\(r.filePath.replace\\(/.*frontend./,\"\"\\),m.line,m.ruleId\\)}\\)')",
       "PowerShell(npm --prefix backend run build)",
-      "PowerShell(git config core.ignorecase)"
+      "PowerShell(git config core.ignorecase)",
+      "PowerShell(Get-Content D:\\\\Harsh\\\\projects\\\\aakara-auction\\\\frontend\\\\next.config.ts; \"---\"; Get-Content D:\\\\Harsh\\\\projects\\\\aakara-auction\\\\frontend\\\\postcss.config.mjs; \"---\"; Get-ChildItem C:\\\\Users\\\\opera -Force -Name | Where-Object { $_ -match 'package|lock' }; \"---\"; Set-Location D:\\\\Harsh\\\\projects\\\\aakara-auction\\\\frontend; node -e \"console.log\\(process.version\\)\"; npm ls tailwindcss @tailwindcss/postcss next tw-animate-css shadcn 2>$null)",
+      "PowerShell(node $s \"D:\\\\Harsh\\\\projects\\\\aakara-auction\\\\frontend\")",
+      "PowerShell(node $s \"d:\\\\Harsh\\\\projects\\\\aakara-auction\\\\frontend\")",
+      "PowerShell(Remove-Item -Recurse -Force .next -Confirm:$false)",
+      "PowerShell(npm run dev)",
+      "PowerShell($f=\"C:\\\\Users\\\\opera\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Harsh-projects-aakara-auction\\\\ad9bec1b-b65c-4048-bfa9-26c0488c6484\\\\tasks\\\\bfnm8ufyf.output\"; for\\($i=0;$i -lt 30;$i++\\){ if\\(\\(Get-Content $f -Raw\\) -match 'Ready|Local:'\\){break}; Start-Sleep 1 }; Get-Content $f; try { $r = Invoke-WebRequest http://localhost:3000/ -UseBasicParsing -TimeoutSec 90; \"STATUS \" + $r.StatusCode } catch { \"ERR \" + $_.Exception.Message }; Start-Sleep 2; Get-Content $f -Tail 20)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

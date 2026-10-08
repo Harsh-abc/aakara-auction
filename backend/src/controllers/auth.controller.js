@@ -39,6 +39,30 @@ export const verifyOtp = async (req, res, next) => {
 export const REFRESH_COOKIE_NAME = 'aakara_refresh';
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days, matches REFRESH_TOKEN_TTL_SECONDS
 
+// on UAT/prod the frontend and API sit on different subdomains, so the cookie must be scoped to the
+// parent domain (e.g. ".example.com") or the Next proxy never sees it. left host-only on localhost.
+const COOKIE_DOMAIN =
+    process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN !== 'localhost' ? process.env.COOKIE_DOMAIN : undefined;
+
+const refreshCookieScope = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    domain: COOKIE_DOMAIN,
+};
+
+const setRefreshCookie = (res, token) => {
+    // drop any older host-only copy on the API subdomain so it can't shadow the parent-domain one
+    if (COOKIE_DOMAIN) res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+    res.cookie(REFRESH_COOKIE_NAME, token, { ...refreshCookieScope, maxAge: REFRESH_COOKIE_MAX_AGE_MS });
+};
+
+const clearRefreshCookie = (res) => {
+    res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieScope);
+    if (COOKIE_DOMAIN) res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+};
+
 const normalizeIp = (ip) => {
     if (!ip) return "unknown";
 
@@ -77,13 +101,7 @@ export const login = async (req, res, next) => {
             userAgent,
         });
 
-        res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/', // scope the cookie to auth routes (refresh/logout live here)
-            maxAge: REFRESH_COOKIE_MAX_AGE_MS,
-        });
+        setRefreshCookie(res, refreshToken);
 
         console.log(user)
 
@@ -105,16 +123,6 @@ export const login = async (req, res, next) => {
 
 
 
-const setRefreshCookie = (res, token) => {
-    res.cookie(REFRESH_COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-        maxAge: REFRESH_COOKIE_MAX_AGE_MS,
-    });
-};
-
 export const refresh = async (req, res) => {
     try {
         const token = req.cookies?.[REFRESH_COOKIE_NAME];
@@ -132,7 +140,7 @@ export const refresh = async (req, res) => {
             },
         });
     } catch (err) {
-        res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+        clearRefreshCookie(res);
         return res.status(err.statusCode || 500).json({
             success: false,
             message: err.message || 'Could not refresh session',
@@ -147,7 +155,7 @@ export const logout = async (req, res) => {
     } catch (err) {
         console.error('logoutService error:', err);
     } finally {
-        res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+        clearRefreshCookie(res);
         return res.status(200).json({ success: true, message: 'Logged out' });
     }
 };
