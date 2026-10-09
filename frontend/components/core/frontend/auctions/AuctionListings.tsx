@@ -10,6 +10,7 @@ import type { PublicAuctionsPage, PublicAuctionTab } from "@/lib/types/publicAuc
 import { getPublicAuctions } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "../profile/ProfileUI"
 
+import type { BidderEligibility } from "./auctionDisplay"
 import { AuctionListItem } from "./AuctionListItem"
 import { SearchInput } from "./SearchInput"
 
@@ -40,10 +41,11 @@ const EMPTY_PAGE: PublicAuctionsPage = {
 
 type AuctionListingsProps = {
     paddles: Record<string, string>
+    eligibility: BidderEligibility
     onRegistered: (auctionUuid: string, paddleNumber: string) => void
 }
 
-export function AuctionListings({ paddles, onRegistered }: AuctionListingsProps) {
+export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionListingsProps) {
     const [tab, setTab] = useState<PublicAuctionTab>("upcoming")
     const [searchInput, setSearchInput] = useState("")
     const search = useDebouncedValue(searchInput.trim(), SEARCH_DEBOUNCE_MS)
@@ -156,6 +158,7 @@ export function AuctionListings({ paddles, onRegistered }: AuctionListingsProps)
                                 key={auction.uuid}
                                 auction={auction}
                                 paddleNumber={paddles[auction.uuid]}
+                                eligibility={eligibility}
                                 onRegistered={onRegistered}
                             />
                         ))}

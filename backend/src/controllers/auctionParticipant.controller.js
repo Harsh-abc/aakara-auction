@@ -173,7 +173,7 @@ export const removeAuctionParticipants = async (req, res) => {
 };
 
 // -----------------------------------------------------------------
-// POST /api/auction/:auctionUuid/register   (BIDDER / USER)
+// POST /api/auction/:auctionUuid/register   (BIDDER with verified KYC)
 // -----------------------------------------------------------------
 
 export const registerForAuction = async (req, res) => {
@@ -184,7 +184,6 @@ export const registerForAuction = async (req, res) => {
         const registration = await registerForAuctionService({
             auctionUuid,
             userId: req.user.userId,
-            role: req.user.role,
         });
 
         return res.status(200).json({

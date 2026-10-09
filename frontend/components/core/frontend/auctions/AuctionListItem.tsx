@@ -4,17 +4,25 @@ import { ImageOff } from "lucide-react"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
 
 import { AuctionCountdown } from "./AuctionCountdown"
-import { auctionHref, auctionMeta, badgeTone, countdownFor, STOREFRONT_STATUS_LABELS } from "./auctionDisplay"
+import {
+    auctionHref,
+    auctionMeta,
+    badgeTone,
+    countdownFor,
+    STOREFRONT_STATUS_LABELS,
+    type BidderEligibility,
+} from "./auctionDisplay"
 import { RegisterToBidButton } from "./RegisterToBidButton"
 import { StatusBadge } from "./StatusBadge"
 
 type AuctionListItemProps = {
     auction: PublicAuction
     paddleNumber?: string
+    eligibility: BidderEligibility
     onRegistered: (auctionUuid: string, paddleNumber: string) => void
 }
 
-export function AuctionListItem({ auction, paddleNumber, onRegistered }: AuctionListItemProps) {
+export function AuctionListItem({ auction, paddleNumber, eligibility, onRegistered }: AuctionListItemProps) {
     const countdown = countdownFor(auction)
     const isPast = !countdown
 
@@ -42,7 +50,14 @@ export function AuctionListItem({ auction, paddleNumber, onRegistered }: Auction
 
             <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">
                 {countdown && <AuctionCountdown label={countdown.label} target={countdown.target} className="lg:justify-end" />}
-                {!isPast && <RegisterToBidButton auction={auction} paddleNumber={paddleNumber} onRegistered={onRegistered} />}
+                {!isPast && (
+                    <RegisterToBidButton
+                        auction={auction}
+                        paddleNumber={paddleNumber}
+                        eligibility={eligibility}
+                        onRegistered={onRegistered}
+                    />
+                )}
                 <Link
                     href={auctionHref(auction)}
                     className="inline-flex h-11 w-full items-center justify-center border border-neutral-950 bg-white px-6 text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-950 transition-colors hover:bg-neutral-50"
