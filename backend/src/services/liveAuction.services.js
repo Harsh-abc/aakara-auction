@@ -102,6 +102,76 @@ export const getLiveAuctionsService = async () => {
 };
 
 // =====================================================================
+// OPENING LOT (when an auction goes live)
+// Only one lot is started: the first lot whose own window covers `now`,
+// else the first lot by number. Staff start / stop the rest by hand.
+// Call inside a transaction that already locked the auction row.
+// =====================================================================
+
+/** Lots that can open a sale (UNSOLD only comes later, as a re-offer) */
+const OPENING_LOT_STATUSES = ["DRAFT", "SCHEDULED"];
+
+export const startOpeningLot = async (tx, auctionId, now = new Date()) => {
+    const live = await tx.auctionItem.findFirst({
+        where: { auctionId, status: "ACTIVE" },
+        select: { id: true },
+    });
+    if (live) return null;
+
+    const lots = await tx.auctionItem.findMany({
+        where: { auctionId, status: { in: OPENING_LOT_STATUSES } },
+        orderBy: { itemNumber: "asc" },
+        select: { id: true, scheduledStartAt: true, scheduledEndAt: true },
+    });
+    if (lots.length === 0) return null;
+
+    const onTime = lots.find((lot) => lot.scheduledStartAt <= now && now < lot.scheduledEndAt);
+    const lot = onTime ?? lots[0];
+
+    return tx.auctionItem.update({
+        where: { id: lot.id },
+        data: { status: "ACTIVE" },
+        select: { uuid: true, itemNumber: true, title: true, status: true },
+    });
+};
+
+// =====================================================================
+// CLOSING LOTS (stopping a lot, or when an auction ends)
+// =====================================================================
+
+/** Status a live lot closes with: sold if the top bid meets the reserve */
+const closedLotStatus = (lot) => {
+    const hasBid = Number(lot.bidCount) > 0 && lot.currentBid !== null;
+    const reserveMet = hasBid && (lot.reservePrice === null || Number(lot.currentBid) >= Number(lot.reservePrice));
+    return reserveMet ? "SOLD" : hasBid ? "PASSED" : "UNSOLD";
+};
+
+/**
+ * Closes every open lot of an ending auction: the live lot closes as if stopped,
+ * lots never offered become UNSOLD. Call inside a transaction that already locked the auction row.
+ */
+export const closeAuctionLots = async (tx, auctionId) => {
+    const live = await tx.auctionItem.findFirst({
+        where: { auctionId, status: "ACTIVE" },
+        select: { id: true, currentBid: true, reservePrice: true, bidCount: true },
+    });
+    const liveLot =
+        live &&
+        (await tx.auctionItem.update({
+            where: { id: live.id },
+            data: { status: closedLotStatus(live) },
+            select: { itemNumber: true, status: true },
+        }));
+
+    const { count: unoffered } = await tx.auctionItem.updateMany({
+        where: { auctionId, status: { in: OPENING_LOT_STATUSES } },
+        data: { status: "UNSOLD" },
+    });
+
+    return { liveLot, unoffered };
+};
+
+// =====================================================================
 // START / STOP A LOT
 // Only one lot per auction can be live (ACTIVE) at a time.
 // =====================================================================
@@ -153,12 +223,7 @@ export const setLotLiveService = async ({ lotUuid, action }) =>
                 status = "ACTIVE";
             } else {
                 if (lot.status !== "ACTIVE") throw httpError(`Lot #${lot.itemNumber} isn't live`, 409);
-
-                // Close the lot: sold if the top bid meets the reserve
-                const hasBid = Number(lot.bidCount) > 0 && lot.currentBid !== null;
-                const reserveMet =
-                    hasBid && (lot.reservePrice === null || Number(lot.currentBid) >= Number(lot.reservePrice));
-                status = reserveMet ? "SOLD" : hasBid ? "PASSED" : "UNSOLD";
+                status = closedLotStatus(lot);
             }
 
             const updated = await tx.auctionItem.update({

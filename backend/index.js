@@ -12,6 +12,7 @@ import categoryRouter from "./src/routes/category.routes.js";
 import auctionRouter from "./src/routes/auction.routes.js";
 import currencyRouter from "./src/routes/currency.routes.js";
 import userRouter from "./src/routes/user.routes.js";
+import { startAuctionScheduler } from "./src/jobs/auctionScheduler.js";
 
 
 const app = express();
@@ -70,6 +71,7 @@ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     prisma.$connect().then(() => {
         console.log("Connected to the database");
+        startAuctionScheduler();
     }).catch((err) => {
         console.error("Error connecting to the database", err);
     });

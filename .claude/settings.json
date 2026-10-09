@@ -98,7 +98,11 @@
       "Bash(node --check src/controllers/auth.controller.js)",
       "Bash(node --check src/routes/auth.routes.js)",
       "PowerShell(node --check ..\\\\backend\\\\src\\\\services\\\\auctionParticipant.services.js)",
-      "PowerShell(node --check ..\\\\backend\\\\src\\\\controllers\\\\auctionParticipant.controller.js)"
+      "PowerShell(node --check ..\\\\backend\\\\src\\\\controllers\\\\auctionParticipant.controller.js)",
+      "PowerShell(node --check backend/src/jobs/auctionScheduler.js)",
+      "PowerShell(node --check backend/src/services/liveAuction.services.js)",
+      "PowerShell(node --check backend/src/services/auction.services.js)",
+      "PowerShell(node --check backend/index.js)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

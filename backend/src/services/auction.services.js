@@ -1,6 +1,7 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { syncParticipantsToLots } from "./auctionParticipant.services.js";
+import { closeAuctionLots, startOpeningLot } from "./liveAuction.services.js";
 
 // =====================================================================
 // Helpers
@@ -830,6 +831,16 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
                     reason: toStr(reason) ?? "Status changed by super admin",
                 },
             });
+
+            // Opening the sale starts its first lot, same as the scheduled auto-start
+            if (status === "LIVE" && (from === "SCHEDULED" || from === "PREVIEW")) {
+                await startOpeningLot(tx, auction.id);
+            }
+
+            // Ending the sale closes its lots, same as the scheduled auto-end
+            if (status === "ENDED") {
+                await closeAuctionLots(tx, auction.id);
+            }
 
             return tx.auction.findUnique({
                 where: { id: auction.id },

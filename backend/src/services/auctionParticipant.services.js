@@ -27,10 +27,11 @@ const httpError = (message, statusCode = 400) => {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** Users who can be added to an auction: bidder accounts (not team members). */
+/** Users who can be added to an auction: KYC-verified bidder accounts (not team members). */
 const addableUsersWhere = {
     deletedAt: null,
     role: { name: { in: BIDDER_ROLES } },
+    kyc: { is: { status: "VERIFIED" } },
 };
 
 const USER_SELECT = {
@@ -393,7 +394,7 @@ export const addAuctionParticipantsService = async ({ auctionUuid, userUuids, ac
     const auction = await findAuction(auctionUuid);
     assertEditable(auction);
 
-    const users = await findUsersOrThrow(userUuids, addableUsersWhere, "can't be added (bidder accounts only)");
+    const users = await findUsersOrThrow(userUuids, addableUsersWhere, "can't be added (KYC-verified bidder accounts only)");
 
     const { added, lotRows } = await prisma.$transaction(
         (tx) =>
