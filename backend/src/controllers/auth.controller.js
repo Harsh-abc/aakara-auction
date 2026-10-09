@@ -1,5 +1,5 @@
 import { registerSchema, verifyOtpSchema, loginSchema } from '../validations/auth.validation.js';
-import { registerService, verifyOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
+import { registerService, verifyOtpService, verifyPhoneOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
 import { ZodError } from 'zod';
 
 export const register = async (req, res, next) => {
@@ -22,6 +22,25 @@ export const verifyOtp = async (req, res, next) => {
     try {
         const data = verifyOtpSchema.parse(req.body);
         const result = await verifyOtpService(data);
+
+        // signups with a phone number still need the phone step before the account exists
+        const accountCreated = result.nextStep === null;
+
+        res.status(accountCreated ? 201 : 200).json({
+            success: true,
+            message: accountCreated ? 'Registration successful' : 'Email verified. Verify your phone number to finish.',
+            data: result,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        next(err);
+    }
+};
+
+export const verifyPhoneOtp = async (req, res, next) => {
+    try {
+        const data = verifyOtpSchema.parse(req.body);
+        const result = await verifyPhoneOtpService(data);
 
         res.status(201).json({
             success: true,

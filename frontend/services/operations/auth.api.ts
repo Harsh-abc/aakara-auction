@@ -4,7 +4,7 @@ import { setSignupEmail } from "@/redux/slices/authSlice";
 import { apiConnector } from "../apiConnector";
 
 import { createAsyncThunk } from "@reduxjs/toolkit";
-const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, LOGOUT_API } = authEndPoints;
+const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, VERIFY_PHONE_OTP_API, LOGOUT_API } = authEndPoints;
 
 
 // import { jwtDecode } from "jwt-decode"
@@ -107,6 +107,40 @@ export const verifySignupOtp = createAsyncThunk<
             return rejectWithValue(message);
         }
 
+    }
+);
+
+
+// runs after verifySignupOtp; this is the call that creates the account
+export const verifySignupPhoneOtp = createAsyncThunk<
+    GenericApiResponse,
+    VerifyOtpPayload,
+    { rejectValue: string }
+>(
+    "auth/verifySignupPhoneOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await apiConnector<GenericApiResponse>({
+                method: "POST",
+                url: VERIFY_PHONE_OTP_API,
+                body: payload,
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(
+                    response.data.message || "OTP verification failed"
+                );
+            }
+
+            return response.data;
+        } catch (error: any) {
+            const message =
+                error?.response?.data?.message ||
+                error?.message ||
+                "Could not verify OTP. Try again.";
+
+            return rejectWithValue(message);
+        }
     }
 );
 

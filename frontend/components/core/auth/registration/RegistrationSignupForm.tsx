@@ -17,7 +17,7 @@ import {
     authInputErrorClass,
     authLabelClass,
 } from "./AuthField"
-import { RegistrationOtpStep } from "./RegistrationOtpStep"
+import { RegistrationOtpStep, type OtpChannel } from "./RegistrationOtpStep"
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -114,8 +114,12 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
     const [formData, setFormData] = useState(initialFormData)
     const [errors, setErrors] = useState<FieldErrors>({})
 
-    // set once the OTP has been sent; its presence moves the tab to the verify step
-    const [pendingSignup, setPendingSignup] = useState<{ payload: SignupPayload; sentAt: number } | null>(null)
+    // set once the OTP has been sent; its presence moves the tab to the verify steps (email, then phone)
+    const [pendingSignup, setPendingSignup] = useState<{
+        payload: SignupPayload
+        sentAt: number
+        step: OtpChannel
+    } | null>(null)
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const id = event.target.id as FieldKey
@@ -150,7 +154,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
         try {
             await dispatch(sendSignupOtp(payload)).unwrap()
             toast.success(`Verification code sent to ${payload.email}`)
-            setPendingSignup({ payload, sentAt: Date.now() })
+            setPendingSignup({ payload, sentAt: Date.now(), step: "email" })
         } catch (error) {
             const message = typeof error === "string" ? error : "Could not send the code. Please try again."
             const conflictField = fieldForConflict(message)
@@ -167,6 +171,12 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
     const handleVerified = () => {
         if (!pendingSignup) return
 
+        if (pendingSignup.step === "email") {
+            toast.success("Email verified. Now verify your mobile number.")
+            setPendingSignup({ ...pendingSignup, step: "phone" })
+            return
+        }
+
         const { email } = pendingSignup.payload
 
         toast.success("Account created. Please log in to continue.")
@@ -181,10 +191,15 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
 
     if (pendingSignup) {
         return (
+            // keyed by step so the phone step starts with empty boxes and fresh error state
             <RegistrationOtpStep
+                key={pendingSignup.step}
+                channel={pendingSignup.step}
                 payload={pendingSignup.payload}
                 sentAt={pendingSignup.sentAt}
                 onEditDetails={() => setPendingSignup(null)}
+                // a fresh code resets the backend's email verification, so always restart at the email step
+                onResent={(sentAt) => setPendingSignup((prev) => prev && { ...prev, sentAt, step: "email" })}
                 onVerified={handleVerified}
             />
         )

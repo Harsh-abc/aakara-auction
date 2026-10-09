@@ -93,7 +93,10 @@
       "PowerShell(node $s \"d:\\\\Harsh\\\\projects\\\\aakara-auction\\\\frontend\")",
       "PowerShell(Remove-Item -Recurse -Force .next -Confirm:$false)",
       "PowerShell(npm run dev)",
-      "PowerShell($f=\"C:\\\\Users\\\\opera\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Harsh-projects-aakara-auction\\\\ad9bec1b-b65c-4048-bfa9-26c0488c6484\\\\tasks\\\\bfnm8ufyf.output\"; for\\($i=0;$i -lt 30;$i++\\){ if\\(\\(Get-Content $f -Raw\\) -match 'Ready|Local:'\\){break}; Start-Sleep 1 }; Get-Content $f; try { $r = Invoke-WebRequest http://localhost:3000/ -UseBasicParsing -TimeoutSec 90; \"STATUS \" + $r.StatusCode } catch { \"ERR \" + $_.Exception.Message }; Start-Sleep 2; Get-Content $f -Tail 20)"
+      "PowerShell($f=\"C:\\\\Users\\\\opera\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Harsh-projects-aakara-auction\\\\ad9bec1b-b65c-4048-bfa9-26c0488c6484\\\\tasks\\\\bfnm8ufyf.output\"; for\\($i=0;$i -lt 30;$i++\\){ if\\(\\(Get-Content $f -Raw\\) -match 'Ready|Local:'\\){break}; Start-Sleep 1 }; Get-Content $f; try { $r = Invoke-WebRequest http://localhost:3000/ -UseBasicParsing -TimeoutSec 90; \"STATUS \" + $r.StatusCode } catch { \"ERR \" + $_.Exception.Message }; Start-Sleep 2; Get-Content $f -Tail 20)",
+      "Read(//d/Harsh/projects/**)",
+      "Bash(node --check src/controllers/auth.controller.js)",
+      "Bash(node --check src/routes/auth.routes.js)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

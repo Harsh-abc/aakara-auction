@@ -63,7 +63,7 @@ import {
     AuthState,
 } from "@/lib/types/auth.types";
 
-import { loginUser, logoutUser, sendSignupOtp, verifySignupOtp } from "@/services/operations/auth.api";
+import { loginUser, logoutUser, sendSignupOtp, verifySignupOtp, verifySignupPhoneOtp } from "@/services/operations/auth.api";
 
 const initialState: AuthState = {
     loading: false,
@@ -154,6 +154,19 @@ const authSlice = createSlice({
             })
 
             .addCase(verifySignupOtp.rejected, (state) => {
+                state.loading = false;
+            })
+
+            // Verify signup phone OTP
+            .addCase(verifySignupPhoneOtp.pending, (state) => {
+                state.loading = true;
+            })
+
+            .addCase(verifySignupPhoneOtp.fulfilled, (state) => {
+                state.loading = false;
+            })
+
+            .addCase(verifySignupPhoneOtp.rejected, (state) => {
                 state.loading = false;
             })
 

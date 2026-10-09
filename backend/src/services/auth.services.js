@@ -94,7 +94,7 @@ export const registerService = async ({ username, email, password, phone, city, 
     return { email, expiresInSeconds: PENDING_TTL };
 };
 
-export const verifyOtpService = async ({ email, otp }) => {
+const getPendingSignup = async (email) => {
     const attempts = Number((await redis.get(attemptsKey(email))) ?? 0);
     if (attempts >= MAX_VERIFY_ATTEMPTS) {
         await redis.del(pendingKey(email), attemptsKey(email), resendKey(email));
@@ -110,17 +110,68 @@ export const verifyOtpService = async ({ email, otp }) => {
         throw error;
     }
 
-    const pending = JSON.parse(raw);
+    return JSON.parse(raw);
+};
 
-    if (pending.otp !== otp) {
-        const newCount = await redis.incr(attemptsKey(email));
-        if (newCount === 1) await redis.expire(attemptsKey(email), PENDING_TTL);
-        const error = new Error('Invalid OTP');
+// wrong guesses on either step count towards the same MAX_VERIFY_ATTEMPTS
+const assertOtpMatches = async (email, expected, otp) => {
+    if (expected === otp) return;
+
+    const newCount = await redis.incr(attemptsKey(email));
+    if (newCount === 1) await redis.expire(attemptsKey(email), PENDING_TTL);
+    const error = new Error('Invalid OTP');
+    error.statusCode = 400;
+    throw error;
+};
+
+// step 1: email code. Signups with a phone number then go on to verifyPhoneOtpService
+export const verifyOtpService = async ({ email, otp }) => {
+    const pending = await getPendingSignup(email);
+    await assertOtpMatches(email, pending.otp, otp);
+
+    if (!pending.phone) {
+        const user = await createUserFromPending(email, pending, { phoneVerified: false });
+        return { ...user, nextStep: null };
+    }
+
+    // keep the remaining lifetime rather than resetting it, so both steps share one expiry
+    const ttl = await redis.ttl(pendingKey(email));
+    if (ttl <= 0) {
+        const error = new Error('OTP expired or registration not found. Please register again.');
+        error.statusCode = 410;
+        throw error;
+    }
+
+    await redis.set(pendingKey(email), JSON.stringify({ ...pending, emailVerified: true }), 'EX', ttl);
+    await redis.del(attemptsKey(email));
+
+    return { email, phone: pending.phone, nextStep: 'VERIFY_PHONE' };
+};
+
+// step 2: phone code. No SMS provider yet, so the phone step accepts the same code that was emailed
+export const verifyPhoneOtpService = async ({ email, otp }) => {
+    const pending = await getPendingSignup(email);
+
+    if (!pending.emailVerified) {
+        const error = new Error('Verify your email address first.');
         error.statusCode = 400;
         throw error;
     }
 
+    if (!pending.phone) {
+        const error = new Error('No phone number on this registration.');
+        error.statusCode = 400;
+        throw error;
+    }
 
+    // TODO: compare against a separate SMS code once phone OTPs are sent
+    await assertOtpMatches(email, pending.otp, otp);
+
+    const user = await createUserFromPending(email, pending, { phoneVerified: true });
+    return { ...user, nextStep: null };
+};
+
+const createUserFromPending = async (email, pending, { phoneVerified }) => {
     const existing = await prisma.user.findFirst({
         where: {
             OR: [
@@ -157,6 +208,8 @@ export const verifyOtpService = async ({ email, otp }) => {
                 status: 'ACTIVE',
                 emailVerified: true,
                 emailVerifiedAt: new Date(),
+                phoneVerified,
+                phoneVerifiedAt: phoneVerified ? new Date() : null,
             },
         });
 
