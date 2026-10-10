@@ -31,7 +31,7 @@ interface AddParticipantsDialogProps {
 }
 
 /**
- * Search bidder accounts not yet registered for the auction, pick any
+ * Search KYC-verified bidder accounts not yet registered for the auction, pick any
  * number, and register them (for every lot, pending verification).
  */
 export default function AddParticipantsDialog({ auctionUuid, busy, onAdd }: AddParticipantsDialogProps) {
@@ -132,7 +132,9 @@ export default function AddParticipantsDialog({ auctionUuid, busy, onAdd }: AddP
                         <p className="flex h-40 items-center justify-center px-4 text-center text-sm text-red-600">{error}</p>
                     ) : results.length === 0 ? (
                         <p className="flex h-40 items-center justify-center px-4 text-center text-sm text-slate-500">
-                            {search ? "No matching users who aren't already registered." : "No users left to add."}
+                            {search
+                                ? "No matching KYC-verified users who aren't already registered."
+                                : "No KYC-verified users left to add."}
                         </p>
                     ) : (
                         <ul className={cn("divide-y divide-slate-100", loading && "opacity-60")}>

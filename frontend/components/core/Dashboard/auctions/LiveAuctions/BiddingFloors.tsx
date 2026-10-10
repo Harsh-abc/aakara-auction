@@ -60,6 +60,26 @@ export default function BiddingFloors() {
         if (selected?.uuid) dispatch(getLotsByAuction({ auctionUuid: selected.uuid }));
     }, [dispatch, selected?.uuid]);
 
+    // The server ends sales at their end time (checks every 30s) and closes their lots —
+    // refetch just after the next one is due so it drops off the floor without a reload
+    useEffect(() => {
+        const now = Date.now();
+        const nextEnd = liveAuctions
+            .map((a) => new Date(a.endTime).getTime())
+            .filter((t) => t > now)
+            .sort((a, b) => a - b)[0];
+        if (nextEnd === undefined) return;
+
+        const delay = nextEnd - now + 35_000;
+        if (delay > 24 * 60 * 60 * 1000) return; // far off — a normal reload will catch it
+
+        const timer = setTimeout(() => {
+            dispatch(getLiveAuctions());
+            if (selected?.uuid) dispatch(getLotsByAuction({ auctionUuid: selected.uuid }));
+        }, delay);
+        return () => clearTimeout(timer);
+    }, [liveAuctions, dispatch, selected?.uuid]);
+
     // The store's lots may still belong to the previously selected auction
     const showingSelected = Boolean(selected && lotsAuction?.uuid === selected.uuid);
     const tableLots = useMemo(() => (showingSelected ? lots : []), [showingSelected, lots]);

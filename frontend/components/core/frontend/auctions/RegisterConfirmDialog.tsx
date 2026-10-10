@@ -177,7 +177,7 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
 
                             {kycStatus !== "VERIFIED" && (
                                 <p className="mt-3 text-xs leading-relaxed text-neutral-500">
-                                    You can register now, but you&apos;ll need verified KYC before you&apos;re approved to bid.{" "}
+                                    Your KYC must be verified before you can register for this auction.{" "}
                                     <Link href="/my-profile" className="text-neutral-950 underline underline-offset-2">
                                         Manage KYC
                                     </Link>
@@ -218,7 +218,7 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                     <button
                         type="button"
                         onClick={onConfirm}
-                        disabled={!loaded || !accepted || submitting}
+                        disabled={!loaded || kycStatus !== "VERIFIED" || !accepted || submitting}
                         className="inline-flex h-11 cursor-pointer items-center justify-center bg-neutral-950 px-6 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {submitting ? "Registering..." : "Confirm registration"}

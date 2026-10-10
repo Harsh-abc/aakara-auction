@@ -26,8 +26,10 @@ const publicWhere = (statuses) => ({
 
 /**
  * Each list is a run of buckets, shown one after another, each with its own sort.
- * Status only changes when staff start a sale, so a SCHEDULED sale can sit past its start time —
- * those go after the sales that genuinely open next. `hero: false` keeps a bucket out of the featured pick.
+ * The scheduler (jobs/auctionScheduler.js) puts sales live at their start time and ends them (→ past)
+ * at their end time, but a SCHEDULED sale
+ * can still briefly sit past it (or stay there if its end time passed first) — those go after the
+ * sales that genuinely open next. `hero: false` keeps a bucket out of the featured pick.
  */
 const timelineBuckets = (type, now = new Date()) => {
     if (type === "past") return [{ where: publicWhere(PAST_STATUSES), orderBy: [{ endTime: "desc" }] }];

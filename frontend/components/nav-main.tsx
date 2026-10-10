@@ -35,9 +35,18 @@ export function NavMain({
 }) {
   const pathname = usePathname()
 
+  // Most specific URL matching the current path, so "/dashboard" isn't active on every page
+  const activeUrl = items
+    .flatMap((item) => (item.items?.length ? item.items.map((sub) => sub.url) : [item.url]))
+    .filter((url) => pathname === url || pathname.startsWith(url + "/"))
+    .sort((a, b) => b.length - a.length)[0]
+
+  const isGroupActive = (item: (typeof items)[number]) =>
+    !!item.items?.some((sub) => sub.url === activeUrl)
+
   // NEW: only one group open at a time; start with the group of the current page open
   const [openGroup, setOpenGroup] = useState<string | null>(
-    () => items.find((item) => item.items?.length && pathname.startsWith(item.url))?.title ?? null
+    () => items.find(isGroupActive)?.title ?? null
   )
 
   return (
@@ -49,6 +58,7 @@ export function NavMain({
               <SidebarMenuItem key={item.title} className="mb-2">
                 <SidebarMenuButton
                   tooltip={item.title}
+                  isActive={item.url === activeUrl}
                   onClick={() => setOpenGroup(null)} // NEW: clicking a plain link closes any open group
                   render={
                     <Link
@@ -56,7 +66,7 @@ export function NavMain({
                       className="flex items-center gap-2 rounded-md px-2 py-2 transition-colors text-[#ffffff] hover:bg-[#491B3A] hover:text-[#491B3A]"
                     />
                   }
-                  className="hover:bg-[#491B3A] hover:border-l-[#491B3A] hover:text-white px-3 py-4"
+                  className="hover:bg-[#491B3A] hover:border-l-[#491B3A] hover:text-white px-3 py-4 data-active:bg-[#491B3A] data-active:text-white data-active:font-semibold"
                 >
                   {item.icon && <span className="w-4 h-4 shrink-0">{item.icon}</span>}
                   <span>{item.title}</span>
@@ -78,7 +88,8 @@ export function NavMain({
                 render={
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className="flex items-center gap-2 rounded-md px-3 py-4 transition-colors text-white hover:bg-[#491B3A] hover:text-white active:bg-[#491B3A] active:text-white data-open:hover:bg-[#491B3A] data-open:hover:text-white"
+                    isActive={isGroupActive(item)}
+                    className="flex items-center gap-2 rounded-md px-3 py-4 transition-colors text-white hover:bg-[#491B3A] hover:text-white active:bg-[#491B3A] active:text-white data-open:hover:bg-[#491B3A] data-open:hover:text-white data-active:bg-[#491B3A] data-active:text-white data-active:font-semibold"
                   />
                 }
               >
@@ -93,13 +104,14 @@ export function NavMain({
                   {item.items.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton
+                        isActive={subItem.url === activeUrl}
                         render={
                           <Link
                             href={subItem.url}
                             className="rounded-md transition-colors"
                           />
                         }
-                        className="text-white hover:bg-[#491B3A] hover:text-white active:bg-[#491B3A] active:text-white data-active:bg-[#491B3A] data-active:text-white"
+                        className="text-white hover:bg-[#491B3A] hover:text-white active:bg-[#491B3A] active:text-white data-active:bg-[#491B3A] data-active:text-white data-active:font-semibold"
                       >
                         <span>{subItem.title}</span>
                       </SidebarMenuSubButton>

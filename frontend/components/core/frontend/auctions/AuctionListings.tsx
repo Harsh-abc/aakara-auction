@@ -12,6 +12,9 @@ import { getErrorMessage } from "../profile/ProfileUI";
 
 import { AuctionListItem } from "./AuctionListItem";
 import { SearchInput } from "./SearchInput";
+import type { BidderEligibility } from "./auctionDisplay"
+import { AuctionListItem } from "./AuctionListItem"
+import { SearchInput } from "./SearchInput"
 
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -56,6 +59,15 @@ export function AuctionListings({ paddles, onRegistered }: AuctionListingsProps)
     const [tab, setTab] = useState<PublicAuctionTab>("upcoming");
     const [searchInput, setSearchInput] = useState("");
     const search = useDebouncedValue(searchInput.trim(), SEARCH_DEBOUNCE_MS);
+    paddles: Record<string, string>
+    eligibility: BidderEligibility
+    onRegistered: (auctionUuid: string, paddleNumber: string) => void
+}
+
+export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionListingsProps) {
+    const [tab, setTab] = useState<PublicAuctionTab>("upcoming")
+    const [searchInput, setSearchInput] = useState("")
+    const search = useDebouncedValue(searchInput.trim(), SEARCH_DEBOUNCE_MS)
 
     // results are tagged with the query they answer, so a stale tag means a fetch is in flight
     const queryKey = `${tab}|${search}`;
@@ -154,6 +166,13 @@ export function AuctionListings({ paddles, onRegistered }: AuctionListingsProps)
                     <div>
                         {auctions.map((auction) => (
                             <AuctionListItem key={auction.uuid} auction={auction} paddleNumber={paddles[auction.uuid]} onRegistered={onRegistered} />
+                            <AuctionListItem
+                                key={auction.uuid}
+                                auction={auction}
+                                paddleNumber={paddles[auction.uuid]}
+                                eligibility={eligibility}
+                                onRegistered={onRegistered}
+                            />
                         ))}
                     </div>
 

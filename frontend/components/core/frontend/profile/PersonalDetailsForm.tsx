@@ -18,11 +18,16 @@ import {
 } from "@/components/core/auth/registration/AuthField"
 import { getErrorMessage, ProfileButton, ProfileSection } from "./ProfileUI"
 
+// signup stores "First Last" as the username and leaves the profile names empty
+const hasProfileName = (account: MyAccount) => !!(account.profile?.firstName || account.profile?.lastName)
+
 const toForm = (account: MyAccount) => {
     const { countryCode, number } = splitPhone(account.phone)
+    const [usernameFirst = "", ...usernameRest] = hasProfileName(account) ? [] : account.username.trim().split(/\s+/)
+
     return {
-        firstName: account.profile?.firstName ?? "",
-        lastName: account.profile?.lastName ?? "",
+        firstName: account.profile?.firstName || usernameFirst,
+        lastName: account.profile?.lastName || usernameRest.join(" "),
         countryCode,
         phone: number,
     }
@@ -98,6 +103,12 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
         if (Object.keys(payload).length === 0) {
             toast("No changes to save")
             return
+        }
+
+        // names prefilled from the username aren't stored yet — save them with the first change
+        if (!hasProfileName(account)) {
+            payload.firstName = firstName
+            payload.lastName = lastName
         }
 
         setSaving(true)

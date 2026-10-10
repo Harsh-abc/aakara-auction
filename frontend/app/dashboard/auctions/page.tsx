@@ -40,6 +40,31 @@ export default function Auctions() {
         dispatch(getAuctions());
     }, [dispatch]);
 
+    // The server puts scheduled auctions live at their start time and ends live ones at their
+    // end time (checks every 30s) — refetch just after the next change is due so the status
+    // updates without a reload
+    useEffect(() => {
+        const now = Date.now();
+        const nextChange = auctions
+            .flatMap((a) =>
+                a.status === "SCHEDULED" || a.status === "PREVIEW"
+                    ? [a.startTime]
+                    : a.status === "LIVE" || a.status === "PAUSED"
+                      ? [a.endTime]
+                      : []
+            )
+            .map((t) => new Date(t).getTime())
+            .filter((t) => t > now)
+            .sort((a, b) => a - b)[0];
+        if (nextChange === undefined) return;
+
+        const delay = nextChange - now + 35_000;
+        if (delay > 24 * 60 * 60 * 1000) return; // far off — a normal reload will catch it
+
+        const timer = setTimeout(() => dispatch(getAuctions()), delay);
+        return () => clearTimeout(timer);
+    }, [auctions, dispatch]);
+
     const role = useSelector((state: RootState) => state.auth.role);
     // Admins can view registrations; only a super admin can change them (enforced by the API)
     const canSeeRegistrations = role === "SUPER_ADMIN" || role === "ADMIN";

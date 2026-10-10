@@ -1,4 +1,5 @@
 import type { AuctionStatus } from "@/lib/types/auction.types"
+import type { MyAccount } from "@/lib/types/profile.types"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { formatDateRange } from "@/utils/formatDateRange"
 
@@ -51,4 +52,17 @@ export function registrationWindow(auction: PublicAuction, now = Date.now()): Re
     return { open: true }
 }
 
-export const auctionHref = (auction: Pick<PublicAuction, "uuid">) => `/auctions/${auction.uuid}`
+// must match BIDDER_ROLES in backend/src/services/lotBidder.services.js
+export const BIDDER_ROLES = ["BIDDER", "USER"]
+
+export type BidderEligibility = "guest" | "loading" | "eligible" | "kyc-pending" | "not-bidder"
+
+// mirrors the account check in registerForAuctionService: BIDDER role with verified KYC
+export function bidderEligibility(account: Pick<MyAccount, "role" | "kyc">): BidderEligibility {
+    const kycVerified = account.kyc?.status === "VERIFIED"
+    if (account.role.name === "BIDDER" && kycVerified) return "eligible"
+    if (BIDDER_ROLES.includes(account.role.name) && !kycVerified) return "kyc-pending"
+    return "not-bidder"
+}
+
+export const auctionHref =(auction: Pick<PublicAuction, "uuid">) => `/auctions/${auction.uuid}`

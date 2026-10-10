@@ -27,10 +27,11 @@ const httpError = (message, statusCode = 400) => {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** Users who can be added to an auction: bidder accounts (not team members). */
+/** Users who can be added to an auction: KYC-verified bidder accounts (not team members). */
 const addableUsersWhere = {
     deletedAt: null,
     role: { name: { in: BIDDER_ROLES } },
+    kyc: { is: { status: "VERIFIED" } },
 };
 
 const USER_SELECT = {
@@ -188,9 +189,19 @@ export const syncParticipantsToLots = async (tx, auctionId) => {
 // REGISTER FOR AN AUCTION (bidder self-registration)
 // =====================================================================
 
-export const registerForAuctionService = async ({ auctionUuid, userId, role }) => {
+export const registerForAuctionService = async ({ auctionUuid, userId }) => {
     if (!userId) throw httpError("Authenticated user is required", 401);
-    if (!BIDDER_ROLES.includes(role)) throw httpError("Only bidder accounts can register for auctions", 403);
+
+    // Read from the DB, not the token: KYC approval promotes USER → BIDDER
+    // after the token was issued
+    const account = await prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: { role: { select: { name: true } }, kyc: { select: { status: true } } },
+    });
+    if (account?.role.name !== "BIDDER") throw httpError("Only bidder accounts can register for auctions", 403);
+    if (account.kyc?.status !== "VERIFIED") {
+        throw httpError("Your KYC must be verified before you can register for auctions", 403);
+    }
 
     const auction = await findAuction(auctionUuid);
     if (!REGISTRATION_AUCTION_STATUSES.includes(auction.status)) {
@@ -383,7 +394,7 @@ export const addAuctionParticipantsService = async ({ auctionUuid, userUuids, ac
     const auction = await findAuction(auctionUuid);
     assertEditable(auction);
 
-    const users = await findUsersOrThrow(userUuids, addableUsersWhere, "can't be added (bidder accounts only)");
+    const users = await findUsersOrThrow(userUuids, addableUsersWhere, "can't be added (KYC-verified bidder accounts only)");
 
     const { added, lotRows } = await prisma.$transaction(
         (tx) =>
