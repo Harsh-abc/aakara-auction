@@ -14,7 +14,7 @@ import {
     removeAuctionParticipants,
     verifyAuctionParticipants,
 } from '../controllers/auctionParticipant.controller.js';
-import { getFeaturedAuction, getPublicAuction, getPublicAuctions, getPublicLots } from '../controllers/publicAuction.controller.js';
+import { getFeaturedAuction, getPublicAuction, getPublicAuctions, getPublicLot, getPublicLots } from '../controllers/publicAuction.controller.js';
 
 
 const auctionRouter = express.Router()
@@ -24,6 +24,7 @@ auctionRouter.get('/public', getPublicAuctions)
 auctionRouter.get('/public/featured', getFeaturedAuction) // before /public/:auctionUuid
 auctionRouter.get('/public/:auctionUuid', getPublicAuction)
 auctionRouter.get('/public/:auctionUuid/lots', getPublicLots)
+auctionRouter.get('/public/:auctionUuid/lots/:lotUuid', getPublicLot)
 
 auctionRouter.post(
     "/create-auction",

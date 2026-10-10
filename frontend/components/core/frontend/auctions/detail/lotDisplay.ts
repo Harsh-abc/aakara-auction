@@ -24,12 +24,16 @@ export const lotHeading = (lot: PublicLot) => [lot.artistName, lot.title].filter
 
 const trimDecimal = (value: string) => String(Number(value))
 
-// "Oil on canvas · 1978 · 122 × 91 × 3 cm" — height first, the catalogue convention
-export function lotDetails(lot: PublicLot) {
+// "122 × 91 × 3 cm" — height first, the catalogue convention
+export function lotDimensions(lot: PublicLot) {
     const d = lot.dimension
     const sizes = d ? [d.height, d.width, d.depth].filter((v): v is string => !!v && Number(v) > 0).map(trimDecimal) : []
-    const dimensions = sizes.length ? `${sizes.join(" × ")} ${d!.dimensionUnit.toLowerCase()}` : null
-    return [lot.medium, lot.yearCreated, dimensions].filter(Boolean).join(" · ")
+    return sizes.length ? `${sizes.join(" × ")} ${d!.dimensionUnit.toLowerCase()}` : null
+}
+
+// "Oil on canvas · 1978 · 122 × 91 × 3 cm"
+export function lotDetails(lot: PublicLot) {
+    return [lot.medium, lot.yearCreated, lotDimensions(lot)].filter(Boolean).join(" · ")
 }
 
 export function lotEstimate(lot: PublicLot) {
@@ -61,5 +65,7 @@ export const LOT_BADGES: Partial<Record<LotStatus, { label: string; live?: boole
     WITHDRAWN: { label: "Withdrawn" },
 }
 
-// lot pages don't exist yet — this is where "View" will point once they do
-export const lotHref = (auctionUuid: string, lot: PublicLot) => `/auctions/${auctionUuid}/lots/${lot.uuid}`
+export const lotHref = (auctionUuid: string, lot: Pick<PublicLot, "uuid">) => `/auctions/${auctionUuid}/lots/${lot.uuid}`
+
+// the full catalogue page for a lot
+export const lotDetailsHref = (auctionUuid: string, lot: Pick<PublicLot, "uuid">) => `${lotHref(auctionUuid, lot)}/details`

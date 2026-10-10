@@ -4,12 +4,14 @@ import {
     getFeaturedAuctionService,
     getPublicAuctionService,
     getPublicAuctionsService,
+    getPublicLotService,
     getPublicLotsService,
 } from "../services/publicAuction.services.js";
 import {
     auctionUuidParamSchema,
     getPublicAuctionsQuerySchema,
     getPublicLotsQuerySchema,
+    publicLotParamsSchema,
 } from "../validations/auction.validation.js";
 
 const handleError = (res, error, label, fallback) => {
@@ -91,5 +93,20 @@ export const getPublicLots = async (req, res) => {
         return res.status(200).json({ success: true, message: "Lots fetched successfully", data });
     } catch (error) {
         return handleError(res, error, "Get public lots", "Failed to fetch lots");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/auction/public/:auctionUuid/lots/:lotUuid
+// One lot with its bid ladder and next valid bid, plus the sale's order of sale
+// -----------------------------------------------------------------
+
+export const getPublicLot = async (req, res) => {
+    try {
+        const params = publicLotParamsSchema.parse(req.params);
+        const data = await getPublicLotService(params);
+        return res.status(200).json({ success: true, message: "Lot fetched successfully", data });
+    } catch (error) {
+        return handleError(res, error, "Get public lot", "Failed to fetch the lot");
     }
 };

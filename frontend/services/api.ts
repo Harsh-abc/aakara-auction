@@ -46,6 +46,8 @@ export const publicAuctionEndPoints = {
     GET_FEATURED_AUCTION_API: `${BASE_URL}/api/auction/public/featured`,
     GET_PUBLIC_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/public/${auctionUuid}`,
     GET_PUBLIC_LOTS_API: (auctionUuid: string) => `${BASE_URL}/api/auction/public/${auctionUuid}/lots`,
+    GET_PUBLIC_LOT_API: (auctionUuid: string, lotUuid: string) =>
+        `${BASE_URL}/api/auction/public/${auctionUuid}/lots/${lotUuid}`,
     REGISTER_FOR_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/${auctionUuid}/register`,
 };
 

@@ -35,6 +35,8 @@ export const auctionUuidParamSchema = z.object({
     auctionUuid: z.uuid({ message: "Invalid auction id" }),
 });
 
+export const publicLotParamsSchema = auctionUuidParamSchema.extend(lotUuidParamSchema.shape);
+
 // bidders tick the auction's terms in the register dialog
 export const registerForAuctionBodySchema = z.object({
     acceptTerms: z.literal(true, { message: "Please accept the terms and conditions to register" }),

@@ -6,6 +6,7 @@ import {
     GetPublicLotsParams,
     PublicAuction,
     PublicAuctionsPage,
+    PublicLotPage,
     PublicLotsPage,
 } from "@/lib/types/publicAuction.types"
 
@@ -14,6 +15,7 @@ const {
     GET_FEATURED_AUCTION_API,
     GET_PUBLIC_AUCTION_API,
     GET_PUBLIC_LOTS_API,
+    GET_PUBLIC_LOT_API,
     REGISTER_FOR_AUCTION_API,
 } = publicAuctionEndPoints
 
@@ -43,6 +45,12 @@ export async function getPublicLots({ auctionUuid, search, sort = "lot", page = 
         url: GET_PUBLIC_LOTS_API(auctionUuid),
         params: { sort, page, limit, search: search || undefined },
     })
+    return response.data.data
+}
+
+// the lot page: lot + bid ladder, the sale, and its order of sale
+export async function getPublicLot(auctionUuid: string, lotUuid: string): Promise<PublicLotPage> {
+    const response = await apiConnector({ method: "GET", url: GET_PUBLIC_LOT_API(auctionUuid, lotUuid) })
     return response.data.data
 }
 

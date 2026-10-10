@@ -42,7 +42,7 @@ function Breadcrumb({ title }: { title?: string }) {
 }
 
 // counts to the close while the sale is live, to the opening before that
-function saleCountdown(auction: PublicAuction) {
+export function saleCountdown(auction: PublicAuction) {
     if (isLive(auction)) return { label: "Closes in", target: auction.endTime }
     if (auction.status === "SCHEDULED" || auction.status === "PREVIEW") return { label: "Opens in", target: auction.startTime }
     return null

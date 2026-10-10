@@ -1,5 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
+import { nextValidBid } from "../utils/bidIncrement.js";
 
 const httpError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -227,5 +228,118 @@ export const getPublicLotsService = async ({ auctionUuid, search, sort, page, li
             image: images[0] ? images[0].thumbnailUrl ?? images[0].url : null,
         })),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+};
+
+// =====================================================================
+// ONE LOT (storefront lot page)
+// The lot with its bid ladder, plus the sale's order of sale for the sidebar
+// =====================================================================
+
+const PUBLIC_LOT_DETAIL_SELECT = {
+    id: true,
+    uuid: true,
+    itemNumber: true,
+    title: true,
+    description: true,
+    artistName: true,
+    medium: true,
+    yearCreated: true,
+    editionType: true,
+    provenance: true,
+    previousOwner: true,
+    acquisitionMethod: true,
+    acquisitionDate: true,
+    authenticateBy: true,
+    auctheticateDate: true,
+    overallCondition: true,
+    frameCondition: true,
+    conditionReport: true,
+    detailedConditionNotes: true,
+    restorationHistory: true,
+    exhibitionHistory: true,
+    category: { select: { name: true } },
+    subCategory: { select: { name: true } },
+    status: true,
+    startingPrice: true,
+    estimateLow: true,
+    estimateHigh: true,
+    currentBid: true,
+    currentBidderId: true,
+    bidCount: true,
+    scheduledStartAt: true,
+    scheduledEndAt: true,
+    currency: { select: { code: true, symbol: true } },
+    dimension: { select: { width: true, height: true, depth: true, dimensionUnit: true } },
+    images: {
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        select: { url: true, thumbnailUrl: true, caption: true, mediaType: true },
+    },
+};
+
+// bids that still count on the ladder
+const LADDER_BID_STATUSES = ["PLACED", "WINNING", "OUTBID", "WON", "LOST"];
+const LADDER_SIZE = 10;
+
+const displayName = (user) => {
+    const p = user?.profile;
+    const full = [p?.firstName, p?.lastName].filter(Boolean).join(" ");
+    return p?.displayName || full || user?.username || null;
+};
+
+export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
+    const { id: auctionId, creator, rules, ...auction } = await findPublicAuction(auctionUuid, {
+        ...PUBLIC_AUCTION_SELECT,
+        id: true,
+        creator: { select: { username: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
+        rules: {
+            where: { ruleType: "BID_INCREMENT", isActive: true },
+            select: { valueType: true, rangeMin: true, rangeMax: true, value: true },
+        },
+    });
+
+    // a lot from another sale reads as not found
+    const lot = await prisma.auctionItem.findFirst({ where: { uuid: lotUuid, auctionId }, select: PUBLIC_LOT_DETAIL_SELECT });
+    if (!lot) throw httpError("Lot not found", 404);
+
+    const [lots, bids, leader] = await Promise.all([
+        prisma.auctionItem.findMany({ where: { auctionId }, orderBy: LOT_ORDER.lot, select: PUBLIC_LOT_SELECT }),
+        prisma.bid.findMany({
+            where: { itemId: lot.id, status: { in: LADDER_BID_STATUSES } },
+            orderBy: [{ amount: "desc" }, { placedAt: "asc" }],
+            take: LADDER_SIZE,
+            select: { uuid: true, amount: true, source: true, placedAt: true },
+        }),
+        // bidders show by paddle number, never by name
+        lot.currentBidderId
+            ? prisma.auctionParticipant.findUnique({
+                  where: { auctionId_userId: { auctionId, userId: lot.currentBidderId } },
+                  select: { paddleNumber: true },
+              })
+            : null,
+    ]);
+
+    const { id, currentBidderId, images, currency, category, subCategory, auctheticateDate, ...detail } = lot;
+
+    return serializeBigInt({
+        auction: { ...toPublicAuction(auction), auctioneer: displayName(creator) },
+        lot: {
+            ...detail,
+            authenticatedAt: auctheticateDate,
+            // "type of artwork": the lot's own sub-category / category, else the sale's
+            artworkType: subCategory?.name ?? category?.name ?? auction.category?.name ?? null,
+            currency: currency ?? auction.currency,
+            image: images.find((media) => media.mediaType === "IMAGE")?.url ?? null,
+            media: images,
+            leadingPaddle: leader?.paddleNumber ?? null,
+            nextBid: String(nextValidBid(lot, rules)),
+            // highest first; the top one is the leading bid
+            bids,
+        },
+        lots: lots.map(({ images: covers, currency: lotCurrency, ...summary }) => ({
+            ...summary,
+            currency: lotCurrency ?? auction.currency,
+            image: covers[0] ? covers[0].thumbnailUrl ?? covers[0].url : null,
+        })),
     });
 };
