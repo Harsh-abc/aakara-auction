@@ -1,5 +1,6 @@
 import { Header } from "@/components/core/frontend/header/header";
 import { Footer } from "@/components/core/frontend/footer/footer";
+import { AkaraToaster } from "@/components/core/frontend/toast/AkaraToaster";
 
 import { Inter } from "next/font/google";
 
@@ -18,6 +19,7 @@ export default function FrontendLayout({
             <Header />
             {children}
             <Footer />
+            <AkaraToaster />
         </div>
     );
 }

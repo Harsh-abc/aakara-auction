@@ -7,7 +7,7 @@ import axios from "axios"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { getPublicAuction } from "@/services/operations/publicAuction.api"
-import { getErrorMessage } from "../../profile/ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
 
 import { AuctionCountdown } from "../AuctionCountdown"
 import { auctionMeta, isLive, STOREFRONT_STATUS_LABELS } from "../auctionDisplay"

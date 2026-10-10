@@ -9,7 +9,7 @@ import { useAppSelector } from "@/hooks/redux"
 import { cn } from "@/lib/utils"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { registerForAuction } from "@/services/operations/publicAuction.api"
-import { getErrorMessage } from "../profile/ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
 
 import { registrationWindow, type BidderEligibility } from "./auctionDisplay"
 import { RegisterConfirmDialog } from "./RegisterConfirmDialog"

@@ -6,7 +6,8 @@ import toast from "react-hot-toast"
 import { useAppSelector } from "@/hooks/redux"
 import { changeMyPassword } from "@/services/operations/profile.api"
 import { AuthField } from "@/components/core/auth/registration/AuthField"
-import { getErrorMessage, ProfileButton, ProfileSection } from "./ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
+import { ProfileButton, ProfileSection } from "./ProfileUI"
 
 const initialForm = {
     currentPassword: "",

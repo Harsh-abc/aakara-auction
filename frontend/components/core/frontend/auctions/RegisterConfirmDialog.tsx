@@ -13,7 +13,7 @@ import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { cn } from "@/lib/utils"
 import { getMyKyc, getMyProfile } from "@/services/operations/profile.api"
 import { getPublicAuction } from "@/services/operations/publicAuction.api"
-import { getErrorMessage } from "../profile/ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
 
 import { auctionMeta } from "./auctionDisplay"
 

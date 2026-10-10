@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { PublicAuctionsPage, PublicAuctionTab } from "@/lib/types/publicAuction.types";
 import { getPublicAuctions } from "@/services/operations/publicAuction.api";
-import { getErrorMessage } from "../profile/ProfileUI";
+import { getErrorMessage } from "@/lib/apiError";
 
 import type { BidderEligibility } from "./auctionDisplay";
 import { AuctionListItem } from "./AuctionListItem";

@@ -13,6 +13,21 @@ const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, VERIFY_PHONE_OTP_API, LOGOUT_AP
 
 import { GenericApiResponse, SignupPayload, VerifyOtpPayload, LoginApiResponse, LoginPayload } from "@/lib/types/auth.types";
 import { AppDispatch } from "@/redux/store";
+import { getErrorMessage } from "@/lib/apiError";
+
+// the signup endpoints can answer without a message, so say what each status means here.
+// keep "too many" / "expired" in the OTP ones: RegistrationOtpStep matches them to offer a new code
+const SIGNUP_ERRORS = {
+    409: "An account with this email or phone number already exists. Log in instead, or sign up with different details.",
+    429: "Too many code requests. Please wait a few minutes before trying again.",
+};
+
+const VERIFY_CODE_ERRORS = {
+    400: "That code is incorrect. Check it and try again.",
+    409: "This email, username or phone number was just registered by another account. Go back and sign up with different details.",
+    410: "This code has expired.",
+    429: "Too many incorrect attempts with this code.",
+};
 
 
 // export function sendSignupOtp(payload: SignupPayload) {
@@ -65,13 +80,8 @@ export const sendSignupOtp = createAsyncThunk<
             dispatch(setSignupEmail(payload.email));
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not send OTP. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not send OTP. Try again.", SIGNUP_ERRORS));
         }
     }
 );
@@ -98,13 +108,8 @@ export const verifySignupOtp = createAsyncThunk<
             }
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not send OTP. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not verify OTP. Try again.", VERIFY_CODE_ERRORS));
         }
 
     }
@@ -133,13 +138,8 @@ export const verifySignupPhoneOtp = createAsyncThunk<
             }
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not verify OTP. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not verify OTP. Try again.", VERIFY_CODE_ERRORS));
         }
     }
 );
@@ -168,13 +168,8 @@ export const loginUser = createAsyncThunk<
 
             return response.data;
 
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not send OTP. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Login failed. Please try again."));
         }
     }
 );

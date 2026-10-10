@@ -3,7 +3,6 @@ import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import "./master.css";
 import Providers from "./providers";
-import { Toaster } from "react-hot-toast";
 
 const nunitoSans = Nunito_Sans({
     variable: "--font-nunito-sans",
@@ -23,10 +22,8 @@ export default function RootLayout({
     return (
         <html lang="en" className={`${nunitoSans.variable} h-full antialiased`}>
             <body className="min-h-full flex flex-col">
-                <Providers>
-                    {children}
-                    <Toaster />
-                </Providers>
+                {/* each route group mounts its own toaster: the storefront's is styled, the dashboard's is the default */}
+                <Providers>{children}</Providers>
             </body>
         </html>
     );

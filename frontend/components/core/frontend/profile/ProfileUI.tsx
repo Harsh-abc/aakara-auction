@@ -1,8 +1,3 @@
-import axios from "axios"
-
-export const getErrorMessage = (err: unknown) =>
-    axios.isAxiosError(err) ? err.response?.data?.message ?? err.message : "Something went wrong"
-
 export function ProfileSection({
     title,
     description,

@@ -16,7 +16,8 @@ import {
     authInputErrorClass,
     authLabelClass,
 } from "@/components/core/auth/registration/AuthField"
-import { getErrorMessage, ProfileButton, ProfileSection } from "./ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
+import { ProfileButton, ProfileSection } from "./ProfileUI"
 
 // signup stores "First Last" as the username and leaves the profile names empty
 const hasProfileName = (account: MyAccount) => !!(account.profile?.firstName || account.profile?.lastName)
@@ -236,6 +237,8 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
                             placeholder="Phone number"
                             value={form.phone}
                             onChange={handleChange}
+                            disabled
+                            readOnly
                             aria-invalid={errors.phone ? true : undefined}
                             aria-describedby={errors.phone ? "profile-phone-error" : undefined}
                             className={cn(authInputClass, errors.phone && authInputErrorClass)}

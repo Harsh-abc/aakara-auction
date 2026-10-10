@@ -8,7 +8,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { cn } from "@/lib/utils"
 import type { PublicLotSort, PublicLotsPage } from "@/lib/types/publicAuction.types"
 import { getPublicLots } from "@/services/operations/publicAuction.api"
-import { getErrorMessage } from "../../profile/ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
 
 import { SearchInput } from "../SearchInput"
 import { LotCard, LotRow } from "./LotCard"

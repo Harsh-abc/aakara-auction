@@ -1,5 +1,5 @@
-import axios from "axios";
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { getErrorMessage } from "@/lib/apiError";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
 import { ChangeUserRolePayload, ChangeUserRoleResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
@@ -33,13 +33,8 @@ export const getAllUsers = createAsyncThunk<
             }
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not fetch users. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not fetch users. Try again."));
         }
     }
 );
@@ -66,13 +61,8 @@ export const getUserById = createAsyncThunk<
             }
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not fetch user. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not fetch user. Try again."));
         }
     }
 );
@@ -118,13 +108,8 @@ export const uploadUserKyc = createAsyncThunk<
             dispatch(getUserById(uuid));
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not upload KYC. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not upload KYC. Try again."));
         }
     }
 );
@@ -153,11 +138,7 @@ export const reviewUserKyc = createAsyncThunk<
 
             return response.data;
         } catch (error) {
-            const message = axios.isAxiosError(error)
-                ? error.response?.data?.message || error.message
-                : "Could not save the review. Try again.";
-
-            return rejectWithValue(message);
+            return rejectWithValue(getErrorMessage(error, "Could not save the review. Try again."));
         }
     }
 );
@@ -186,11 +167,7 @@ export const requestKycDocuments = createAsyncThunk<
 
             return response.data;
         } catch (error) {
-            const message = axios.isAxiosError(error)
-                ? error.response?.data?.message || error.message
-                : "Could not send the request. Try again.";
-
-            return rejectWithValue(message);
+            return rejectWithValue(getErrorMessage(error, "Could not send the request. Try again."));
         }
     }
 );
@@ -220,13 +197,8 @@ export const createUser = createAsyncThunk<
             dispatch(getAllUsers({ page: 1, limit: 100 }));
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not create user. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not create user. Try again."));
         }
     }
 );
@@ -253,13 +225,8 @@ export const changeUserRole = createAsyncThunk<
             }
 
             return response.data;
-        } catch (error: any) {
-            const message =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Could not change role. Try again.";
-
-            return rejectWithValue(message);
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not change role. Try again."));
         }
     }
 );

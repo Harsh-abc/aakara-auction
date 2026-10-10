@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import axios from "axios"
 import toast from "react-hot-toast"
 import {
     BadgeCheckIcon,
@@ -22,6 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
 import { getMyProfile, updateMyProfile } from "@/services/operations/profile.api"
+import { getErrorMessage } from "@/lib/apiError"
 import { MyAccount, UserProfile } from "@/lib/types/profile.types"
 import { setUser } from "@/redux/slices/authSlice"
 import type { RootState } from "@/redux/store"
@@ -58,9 +58,6 @@ const toForm = (profile: UserProfile | null): ProfileForm => ({
     country: profile?.country ?? "",
     pincode: profile?.pincode ?? "",
 })
-
-const getErrorMessage = (err: unknown) =>
-    axios.isAxiosError(err) ? err.response?.data?.message ?? err.message : "Something went wrong"
 
 const inputClass = "h-10"
 const selectClass =

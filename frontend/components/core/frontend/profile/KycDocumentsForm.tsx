@@ -14,7 +14,8 @@ import {
     KYC_MAX_SIZE,
 } from "@/lib/constants/kyc"
 import { cn } from "@/lib/utils"
-import { getErrorMessage, ProfileButton, ProfileSection } from "./ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
+import { ProfileButton, ProfileSection } from "./ProfileUI"
 
 const KYC_TYPE_LABELS: Record<KycType, string> = {
     INDIVIDUAL: "Individual",

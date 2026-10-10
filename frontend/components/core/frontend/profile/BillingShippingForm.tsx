@@ -7,7 +7,8 @@ import { useAppSelector } from "@/hooks/redux"
 import { updateMyProfile } from "@/services/operations/profile.api"
 import type { MyAccount, UpdateProfilePayload } from "@/lib/types/profile.types"
 import { AuthField } from "@/components/core/auth/registration/AuthField"
-import { getErrorMessage, ProfileButton, ProfileSection } from "./ProfileUI"
+import { getErrorMessage } from "@/lib/apiError"
+import { ProfileButton, ProfileSection } from "./ProfileUI"
 
 const toForm = (account: MyAccount) => ({
     address: account.profile?.address ?? "",
