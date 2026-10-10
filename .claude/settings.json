@@ -114,7 +114,8 @@
       "Bash(node -p \"const p=require\\('./frontend/node_modules/libphonenumber-js/package.json'\\);p.version+' '+p.license+' '+\\(p.repository?.url||p.homepage\\)\")",
       "Bash(node -p \"const p=require\\('./frontend/node_modules/@tanstack/react-virtual/package.json'\\);p.version+' '+p.license\")",
       "Bash(node -e \"import\\('country-state-city'\\).then\\(\\({City}\\)=>console.log\\(City.getAllCities\\(\\).length\\)\\)\")",
-      "mcp__claude_ai_Claude_Docs__read"
+      "mcp__claude_ai_Claude_Docs__read",
+      "PowerShell(npx tsc --noEmit -p .)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

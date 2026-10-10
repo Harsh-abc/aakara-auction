@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useAppSelector } from "@/hooks/redux";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
-import { getMyRegistrations } from "@/services/operations/profile.api";
+import { getMyProfile, getMyRegistrations } from "@/services/operations/profile.api";
 import { getFeaturedAuction } from "@/services/operations/publicAuction.api";
 
+import { bidderEligibility, type BidderEligibility } from "./auctionDisplay";
 import { AuctionListings } from "./AuctionListings";
 import { FeaturedAuction, FeaturedAuctionSkeleton } from "./FeaturedAuction";
 import { HowToBid } from "./HowToBid";
@@ -29,20 +30,20 @@ export function AuctionsPage() {
     const paddles = isBidder ? bidderPaddles : NO_PADDLES;
 
     // read from the account, not the token's role — KYC approval promotes USER → BIDDER mid-session
-    const [eligibilityFor, setEligibilityFor] = useState<{ token: string; value: BidderEligibility } | null>(null)
+    const [eligibilityFor, setEligibilityFor] = useState<{ token: string; value: BidderEligibility } | null>(null);
     const eligibility: BidderEligibility = !token
         ? "guest"
         : eligibilityFor?.token === token
           ? eligibilityFor.value
-          : "loading"
+          : "loading";
 
     useEffect(() => {
-        if (!token) return
+        if (!token) return;
         getMyProfile(token)
             .then((account) => setEligibilityFor({ token, value: bidderEligibility(account) }))
             // let them try — the server makes the final call
-            .catch(() => setEligibilityFor({ token, value: "eligible" }))
-    }, [token])
+            .catch(() => setEligibilityFor({ token, value: "eligible" }));
+    }, [token]);
 
     useEffect(() => {
         getFeaturedAuction()
