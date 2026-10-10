@@ -148,7 +148,20 @@
       "Bash(timeout 20 node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/4fa60ece-b1e7-49d4-a76c-4e8e6b5356bd/scratchpad/socket-test.mjs\" 4492aeee-f4ba-4ff9-887a-eeff5a11299d)",
       "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const u=new URL\\(process.env.DATABASE_URL\\); console.log\\(u.hostname, u.port, u.pathname\\)\")",
       "Bash(timeout 60 node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/4fa60ece-b1e7-49d4-a76c-4e8e6b5356bd/scratchpad/service-test.mjs\")",
-      "Bash(sed -i 's#import\\(\"D:/Harsh#import\\(\"file:///D:/Harsh#g' service-test.mjs)"
+      "Bash(sed -i 's#import\\(\"D:/Harsh#import\\(\"file:///D:/Harsh#g' service-test.mjs)",
+      "PowerShell(node -v)",
+      "PowerShell(npm -v)",
+      "PowerShell($s = \"C:\\\\Users\\\\opera\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Harsh-projects-aakara-auction\\\\3e499ab9-569d-4df5-9879-946db95cf071\\\\scratchpad\"; New-Item -ItemType Directory -Force $s | Out-Null; Copy-Item frontend/package-lock.json \"$s/package-lock.backup.json\"; cd frontend; Remove-Item package-lock.json; npm install --package-lock-only --no-audit --no-fund; Select-String -Path package-lock.json -Pattern '\"node_modules/@emnapi/\\(core|runtime\\)\"' -Context 0,1; cd ..; git diff --stat frontend/package-lock.json)",
+      "PowerShell($s = \"C:\\\\Users\\\\opera\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Harsh-projects-aakara-auction\\\\3e499ab9-569d-4df5-9879-946db95cf071\\\\scratchpad\"; Copy-Item \"$s/package-lock.backup.json\" frontend/package-lock.json -Force; $c = \"$s/clean\"; New-Item -ItemType Directory -Force $c | Out-Null; Copy-Item frontend/package.json, frontend/package-lock.json $c -Force; if \\(Test-Path frontend/.npmrc\\) { Copy-Item frontend/.npmrc $c }; npm install --package-lock-only --no-audit --no-fund --prefix $c; Select-String -Path \"$c/package-lock.json\" -Pattern '\"node_modules/@emnapi/\\(core|runtime\\)\"' -Context 0,1)",
+      "PowerShell($c = \"C:\\\\Users\\\\opera\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Harsh-projects-aakara-auction\\\\3e499ab9-569d-4df5-9879-946db95cf071\\\\scratchpad\\\\clean\"; Remove-Item \"$c/package-lock.json\"; npm install --package-lock-only --no-audit --no-fund --prefix $c; Select-String -Path \"$c/package-lock.json\" -Pattern '\"node_modules/@emnapi/\\(core|runtime\\)\"' -Context 0,1; \\(Get-Content \"$c/package-lock.json\"\\).Count; \\(Get-Content frontend/package-lock.json\\).Count)",
+      "PowerShell($c = \"C:\\\\Users\\\\opera\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Harsh-projects-aakara-auction\\\\3e499ab9-569d-4df5-9879-946db95cf071\\\\scratchpad\\\\clean\"; $old = \\(Get-Content frontend/package-lock.json -Raw | ConvertFrom-Json\\).packages; $new = \\(Get-Content \"$c/package-lock.json\" -Raw | ConvertFrom-Json\\).packages; $o=@{}; $old.PSObject.Properties | % { $o[$_.Name]=$_.Value.version }; $changed = $new.PSObject.Properties | ? { $_.Name -ne '' -and $o[$_.Name] -ne $_.Value.version } | % { \"$\\($_.Name\\): $\\($o[$_.Name]\\) -> $\\($_.Value.version\\)\" }; $changed.Count; $changed | Select-Object -First 60; Push-Location $c; npm ci --dry-run --ignore-scripts --no-audit --no-fund; Pop-Location)",
+      "Bash(mkdir -p /c/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/3e499ab9-569d-4df5-9879-946db95cf071/scratchpad/clean2)",
+      "Bash(cp package.json package-lock.json /c/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/3e499ab9-569d-4df5-9879-946db95cf071/scratchpad/clean2/)",
+      "Read(//c/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/3e499ab9-569d-4df5-9879-946db95cf071/scratchpad/**)",
+      "Bash(npm update *)",
+      "Bash(cp \"/c/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/3e499ab9-569d-4df5-9879-946db95cf071/scratchpad/clean/package-lock.json\" package-lock.json)",
+      "Bash(npm run *)",
+      "Bash(npm ci *)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
