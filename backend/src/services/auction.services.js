@@ -2,6 +2,7 @@ import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { syncParticipantsToLots } from "./auctionParticipant.services.js";
 import { closeAuctionLots, startOpeningLot } from "./liveAuction.services.js";
+import { overlayLiveBids, syncAuctionBidding } from "./bidding.services.js";
 
 // =====================================================================
 // Helpers
@@ -743,7 +744,8 @@ export const getLotByAuctionId = async ({ auctionUuid }) => {
         message: "Lots fetched successfully",
         data: {
             auction: serializeBigInt(auction),
-            lots: serializeBigInt(lots),
+            // live lots: current bid / count straight from the bidding engine
+            lots: serializeBigInt(await overlayLiveBids(lots)),
         },
     };
 };
@@ -771,7 +773,25 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
     if (!auctionUuid) throw httpError("Auction UUID is required");
     if (!changedBy) throw httpError("Authenticated user is required", 401);
 
-    return prisma.$transaction(
+    // Live bidding follows the new status (pause / resume / open the first lot / save
+    // the bids once over). Also runs on failure: ending may have stopped bids on the live lot.
+    const syncBidding = () =>
+        syncAuctionBidding(auctionUuid).catch((error) =>
+            console.error(`[bidding] could not sync auction ${auctionUuid}:`, error)
+        );
+
+    try {
+        const updated = await changeAuctionStatusTx({ auctionUuid, status, reason, changedBy });
+        await syncBidding();
+        return updated;
+    } catch (error) {
+        await syncBidding();
+        throw error;
+    }
+};
+
+const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy }) =>
+    prisma.$transaction(
         async (tx) => {
             const auction = await tx.auction.findUnique({
                 where: { uuid: auctionUuid },
@@ -849,7 +869,6 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
         },
         { maxWait: 10_000, timeout: 30_000 }
     );
-};
 
 // =====================================================================
 // DELETE AUCTION (DRAFT only)

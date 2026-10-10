@@ -1,5 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
+import { freezeLotBidding, syncLotBidding } from "./bidding.services.js";
 
 const httpError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -148,20 +149,25 @@ const closedLotStatus = (lot) => {
 
 /**
  * Closes every open lot of an ending auction: the live lot closes as if stopped,
- * lots never offered become UNSOLD. Call inside a transaction that already locked the auction row.
+ * lots never offered become UNSOLD. Call inside a transaction that already locked the auction row;
+ * if it fails, call syncAuctionBidding so the live lot takes bids again.
  */
 export const closeAuctionLots = async (tx, auctionId) => {
     const live = await tx.auctionItem.findFirst({
         where: { auctionId, status: "ACTIVE" },
-        select: { id: true, currentBid: true, reservePrice: true, bidCount: true },
+        select: { id: true, uuid: true, currentBid: true, reservePrice: true, bidCount: true },
     });
-    const liveLot =
-        live &&
-        (await tx.auctionItem.update({
+
+    let liveLot = null;
+    if (live) {
+        // bids are settled in Redis — stop them and close on the final position
+        const final = await freezeLotBidding(live.uuid);
+        liveLot = await tx.auctionItem.update({
             where: { id: live.id },
-            data: { status: closedLotStatus(live) },
+            data: { status: closedLotStatus({ ...live, ...final }), ...final },
             select: { itemNumber: true, status: true },
-        }));
+        });
+    }
 
     const { count: unoffered } = await tx.auctionItem.updateMany({
         where: { auctionId, status: { in: OPENING_LOT_STATUSES } },
@@ -176,7 +182,22 @@ export const closeAuctionLots = async (tx, auctionId) => {
 // Only one lot per auction can be live (ACTIVE) at a time.
 // =====================================================================
 
-export const setLotLiveService = async ({ lotUuid, action }) =>
+export const setLotLiveService = async ({ lotUuid, action }) => {
+    let frozen = false;
+
+    try {
+        const lot = await setLotLiveTx({ lotUuid, action, onFrozen: () => (frozen = true) });
+        // open the lot for bids (waiting proxies bid now) or publish its result
+        await syncLotBidding(lotUuid).catch((error) => console.error(`[bidding] could not sync lot ${lotUuid}:`, error));
+        return lot;
+    } catch (error) {
+        // the stop failed after bids were stopped — the lot is still live, reopen it
+        if (frozen) await syncLotBidding(lotUuid).catch((err) => console.error(`[bidding] could not reopen lot ${lotUuid}:`, err));
+        throw error;
+    }
+};
+
+const setLotLiveTx = ({ lotUuid, action, onFrozen }) =>
     prisma.$transaction(
         async (tx) => {
             const ref = await tx.auctionItem.findUnique({
@@ -205,6 +226,7 @@ export const setLotLiveService = async ({ lotUuid, action }) =>
             if (!lot || lot.auction.deletedAt) throw httpError("Lot not found", 404);
 
             let status;
+            let final = null;
 
             if (action === "start") {
                 if (lot.auction.status !== "LIVE") {
@@ -223,12 +245,15 @@ export const setLotLiveService = async ({ lotUuid, action }) =>
                 status = "ACTIVE";
             } else {
                 if (lot.status !== "ACTIVE") throw httpError(`Lot #${lot.itemNumber} isn't live`, 409);
-                status = closedLotStatus(lot);
+                // bids are settled in Redis — stop them and close on the final position
+                final = await freezeLotBidding(lotUuid);
+                if (final) onFrozen();
+                status = closedLotStatus({ ...lot, ...final });
             }
 
             const updated = await tx.auctionItem.update({
                 where: { id: lot.id },
-                data: { status },
+                data: { status, ...final },
                 select: { uuid: true, itemNumber: true, title: true, status: true, currentBid: true, bidCount: true },
             });
 

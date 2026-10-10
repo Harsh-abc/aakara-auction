@@ -1,24 +1,29 @@
 "use client"
 
+import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import toast from "react-hot-toast"
 
 import { useAppSelector } from "@/hooks/redux"
+import type { PublicLot } from "@/lib/types/publicAuction.types"
 
 export type BidKind = "bid" | "proxy"
 
-// guests sign in first and come back to this lot.
-// TODO: wire to the bidding API once it exists — there's no place-bid endpoint yet
+export type BidTarget = { kind: BidKind; lotUuid: string }
+
+// guests sign in first and come back to this lot; signed-in users get the bid dialog (see BidDialog)
 export function useBidAction() {
     const router = useRouter()
     const pathname = usePathname()
     const token = useAppSelector((state) => state.auth.accessToken)
+    const [target, setTarget] = useState<BidTarget | null>(null)
 
-    return (kind: BidKind) => {
+    const onBid = (kind: BidKind, lot: Pick<PublicLot, "uuid">) => {
         if (!token) {
             router.push(`/registration?redirect=${encodeURIComponent(pathname)}`)
             return
         }
-        toast(kind === "proxy" ? "Proxy bidding opens here soon." : "Online bidding opens here soon.")
+        setTarget({ kind, lotUuid: lot.uuid })
     }
+
+    return { onBid, target, setTarget }
 }

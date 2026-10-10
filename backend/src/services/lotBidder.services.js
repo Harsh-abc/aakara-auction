@@ -1,5 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
+import { invalidateBidderAccess } from "./bidding.services.js";
 
 // =====================================================================
 // Lot bidders
@@ -239,6 +240,9 @@ export const setLotBiddersVerifiedService = async ({ lotUuid, userUuids, verifie
         },
         { maxWait: 10_000, timeout: 30_000 }
     );
+
+    // live bidding re-reads who may bid on this lot
+    await invalidateBidderAccess({ lotUuids: [lotUuid], revokedUserIds: verified ? [] : userIds });
 
     return { lotUuid, verified, requested: uniqueUuids.length, changed };
 };

@@ -3,15 +3,14 @@ import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
 
 import { AuctionCountdown } from "../AuctionCountdown"
 import { formatMoney, lotEstimate } from "../detail/lotDisplay"
-import { BidButtons } from "./BidButtons"
+import { BidButtons, type OnBid } from "./BidButtons"
 import { lotCountdown } from "./lotCatalogue"
 import { bidCountLabel } from "./lotPageDisplay"
-import type { BidKind } from "./useBidAction"
 
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
 
 // the right-hand column of the lot page: who, what, how much, and the bid buttons
-export function LotPricePanel({ lot, onBid, className }: { lot: PublicLotDetail; onBid: (kind: BidKind) => void; className?: string }) {
+export function LotPricePanel({ lot, onBid, className }: { lot: PublicLotDetail; onBid: OnBid; className?: string }) {
     const count = Number(lot.bidCount) || 0
     const countdown = lotCountdown(lot)
 

@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 import { auctionHref, auctionMeta } from "./auctionDisplay"
 import { lotHeading } from "./detail/lotDisplay"
+import { BidDialog } from "./lot/BidDialog"
 import { LotCatalogueDetails } from "./lot/LotCatalogueDetails"
 import { LotEssay } from "./lot/LotEssay"
 import { LotFaqs } from "./lot/LotFaqs"
@@ -36,7 +37,7 @@ async function shareLot(title: string) {
 // the individual lot page — every image, the full catalogue entry and the essay
 export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid)
-    const onBid = useBidAction()
+    const { onBid, target, setTarget } = useBidAction()
 
     if (state.status === "loading") {
         return (
@@ -98,6 +99,14 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
             <LotEssay html={lot.description} className="mt-16" />
 
             <LotFaqs className="mt-16" />
+
+            <BidDialog
+                auctionUuid={auction.uuid}
+                lot={target ? lot : null}
+                kind={target?.kind ?? "bid"}
+                onKindChange={(kind) => setTarget((prev) => (prev ? { ...prev, kind } : prev))}
+                onClose={() => setTarget(null)}
+            />
         </main>
     )
 }

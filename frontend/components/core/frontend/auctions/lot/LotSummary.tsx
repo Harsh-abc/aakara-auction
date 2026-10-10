@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils"
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
 
 import { formatMoney, lotDetailsHref, lotDimensions, lotEstimate } from "../detail/lotDisplay"
-import { BidButtons, BUTTON, BUTTON_OUTLINE } from "./BidButtons"
+import { BidButtons, BUTTON, BUTTON_OUTLINE, type OnBid } from "./BidButtons"
 import { LotStatusTag, Tag } from "./LotTag"
 import { bidCountLabel, lotTag } from "./lotPageDisplay"
-import type { BidKind } from "./useBidAction"
 
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
 
@@ -20,7 +19,7 @@ function bidHeading(lot: PublicLotDetail, count: number) {
 type LotSummaryProps = {
     auctionUuid: string
     lot: PublicLotDetail
-    onBid: (kind: BidKind) => void
+    onBid: OnBid
     className?: string
 }
 

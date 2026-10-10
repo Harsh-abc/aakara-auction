@@ -20,10 +20,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import type { AuctionLot } from "@/lib/types/auction.types";
+import type { LiveLotUpdate } from "@/lib/types/bidding.types";
+import { applyLiveLotUpdate } from "@/redux/slices/auctionSlice";
 import { getLiveAuctions, getLotsByAuction, setLotLive } from "@/services/operations/auction.api";
 
 import LiveAuctionsCard from "./LiveAuctionsCard";
 import { LiveAuctionDataTable } from "./LiveAuctionDataTable";
+import LiveBiddingPanel from "./LiveBiddingPanel";
 import type { LiveLotTableMeta } from "./LiveAuctionsColumns";
 
 /** Roles that can start / stop lots (mirrors the PATCH /lots/:lotUuid/live route) */
@@ -87,6 +90,14 @@ export default function BiddingFloors() {
     const refresh = () => {
         dispatch(getLiveAuctions());
         if (selected?.uuid) dispatch(getLotsByAuction({ auctionUuid: selected.uuid }));
+    };
+
+    // Bids patch the lot row in place; a lot opening or closing (here or on another
+    // screen) also changes the auction card, so the floor is refetched
+    const onLiveLotUpdate = (update: LiveLotUpdate) => {
+        const known = tableLots.find((lot) => lot.uuid === update.lotUuid);
+        dispatch(applyLiveLotUpdate(update));
+        if (known && known.status !== update.status) dispatch(getLiveAuctions());
     };
 
     const runControl = async (lot: AuctionLot, action: "start" | "stop") => {
@@ -228,6 +239,16 @@ export default function BiddingFloors() {
                         />
                     )}
                 </div>
+            )}
+
+            {selected && (
+                <LiveBiddingPanel
+                    // fresh panel per sale, so its feed never mixes two auctions
+                    key={selected.uuid}
+                    auctionUuid={selected.uuid}
+                    onLotUpdate={onLiveLotUpdate}
+                    onAuctionStatus={refresh}
+                />
             )}
 
             {/* Stop = close bidding on the lot */}

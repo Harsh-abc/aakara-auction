@@ -6,7 +6,7 @@ import type { PublicLot } from "@/lib/types/publicAuction.types"
 import { formatMoney, lotEstimate, lotHeading, lotHref } from "../detail/lotDisplay"
 import { LotStatusTag } from "./LotTag"
 import { isUpcomingLot, lotTag } from "./lotPageDisplay"
-import type { BidKind } from "./useBidAction"
+import type { OnBid } from "./BidButtons"
 
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
 const ROW_GRID = "md:grid md:grid-cols-[96px_minmax(0,1fr)_156px_136px_240px] md:items-center md:px-5"
@@ -20,7 +20,7 @@ type TopLotsProps = {
     lots: PublicLot[]
     /** "live", "upcoming"… — the sale's state, lowercased in the heading */
     saleStatus: string
-    onBid: (kind: BidKind) => void
+    onBid: OnBid
     className?: string
 }
 
@@ -70,7 +70,7 @@ export function TopLots({ auctionUuid, lots, saleStatus, onBid, className }: Top
                                     {action && (
                                         <button
                                             type="button"
-                                            onClick={() => onBid(action)}
+                                            onClick={() => onBid(action, lot)}
                                             className={cn(ROW_BUTTON, "w-27.5 bg-[#0d0d0d] px-0 text-white hover:bg-neutral-800")}
                                         >
                                             {action === "bid" ? "Place a bid" : "Proxy bid"}

@@ -10,6 +10,7 @@ import { AuctionCountdown } from "./AuctionCountdown"
 import { auctionHref, STOREFRONT_STATUS_LABELS } from "./auctionDisplay"
 import { saleCountdown } from "./detail/AuctionDetail"
 import { lotHeading } from "./detail/lotDisplay"
+import { BidDialog } from "./lot/BidDialog"
 import { BidLadder } from "./lot/BidLadder"
 import { BUTTON, BUTTON_OUTLINE, BUTTON_SOLID } from "./lot/BidButtons"
 import { LOT_PAGE, LotBreadcrumb, LotPageMessage } from "./lot/LotPageChrome"
@@ -23,7 +24,7 @@ import { useLotPage } from "./lot/useLotPage"
 // the live auction room, focused on one lot
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid)
-    const onBid = useBidAction()
+    const { onBid, target, setTarget } = useBidAction()
 
     if (state.status === "loading") {
         return (
@@ -115,7 +116,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                 <div className="flex shrink-0 gap-2">
                     <button
                         type="button"
-                        onClick={() => onBid(lot.status === "ACTIVE" ? "bid" : "proxy")}
+                        onClick={() => onBid(lot.status === "ACTIVE" ? "bid" : "proxy", lot)}
                         className={cn(BUTTON, BUTTON_SOLID, "w-auto px-5.25")}
                     >
                         Place a bid
@@ -125,6 +126,15 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                     </Link>
                 </div>
             </section>
+
+            {/* the lot comes from the live page state, so the dialog sees new bids as they land */}
+            <BidDialog
+                auctionUuid={auction.uuid}
+                lot={target ? (target.lotUuid === lot.uuid ? lot : lots.find((item) => item.uuid === target.lotUuid) ?? null) : null}
+                kind={target?.kind ?? "bid"}
+                onKindChange={(kind) => setTarget((prev) => (prev ? { ...prev, kind } : prev))}
+                onClose={() => setTarget(null)}
+            />
         </main>
     )
 }

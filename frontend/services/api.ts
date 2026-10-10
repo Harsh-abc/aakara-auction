@@ -51,6 +51,17 @@ export const publicAuctionEndPoints = {
     REGISTER_FOR_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/${auctionUuid}/register`,
 };
 
+// live bidding — bidders (verified on the lot) and the dashboard's activity panel
+export const biddingEndPoints = {
+    MY_LOT_STANDING_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/me`,
+    PLACE_BID_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/bids`,
+    SET_PROXY_BID_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/proxy`,
+    AUCTION_ACTIVITY_API: (auctionUuid: string) => `${BASE_URL}/api/bidding/auctions/${auctionUuid}/activity`,
+};
+
+// Socket.IO is served by the same backend
+export const SOCKET_URL = BASE_URL;
+
 
 export const categoryEndPoints = {
     GET_ALL_CATEGORIES_API: `${BASE_URL}/api/category/get-all-category`,

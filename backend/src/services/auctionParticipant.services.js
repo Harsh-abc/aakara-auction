@@ -1,6 +1,7 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { createUserByAdminService } from "./admin.services.js";
+import { invalidateBidderAccess } from "./bidding.services.js";
 import {
     BIDDER_ROLES,
     EDITABLE_AUCTION_STATUSES,
@@ -499,6 +500,9 @@ export const setParticipantsVerifiedService = async ({ auctionUuid, userUuids, v
         { maxWait: 10_000, timeout: 30_000 }
     );
 
+    // live bidding re-reads who may bid on the auction's lots
+    await invalidateBidderAccess({ auctionId: auction.id, revokedUserIds: verified ? [] : userIds });
+
     return { auctionUuid, verified, requested: users.length, changed };
 };
 
@@ -532,6 +536,9 @@ export const removeAuctionParticipantsService = async ({ auctionUuid, userUuids,
         },
         { maxWait: 10_000, timeout: 30_000 }
     );
+
+    // they can no longer bid; any proxy bids they left are withdrawn
+    await invalidateBidderAccess({ auctionId: auction.id, revokedUserIds: userIds });
 
     return { auctionUuid, removed };
 };

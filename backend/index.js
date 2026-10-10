@@ -1,3 +1,4 @@
+import { createServer } from "node:http";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -13,7 +14,9 @@ import auctionRouter from "./src/routes/auction.routes.js";
 import currencyRouter from "./src/routes/currency.routes.js";
 import userRouter from "./src/routes/user.routes.js";
 import locationRouter from "./src/routes/location.routes.js";
+import biddingRouter from "./src/routes/bidding.routes.js";
 import { startAuctionScheduler } from "./src/jobs/auctionScheduler.js";
+import { initSocket } from "./src/libs/socket.js";
 
 
 const app = express();
@@ -66,10 +69,15 @@ app.use('/api/auction', auctionRouter)
 app.use('/api/currency', currencyRouter)
 app.use('/api/users', userRouter)
 app.use('/api/location', locationRouter)
+app.use('/api/bidding', biddingRouter)
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
+// Socket.IO shares the HTTP server (live bids — see src/libs/socket.js)
+const server = createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     prisma.$connect().then(() => {
         console.log("Connected to the database");

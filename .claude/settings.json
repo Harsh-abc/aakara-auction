@@ -138,7 +138,17 @@
       "Bash(rm lot/LotCatalogueDialog.tsx)",
       "Bash(curl -s -o /dev/null -w 'details %{http_code}\\\\n' http://localhost:3000/auctions/__TRACKED_VAR__/lots/__TRACKED_VAR__/details)",
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --hide-scrollbars --user-data-dir=C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/b2c9d342-881d-4308-a8ca-34e16525aa2c/scratchpad/chrome --window-size=1440,2200 --virtual-time-budget=20000 --screenshot=C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/b2c9d342-881d-4308-a8ca-34e16525aa2c/scratchpad/details-desktop.png http://localhost:3000/auctions/__TRACKED_VAR__/lots/__TRACKED_VAR__/details)",
-      "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --hide-scrollbars --user-data-dir=C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/b2c9d342-881d-4308-a8ca-34e16525aa2c/scratchpad/chrome --window-size=1440,1700 --virtual-time-budget=20000 --screenshot=C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/b2c9d342-881d-4308-a8ca-34e16525aa2c/scratchpad/details-desktop2.png http://localhost:3000/auctions/__TRACKED_VAR__/lots/__TRACKED_VAR__/details)"
+      "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --hide-scrollbars --user-data-dir=C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/b2c9d342-881d-4308-a8ca-34e16525aa2c/scratchpad/chrome --window-size=1440,1700 --virtual-time-budget=20000 --screenshot=C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/b2c9d342-881d-4308-a8ca-34e16525aa2c/scratchpad/details-desktop2.png http://localhost:3000/auctions/__TRACKED_VAR__/lots/__TRACKED_VAR__/details)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/ioredis/package.json'\\).version\\)\")",
+      "Bash(node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/4fa60ece-b1e7-49d4-a76c-4e8e6b5356bd/scratchpad/engine-test.mjs\")",
+      "Bash(curl -s localhost:8080/)",
+      "Bash(curl -s \"localhost:8080/socket.io/?EIO=4&transport=polling\")",
+      "Bash(curl -s localhost:8080/api/bidding/lots/00000000-0000-0000-0000-000000000000/me)",
+      "Bash(curl -s \"localhost:8080/api/auction/public?type=upcoming&limit=3\")",
+      "Bash(timeout 20 node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/4fa60ece-b1e7-49d4-a76c-4e8e6b5356bd/scratchpad/socket-test.mjs\" 4492aeee-f4ba-4ff9-887a-eeff5a11299d)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const u=new URL\\(process.env.DATABASE_URL\\); console.log\\(u.hostname, u.port, u.pathname\\)\")",
+      "Bash(timeout 60 node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/4fa60ece-b1e7-49d4-a76c-4e8e6b5356bd/scratchpad/service-test.mjs\")",
+      "Bash(sed -i 's#import\\(\"D:/Harsh#import\\(\"file:///D:/Harsh#g' service-test.mjs)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

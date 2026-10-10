@@ -1,11 +1,14 @@
 import prisma from "../libs/prisma.js";
 import { closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
+import { flushPendingAuctions, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
 
 /**
  * Every tick:
  *   - ends LIVE / PAUSED auctions once their end time passes, closing their lots (see closeAuctionLots)
+ *     and saving their bids from Redis to the database (see syncAuctionBidding)
  *   - puts SCHEDULED / PREVIEW auctions live once their start time passes, and starts
  *     the opening lot (see startOpeningLot)
+ *   - copies live lots' current bids to the database, and retries any bid saves that failed
  * Scheduled auctions already past their end time are left as they are — staff decide
  * what to do with a sale that never ran.
  */
@@ -89,16 +92,25 @@ const endSale = (auctionId, now) =>
         { maxWait: 10_000, timeout: 20_000 }
     );
 
+// Live bidding follows the auction's new status. Also runs after a failed end,
+// which may have stopped bids on the live lot.
+const syncBidding = (uuid) =>
+    syncAuctionBidding(uuid).catch((err) => console.error(`[scheduler] could not sync bidding for auction ${uuid}:`, err));
+
 const runDue = async (label, where, action, describe) => {
     const now = new Date();
-    const due = await prisma.auction.findMany({ where: { deletedAt: null, ...where(now) }, select: { id: true } });
+    const due = await prisma.auction.findMany({ where: { deletedAt: null, ...where(now) }, select: { id: true, uuid: true } });
 
-    for (const { id } of due) {
+    for (const { id, uuid } of due) {
         try {
             const result = await action(id, now);
-            if (result) console.info(`[scheduler] ${describe(result)}`);
+            if (result) {
+                console.info(`[scheduler] ${describe(result)}`);
+                await syncBidding(uuid);
+            }
         } catch (err) {
             console.error(`[scheduler] failed to ${label} auction ${id}:`, err);
+            await syncBidding(uuid);
         }
     }
 };
@@ -131,6 +143,8 @@ const tick = async () => {
         // End first, so a sale finishing as the next one opens is cleared off the floor
         await endDueAuctions();
         await startDueAuctions();
+        await syncDirtyLots();
+        await flushPendingAuctions();
     } catch (err) {
         console.error("[scheduler] tick failed:", err);
     } finally {

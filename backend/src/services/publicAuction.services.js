@@ -1,6 +1,7 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { nextValidBid } from "../utils/bidIncrement.js";
+import { getLiveLotView, overlayLiveBids } from "./bidding.services.js";
 
 const httpError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -221,7 +222,7 @@ export const getPublicLotsService = async ({ auctionUuid, search, sort, page, li
     ]);
 
     return serializeBigInt({
-        lots: lots.map(({ images, currency, ...lot }) => ({
+        lots: (await overlayLiveBids(lots)).map(({ images, currency, ...lot }) => ({
             ...lot,
             // lots without their own currency are priced in the sale's
             currency: currency ?? auction.currency,
@@ -302,16 +303,22 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
     const lot = await prisma.auctionItem.findFirst({ where: { uuid: lotUuid, auctionId }, select: PUBLIC_LOT_DETAIL_SELECT });
     if (!lot) throw httpError("Lot not found", 404);
 
+    // while the sale runs, bids live in Redis (written to the bids table once it ends)
+    const live = await getLiveLotView(lot.uuid, LADDER_SIZE);
+
     const [lots, bids, leader] = await Promise.all([
-        prisma.auctionItem.findMany({ where: { auctionId }, orderBy: LOT_ORDER.lot, select: PUBLIC_LOT_SELECT }),
-        prisma.bid.findMany({
-            where: { itemId: lot.id, status: { in: LADDER_BID_STATUSES } },
-            orderBy: [{ amount: "desc" }, { placedAt: "asc" }],
-            take: LADDER_SIZE,
-            select: { uuid: true, amount: true, source: true, placedAt: true },
-        }),
+        prisma.auctionItem.findMany({ where: { auctionId }, orderBy: LOT_ORDER.lot, select: PUBLIC_LOT_SELECT }).then(overlayLiveBids),
+        live
+            ? live.bids
+            : prisma.bid.findMany({
+                  where: { itemId: lot.id, status: { in: LADDER_BID_STATUSES } },
+                  // equal amounts: the later row is the one that took the lead (an earlier proxy matching a bid)
+                  orderBy: [{ amount: "desc" }, { placedAt: "desc" }, { id: "desc" }],
+                  take: LADDER_SIZE,
+                  select: { uuid: true, amount: true, source: true, placedAt: true },
+              }),
         // bidders show by paddle number, never by name
-        lot.currentBidderId
+        !live && lot.currentBidderId
             ? prisma.auctionParticipant.findUnique({
                   where: { auctionId_userId: { auctionId, userId: lot.currentBidderId } },
                   select: { paddleNumber: true },
@@ -325,14 +332,15 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
         auction: { ...toPublicAuction(auction), auctioneer: displayName(creator) },
         lot: {
             ...detail,
+            ...(live && { currentBid: live.currentBid, bidCount: live.bidCount }),
             authenticatedAt: auctheticateDate,
             // "type of artwork": the lot's own sub-category / category, else the sale's
             artworkType: subCategory?.name ?? category?.name ?? auction.category?.name ?? null,
             currency: currency ?? auction.currency,
             image: images.find((media) => media.mediaType === "IMAGE")?.url ?? null,
             media: images,
-            leadingPaddle: leader?.paddleNumber ?? null,
-            nextBid: String(nextValidBid(lot, rules)),
+            leadingPaddle: live ? live.leadingPaddle : leader?.paddleNumber ?? null,
+            nextBid: live ? live.nextBid : String(nextValidBid(lot, rules)),
             // highest first; the top one is the leading bid
             bids,
         },

@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 import {
     changeAuctionStatus,
@@ -20,6 +20,7 @@ import type {
     LiveAuctionSummary,
     DeleteAuctionResponse
 } from "@/lib/types/auction.types";
+import type { LiveLotUpdate } from "@/lib/types/bidding.types";
 
 /**
  * Each request has its own loading/error so that, for example, fetching the
@@ -134,6 +135,17 @@ const auctionSlice = createSlice({
             state.updating = false;
             state.updateError = null;
             state.updateSuccess = false;
+        },
+
+        /** A live bid / lot change from the socket — patch the lot row in place. */
+        applyLiveLotUpdate: (state, action: PayloadAction<LiveLotUpdate>) => {
+            const update = action.payload;
+            if (state.lotsAuction?.uuid !== update.auctionUuid) return;
+            const lot = state.lots.find((row) => row.uuid === update.lotUuid);
+            if (!lot) return;
+            lot.status = update.status;
+            if (update.currentBid !== undefined) lot.currentBid = update.currentBid;
+            if (update.bidCount !== undefined) lot.bidCount = update.bidCount;
         },
 
     },
@@ -313,6 +325,6 @@ const auctionSlice = createSlice({
             })
     },
 });
-export const { clearAuctionState, clearLots, clearDeleteError, clearUpdateState } = auctionSlice.actions;
+export const { clearAuctionState, clearLots, clearDeleteError, clearUpdateState, applyLiveLotUpdate } = auctionSlice.actions;
 
 export default auctionSlice.reducer;
