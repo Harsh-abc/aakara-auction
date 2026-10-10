@@ -61,6 +61,12 @@ export const currencyEndPoints = {
     GET_CURRENCIES_API: `${BASE_URL}/api/currency`,
 };
 
+// public — the signup form uses these before the user has an account
+export const locationEndPoints = {
+    GET_COUNTRIES_API: `${BASE_URL}/api/location/countries`,
+    GET_CITIES_API: (isoCode: string) => `${BASE_URL}/api/location/countries/${isoCode}/cities`,
+};
+
 
 export const userEndPoints = {
     GET_ALL_USERS_API: `${BASE_URL}/api/users/get-all-users`,

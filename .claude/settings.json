@@ -102,7 +102,19 @@
       "PowerShell(node --check backend/src/jobs/auctionScheduler.js)",
       "PowerShell(node --check backend/src/services/liveAuction.services.js)",
       "PowerShell(node --check backend/src/services/auction.services.js)",
-      "PowerShell(node --check backend/index.js)"
+      "PowerShell(node --check backend/index.js)",
+      "Bash(npm install *)",
+      "Bash(node -e \"import\\('country-state-city'\\).then\\(\\({Country,City}\\)=>{const c=Country.getAllCountries\\(\\);console.log\\(c.length, JSON.stringify\\(c[0]\\).slice\\(0,200\\)\\);const ci=City.getCitiesOfCountry\\('IN'\\);console.log\\(ci.length, JSON.stringify\\(ci[0]\\)\\);console.log\\(c.filter\\(x=>City.getCitiesOfCountry\\(x.isoCode\\).length===0\\).length,'countries without cities'\\)}\\)\")",
+      "Bash(node -e \"import\\('country-state-city'\\).then\\(\\({Country}\\)=>{const c=Country.getAllCountries\\(\\);const odd=c.filter\\(x=>!/^\\\\d+$/.test\\(x.phonecode\\)\\);console.log\\(odd.map\\(x=>x.isoCode+':'+x.phonecode\\).join\\(' '\\)\\);const m={};c.forEach\\(x=>{\\(m[x.phonecode]??=[]\\).push\\(x.isoCode\\)}\\);console.log\\(Object.entries\\(m\\).filter\\(\\([k,v]\\)=>v.length>1\\).map\\(\\([k,v]\\)=>k+'='+v.join\\(','\\)\\).join\\(' | '\\)\\)}\\)\")",
+      "Bash(node -e \"const l=require\\('libphonenumber-js'\\);console.log\\(l.getCountries\\(\\).length, l.getCountryCallingCode\\('JM'\\), l.isValidPhoneNumber\\('9876543210','IN'\\), l.isValidPhoneNumber\\('07911123456','GB'\\), l.parsePhoneNumberFromString\\('07911123456','GB'\\).number, l.parsePhoneNumberFromString\\('+919876543210'\\).country, l.parsePhoneNumberFromString\\('+12025550123'\\)?.country, l.isValidPhoneNumber\\('2025550123','US'\\)\\)\")",
+      "mcp__claude_ai_Claude_Docs__batch",
+      "mcp__claude_ai_Claude_Docs__guide",
+      "mcp__claude_ai_Claude_Docs__update",
+      "Bash(node -p \"const p=require\\('./backend/node_modules/country-state-city/package.json'\\);p.version+' '+p.license+' '+\\(p.repository?.url||p.homepage\\)\")",
+      "Bash(node -p \"const p=require\\('./frontend/node_modules/libphonenumber-js/package.json'\\);p.version+' '+p.license+' '+\\(p.repository?.url||p.homepage\\)\")",
+      "Bash(node -p \"const p=require\\('./frontend/node_modules/@tanstack/react-virtual/package.json'\\);p.version+' '+p.license\")",
+      "Bash(node -e \"import\\('country-state-city'\\).then\\(\\({City}\\)=>console.log\\(City.getAllCities\\(\\).length\\)\\)\")",
+      "mcp__claude_ai_Claude_Docs__read"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

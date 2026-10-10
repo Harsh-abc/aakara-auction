@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { setUser } from "@/redux/slices/authSlice"
 import { updateMyProfile } from "@/services/operations/profile.api"
 import type { MyAccount, UpdateProfilePayload } from "@/lib/types/profile.types"
-import { COUNTRY_CODES, splitPhone } from "@/lib/constants/countryCodes"
+import { COUNTRY_CODES, countryNameOf, splitPhone, toE164 } from "@/lib/constants/countryCodes"
 import { cn } from "@/lib/utils"
 import {
     AuthField,
@@ -50,7 +50,9 @@ function validate(data: FormData): FieldErrors {
     if (!data.lastName.trim()) errors.lastName = "Enter your last name"
 
     if (!data.phone) errors.phone = "Enter your mobile number"
-    else if (data.phone.length !== 10) errors.phone = "Enter a valid 10-digit mobile number"
+    else if (!toE164(data.phone, data.countryCode)) {
+        errors.phone = `Enter a valid ${countryNameOf(data.countryCode)} mobile number`
+    }
 
     return errors
 }
@@ -72,7 +74,8 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const key = event.target.name as FieldKey
-        const value = key === "phone" ? event.target.value.replace(/\D/g, "").slice(0, 10) : event.target.value
+        // E.164 allows at most 15 digits; the per-country length is checked on submit
+        const value = key === "phone" ? event.target.value.replace(/\D/g, "").slice(0, 15) : event.target.value
 
         setForm((prev) => ({ ...prev, [key]: value }))
         setErrors((prev) => ({ ...prev, [key]: undefined }))
@@ -94,7 +97,8 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
         const payload: UpdateProfilePayload = {}
         const firstName = form.firstName.trim()
         const lastName = form.lastName.trim()
-        const phone = `${form.countryCode}${form.phone}`
+        // validate() has already confirmed the number is valid for its country
+        const phone = toE164(form.phone, form.countryCode) ?? ""
 
         if (firstName !== initialForm.firstName) payload.firstName = firstName
         if (lastName !== initialForm.lastName) payload.lastName = lastName
@@ -212,8 +216,8 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
                             className={cn(authInputClass, "cursor-pointer")}
                         >
                             {COUNTRY_CODES.map((item) => (
-                                <option key={item.value} value={item.value}>
-                                    {item.label} ({item.value})
+                                <option key={item.country} value={item.country} suppressHydrationWarning>
+                                    {item.name} ({item.dialCode})
                                 </option>
                             ))}
                         </select>

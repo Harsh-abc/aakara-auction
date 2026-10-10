@@ -83,7 +83,7 @@ export const updateMyProfileSchema = z
         country: optionalText(100),
         pincode: emptyToNull(z.string().trim().regex(/^\d{6}$/, 'Pincode must be 6 digits').nullable().optional()),
         // lives on User, not UserProfile — stored with its country code, e.g. +919876543210
-        phone: emptyToNull(z.string().trim().regex(/^\+?[0-9]{10,15}$/, 'Invalid phone number').nullable().optional()),
+        phone: emptyToNull(z.string().trim().regex(/^\+?[0-9]{7,15}$/, 'Invalid phone number').nullable().optional()),
     })
     .strict();
 

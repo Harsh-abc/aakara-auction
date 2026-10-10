@@ -1,14 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import toast from "react-hot-toast"
+import { ChevronDown } from "lucide-react"
+import type { CountryCode } from "libphonenumber-js"
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { sendSignupOtp } from "@/services/operations/auth.api"
+import { getCities, getCountries } from "@/services/operations/location.api"
 import type { SignupPayload } from "@/lib/types/auth.types"
+import type { Country } from "@/lib/types/location.types"
 import { cn } from "@/lib/utils"
-import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from "@/lib/constants/countryCodes"
+import {
+    COUNTRY_CODES,
+    DEFAULT_COUNTRY,
+    countryNameOf,
+    dialCodeOf,
+    isPhoneCountry,
+    toE164,
+} from "@/lib/constants/countryCodes"
+import { AuthComboboxField } from "./AuthComboboxField"
 import {
     AuthField,
     AuthFieldError,
@@ -28,6 +40,8 @@ const initialFormData = {
     firstName: "",
     lastName: "",
     email: "",
+    // the dialling code's country; follows the Country field unless the user picks another code
+    phoneCountry: DEFAULT_COUNTRY as CountryCode,
     phone: "",
     city: "",
     country: "",
@@ -48,8 +62,8 @@ const fieldOrder: FieldKey[] = [
     "firstName",
     "lastName",
     "phone",
-    "city",
     "country",
+    "city",
     "terms",
 ]
 
@@ -82,11 +96,13 @@ function validate(data: FormData): FieldErrors {
     }
 
     if (!data.phone) errors.phone = "Enter your mobile number"
-    else if (data.phone.length !== 10) errors.phone = "Enter a valid 10-digit mobile number"
+    else if (!toE164(data.phone, data.phoneCountry)) {
+        errors.phone = `Enter a valid ${countryNameOf(data.phoneCountry)} mobile number`
+    }
 
-    if (!data.city.trim()) errors.city = "Enter your city"
+    if (!data.country.trim()) errors.country = "Select your country"
 
-    if (!data.country.trim()) errors.country = "Enter your country"
+    if (!data.city.trim()) errors.city = "Select your city"
 
     if (!data.terms) errors.terms = "Please accept the Terms of Service to continue"
 
@@ -110,9 +126,112 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
     const dispatch = useAppDispatch()
     const { loading } = useAppSelector((state) => state.auth)
 
-    const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE)
     const [formData, setFormData] = useState(initialFormData)
     const [errors, setErrors] = useState<FieldErrors>({})
+
+    // null while loading; if the list can't be fetched, country and city fall back to plain text inputs
+    const [countries, setCountries] = useState<Country[] | null>(null)
+    const [countriesFailed, setCountriesFailed] = useState(false)
+    const [cities, setCities] = useState<string[]>([])
+    const [citiesLoading, setCitiesLoading] = useState(false)
+
+    // cities already fetched, by country ISO code
+    const citiesCache = useRef(new Map<string, string[]>())
+    // the country whose cities were asked for last, so a slow earlier response can't overwrite it
+    const latestCityRequest = useRef("")
+
+    // the mobile code picked last; read when the country list arrives, in case it was changed while loading
+    const latestPhoneCountry = useRef<CountryCode>(initialFormData.phoneCountry)
+
+    const loadCities = async (isoCode: string) => {
+        latestCityRequest.current = isoCode
+
+        const cached = citiesCache.current.get(isoCode)
+        if (!isoCode || cached) {
+            setCities(cached ?? [])
+            setCitiesLoading(false)
+            return
+        }
+
+        setCities([])
+        setCitiesLoading(true)
+
+        try {
+            const response = await getCities(isoCode)
+            citiesCache.current.set(isoCode, response.data)
+            if (latestCityRequest.current === isoCode) setCities(response.data)
+        } catch {
+            // leave the list empty, so city becomes a text input rather than blocking signup
+            if (latestCityRequest.current === isoCode) setCities([])
+        } finally {
+            if (latestCityRequest.current === isoCode) setCitiesLoading(false)
+        }
+    }
+
+    // country and mobile code mirror each other: picking either one sets the other
+    const selectCountry = (country: Country) => {
+        setFormData((prev) => ({
+            ...prev,
+            country: country.name,
+            city: "",
+            phoneCountry: isPhoneCountry(country.isoCode) ? country.isoCode : prev.phoneCountry,
+        }))
+        setErrors((prev) => ({ ...prev, country: undefined, city: undefined, phone: undefined }))
+
+        if (isPhoneCountry(country.isoCode)) latestPhoneCountry.current = country.isoCode
+
+        loadCities(country.isoCode)
+    }
+
+    useEffect(() => {
+        getCountries()
+            .then((response) => {
+                setCountries(response.data)
+
+                // start with the country of the default mobile code (+91 → India)
+                const match = response.data.find((item) => item.isoCode === latestPhoneCountry.current)
+                if (match) selectCountry(match)
+            })
+            .catch(() => setCountriesFailed(true))
+        // selectCountry only uses state setters and refs, so the first render's copy is safe here
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    const handleCountryChange = (name: string) => {
+        const country = countries?.find((item) => item.name === name)
+
+        if (country) {
+            selectCountry(country)
+            return
+        }
+
+        // cleared
+        setFormData((prev) => ({ ...prev, country: name, city: "" }))
+        setErrors((prev) => ({ ...prev, country: undefined, city: undefined }))
+        loadCities("")
+    }
+
+    const handlePhoneCountryChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const phoneCountry = event.target.value
+        if (!isPhoneCountry(phoneCountry)) return
+
+        latestPhoneCountry.current = phoneCountry
+        setFormData((prev) => ({ ...prev, phoneCountry }))
+        setErrors((prev) => ({ ...prev, phone: undefined }))
+
+        // show the matching country too, unless it's already the selected one (keeps the chosen city)
+        const country = countries?.find((item) => item.isoCode === phoneCountry)
+        if (country && country.name !== formData.country) selectCountry(country)
+    }
+
+    const handleCityChange = (city: string) => {
+        setFormData((prev) => ({ ...prev, city }))
+        setErrors((prev) => ({ ...prev, city: undefined }))
+    }
+
+    // some territories have no city data, and the lookups can fail — then the user types the value
+    const countryIsFreeText = countriesFailed
+    const cityIsFreeText = countriesFailed || (!!formData.country && !citiesLoading && cities.length === 0)
 
     // set once the OTP has been sent; its presence moves the tab to the verify steps (email, then phone)
     const [pendingSignup, setPendingSignup] = useState<{
@@ -123,7 +242,8 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const id = event.target.id as FieldKey
-        const value = id === "phone" ? event.target.value.replace(/\D/g, "").slice(0, 10) : event.target.value
+        // E.164 allows at most 15 digits; the per-country length is checked on submit
+        const value = id === "phone" ? event.target.value.replace(/\D/g, "").slice(0, 15) : event.target.value
 
         setFormData((prev) => ({ ...prev, [id]: value }))
         setErrors((prev) => ({ ...prev, [id]: undefined }))
@@ -146,7 +266,8 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
             // login lowercases the email, so store it lowercased or the new account can't log in
             email: formData.email.trim().toLowerCase(),
             password: formData.password,
-            phone: `${countryCode}${formData.phone}`,
+            // validate() has already confirmed the number is valid for its country
+            phone: toE164(formData.phone, formData.phoneCountry) ?? "",
             city: formData.city.trim(),
             country: formData.country.trim(),
         }
@@ -185,6 +306,10 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
         setPendingSignup(null)
         setFormData(initialFormData)
         setErrors({})
+        latestPhoneCountry.current = initialFormData.phoneCountry
+
+        const defaultCountry = countries?.find((item) => item.isoCode === initialFormData.phoneCountry)
+        if (defaultCountry) selectCountry(defaultCountry)
 
         onAccountCreated(email)
     }
@@ -266,22 +391,29 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                     Mobile number
                 </label>
                 <div className="flex">
-                    <select
-                        aria-label="Country code"
-                        value={countryCode}
-                        onChange={(event) => setCountryCode(event.target.value)}
+                    {/* the box shows just the code; the transparent native select on top lists full country names */}
+                    <div
                         className={cn(
                             authInputClass,
-                            "w-24 shrink-0 cursor-pointer border-r-0 px-2.5",
+                            "relative flex w-24 shrink-0 items-center justify-between border-r-0 px-3 focus-within:border-neutral-900",
                             errors.phone && authInputErrorClass
                         )}
                     >
-                        {COUNTRY_CODES.map((item) => (
-                            <option key={item.value} value={item.value}>
-                                {item.value}
-                            </option>
-                        ))}
-                    </select>
+                        <span>{dialCodeOf(formData.phoneCountry)}</span>
+                        <ChevronDown className="h-4 w-4 text-neutral-400" />
+                        <select
+                            aria-label="Country code"
+                            value={formData.phoneCountry}
+                            onChange={handlePhoneCountryChange}
+                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        >
+                            {COUNTRY_CODES.map((item) => (
+                                <option key={item.country} value={item.country} suppressHydrationWarning>
+                                    {item.name} ({item.dialCode})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                     <input
                         id="phone"
                         name="phone"
@@ -298,25 +430,61 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 <AuthFieldError id="phone-error" message={errors.phone} />
             </div>
 
-            <AuthField
-                id="city"
-                label="City"
-                autoComplete="address-level2"
-                maxLength={100}
-                value={formData.city}
-                onChange={handleChange}
-                error={errors.city}
-            />
+            {countryIsFreeText ? (
+                <AuthField
+                    id="country"
+                    label="Country"
+                    autoComplete="country-name"
+                    maxLength={100}
+                    value={formData.country}
+                    onChange={handleChange}
+                    error={errors.country}
+                />
+            ) : (
+                <AuthComboboxField
+                    id="country"
+                    label="Country"
+                    items={countries?.map((item) => item.name) ?? []}
+                    value={formData.country}
+                    onValueChange={handleCountryChange}
+                    error={errors.country}
+                    placeholder={countries ? "Search country" : "Loading countries..."}
+                    disabled={!countries}
+                    emptyText="No country found"
+                />
+            )}
 
-            <AuthField
-                id="country"
-                label="Country"
-                autoComplete="country-name"
-                maxLength={100}
-                value={formData.country}
-                onChange={handleChange}
-                error={errors.country}
-            />
+            {cityIsFreeText ? (
+                <AuthField
+                    id="city"
+                    label="City"
+                    autoComplete="address-level2"
+                    maxLength={100}
+                    value={formData.city}
+                    onChange={handleChange}
+                    error={errors.city}
+                />
+            ) : (
+                <AuthComboboxField
+                    // remount per country, so the search text from the previous country's list is cleared
+                    key={formData.country}
+                    id="city"
+                    label="City"
+                    items={cities}
+                    value={formData.city}
+                    onValueChange={handleCityChange}
+                    error={errors.city}
+                    placeholder={
+                        !formData.country
+                            ? "Select a country first"
+                            : citiesLoading
+                              ? "Loading cities..."
+                              : "Search city"
+                    }
+                    disabled={!formData.country || citiesLoading}
+                    emptyText="No city found"
+                />
+            )}
 
             <div>
                 <label htmlFor="terms" className="flex cursor-pointer items-start gap-3 text-xs text-neutral-500">

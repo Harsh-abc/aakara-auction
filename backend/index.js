@@ -12,6 +12,7 @@ import categoryRouter from "./src/routes/category.routes.js";
 import auctionRouter from "./src/routes/auction.routes.js";
 import currencyRouter from "./src/routes/currency.routes.js";
 import userRouter from "./src/routes/user.routes.js";
+import locationRouter from "./src/routes/location.routes.js";
 import { startAuctionScheduler } from "./src/jobs/auctionScheduler.js";
 
 
@@ -64,6 +65,7 @@ app.use('/api/category', categoryRouter)
 app.use('/api/auction', auctionRouter)
 app.use('/api/currency', currencyRouter)
 app.use('/api/users', userRouter)
+app.use('/api/location', locationRouter)
 
 const PORT = process.env.PORT || 8080;
 
