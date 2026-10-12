@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import type { PublicLot } from "@/lib/types/publicAuction.types"
 
 import { formatMoney, lotHeading, lotHref } from "../detail/lotDisplay"
+import { LivePlayer } from "./LivePlayer"
 import { Tag } from "./LotTag"
 import { auctioneerCall, closedLabel, isClosedLot, lotTag, lotNo, upNextLot } from "./lotPageDisplay"
 
@@ -17,31 +18,36 @@ type OrderOfSaleProps = {
     /** the lot this page is showing */
     currentLotUuid: string
     saleClosed: boolean
+    /** the sale is live — show the auctioneer's video stream */
+    streaming: boolean
     className?: string
 }
 
-// what's on the block — the live lot, with the auctioneer's call under it
-function OnTheBlock({ lot, saleClosed }: { lot: PublicLot | null; saleClosed: boolean }) {
+// what's on the block — the auctioneer's live video (the live lot's image until it starts), with their call under it
+function OnTheBlock({ auctionUuid, lot, saleClosed, streaming }: { auctionUuid: string; lot: PublicLot | null; saleClosed: boolean; streaming: boolean }) {
+    const poster = (
+        <div className="absolute inset-0 flex items-center justify-center">
+            {lot?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={lot.image} alt={lotHeading(lot)} className="h-full w-full object-contain" />
+            ) : (
+                <ImageOff className="size-6 text-neutral-400" />
+            )}
+        </div>
+    )
+
     return (
         <div className="border-b border-[#cecece] p-4">
-            <div className="relative flex aspect-[266/150] items-center justify-center overflow-hidden bg-[#ebebeb]">
-                {lot?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={lot.image} alt={lotHeading(lot)} className="h-full w-full object-contain" />
-                ) : (
-                    <ImageOff className="size-6 text-neutral-400" />
-                )}
+            <div className="relative aspect-266/150 overflow-hidden bg-[#ebebeb]">
+                {/* stays mounted between lots, so the stream doesn't drop when one closes */}
+                {streaming ? <LivePlayer auctionUuid={auctionUuid} fallback={poster} /> : poster}
 
                 {lot && (
                     <>
-                        <span className="absolute top-3 left-4.25 flex h-5 items-center bg-white px-2.25 text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">
+                        <span className="absolute top-3 left-4.25 z-2 flex h-5 items-center bg-white px-2.25 text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">
                             {lotTag(lot)}
                         </span>
-                        <Tag tone="live" label="Live" className="absolute top-3 right-3" />
-                        <span className="absolute right-3 bottom-3 flex h-5.75 w-7.25 items-center justify-center bg-white" aria-hidden>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/icons/volume-off.svg" alt="" width={15} height={15} />
-                        </span>
+                        <Tag tone="live" label="Live" className="absolute top-3 right-3 z-2" />
                     </>
                 )}
             </div>
@@ -53,7 +59,7 @@ function OnTheBlock({ lot, saleClosed }: { lot: PublicLot | null; saleClosed: bo
     )
 }
 
-export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, className }: OrderOfSaleProps) {
+export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, streaming, className }: OrderOfSaleProps) {
     const liveLot = lots.find((lot) => lot.status === "ACTIVE") ?? null
     const upNext = upNextLot(lots)
     const hammered = lots.filter(isClosedLot).length
@@ -69,7 +75,7 @@ export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, cla
 
     return (
         <aside className={cn("self-start border border-[#cecece] bg-white", className)}>
-            <OnTheBlock lot={liveLot} saleClosed={saleClosed} />
+            <OnTheBlock auctionUuid={auctionUuid} lot={liveLot} saleClosed={saleClosed} streaming={streaming} />
 
             <div className="flex h-11.25 items-center justify-between border-b border-[#cecece] px-4">
                 <h2 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">Order of sale</h2>

@@ -2,6 +2,7 @@
 // app/dashboard/layout.tsx
 import { AppSidebar } from "@/components/app-sidebar"
 import { HeaderNotifications } from "@/components/core/Dashboard/HeaderNotifications"
+import { GoLiveButton } from "@/components/core/Dashboard/live/GoLiveButton"
 import { HeaderUserMenu } from "@/components/core/Dashboard/HeaderUserMenu"
 import {
     Breadcrumb, BreadcrumbItem, BreadcrumbLink,
@@ -44,6 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 </Breadcrumb>
                             </div>
                             <div className="flex items-center gap-3 px-4">
+                                <GoLiveButton />
                                 <Link href="/" className={buttonVariants({ variant: "outline", size: "sm" })}>
                                     <GlobeIcon className="size-4" />
                                     <span className="hidden sm:inline">View website</span>

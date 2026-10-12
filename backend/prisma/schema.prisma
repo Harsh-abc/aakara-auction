@@ -49,6 +49,7 @@ model User {
   usersCreated              User[]                 @relation("UserCreatedBy")
   lotBidders                LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
+  liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
 
   @@index([roleId])
   @@index([status])
@@ -311,6 +312,7 @@ model Auction {
   shippingStrategy     ShippingStrategy       @default(SHIPPING_CALCULATED_SEPARATELY)
   visibility           AuctionVisibility      @default(REGISTERED_USERS_ONLY)
   auctionCurrencies    AuctionCurrency[]
+  liveStreamBans       LiveStreamBan[]
 
   @@index([status])
   @@index([startTime])
@@ -914,4 +916,21 @@ enum WEIGHTUNIT {
   GRAM
   LB
   OZ
+}
+
+// viewers removed from an auction's live video and blocked from rejoining it
+// identity is the LiveKit identity: "user-<uuid>" (signed in) or "viewer-<browser id>" (guest)
+model LiveStreamBan {
+  id        BigInt   @id @default(autoincrement())
+  auctionId BigInt
+  identity  String   @db.VarChar(80)
+  name      String?  @db.VarChar(120)
+  bannedBy  BigInt?
+  createdAt DateTime @default(now())
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  issuer    User?    @relation("LiveStreamBanIssuer", fields: [bannedBy], references: [id], onDelete: SetNull)
+
+  @@unique([auctionId, identity])
+  @@index([auctionId])
+  @@map("live_stream_bans")
 }

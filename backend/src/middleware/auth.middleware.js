@@ -49,3 +49,24 @@ export function authenticate(req, res, next) {
         });
     }
 }
+
+// like authenticate, but lets guests through: req.user is set only for a valid access token
+export function optionalAuthenticate(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) return next();
+
+    try {
+        const decoded = jwt.verify(authHeader.substring(7).trim(), process.env.JWT_ACCESS_SECRET);
+        req.user = {
+            uuid: decoded.sub,
+            userId: decoded.userId,
+            roleId: decoded.roleId,
+            sessionId: decoded.sessionId,
+            role: decoded.role,
+            permissions: decoded.permissions ?? [],
+        };
+    } catch {
+        // expired / invalid token — watch as a guest
+    }
+    next();
+}
