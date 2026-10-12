@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 import { AuctionCountdown } from "./AuctionCountdown"
-import { auctionHref, STOREFRONT_STATUS_LABELS } from "./auctionDisplay"
+import { auctionHref, isLive, STOREFRONT_STATUS_LABELS } from "./auctionDisplay"
 import { saleCountdown } from "./detail/AuctionDetail"
 import { lotHeading } from "./detail/lotDisplay"
 import { BidDialog } from "./lot/BidDialog"
@@ -79,6 +79,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                     lots={lots}
                     currentLotUuid={lot.uuid}
                     saleClosed={!countdown}
+                    streaming={isLive(auction)}
                     className="order-2 lg:order-1"
                 />
 
