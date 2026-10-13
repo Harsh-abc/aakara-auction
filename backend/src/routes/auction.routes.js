@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from "../middleware/upload.middleware.js";
 import { getLotBidders, getLotSummary, verifyLotBidders } from '../controllers/lotBidder.controller.js';
 import { getAuctionStats, getAuctionTimeline, getLiveAuctions, setLotLive } from '../controllers/liveAuction.controller.js';
+import { getDashboardCalendar, getDashboardOverview } from '../controllers/dashboard.controller.js';
 import {
     addAuctionParticipants,
     addNewUserToAuction,
@@ -61,6 +62,10 @@ auctionRouter.get("/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AU
 
 // DASHBOARD CARDS — auction counts by status
 auctionRouter.get("/stats", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionStats);
+
+// DASHBOARD HOME — overview panels, and the auction calendar (?month=YYYY-MM)
+auctionRouter.get("/dashboard/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getDashboardOverview);
+auctionRouter.get("/dashboard/calendar", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getDashboardCalendar);
 
 // PAST / UPCOMING auctions (?type=past|upcoming)
 auctionRouter.get("/timeline", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionTimeline);

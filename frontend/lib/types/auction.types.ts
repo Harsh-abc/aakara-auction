@@ -234,6 +234,82 @@ export interface AuctionStats {
     settled: number;
 }
 
+// =====================================================================
+// DASHBOARD HOME
+// =====================================================================
+
+export interface DashboardCurrency {
+    code: string;
+    symbol: string | null;
+}
+
+export interface DashboardUpcomingAuction {
+    uuid: string;
+    title: string;
+    status: AuctionStatus; // SCHEDULED | PREVIEW
+    coverImageUrl: string | null;
+    startTime: string;
+    currency: DashboardCurrency;
+    lotCount: number;
+    /** Lowest opening price among the lots, in the auction's currency */
+    startingBid: number | null;
+}
+
+export interface DashboardLiveAuction {
+    uuid: string;
+    title: string;
+    status: AuctionStatus; // LIVE | PAUSED
+    coverImageUrl: string | null;
+    startTime: string;
+    endTime: string;
+    currency: DashboardCurrency;
+    category: string | null;
+    lotCount: number;
+    liveLot: { uuid: string; itemNumber: string } | null;
+    /** The live lot's top bid; between lots, the sale's latest bid */
+    currentBid: number | null;
+    totalBids: number;
+    /** People who have placed at least one bid */
+    bidders: number;
+}
+
+/** LEADING / OUTBID while the sale runs; WON / LOST / CANCELLED once it's over */
+export type DashboardBidStatus = "LEADING" | "OUTBID" | "WON" | "LOST" | "CANCELLED";
+
+export interface DashboardBid {
+    uuid: string;
+    amount: string;
+    source: "MANUAL" | "PROXY";
+    placedAt: string;
+    status: DashboardBidStatus;
+    bidder: { uuid: string | null; paddle: string | null; name: string | null } | null;
+    lot: { uuid: string; itemNumber: string; title: string | null };
+    auction: { uuid: string; title: string };
+    currency: DashboardCurrency;
+}
+
+/** GET /auction/dashboard/overview */
+export interface DashboardOverview {
+    stats: AuctionStats;
+    upcoming: DashboardUpcomingAuction[];
+    live: DashboardLiveAuction[];
+    recentBids: DashboardBid[];
+}
+
+export interface DashboardCalendarAuction {
+    uuid: string;
+    title: string;
+    status: AuctionStatus;
+    startTime: string;
+    endTime: string;
+}
+
+/** GET /auction/dashboard/calendar?month=YYYY-MM */
+export interface DashboardCalendar {
+    month: string;
+    auctions: DashboardCalendarAuction[];
+}
+
 export interface Auction {
     id?: string;
     uuid: string;

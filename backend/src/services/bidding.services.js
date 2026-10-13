@@ -728,6 +728,80 @@ export const getAuctionActivityService = async ({ auctionUuid }) => {
 };
 
 // =====================================================================
+// DASHBOARD HOME (every running sale at a glance — Redis only)
+// =====================================================================
+
+/**
+ * For each running sale ({ id, uuid, liveLotUuid }): bid totals, the live lot's
+ * current position, and its latest `feedSize` bids, each with the bidder and
+ * whether it still leads its lot. Returns a Map keyed by auction uuid.
+ */
+export const getSalesBidSnapshot = async (auctions, { feedSize = 10 } = {}) => {
+    const result = new Map();
+    if (auctions.length === 0) return result;
+
+    const feedPipe = redis.pipeline();
+    for (const { uuid } of auctions) feedPipe.lrange(bidKeys.auctionFeed(uuid), 0, feedSize - 1);
+    const feeds = (await feedPipe.exec()).map(([, raw]) => (raw ?? []).map((bid) => JSON.parse(bid)));
+
+    // where each lot stands now (lots in the feeds + each sale's live lot)
+    const lotUuids = [
+        ...new Set([...feeds.flat().map((bid) => bid.lot), ...auctions.map((a) => a.liveLotUuid).filter(Boolean)]),
+    ];
+    const lotPipe = redis.pipeline();
+    for (const lotUuid of lotUuids) {
+        lotPipe.hmget(bidKeys.lot(lotUuid), "currentBid", "bidCount", "leaderId", "title", "currencyCode", "currencySymbol");
+    }
+    const lotRows = lotUuids.length ? await lotPipe.exec() : [];
+    const lots = new Map(
+        lotUuids.map((lotUuid, index) => {
+            const [currentBid, bidCount, leaderId, title, code, symbol] = lotRows[index][1] ?? [];
+            const count = Number(bidCount) || 0;
+            return [
+                lotUuid,
+                {
+                    currentBid: count > 0 ? Number(currentBid) : null,
+                    bidCount: count,
+                    leaderId,
+                    title,
+                    currency: code ? { code, symbol: symbol || null } : null,
+                },
+            ];
+        })
+    );
+
+    await Promise.all(
+        auctions.map(async ({ id, uuid, liveLotUuid }, index) => {
+            const feed = feeds[index];
+            const [stats, bidders] = await Promise.all([
+                readStats(uuid),
+                biddersById(uuid, id, feed.map((bid) => bid.u)),
+            ]);
+            const live = liveLotUuid ? lots.get(liveLotUuid) : null;
+
+            result.set(uuid, {
+                stats,
+                liveLot: live && live.bidCount > 0 ? { currentBid: live.currentBid, bidCount: live.bidCount } : null,
+                bids: feed.map((bid) => {
+                    const lot = lots.get(bid.lot);
+                    return {
+                        ...toPublicBid(bid.lot, bid),
+                        lotUuid: bid.lot,
+                        itemNumber: String(bid.n),
+                        title: lot?.title ?? null,
+                        currency: lot?.currency ?? null,
+                        bidder: bidders.get(String(bid.u)) ?? null,
+                        leading: !!lot && String(lot.leaderId) === String(bid.u) && lot.currentBid === Number(bid.a),
+                    };
+                }),
+            });
+        })
+    );
+
+    return result;
+};
+
+// =====================================================================
 // LOT + AUCTION LIFECYCLE
 // =====================================================================
 

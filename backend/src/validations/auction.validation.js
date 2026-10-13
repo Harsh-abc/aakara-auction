@@ -65,6 +65,13 @@ export const getAuctionTimelineQuerySchema = z.object({
     search: z.string().trim().max(100).optional(),
 });
 
+// dashboard calendar — one month at a time
+export const getDashboardCalendarQuerySchema = z.object({
+    month: z
+        .string()
+        .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "month must look like 2026-10" }),
+});
+
 // storefront list — "upcoming" also covers sales that are live right now
 export const getPublicAuctionsQuerySchema = z.object({
     type: z.enum(["past", "upcoming"], { message: 'type must be "past" or "upcoming"' }),

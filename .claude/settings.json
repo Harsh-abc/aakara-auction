@@ -176,7 +176,13 @@
       "Bash(node --check src/controllers/upload.controller.js)",
       "Bash(node --check src/middleware/upload.middleware.js)",
       "Bash(node -e \"import\\('./src/routes/upload.routes.js'\\).then\\(\\(\\)=>console.log\\('backend route imports OK'\\)\\)\")",
-      "Bash(node --experimental-strip-types -e ' *)"
+      "Bash(node --experimental-strip-types -e ' *)",
+      "Bash(curl -s -m 3 -o /dev/null -w \"backend8080:%{http_code}\\\\n\" http://localhost:8080/api/auction/dashboard/overview)",
+      "Bash(timeout 60 node --env-file=.env --input-type=module -e ' *)",
+      "Bash(node --check src/services/dashboard.services.js)",
+      "Bash(curl -s -m 120 -o /dev/null -w \"dashboard page: %{http_code}\\\\n\" http://localhost:3000/dashboard)",
+      "Bash(curl -s -m 5 -o /dev/null -w \"overview api \\(no token\\): %{http_code}\\\\n\" http://localhost:8080/api/auction/dashboard/overview)",
+      "Bash(curl -s -m 5 -o /dev/null -w \"calendar api \\(no token\\): %{http_code}\\\\n\" \"http://localhost:8080/api/auction/dashboard/calendar?month=2026-10\")"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

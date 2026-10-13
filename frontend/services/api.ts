@@ -26,6 +26,8 @@ export const auctionEndPoints = {
     GET_LIVE_AUCTIONS_API: `${BASE_URL}/api/auction/live`,
     GET_AUCTION_TIMELINE_API: `${BASE_URL}/api/auction/timeline`,
     GET_AUCTION_STATS_API: `${BASE_URL}/api/auction/stats`,
+    GET_DASHBOARD_OVERVIEW_API: `${BASE_URL}/api/auction/dashboard/overview`,
+    GET_DASHBOARD_CALENDAR_API: `${BASE_URL}/api/auction/dashboard/calendar`,
     SET_LOT_LIVE_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/live`,
     DELETE_LOT_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}`,
     GET_LOT_SUMMARY_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/summary`,

@@ -8,6 +8,8 @@ import {
     ChangeAuctionStatusParams,
     ChangeAuctionStatusResponse,
     CreateAuctionResponse,
+    DashboardCalendar,
+    DashboardOverview,
     DeleteAuctionResponse,
     DeleteLotResponse,
     GetAuctionLotsResponse,
@@ -52,6 +54,30 @@ export async function getAuctionStats(token: string): Promise<AuctionStats> {
     const response = await apiConnector<{ success: boolean; message: string; data: AuctionStats }>({
         method: "GET",
         url: auctionEndPoints.GET_AUCTION_STATS_API,
+        header: authHeader(token),
+    });
+    return response.data.data;
+}
+
+// =====================================================================
+// DASHBOARD HOME — overview panels and the month calendar
+// =====================================================================
+
+export async function getDashboardOverview(token: string): Promise<DashboardOverview> {
+    const response = await apiConnector<{ success: boolean; message: string; data: DashboardOverview }>({
+        method: "GET",
+        url: auctionEndPoints.GET_DASHBOARD_OVERVIEW_API,
+        header: authHeader(token),
+    });
+    return response.data.data;
+}
+
+/** `month` as YYYY-MM */
+export async function getDashboardCalendar(token: string, month: string): Promise<DashboardCalendar> {
+    const response = await apiConnector<{ success: boolean; message: string; data: DashboardCalendar }>({
+        method: "GET",
+        url: auctionEndPoints.GET_DASHBOARD_CALENDAR_API,
+        params: { month },
         header: authHeader(token),
     });
     return response.data.data;
