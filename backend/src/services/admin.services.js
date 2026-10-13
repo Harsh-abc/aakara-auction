@@ -1,12 +1,18 @@
 import prisma from '../libs/prisma.js';
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import { invalidateBidderAccess } from './bidding.services.js';
+import { blockUserAccess, unblockUserAccess } from '../libs/accountBlock.js';
+import { disconnectUser } from '../libs/socket.js';
 
 const MAX_SUPER_ADMINS = 3;
 
 
-export const changeUserRoleService = async ({ actorUuid, targetUUuid, newRoleName }) => {
-    const targetUser = await prisma.user.findUnique({ where: { uuid: targetUUuid } });
+export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, newRoleName }) => {
+    const targetUser = await prisma.user.findUnique({
+        where: { uuid: targetUUuid },
+        include: { kyc: { select: { status: true } } },
+    });
 
     if (!targetUser) {
         const error = new Error('User not found');
@@ -35,6 +41,13 @@ export const changeUserRoleService = async ({ actorUuid, targetUUuid, newRoleNam
         throw error;
     }
 
+    // signup → KYC approved → a super admin makes them a bidder
+    if (newRole.name === 'BIDDER' && targetUser.kyc?.status !== 'VERIFIED') {
+        const error = new Error("KYC must be verified before this user can be made a bidder");
+        error.statusCode = 400;
+        throw error;
+    }
+
     let updatedUser;
     try {
         // Serializable so two concurrent promotions can't both pass the limit check
@@ -52,7 +65,16 @@ export const changeUserRoleService = async ({ actorUuid, targetUUuid, newRoleNam
 
             const updated = await tx.user.update({
                 where: { id: targetUser.id },
-                data: { roleId: newRole.id },
+                data: { roleId: newRole.id, roleChangedAt: new Date(), roleChangedById: BigInt(actorId) },
+                include: {
+                    roleChangedBy: {
+                        select: {
+                            uuid: true,
+                            username: true,
+                            profile: { select: { firstName: true, lastName: true, displayName: true } },
+                        },
+                    },
+                },
             });
 
             await tx.userSession.deleteMany({ where: { userId: targetUser.id } });
@@ -69,16 +91,104 @@ export const changeUserRoleService = async ({ actorUuid, targetUUuid, newRoleNam
         throw error;
     }
 
+    // only BIDDERs may bid, so gaining or losing the role refreshes who may bid on their lots
+    const oldRole = await prisma.role.findUnique({ where: { id: targetUser.roleId }, select: { name: true } });
+    if (oldRole?.name === 'BIDDER' || newRole.name === 'BIDDER') {
+        const lots = await prisma.lotBidder.findMany({
+            where: { userId: targetUser.id },
+            select: { item: { select: { uuid: true } } },
+        });
+        if (lots.length > 0) {
+            await invalidateBidderAccess({
+                lotUuids: lots.map((row) => row.item.uuid),
+                revokedUserIds: newRole.name === 'BIDDER' ? [] : [targetUser.id],
+            });
+        }
+    }
+
     return {
         uuid: updatedUser.uuid,
         email: updatedUser.email,
         roleId: updatedUser.roleId.toString(),
         roleName: newRole.name,
+        roleChangedAt: updatedUser.roleChangedAt,
+        roleChangedBy: updatedUser.roleChangedBy,
     };
 }
 
 
 
+
+
+/**
+ * Suspends or reactivates an account (super admin). A suspended user is logged out
+ * everywhere straight away and can't log in, use the API, or bid until reactivated.
+ */
+export const changeUserStatusService = async ({ actorUuid, targetUuid, action }) => {
+    const targetUser = await prisma.user.findFirst({
+        where: { uuid: targetUuid, deletedAt: null },
+        select: { id: true, uuid: true, status: true, role: { select: { name: true } } },
+    });
+
+    if (!targetUser) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    if (targetUser.uuid === actorUuid) {
+        const error = new Error('You cannot suspend your own account');
+        error.statusCode = 400;
+        throw error;
+    }
+    if (targetUser.role.name === 'SUPER_ADMIN') {
+        const error = new Error("A super admin can't be suspended. Change their role first.");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const suspend = action === 'SUSPEND';
+    if (suspend && targetUser.status === 'SUSPENDED') {
+        const error = new Error('This user is already suspended');
+        error.statusCode = 409;
+        throw error;
+    }
+    if (!suspend && targetUser.status !== 'SUSPENDED') {
+        const error = new Error('This user is not suspended');
+        error.statusCode = 409;
+        throw error;
+    }
+
+    await prisma.$transaction([
+        prisma.user.update({
+            where: { id: targetUser.id },
+            data: { status: suspend ? 'SUSPENDED' : 'ACTIVE' },
+        }),
+        // suspending logs them out of every device (refresh tokens stop working)
+        ...(suspend ? [prisma.userSession.deleteMany({ where: { userId: targetUser.id } })] : []),
+    ]);
+
+    if (suspend) {
+        // access tokens already issued stop working now, not when they expire
+        await blockUserAccess(targetUser.id);
+        disconnectUser(targetUser.id);
+    } else {
+        await unblockUserAccess(targetUser.id);
+    }
+
+    // who may bid excludes suspended users — refresh it on their lots (suspending also drops their maximum bids)
+    const lots = await prisma.lotBidder.findMany({
+        where: { userId: targetUser.id },
+        select: { item: { select: { uuid: true } } },
+    });
+    if (lots.length > 0) {
+        await invalidateBidderAccess({
+            lotUuids: lots.map((row) => row.item.uuid),
+            revokedUserIds: suspend ? [targetUser.id] : [],
+        });
+    }
+
+    return { uuid: targetUser.uuid, status: suspend ? 'SUSPENDED' : 'ACTIVE' };
+};
 
 
 /**
@@ -143,6 +253,8 @@ export const createUserByAdminService = async (
                     phoneVerifiedAt: now,
                     passwordChangedAt: now,
                     createdById: adminId,
+                    roleChangedAt: now,
+                    roleChangedById: adminId,
                 },
             });
 

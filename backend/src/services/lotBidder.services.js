@@ -16,8 +16,11 @@ const httpError = (message, statusCode = 400) => {
     return error;
 };
 
-/** Roles that can register for an auction (themselves, or be added by a super admin). */
-export const BIDDER_ROLES = ["BIDDER", "USER"];
+/**
+ * Roles that can register for an auction (themselves, or be added by a super admin).
+ * Only BIDDER: a super admin assigns it; KYC approval alone leaves a user as USER.
+ */
+export const BIDDER_ROLES = ["BIDDER"];
 
 /** Lot bidders can be verified / unverified until the auction is over. */
 export const EDITABLE_AUCTION_STATUSES = ["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];

@@ -1,4 +1,4 @@
-import { getAllUsersService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService, getMyRegistrationsService, changeMyPasswordService, getMyKycService, submitMyKycService, reviewUserKycService, requestKycDocumentsService } from '../services/user.services.js';
+import { getAllUsersService, getUserStatsService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService, getMyRegistrationsService, changeMyPasswordService, getMyKycService, submitMyKycService, reviewUserKycService, requestKycDocumentsService } from '../services/user.services.js';
 import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema, changePasswordSchema, submitMyKycSchema, reviewKycSchema, requestKycDocumentsSchema } from '../validations/user.validation.js';
 import { REFRESH_COOKIE_NAME } from './auth.controller.js';
 
@@ -18,6 +18,23 @@ export const getAllUsers = async (req, res) => {
         });
     } catch (err) {
         if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const getUserStats = async (req, res) => {
+    try {
+        const stats = await getUserStatsService();
+        return res.status(200).json({
+            success: true,
+            message: 'User stats fetched successfully',
+            data: stats,
+        });
+    } catch (err) {
         return res.status(err.statusCode || 500).json({
             success: false,
             message: err.message || "Something went wrong",
@@ -64,7 +81,9 @@ export const uploadUserKyc = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: 'KYC uploaded and verified successfully',
+            message: result.status === 'VERIFIED'
+                ? 'KYC documents added. KYC is verified.'
+                : 'KYC documents added and approved. KYC is not verified yet: a required document is still missing or awaiting review.',
             data: result,
         });
     } catch (err) {

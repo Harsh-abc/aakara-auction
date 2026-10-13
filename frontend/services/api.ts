@@ -25,6 +25,7 @@ export const auctionEndPoints = {
         `${BASE_URL}/api/auction/change-status/${auctionUuid}`,
     GET_LIVE_AUCTIONS_API: `${BASE_URL}/api/auction/live`,
     GET_AUCTION_TIMELINE_API: `${BASE_URL}/api/auction/timeline`,
+    GET_AUCTION_STATS_API: `${BASE_URL}/api/auction/stats`,
     SET_LOT_LIVE_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/live`,
     DELETE_LOT_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}`,
     GET_LOT_SUMMARY_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/summary`,
@@ -95,6 +96,7 @@ export const locationEndPoints = {
 
 export const userEndPoints = {
     GET_ALL_USERS_API: `${BASE_URL}/api/users/get-all-users`,
+    GET_USER_STATS_API: `${BASE_URL}/api/users/stats`,
     GET_USER_BY_ID_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}`,
     UPLOAD_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc`,
     REVIEW_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc/review`,
@@ -115,4 +117,5 @@ export const profileEndpoints = {
 export const adminEndPoints = {
     CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
     CHANGE_USER_ROLE_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/role`,
+    CHANGE_USER_STATUS_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/status`,
 }

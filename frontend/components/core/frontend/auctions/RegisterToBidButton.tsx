@@ -45,10 +45,14 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
     }
 
     const registration = registrationWindow(auction)
-    if (!registration.open || eligibility === "not-bidder") {
+    if (!registration.open || eligibility === "not-bidder" || eligibility === "awaiting-bidder-role") {
         return (
             <span className={cn(base, "cursor-not-allowed bg-neutral-200 text-neutral-500", className)}>
-                {registration.open ? "Bidder accounts only" : registration.reason}
+                {!registration.open
+                    ? registration.reason
+                    : eligibility === "awaiting-bidder-role"
+                        ? "Awaiting bidder approval"
+                        : "Bidder accounts only"}
             </span>
         )
     }

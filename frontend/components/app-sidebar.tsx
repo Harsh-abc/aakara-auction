@@ -247,6 +247,13 @@ const data = {
         { title: "Live Auctions", url: "/dashboard/auctions/live-auctions" },
         { title: "Past Auctions", url: "/dashboard/auctions/past-auctions" },
         { title: "Upcoming Auctions", url: "/dashboard/auctions/upcoming-auctions" },
+        {
+          title: "Manage Bidders",
+          url: "/dashboard/auctions/manage-bidders",
+          roles: ["SUPER_ADMIN", "ADMIN"],
+          // also highlighted on an auction's bidder pages
+          activeOn: /^\/dashboard\/auctions\/[^/]+\/(registrations|lots\/[^/]+\/bidders)/,
+        },
       ],
     },
     { title: "Artworks", url: "/dashboard/artworks", icon: <Palette /> },

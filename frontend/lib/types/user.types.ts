@@ -46,6 +46,8 @@ export interface UserKyc {
     requestedAt?: string | null;
     // newest document of each type; every "OTHERS" document
     documents?: UserKycDocument[];
+    // only on GET /users (list): each non-rejected document type on file
+    uploadedDocumentTypes?: DocumentType[];
 }
 
 export interface User {
@@ -66,9 +68,18 @@ export interface User {
     createdAt: string;
     updatedAt: string;
     role: { name: string };
+    // only on GET /users/:uuid — who last set the role (e.g. made them a bidder) and when
+    roleChangedAt?: string | null;
+    roleChangedBy?: RoleChangedBy | null;
     profile: UserProfile | null;
     kyc: UserKyc | null;
     _count: { bids: number; auctionsWon: number; auctionParticipations: number };
+}
+
+export interface RoleChangedBy {
+    uuid: string;
+    username: string;
+    profile: Pick<UserProfile, "firstName" | "lastName" | "displayName"> | null;
 }
 
 export interface Pagination {
@@ -96,6 +107,18 @@ export interface GetAllUsersResponse {
     };
 }
 
+
+/** GET /users/stats — counts for the cards on the users page */
+export interface UserStats {
+    total: number;
+    joinedThisMonth: number;
+    bidders: number;
+    /** bidders whose KYC is verified, so they can register and bid */
+    biddersCanBid: number;
+    newUsers: number;
+    newUserDays: number;
+    suspended: number;
+}
 
 export interface GetUserByIdResponse {
     success: boolean;
@@ -136,6 +159,7 @@ export interface UploadUserKycResponse {
         kycType: KycType;
         status: string;
         documentsUploaded: number;
+        user: User;
     };
 }
 
@@ -196,6 +220,22 @@ export interface ChangeUserRoleResponse {
         email: string;
         roleId: string;
         roleName: string;
+        roleChangedAt: string | null;
+        roleChangedBy: RoleChangedBy | null;
+    };
+}
+
+export interface ChangeUserStatusPayload {
+    uuid: string;
+    action: "SUSPEND" | "REACTIVATE";
+}
+
+export interface ChangeUserStatusResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        status: "SUSPENDED" | "ACTIVE";
     };
 }
 

@@ -18,9 +18,10 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { ChevronRightIcon } from "lucide-react"
+import { useAppSelector } from "@/hooks/redux"
 
 export function NavMain({
-  items,
+  items: allItems,
 }: {
   items: {
     title: string
@@ -30,16 +31,30 @@ export function NavMain({
     items?: {
       title: string
       url: string
+      /** only shown to these roles (all roles when omitted) */
+      roles?: string[]
+      /** extra paths that count as this page, e.g. its detail pages */
+      activeOn?: RegExp
     }[]
   }[]
 }) {
   const pathname = usePathname()
+  const role = useAppSelector((state) => state.auth.role)
 
-  // Most specific URL matching the current path, so "/dashboard" isn't active on every page
-  const activeUrl = items
-    .flatMap((item) => (item.items?.length ? item.items.map((sub) => sub.url) : [item.url]))
-    .filter((url) => pathname === url || pathname.startsWith(url + "/"))
-    .sort((a, b) => b.length - a.length)[0]
+  const items = allItems.map((item) => ({
+    ...item,
+    items: item.items?.filter((sub) => !sub.roles || (!!role && sub.roles.includes(role))),
+  }))
+
+  // An explicit activeOn match wins; otherwise the most specific URL matching the
+  // current path, so "/dashboard" isn't active on every page
+  const subItems = items.flatMap((item) => item.items ?? [])
+  const activeUrl =
+    subItems.find((sub) => sub.activeOn?.test(pathname))?.url ??
+    items
+      .flatMap((item) => (item.items?.length ? item.items.map((sub) => sub.url) : [item.url]))
+      .filter((url) => pathname === url || pathname.startsWith(url + "/"))
+      .sort((a, b) => b.length - a.length)[0]
 
   const isGroupActive = (item: (typeof items)[number]) =>
     !!item.items?.some((sub) => sub.url === activeUrl)

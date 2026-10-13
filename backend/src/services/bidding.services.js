@@ -192,7 +192,13 @@ const isVerifiedBidder = async (lotUuid, lotId, userId) => {
         where: {
             itemId: BigInt(lotId),
             status: "VERIFIED",
-            user: { deletedAt: null, status: { notIn: BLOCKED_USER_STATUSES } },
+            // a bidder moved back to USER, or whose KYC approval was taken back, keeps their lot rows but can't bid
+            user: {
+                deletedAt: null,
+                status: { notIn: BLOCKED_USER_STATUSES },
+                role: { name: "BIDDER" },
+                kyc: { is: { status: "VERIFIED" } },
+            },
         },
         select: { userId: true },
     });
@@ -207,10 +213,22 @@ const isVerifiedBidder = async (lotUuid, lotId, userId) => {
 };
 
 const notVerifiedError = async (lotId, userId) => {
-    const row = await prisma.lotBidder.findUnique({
-        where: { itemId_userId: { itemId: BigInt(lotId), userId: BigInt(userId) } },
-        select: { status: true },
-    });
+    const [row, account] = await Promise.all([
+        prisma.lotBidder.findUnique({
+            where: { itemId_userId: { itemId: BigInt(lotId), userId: BigInt(userId) } },
+            select: { status: true },
+        }),
+        prisma.user.findUnique({
+            where: { id: BigInt(userId) },
+            select: { role: { select: { name: true } }, kyc: { select: { status: true } } },
+        }),
+    ]);
+    if (account?.role.name !== "BIDDER") {
+        return httpError("Only bidder accounts can bid. The auction house will make you a bidder once approved.", 403);
+    }
+    if (account.kyc?.status !== "VERIFIED") {
+        return httpError("Your KYC must be verified before you can bid. Check your profile for documents to resubmit.", 403);
+    }
     return row
         ? httpError("Your registration for this lot is awaiting verification by the auction house", 403)
         : httpError("Register for this auction to bid on its lots", 403);
@@ -498,7 +516,13 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
             currentBidderId: true,
             bidCount: true,
             currency: { select: { code: true, symbol: true } },
-            bidders: { where: { userId: user }, select: { status: true } },
+            bidders: {
+                where: { userId: user },
+                select: {
+                    status: true,
+                    user: { select: { role: { select: { name: true } }, kyc: { select: { status: true } } } },
+                },
+            },
             auction: {
                 select: {
                     id: true,
@@ -542,7 +566,9 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
         };
     }
 
-    const verified = registration === "VERIFIED";
+    const bidder = lot.bidders[0]?.user;
+    const verified =
+        registration === "VERIFIED" && bidder?.role.name === "BIDDER" && bidder?.kyc?.status === "VERIFIED";
     return serializeBigInt({
         lotUuid,
         itemNumber: lot.itemNumber,

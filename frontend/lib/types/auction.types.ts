@@ -219,6 +219,21 @@ export interface CreateAuctionPayload {
 // RESPONSE MODELS
 // =====================================================================
 
+/** GET /auction/stats — counts for the dashboard cards */
+export interface AuctionStats {
+    total: number;
+    createdThisMonth: number;
+    /** LIVE + PAUSED */
+    live: number;
+    paused: number;
+    /** SCHEDULED + PREVIEW */
+    upcoming: number;
+    nextStartTime: string | null;
+    /** ENDED + SETTLED */
+    completed: number;
+    settled: number;
+}
+
 export interface Auction {
     id?: string;
     uuid: string;
@@ -257,7 +272,7 @@ export interface Auction {
     auctionFees?: (AuctionFee & { uuid: string })[];
     /** Only the EXTENSION_TRIGGER rule is returned; value = minutes (Decimal string) */
     rules?: { ruleType: string; value: string | number; isActive?: boolean; description?: string | null }[];
-    _count?: { items: number };
+    _count?: { items: number; participants?: number };
 
     createdAt: string;
     updatedAt: string;

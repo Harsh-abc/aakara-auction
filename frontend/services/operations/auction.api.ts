@@ -4,6 +4,7 @@ import axios from "axios";
 import { apiConnector } from "../apiConnector";
 import { auctionEndPoints } from "../api";
 import {
+    AuctionStats,
     ChangeAuctionStatusParams,
     ChangeAuctionStatusResponse,
     CreateAuctionResponse,
@@ -42,6 +43,19 @@ const toErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 const authHeader = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+// =====================================================================
+// AUCTION STATS (dashboard cards) — counts straight from the database
+// =====================================================================
+
+export async function getAuctionStats(token: string): Promise<AuctionStats> {
+    const response = await apiConnector<{ success: boolean; message: string; data: AuctionStats }>({
+        method: "GET",
+        url: auctionEndPoints.GET_AUCTION_STATS_API,
+        header: authHeader(token),
+    });
+    return response.data.data;
+}
 
 // =====================================================================
 // CREATE AUCTION (multipart/form-data)

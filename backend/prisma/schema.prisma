@@ -47,13 +47,19 @@ model User {
   createdById               BigInt?
   createdBy                 User?                  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   usersCreated              User[]                 @relation("UserCreatedBy")
-  lotBidders                LotBidder[]            @relation("LotBidderUser")
+  // who last set this user's role (role change or admin-created account) and when
+  roleChangedAt             DateTime?
+  roleChangedById           BigInt?
+  roleChangedBy             User?                  @relation("UserRoleChangedBy", fields: [roleChangedById], references: [id], onDelete: SetNull)
+  rolesChanged              User[]                 @relation("UserRoleChangedBy")
+  lotBidders               LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
 
   @@index([roleId])
   @@index([status])
   @@index([createdById])
+  @@index([roleChangedById])
   @@map("users")
 }
 

@@ -47,13 +47,6 @@ const formatRole = (role: string) =>
         .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
         .join(" ")
 
-const getRiskLevel = (user: User) => {
-    const isLocked = user.lockedUntil && new Date(user.lockedUntil) > new Date()
-    if (user.status === "SUSPENDED" || isLocked) return { label: "High (Locked/Suspended)", className: "text-[#DC2626]" }
-    if (user.failedLoginAttempts >= 3) return { label: "Medium", className: "text-orange-500" }
-    return { label: "Low (Trusted)", className: "text-[#16A34A]" }
-}
-
 export default function UserProfile({ user }: UserProfileProps) {
 
     const profile = user.profile
@@ -70,8 +63,6 @@ export default function UserProfile({ user }: UserProfileProps) {
     const wonAuctions = user._count.auctionsWon
     const joinedAuctions = user._count.auctionParticipations
     const successRate = joinedAuctions > 0 ? ((wonAuctions / joinedAuctions) * 100).toFixed(1) : "0"
-
-    const risk = getRiskLevel(user)
 
     return (
         <div>
@@ -163,12 +154,6 @@ export default function UserProfile({ user }: UserProfileProps) {
                             label="KYC Status"
                             value={kycStatus}
                             valueClassName={isKycVerified ? "text-[#16A34A]" : "text-[#DC2626]"}
-                        />
-
-                        <InfoRow
-                            label="Risk Level"
-                            value={risk.label}
-                            valueClassName={risk.className}
                         />
 
                         <InfoRow label="Last Active IP" value={user.lastLoginIp ?? "-"} />

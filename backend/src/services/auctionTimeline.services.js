@@ -19,6 +19,44 @@ export const TIMELINE = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// =====================================================================
+// COUNTS FOR THE DASHBOARD CARDS (same status groups as the live floor
+// and the past / upcoming pages)
+// =====================================================================
+
+const LIVE_STATUSES = ["LIVE", "PAUSED"];
+const COMPLETED_STATUSES = ["ENDED", "SETTLED"];
+
+export const getAuctionStatsService = async () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const notDeleted = { deletedAt: null };
+
+    const [byStatus, createdThisMonth, nextUpcoming] = await Promise.all([
+        prisma.auction.groupBy({ by: ["status"], where: notDeleted, _count: { _all: true } }),
+        prisma.auction.count({ where: { ...notDeleted, createdAt: { gte: monthStart } } }),
+        prisma.auction.findFirst({
+            where: { ...notDeleted, status: { in: TIMELINE.upcoming.statuses }, startTime: { gte: now } },
+            orderBy: { startTime: "asc" },
+            select: { startTime: true },
+        }),
+    ]);
+
+    const count = Object.fromEntries(byStatus.map((row) => [row.status, row._count._all]));
+    const sum = (statuses) => statuses.reduce((total, status) => total + (count[status] ?? 0), 0);
+
+    return {
+        total: sum(Object.keys(count)),
+        createdThisMonth,
+        live: sum(LIVE_STATUSES),
+        paused: count.PAUSED ?? 0,
+        upcoming: sum(TIMELINE.upcoming.statuses),
+        nextStartTime: nextUpcoming?.startTime ?? null,
+        completed: sum(COMPLETED_STATUSES),
+        settled: count.SETTLED ?? 0,
+    };
+};
+
 const sumBy = (items, pick) => items.reduce((total, item) => total + (Number(pick(item)) || 0), 0);
 
 // =====================================================================

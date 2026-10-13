@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { changeMyPassword, getAllUsers, getMyKyc, getMyProfile, getMyRegistrations, getUserById, requestKycDocuments, reviewUserKyc, submitMyKyc, updateMyProfile, uploadUserKyc } from '../controllers/user.controller.js';
+import { changeMyPassword, getAllUsers, getUserStats, getMyKyc, getMyProfile, getMyRegistrations, getUserById, requestKycDocuments, reviewUserKyc, submitMyKyc, updateMyProfile, uploadUserKyc } from '../controllers/user.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from '../middleware/upload.middleware.js';
@@ -18,6 +18,9 @@ userRouter.post('/me/kyc', authenticate, uploadAny, submitMyKyc);
 
 // GET ALL USERS (admin only)
 userRouter.get('/get-all-users', getAllUsers);
+
+// counts for the users page cards (before /:uuid so "stats" isn't read as a uuid)
+userRouter.get('/stats', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF', 'AUCTIONEER'), getUserStats);
 
 // includes the user's KYC document links, so dashboard roles only
 userRouter.get('/:uuid', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF', 'AUCTIONEER'), getUserById);

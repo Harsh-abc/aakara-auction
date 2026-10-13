@@ -12,7 +12,7 @@ import { AuctionListings } from "./AuctionListings";
 import { FeaturedAuction, FeaturedAuctionSkeleton } from "./FeaturedAuction";
 import { HowToBid } from "./HowToBid";
 
-// must match BIDDER_ROLES in backend/src/services/lotBidder.services.js
+// customer accounts (not team members) — only BIDDER can actually register; a super admin assigns it
 const BIDDER_ROLES = ["BIDDER", "USER"];
 
 const NO_PADDLES: Record<string, string> = {};
@@ -29,7 +29,7 @@ export function AuctionsPage() {
     const isBidder = !!token && !!role && BIDDER_ROLES.includes(role);
     const paddles = isBidder ? bidderPaddles : NO_PADDLES;
 
-    // read from the account, not the token's role — KYC approval promotes USER → BIDDER mid-session
+    // read from the account, not the token's role — KYC status can change mid-session
     const [eligibilityFor, setEligibilityFor] = useState<{ token: string; value: BidderEligibility } | null>(null);
     const eligibility: BidderEligibility = !token
         ? "guest"

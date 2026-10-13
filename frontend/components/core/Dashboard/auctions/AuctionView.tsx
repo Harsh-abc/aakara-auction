@@ -641,7 +641,7 @@ const LotsTable = ({
                                                         onClick={() => router.push(`${lotPath(lot)}/bidders`)}
                                                     >
                                                         <Users />
-                                                        Registrations
+                                                        Manage bidders
                                                     </DropdownMenuItem>
                                                 )}
 

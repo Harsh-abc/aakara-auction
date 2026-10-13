@@ -161,7 +161,11 @@
       "Bash(npm update *)",
       "Bash(cp \"/c/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/3e499ab9-569d-4df5-9879-946db95cf071/scratchpad/clean/package-lock.json\" package-lock.json)",
       "Bash(npm run *)",
-      "Bash(npm ci *)"
+      "Bash(npm ci *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{time_total}s\\\\n\" https://api-uat.auction.akaraart.com/)",
+      "Bash(curl -s -i --max-time 15 https://api-uat.auction.akaraart.com/api)",
+      "mcp__claude-vscode__getDiagnostics",
+      "Bash(timeout 90 node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/c7168193-5cbf-4931-bf48-13fe630a5f06/scratchpad/kyc_check.mjs\")"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

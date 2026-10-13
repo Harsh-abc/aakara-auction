@@ -2,12 +2,22 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { getErrorMessage } from "@/lib/apiError";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { ChangeUserRolePayload, ChangeUserRoleResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, UploadUserKycPayload, UploadUserKycResponse } from "@/lib/types/user.types";
+import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, UploadUserKycPayload, UploadUserKycResponse, UserStats } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
-const { GET_ALL_USERS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API } = userEndPoints;
+const { GET_ALL_USERS_API, GET_USER_STATS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API } = userEndPoints;
 
-const { CREATE_USER_API, CHANGE_USER_ROLE_API } = adminEndPoints;
+const { CREATE_USER_API, CHANGE_USER_ROLE_API, CHANGE_USER_STATUS_API } = adminEndPoints;
+
+// counts for the users page cards — read straight from the database, not the loaded page of users
+export async function getUserStats(token: string | null): Promise<UserStats> {
+    const response = await apiConnector<{ success: boolean; message: string; data: UserStats }>({
+        method: "GET",
+        url: GET_USER_STATS_API,
+        header: { Authorization: `Bearer ${token}` },
+    });
+    return response.data.data;
+}
 
 
 
@@ -74,7 +84,7 @@ export const uploadUserKyc = createAsyncThunk<
     { rejectValue: string; state: RootState }
 >(
     "user/uploadUserKyc",
-    async ({ uuid, kycType, documents }, { getState, dispatch, rejectWithValue }) => {
+    async ({ uuid, kycType, documents }, { getState, rejectWithValue }) => {
         try {
             const token = getState().auth.accessToken;
 
@@ -104,9 +114,7 @@ export const uploadUserKyc = createAsyncThunk<
                 return rejectWithValue(response.data.message || "Could not upload KYC");
             }
 
-            // refresh user so the page switches to UserProfile
-            dispatch(getUserById(uuid));
-
+            // the response carries the refreshed user (the slice swaps it in, so the page doesn't reload)
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not upload KYC. Try again."));
@@ -227,6 +235,35 @@ export const changeUserRole = createAsyncThunk<
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not change role. Try again."));
+        }
+    }
+);
+
+// suspend (logs them out everywhere, blocks login) or reactivate — super admin only
+export const changeUserStatus = createAsyncThunk<
+    ChangeUserStatusResponse,
+    ChangeUserStatusPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/changeUserStatus",
+    async ({ uuid, action }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<ChangeUserStatusResponse>({
+                method: "PATCH",
+                url: CHANGE_USER_STATUS_API(uuid),
+                body: { action },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not update the account");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not update the account. Try again."));
         }
     }
 );

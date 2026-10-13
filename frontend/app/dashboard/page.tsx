@@ -11,7 +11,7 @@ export default function Page() {
       <div className="flex items-center justify-between w-full">
         <div className="">
           <DashboardFormText text="Dashboard" className="text-[24px]" />
-          <p className="text-[13px] text-[#62666F]">Monitor your aucitons, bids and overall performance</p>
+          <p className="text-[13px] text-[#62666F]">Monitor your auctions, bids and overall performance</p>
         </div>
         <div>
           <Button className={'h-11 rounded-[8px] bg-[#F5A000] text-black'}>

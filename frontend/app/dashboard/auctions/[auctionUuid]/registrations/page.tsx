@@ -233,7 +233,7 @@ export default function AuctionRegistrationsPage() {
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <BackLink auctionUuid={auctionUuid} label={current.title} />
-                    <h3 className="text-2xl font-bold">Auction Registrations</h3>
+                    <h3 className="text-2xl font-bold">Manage Bidders</h3>
                     <p className="mt-1 max-w-2xl text-sm text-slate-500">
                         Everyone registered for this auction is registered for all of its lots. They can bid on a lot
                         only once a super admin verifies them for it — here for all lots at once, or lot by lot.

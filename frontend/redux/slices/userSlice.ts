@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { changeUserRole, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -23,6 +23,9 @@ interface UserState {
 
     // uuid of the user whose role is being changed
     changingRoleFor: string | null;
+
+    // uuid of the user being suspended / reactivated
+    changingStatusFor: string | null;
 }
 
 const initialState: UserState = {
@@ -44,6 +47,8 @@ const initialState: UserState = {
     createUserError: null,
 
     changingRoleFor: null,
+
+    changingStatusFor: null,
 };
 
 const userSlice = createSlice({
@@ -84,8 +89,12 @@ const userSlice = createSlice({
                 state.kycUploading = true;
                 state.kycUploadError = null;
             })
-            .addCase(uploadUserKyc.fulfilled, (state) => {
+            .addCase(uploadUserKyc.fulfilled, (state, action) => {
                 state.kycUploading = false;
+                const updated = action.payload.data.user;
+                if (state.selectedUser?.uuid === updated.uuid) state.selectedUser = updated;
+                const row = state.users.find((u) => u.uuid === updated.uuid);
+                if (row) row.kyc = updated.kyc;
             })
             .addCase(uploadUserKyc.rejected, (state, action) => {
                 state.kycUploading = false;
@@ -142,13 +151,31 @@ const userSlice = createSlice({
             .addCase(changeUserRole.fulfilled, (state, action) => {
                 state.changingRoleFor = null;
                 // update the row in place instead of refetching the list
-                const { uuid, roleName } = action.payload.data;
+                const { uuid, roleName, roleChangedAt, roleChangedBy } = action.payload.data;
                 const user = state.users.find((u) => u.uuid === uuid);
                 if (user) user.role = { name: roleName };
-                if (state.selectedUser?.uuid === uuid) state.selectedUser.role = { name: roleName };
+                if (state.selectedUser?.uuid === uuid) {
+                    state.selectedUser.role = { name: roleName };
+                    state.selectedUser.roleChangedAt = roleChangedAt;
+                    state.selectedUser.roleChangedBy = roleChangedBy;
+                }
             })
             .addCase(changeUserRole.rejected, (state) => {
                 state.changingRoleFor = null;
+            })
+
+            .addCase(changeUserStatus.pending, (state, action) => {
+                state.changingStatusFor = action.meta.arg.uuid;
+            })
+            .addCase(changeUserStatus.fulfilled, (state, action) => {
+                state.changingStatusFor = null;
+                const { uuid, status } = action.payload.data;
+                const row = state.users.find((u) => u.uuid === uuid);
+                if (row) row.status = status;
+                if (state.selectedUser?.uuid === uuid) state.selectedUser.status = status;
+            })
+            .addCase(changeUserStatus.rejected, (state) => {
+                state.changingStatusFor = null;
             });
     },
 });

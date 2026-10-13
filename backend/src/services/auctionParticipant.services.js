@@ -193,8 +193,8 @@ export const syncParticipantsToLots = async (tx, auctionId) => {
 export const registerForAuctionService = async ({ auctionUuid, userId }) => {
     if (!userId) throw httpError("Authenticated user is required", 401);
 
-    // Read from the DB, not the token: KYC approval promotes USER → BIDDER
-    // after the token was issued
+    // Read from the DB, not the token: KYC can be approved after the token
+    // was issued (the BIDDER role itself is assigned by a super admin)
     const account = await prisma.user.findUnique({
         where: { id: BigInt(userId) },
         select: { role: { select: { name: true } }, kyc: { select: { status: true } } },

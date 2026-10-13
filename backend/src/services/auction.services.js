@@ -701,7 +701,8 @@ export const getAuctionService = async (data = {}) => {
             tags: { include: { tag: true } },
             auctionFees: true,
             rules: EXTENSION_RULE_INCLUDE,
-            _count: { select: { items: true } },
+            // participants: registered bidders, for Auctions & Lots → Manage Bidders
+            _count: { select: { items: true, participants: true } },
         },
     });
 

@@ -12,6 +12,7 @@ import { reviewUserKyc } from "@/services/operations/user.api"
 import { KYC_DOCUMENT_GROUPS, KYC_DOCUMENTS } from "@/lib/constants/kyc"
 import type { KycDocumentReview, KycDocumentStatus, User, UserKycDocument } from "@/lib/types/user.types"
 import { KycRequestDialog, KycRequestNotice, useCanRequestKycDocuments } from "./KycRequestDialog"
+import { KycAddDocumentsDialog, useCanAddKycDocuments } from "./KycAddDocumentsDialog"
 
 // must match the roles on PATCH /users/:uuid/kyc/review
 const KYC_REVIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "STAFF"]
@@ -26,7 +27,7 @@ const KYC_STATUS_BADGE: Record<string, { label: string; className: string }> = {
 
 const DOCUMENT_STATUS_BADGE: Record<KycDocumentStatus, { label: string; className: string }> = {
     PENDING: { label: "Pending for review", className: "bg-[#fff4e8] text-[#f28c28]" },
-    APPROVED: { label: "Approved", className: "bg-[#effbf3] text-[#16a34a]" },
+    APPROVED: { label: "Verified", className: "bg-[#effbf3] text-[#16a34a]" },
     REJECTED: { label: "Rejected", className: "bg-[#fff0f0] text-red-500" },
 }
 
@@ -52,6 +53,7 @@ export function KycReview({ user }: { user: User }) {
     const role = useSelector((state: RootState) => state.auth.role)
     const reviewingIds = useSelector((state: RootState) => state.user.reviewingDocumentIds)
     const canRequest = useCanRequestKycDocuments()
+    const canAdd = useCanAddKycDocuments()
 
     // document being rejected, and the reason typed for it
     const [rejectingId, setRejectingId] = useState<string | null>(null)
@@ -85,9 +87,16 @@ export function KycReview({ user }: { user: User }) {
             setReason("")
 
             const { kycStatus } = response.data
-            if (kycStatus === "VERIFIED") toast.success("KYC verified. The user can now be approved to bid.")
-            else if (kycStatus === "REJECTED") toast.success("Review saved. The user has been asked to resubmit.")
-            else toast.success("Review saved")
+            const wasVerified = kyc?.status === "VERIFIED"
+            if (kycStatus === "VERIFIED") {
+                toast.success(wasVerified ? "Review saved. KYC is still verified." : "KYC verified. The user can now be approved to bid.")
+            } else if (wasVerified) {
+                toast.success("Document rejected. KYC is no longer verified, so this user can't bid until it's approved again.")
+            } else if (kycStatus === "REJECTED") {
+                toast.success("Review saved. The user has been asked to resubmit.")
+            } else {
+                toast.success("Review saved")
+            }
         } catch (error) {
             toast.error(typeof error === "string" ? error : "Could not save the review")
         }
@@ -117,6 +126,7 @@ export function KycReview({ user }: { user: User }) {
 
                 <div className="flex flex-wrap items-center gap-2">
                     {canRequest && <KycRequestDialog user={user} />}
+                    {canAdd && <KycAddDocumentsDialog user={user} />}
 
                     {canReview && pending.length > 1 && (
                         <Button
@@ -239,6 +249,13 @@ export function KycReview({ user }: { user: User }) {
                                             submit([{ documentId: doc.id, action: "REJECT", reason: reason.trim() }])
                                         }}
                                     >
+                                        {doc.status === "APPROVED" && (
+                                            <p className="rounded-[6px] bg-[#fff4e8] px-3 py-2 text-[11px] text-[#b45309]">
+                                                This document is already approved. Rejecting it takes the approval
+                                                back. If it was a required document, the user&apos;s KYC will no longer
+                                                be verified and they can&apos;t bid until it&apos;s approved again.
+                                            </p>
+                                        )}
                                         <Textarea
                                             autoFocus
                                             rows={2}
@@ -304,10 +321,24 @@ export function KycReview({ user }: { user: User }) {
                                         )}
 
                                         {doc.status === "APPROVED" && (
-                                            <span className="flex items-center gap-1 text-[10px] font-medium text-[#16A34A]">
-                                                <Check className="h-4 w-4" />
-                                                Approved{doc.verifiedAt && ` on ${formatDate(doc.verifiedAt)}`}
-                                            </span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex items-center gap-1 text-[10px] font-medium text-[#16A34A]">
+                                                    <Check className="h-4 w-4" />
+                                                    Approved{doc.verifiedAt && ` on ${formatDate(doc.verifiedAt)}`}
+                                                </span>
+                                                {canReview && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        disabled={busy}
+                                                        onClick={() => startReject(doc.id)}
+                                                        className="h-8 border-red-400 px-4 text-[10px] text-red-500 hover:bg-red-50 hover:text-red-500"
+                                                    >
+                                                        <X className="mr-1 h-3.5 w-3.5" />
+                                                        Reject
+                                                    </Button>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 )}

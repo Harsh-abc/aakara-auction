@@ -141,7 +141,7 @@ export default function ViewAuction() {
                             className={cn(buttonVariants({ variant: "outline" }), "flex items-center gap-2 px-4 text-[14px]")}
                         >
                             <Users className="h-4 w-4" />
-                            Registrations
+                            Manage bidders
                         </Link>
                     )}
 

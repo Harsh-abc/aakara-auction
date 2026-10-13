@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 
 import { getLiveAuctionsService, setLotLiveService } from "../services/liveAuction.services.js";
-import { getAuctionTimelineService } from "../services/auctionTimeline.services.js";
+import { getAuctionStatsService, getAuctionTimelineService } from "../services/auctionTimeline.services.js";
 import {
     getAuctionTimelineQuerySchema,
     lotUuidParamSchema,
@@ -21,6 +21,24 @@ const handleError = (res, error, label, fallback) => {
         success: false,
         message: status === 500 ? fallback : error.message,
     });
+};
+
+// -----------------------------------------------------------------
+// GET /api/auction/stats
+// Counts for the dashboard cards (total / live / upcoming / completed)
+// -----------------------------------------------------------------
+
+export const getAuctionStats = async (req, res) => {
+    try {
+        const data = await getAuctionStatsService();
+        return res.status(200).json({
+            success: true,
+            message: "Auction stats fetched successfully",
+            data,
+        });
+    } catch (error) {
+        return handleError(res, error, "Get auction stats", "Failed to fetch auction stats");
+    }
 };
 
 // -----------------------------------------------------------------

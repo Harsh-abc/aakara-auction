@@ -188,7 +188,7 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
         throw error;
     }
 
-    // new users start as USER and are promoted to BIDDER once their KYC is approved
+    // new users start as USER; only a super admin can make them a BIDDER (KYC approval doesn't)
     const defaultRole = await prisma.role.findFirst({ where: { name: 'USER' } });
 
     if (!defaultRole) {
@@ -349,7 +349,9 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
 
     if (user.status !== 'ACTIVE') {
         await logAttempt({ userId: user.id, email, ip, userAgent, success: false, failureReason: `STATUS_${user.status}` });
-        const error = new Error('Account is not active');
+        const error = new Error(user.status === 'SUSPENDED'
+            ? 'Your account has been suspended. Please contact the auction house.'
+            : 'Account is not active');
         error.statusCode = 403;
         throw error;
     }

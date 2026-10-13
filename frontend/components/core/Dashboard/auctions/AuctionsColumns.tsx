@@ -283,7 +283,7 @@ export const columns: ColumnDef<AppTableFeatures, Auction>[] = [
                         {meta?.onRegistrations && (
                             <DropdownMenuItem className="py-2 text-[13px]" onClick={() => meta.onRegistrations?.(auction)}>
                                 <Users />
-                                Registrations
+                                Manage bidders
                             </DropdownMenuItem>
                         )}
 

@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken'
-export function authenticate(req, res, next) {
+import { isUserBlocked } from '../libs/accountBlock.js'
+
+export async function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
 
     console.log("========== AUTH DEBUG ==========");
@@ -38,8 +40,6 @@ export function authenticate(req, res, next) {
         };
 
         console.log("REQ.USER:", req.user);
-
-        next();
     } catch (err) {
         console.error("JWT ERROR:", err);
 
@@ -48,23 +48,37 @@ export function authenticate(req, res, next) {
             message: "Invalid access token",
         });
     }
+
+    // suspended after this token was issued — 401 so the app tries to refresh, which the
+    // suspended account can't, and logs the user out
+    if (await isUserBlocked(req.user.userId)) {
+        return res.status(401).json({
+            success: false,
+            message: "Your account has been suspended",
+        });
+    }
+
+    next();
 }
 
 // like authenticate, but lets guests through: req.user is set only for a valid access token
-export function optionalAuthenticate(req, res, next) {
+export async function optionalAuthenticate(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) return next();
 
     try {
         const decoded = jwt.verify(authHeader.substring(7).trim(), process.env.JWT_ACCESS_SECRET);
-        req.user = {
-            uuid: decoded.sub,
-            userId: decoded.userId,
-            roleId: decoded.roleId,
-            sessionId: decoded.sessionId,
-            role: decoded.role,
-            permissions: decoded.permissions ?? [],
-        };
+        // a suspended account is treated as a guest
+        if (!(await isUserBlocked(decoded.userId))) {
+            req.user = {
+                uuid: decoded.sub,
+                userId: decoded.userId,
+                roleId: decoded.roleId,
+                sessionId: decoded.sessionId,
+                role: decoded.role,
+                permissions: decoded.permissions ?? [],
+            };
+        }
     } catch {
         // expired / invalid token — watch as a guest
     }
