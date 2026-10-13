@@ -48,7 +48,8 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
         deletedAt: null,
         ...(emailVerified && { emailVerified: emailVerified === 'true' }),
         ...(kycStatus && { kyc: { status: kycStatus } }),
-        ...(role && { role: { name: role } }),
+        // one role, or several comma-separated ("USER,BIDDER")
+        ...(role && { role: { name: { in: role.split(',').map((r) => r.trim()).filter(Boolean) } } }),
         ...(search && {
             OR: [
                 { username: { contains: search, mode: 'insensitive' } },

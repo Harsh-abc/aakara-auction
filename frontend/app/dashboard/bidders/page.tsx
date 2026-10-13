@@ -1,5 +1,5 @@
 'use client'
-import { columns } from "@/components/core/Dashboard/users/users-columns";
+import { bidderColumns } from "@/components/core/Dashboard/users/users-columns";
 import { UsersTable } from "@/components/core/Dashboard/users/users-table";
 import { Field } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -9,20 +9,25 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { getAllUsers } from "@/services/operations/user.api";
 
+const CUSTOMER_ROLES = ["USER", "BIDDER"];
+
 export default function Bidders() {
     const [search, setSearch] = useState("")
 
     const dispatch = useDispatch<AppDispatch>();
     const { users, loading, error } = useSelector((state: RootState) => state.user);
 
-    // only bidders whose KYC is verified
+    // customers (users and bidders) whose KYC is verified — the Bidder column shows who has bidder access
     useEffect(() => {
-        dispatch(getAllUsers({ page: 1, limit: 100, role: "BIDDER", kycStatus: "VERIFIED" }));
+        dispatch(getAllUsers({ page: 1, limit: 100, role: CUSTOMER_ROLES.join(","), kycStatus: "VERIFIED" }));
     }, [dispatch]);
 
     // the users slice is shared with other pages, so guard against stale unfiltered data
-    const verifiedBidders = useMemo(
-        () => (users ?? []).filter((u) => u.role?.name === "BIDDER" && u.kyc?.status === "VERIFIED"),
+    const verifiedCustomers = useMemo(
+        () =>
+            (users ?? []).filter(
+                (u) => CUSTOMER_ROLES.includes(u.role?.name) && u.kyc?.status === "VERIFIED"
+            ),
         [users]
     );
 
@@ -31,7 +36,7 @@ export default function Bidders() {
 
             <div className="">
                 <h1 className="text-[24px] font-bold">Bidders</h1>
-                <p className="text-sm text-muted-foreground">Verified bidders only</p>
+                <p className="text-sm text-muted-foreground">Customers with verified KYC and whether they have bidder access</p>
             </div>
 
             <div className="w-full rounded-[8px] pb-4">
@@ -54,7 +59,7 @@ export default function Bidders() {
                 ) : error ? (
                     <p className="text-sm text-red-500">{error}</p>
                 ) : (
-                    <UsersTable columns={columns} data={verifiedBidders} search={search} />
+                    <UsersTable columns={bidderColumns} data={verifiedCustomers} search={search} />
                 )}
 
             </div>

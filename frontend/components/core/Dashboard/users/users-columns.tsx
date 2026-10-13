@@ -227,3 +227,33 @@ export const columns: ColumnDef<AppTableFeatures, User>[] = [
         cell: ({ row }) => <UserActionsCell user={row.original} />,
     },
 ]
+
+// Yes when the user has the BIDDER role (bidder access is granted on the user page)
+const bidderColumn: ColumnDef<AppTableFeatures, User> = {
+    id: "bidder",
+    accessorFn: (user) => (user.role?.name === "BIDDER" ? "Yes" : "No"),
+
+    header: "Bidder",
+
+    cell: ({ row }) => {
+        const isBidder = row.original.role?.name === "BIDDER"
+
+        return (
+            <Badge
+                variant="outline"
+                className={`rounded-full px-3 py-1 text-xs font-normal ${
+                    isBidder
+                        ? "bg-green-50 text-green-600 border-green-100"
+                        : "bg-gray-100 text-gray-600 border-gray-200"
+                }`}
+            >
+                {isBidder ? "Yes" : "No"}
+            </Badge>
+        )
+    },
+}
+
+// Users & Bidders pages: same columns with "Bidder" placed before the account status
+export const bidderColumns: ColumnDef<AppTableFeatures, User>[] = columns.flatMap((column) =>
+    column.id === "status" ? [bidderColumn, column] : [column]
+)

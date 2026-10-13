@@ -1,6 +1,6 @@
 
 'use client'
-import { columns } from "@/components/core/Dashboard/users/users-columns";
+import { bidderColumns } from "@/components/core/Dashboard/users/users-columns";
 import { UsersTable } from "@/components/core/Dashboard/users/users-table";
 
 import UserStats from "@/components/core/Dashboard/users/UserStats";
@@ -101,7 +101,7 @@ export default function Users() {
                 </div>
 
 
-                <UsersTable columns={columns} data={users} search={search} />
+                <UsersTable columns={bidderColumns} data={users} search={search} />
 
             </div>
         </div>

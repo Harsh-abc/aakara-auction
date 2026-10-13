@@ -259,7 +259,7 @@ const data = {
     { title: "Artworks", url: "/dashboard/artworks", icon: <Palette /> },
     // { title: "Bidders", url: "/dashboard/bidders", icon: <UserCheck /> },
     { title: "User", url: "/dashboard/users", icon: <Users /> },
-    { title: "Bids", url: "/dashboard/bidders", icon: <HandCoins /> },
+    { title: "Bidders", url: "/dashboard/bidders", icon: <HandCoins /> },
     // { title: "Orders", url: "/dashboard/orders", icon: <ShoppingBag /> },
     // { title: "Payment", url: "/dashboard/payment", icon: <CreditCard /> },
     // { title: "Shipping", url: "/dashboard/shipping", icon: <Truck /> },
