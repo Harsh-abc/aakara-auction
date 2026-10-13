@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 
 import { AuctionDetail } from "@/components/core/frontend/auctions/detail/AuctionDetail"
 import { publicAuctionEndPoints } from "@/services/api"
+import { htmlToPlainText } from "@/utils/sanitizeHtml"
 
 type AuctionPageProps = {
     params: Promise<{ auctionUuid: string }>
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: AuctionPageProps): Promise<Me
         })
         if (response.ok) {
             const { data } = await response.json()
-            return { title: `${data.title} | Aakara`, description: data.short_description ?? undefined }
+            return { title: `${data.title} | Aakara`, description: htmlToPlainText(data.short_description) || undefined }
         }
     } catch {
         // fall through

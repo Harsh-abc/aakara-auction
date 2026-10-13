@@ -4,8 +4,9 @@ import { useFormContext } from "react-hook-form";
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 
 import { Input } from "@/components/ui/input";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
+import { useAppSelector } from "@/hooks/redux";
 
 import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
 import TagsInput from "@/components/common/Tags/TagsInput";
@@ -13,6 +14,7 @@ import DashboardFormText from "@/components/common/DashboardFormText";
 
 
 import { getCategories, getSubCategories } from "@/services/operations/category.api";
+import { uploadEditorImage } from "@/services/operations/upload.api";
 import { Category, SubCategory } from "@/lib/types/category.types";
 import CurrencySelector from "@/components/common/CurrencySelector";
 
@@ -44,6 +46,11 @@ export default function BasicInfo() {
         watch,
         formState: { errors, defaultValues },
     } = useFormContext<AuctionFormData>();
+
+    const token = useAppSelector((state) => state.auth.accessToken);
+
+    // images inside the detailed description go straight to S3; the HTML keeps their URLs
+    const handleDescriptionImageUpload = useCallback((file: File) => uploadEditorImage(file, token), [token]);
 
     /* =====================================================
        AUCTION ID — follows the name like a slug
@@ -252,11 +259,17 @@ export default function BasicInfo() {
                     {/* SHORT DESCRIPTION */}
                     <div className="input-wrapper">
                         <label className="block mb-2">Short Description</label>
-                        <textarea
-                            {...register("basicInfo.shortDescription")}
-                            rows={3}
+                        <RichTextEditor
+                            variant="basic"
                             placeholder="Enter short auction description"
-                            className="w-full border rounded-md px-3 py-2"
+                            value={watch("basicInfo.shortDescription")}
+                            onChange={(value: string) => {
+                                setValue("basicInfo.shortDescription", value, {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                    shouldValidate: true,
+                                });
+                            }}
                         />
                     </div>
 
@@ -272,6 +285,7 @@ export default function BasicInfo() {
                                     shouldValidate: true,
                                 });
                             }}
+                            onImageUpload={handleDescriptionImageUpload}
                         />
                     </div>
 

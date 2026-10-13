@@ -22,7 +22,7 @@ export function LotEssay({ html, className }: { html: string | null; className?:
 
     return (
         <section className={cn("border-t border-[#cecece] pt-12", className)}>
-            <div className={ESSAY} dangerouslySetInnerHTML={{ __html: clean }} />
+            <div className={cn("rich-text", ESSAY)} dangerouslySetInnerHTML={{ __html: clean }} />
         </section>
     )
 }

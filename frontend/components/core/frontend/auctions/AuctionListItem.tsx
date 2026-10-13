@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ImageOff } from "lucide-react"
 
+import RichTextContent from "@/components/common/RichTextContent"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
 
 import { AuctionCountdown } from "./AuctionCountdown"
@@ -43,9 +44,10 @@ export function AuctionListItem({ auction, paddleNumber, eligibility, onRegister
                 <StatusBadge label={STOREFRONT_STATUS_LABELS[auction.status] ?? auction.status} tone={badgeTone(auction)} />
                 <h3 className="mt-3 text-lg font-normal text-neutral-950">{auction.title}</h3>
                 <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-neutral-500">{auctionMeta(auction)}</p>
-                {auction.short_description && (
-                    <p className="mt-4 max-w-xl text-sm leading-relaxed text-neutral-600">{auction.short_description}</p>
-                )}
+                <RichTextContent
+                    html={auction.short_description}
+                    className="mt-4 max-w-xl text-sm leading-relaxed text-neutral-600 [&_p+p]:mt-2"
+                />
             </div>
 
             <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1">

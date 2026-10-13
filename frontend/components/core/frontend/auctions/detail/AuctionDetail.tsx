@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { getPublicAuction } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "@/lib/apiError"
+import { htmlToPlainText } from "@/utils/sanitizeHtml"
 
 import { AuctionCountdown } from "../AuctionCountdown"
 import { auctionMeta, isLive, STOREFRONT_STATUS_LABELS } from "../auctionDisplay"
@@ -110,7 +111,8 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
             <header className="mt-6 max-w-2xl">
                 <h1 className="text-3xl font-normal text-neutral-950 md:text-4xl">{auction.title}: Overview</h1>
                 <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-                    {status} · {auctionMeta(auction)}.{auction.short_description && ` ${auction.short_description}`}
+                    {/* part of a sentence — the short description's formatting is dropped here */}
+                    {status} · {auctionMeta(auction)}.{auction.short_description && ` ${htmlToPlainText(auction.short_description)}`}
                 </p>
             </header>
 

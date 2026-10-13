@@ -119,6 +119,11 @@ export const profileEndpoints = {
 }
 
 
+// images placed inside rich-text fields (multipart, field "image")
+export const uploadEndPoints = {
+    EDITOR_IMAGE_API: `${BASE_URL}/api/image/editor-image`,
+}
+
 export const adminEndPoints = {
     CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
     CHANGE_USER_ROLE_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/role`,

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import RichTextContent from "@/components/common/RichTextContent";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
 
@@ -80,7 +81,7 @@ export function FeaturedAuction({ auction }: { auction: PublicAuction | null }) 
                 <div className="min-w-0 max-w-xl">
                     <StatusBadge label={live ? "Live now" : "Coming soon"} tone={live ? "live" : "upcoming"} />
                     <h1 className={TITLE}>{auction.title}</h1>
-                    {auction.short_description && <p className={DESC}>{auction.short_description}</p>}
+                    <RichTextContent html={auction.short_description} className={`${DESC} [&_p+p]:mt-2`} />
                 </div>
 
                 <div className="flex shrink-0 flex-col items-start gap-4 md:items-end">

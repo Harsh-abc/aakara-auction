@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 
 import { LotFullPage } from "@/components/core/frontend/auctions/LotFullPage"
 import { publicAuctionEndPoints } from "@/services/api"
+import { htmlToPlainText } from "@/utils/sanitizeHtml"
 
 type LotDetailsPageProps = {
     params: Promise<{ auctionUuid: string; lotUuid: string }>
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: LotDetailsPageProps): Promise
         if (response.ok) {
             const { data } = await response.json()
             const heading = [data.lot.artistName, data.lot.title].filter(Boolean).join(" · ")
-            return { title: `${heading} | ${data.auction.title} | Aakara`, description: data.auction.short_description ?? undefined }
+            return { title: `${heading} | ${data.auction.title} | Aakara`, description: htmlToPlainText(data.auction.short_description) || undefined }
         }
     } catch {
         // fall through

@@ -63,4 +63,34 @@ export const uploadAny = (req, res, next) => {
     });
 };
 
+/**
+ * Single image under the "image" field (rich-text editor inserts) —
+ * images only, 10MB max, multer errors returned as JSON 400s.
+ */
+const EDITOR_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+
+const editorImageUpload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+    fileFilter: (req, file, cb) => {
+        if (EDITOR_IMAGE_TYPES.includes(file.mimetype)) return cb(null, true);
+        const error = new Error("Only JPG, PNG, WEBP or GIF images are allowed");
+        error.statusCode = 400;
+        cb(error, false);
+    },
+});
+
+export const uploadEditorImage = (req, res, next) => {
+    editorImageUpload.single("image")(req, res, (err) => {
+        if (!err) return next();
+
+        let message = err.message || "Image upload failed";
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+            message = "Image must be 10MB or smaller";
+        }
+
+        return res.status(400).json({ success: false, message });
+    });
+};
+
 export default upload;

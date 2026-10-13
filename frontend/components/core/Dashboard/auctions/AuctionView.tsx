@@ -40,6 +40,7 @@ import type {
 } from "@/lib/types/auction.types";
 import { cn } from "@/lib/utils";
 import { isEmptyHtml, sanitizeHtml } from "@/utils/sanitizeHtml";
+import RichTextContent from "@/components/common/RichTextContent";
 
 // =====================================================================
 // LABELS
@@ -231,7 +232,7 @@ const RichText = ({ html }: { html?: string | null }) =>
         <p className="text-[13px] text-slate-400">—</p>
     ) : (
         <div
-            className="text-[13px] leading-relaxed text-slate-700 [&_a]:text-blue-600 [&_a]:underline [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:mb-2 [&_ul]:list-disc"
+            className="rich-text text-[13px] leading-relaxed text-slate-700 [&_a]:text-blue-600 [&_a]:underline [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:text-base [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:mb-2 [&_ul]:list-disc"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
         />
     );
@@ -789,9 +790,10 @@ export default function AuctionView({ auction, lots, onLotDeleted }: AuctionView
                             </span>
                         </div>
 
-                        {auction.short_description?.trim() && (
-                            <p className="text-sm text-slate-600">{auction.short_description}</p>
-                        )}
+                        <RichTextContent
+                            html={auction.short_description}
+                            className="text-sm text-slate-600 [&_a]:text-blue-600 [&_p+p]:mt-2"
+                        />
 
                         <FieldGrid>
                             <Field label="Auction ID / Slug" value={auction.slug} />

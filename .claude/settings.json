@@ -168,7 +168,15 @@
       "Bash(timeout 90 node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/c7168193-5cbf-4931-bf48-13fe630a5f06/scratchpad/kyc_check.mjs\")",
       "Bash(cd /d/Harsh/projects/aakara-auction/frontend && npx tsc --noEmit -p . 2>&1 | grep -iE \"bidders|users-columns\" ; echo \"tsc done\"; npx eslint app/dashboard/bidders/page.tsx components/core/Dashboard/users/users-columns.tsx 2>&1 | tail -20; cd ../backend && node --check src/services/user.services.js && echo backend-ok)",
       "Bash(git mv *)",
-      "Bash(curl -s -m 60 http://localhost:3000/)"
+      "Bash(curl -s -m 60 http://localhost:3000/)",
+      "Bash(cd \"d:/Harsh/projects/aakara-auction/backend/src\" && cat routes/upload.routes.js controllers/upload.controller.js middleware/upload.middleware.js services/s3.services.js config/s3.js; grep -n \"upload\" ../index.js)",
+      "Bash(node -p \"require\\('./node_modules/@tiptap/react/package.json'\\).version\")",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('./node_modules/@tiptap/react/package.json'\\).exports\\)\\)\")",
+      "Bash(node --check src/routes/upload.routes.js)",
+      "Bash(node --check src/controllers/upload.controller.js)",
+      "Bash(node --check src/middleware/upload.middleware.js)",
+      "Bash(node -e \"import\\('./src/routes/upload.routes.js'\\).then\\(\\(\\)=>console.log\\('backend route imports OK'\\)\\)\")",
+      "Bash(node --experimental-strip-types -e ' *)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
