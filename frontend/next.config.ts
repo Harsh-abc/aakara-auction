@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    // the auctions listing lives at "/" — keep old /auctions links working (sale pages stay under /auctions/:uuid)
+    return [{ source: "/auctions", destination: "/", permanent: false }];
+  },
   async headers() {
     return [
       {

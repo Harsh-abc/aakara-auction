@@ -1,16 +1,16 @@
 import type { Metadata } from "next"
 
-import { HomePage } from "@/components/core/frontend/home/HomePage"
+import { AuctionsPage } from "@/components/core/frontend/auctions/AuctionsPage"
 
 export const metadata: Metadata = {
-    title: "Aakara | Fine Art Auctions",
-    description: "The live or next upcoming fine art auction at Aakara.",
+    title: "Auctions | Aakara",
+    description: "Upcoming, live and past fine art auctions at Aakara.",
 }
 
-export default function Home() {
+export default function Auctions() {
     return (
         <div className="min-h-svh bg-white">
-            <HomePage />
+            <AuctionsPage />
         </div>
     )
 }

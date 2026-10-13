@@ -24,11 +24,7 @@ function Breadcrumb({ title }: { title?: string }) {
         <nav aria-label="Breadcrumb" className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
             <ol className="flex flex-wrap items-center gap-2">
                 <li>
-                    <Link href="/" className="hover:text-neutral-900">Home</Link>
-                </li>
-                <li aria-hidden>›</li>
-                <li>
-                    <Link href="/auctions" className="hover:text-neutral-900">Auctions</Link>
+                    <Link href="/" className="hover:text-neutral-900">Auctions</Link>
                 </li>
                 {title && (
                     <>
@@ -93,7 +89,7 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
                             : state.message}
                     </p>
                     <Link
-                        href="/auctions"
+                        href="/"
                         className="mt-6 inline-flex h-10 items-center bg-neutral-950 px-6 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-neutral-800"
                     >
                         All auctions

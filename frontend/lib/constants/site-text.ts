@@ -2,14 +2,13 @@ import type { MenuLink, QuestionAndAnswer } from "@/lib/types/frontendTypes";
 
 /** The right-side menu. `children` makes a small expandable sub-menu. */
 export const MAIN_MENU_LINKS: MenuLink[] = [
-    { label: "Home", href: "/" },
     { label: "About", href: "/about" },
     {
         label: "Auction",
-        href: "/auctions",
+        href: "/",
         children: [
-            { label: "Upcoming / Live", href: "/auctions?tab=upcoming" },
-            { label: "Past auctions", href: "/auctions?tab=past" },
+            { label: "Upcoming / Live", href: "/?tab=upcoming" },
+            { label: "Past auctions", href: "/?tab=past" },
             { label: "Live auction", href: "/auctions/autumn-auction-2026/live" },
             { label: "How to bid", href: "/how-to-bid" },
         ],
@@ -29,8 +28,8 @@ export const FOOTER_CONTENT = {
         {
             heading: "Auctions",
             links: [
-                { label: "Upcoming / Live", href: "/auctions?tab=upcoming" },
-                { label: "Past", href: "/auctions?tab=past" },
+                { label: "Upcoming / Live", href: "/?tab=upcoming" },
+                { label: "Past", href: "/?tab=past" },
                 { label: "Live Auction", href: "/auctions/autumn-auction-2026/live" },
             ],
         },

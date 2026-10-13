@@ -8,12 +8,12 @@ export const LOT_PAGE = "mx-auto w-full max-w-6xl px-4 pt-8 pb-18 md:px-6"
 
 export type Crumb = { label: string; href?: string }
 
-// Home › Auctions › …crumbs
+// Auctions › …crumbs
 export function LotBreadcrumb({ crumbs }: { crumbs: Crumb[] }) {
     return (
         <nav aria-label="Breadcrumb" className="text-[11px] leading-[16.5px] tracking-[0.12em] text-[#717171] uppercase">
             <ol className="flex flex-wrap items-center gap-x-2">
-                {[{ label: "Home", href: "/" }, { label: "Auctions", href: "/auctions" }, ...crumbs].map((crumb, index, all) => (
+                {[{ label: "Auctions", href: "/" }, ...crumbs].map((crumb, index, all) => (
                     <li key={`${crumb.label}-${index}`} className="flex items-center gap-2">
                         {index > 0 && <span className="text-[#333]" aria-hidden>›</span>}
                         {crumb.href ? (

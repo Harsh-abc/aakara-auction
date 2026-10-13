@@ -53,7 +53,7 @@ export function RegistrationLoginForm({ redirectTo, newAccountEmail }: Registrat
 
             toast.success(response.message || "Login successful!")
 
-            // only staff roles go to the dashboard; BIDDER (and anything else) goes home
+            // only staff roles go to the dashboard; BIDDER (and anything else) goes to the auctions
             const fallback = canAccessDashboard(response.data.role) ? "/dashboard" : "/"
             router.push(redirectTo ?? fallback)
         } catch (error) {

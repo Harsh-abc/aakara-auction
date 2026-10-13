@@ -14,7 +14,7 @@ import { getErrorMessage } from "@/lib/apiError"
 import { registrationWindow, type BidderEligibility } from "./auctionDisplay"
 import { RegisterConfirmDialog } from "./RegisterConfirmDialog"
 
-const LOGIN_HREF = `/registration?redirect=${encodeURIComponent("/auctions")}`
+const LOGIN_HREF = `/registration?redirect=${encodeURIComponent("/")}`
 const KYC_HREF = "/my-profile"
 
 type RegisterToBidButtonProps = {

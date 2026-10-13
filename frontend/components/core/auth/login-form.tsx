@@ -110,7 +110,7 @@ export function LoginForm({
                 response.message || "Login successful!"
             )
 
-            // only staff roles go to the dashboard; BIDDER (and anything else) goes home
+            // only staff roles go to the dashboard; BIDDER (and anything else) goes to the auctions
             router.push(canAccessDashboard(response.data.role) ? "/dashboard" : "/")
         } catch (error) {
             toast.error(

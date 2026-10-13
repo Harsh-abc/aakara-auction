@@ -31,7 +31,8 @@ const SMOOTH = [0.22, 1, 0.36, 1] as const;
 
 /** Is this menu link the page we're on? */
 function isCurrentPage(currentPath: string, link: MenuLink) {
-    if (link.href === "/") return currentPath === "/";
+    // "/" is the auctions listing, so it also owns the /auctions/… sale pages
+    if (link.href === "/") return currentPath === "/" || currentPath.startsWith("/auctions/");
     return currentPath.startsWith(link.href.split("?")[0]);
 }
 

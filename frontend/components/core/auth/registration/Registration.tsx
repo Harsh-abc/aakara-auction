@@ -59,7 +59,7 @@ export function Registration() {
                 <ol className="flex items-center gap-2">
                     <li>
                         <Link href="/" className="text-neutral-500 hover:text-neutral-900">
-                            Home
+                            Auctions
                         </Link>
                     </li>
                     <li aria-hidden className="text-neutral-400">
