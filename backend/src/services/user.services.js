@@ -485,6 +485,61 @@ export const updateMyProfileService = async ({ userId, data, avatarFile }) => {
 
 
 
+const usernameTakenError = () => {
+    const error = new Error('This username is already taken');
+    error.statusCode = 409;
+    return error;
+};
+
+// staff editing a user's name, date of birth and username from the dashboard
+export const updateUserDetailsService = async ({ uuid, data }) => {
+    const user = await prisma.user.findFirst({
+        where: { uuid, deletedAt: null },
+        select: { id: true, username: true },
+    });
+
+    if (!user) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    // username is a User column; the rest goes to UserProfile
+    const { username, ...profileFields } = data;
+    const usernameChanged = username !== undefined && username !== user.username;
+
+    if (usernameChanged) {
+        const taken = await prisma.user.findFirst({
+            where: { username, NOT: { id: user.id } },
+            select: { id: true },
+        });
+        if (taken) throw usernameTakenError();
+    }
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            if (usernameChanged) {
+                await tx.user.update({ where: { id: user.id }, data: { username } });
+            }
+            if (Object.keys(profileFields).length > 0) {
+                await tx.userProfile.upsert({
+                    where: { userId: user.id },
+                    create: { userId: user.id, ...profileFields },
+                    update: profileFields,
+                });
+            }
+        });
+    } catch (err) {
+        // someone else took the username between the check above and the update
+        if (err.code === 'P2002') throw usernameTakenError();
+        throw err;
+    }
+
+    return getUserByIdService({ uuid });
+};
+
+
+
 // Auctions the user is registered for (each with their paddle number), soonest first
 export const getMyRegistrationsService = async ({ userId }) => {
     return prisma.auctionParticipant.findMany({
@@ -854,6 +909,40 @@ export const reviewUserKycService = async ({ uuid, reviews, adminId }) => {
     await refreshBidderAccessOnKycChange(user.id, wasVerified, status === 'VERIFIED');
 
     return { kycStatus: status, user: await getUserByIdService({ uuid }) };
+};
+
+
+/**
+ * Staff overriding the KYC status by hand. Documents are left as they are, so the next
+ * document review or upload works the status out from the documents again.
+ */
+export const setKycStatusService = async ({ uuid, verified, reason, adminId }) => {
+    const user = await prisma.user.findFirst({
+        where: { uuid, deletedAt: null },
+        select: { id: true, kyc: { select: { status: true } } },
+    });
+
+    if (!user) throw httpError('User not found', 404);
+    const wasVerified = user.kyc?.status === 'VERIFIED';
+
+    if (verified && wasVerified) throw httpError('KYC is already verified', 409);
+    if (!verified && !wasVerified) throw httpError('KYC is not verified', 409);
+
+    const now = new Date();
+    const data = verified
+        ? { status: 'VERIFIED', verifiedAt: now, verifiedBy: adminId, rejectedAt: null, rejectionReason: null }
+        : { status: 'REJECTED', rejectedAt: now, rejectionReason: reason, verifiedAt: null, verifiedBy: null };
+
+    // a user with no KYC record yet gets one, so they can be verified without documents
+    await prisma.userKyc.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id, kycType: 'INDIVIDUAL', submittedAt: now, ...data },
+        update: data,
+    });
+
+    await refreshBidderAccessOnKycChange(user.id, wasVerified, verified);
+
+    return { kycStatus: data.status, user: await getUserByIdService({ uuid }) };
 };
 
 

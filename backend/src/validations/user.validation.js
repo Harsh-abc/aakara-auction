@@ -139,6 +139,36 @@ export const reviewKycSchema = z.object({
 });
 
 
+// staff editing a user's name, date of birth and username from the dashboard
+export const updateUserDetailsSchema = z
+    .object({
+        firstName: updateMyProfileSchema.shape.firstName,
+        lastName: updateMyProfileSchema.shape.lastName,
+        dateOfBirth: updateMyProfileSchema.shape.dateOfBirth,
+        // same rule as registration
+        username: z
+            .string()
+            .trim()
+            .min(3, 'Username must be at least 3 characters')
+            .max(50, 'Username cannot exceed 50 characters')
+            .regex(/^[a-zA-Z0-9_ ]+$/, 'Only letters, numbers, spaces and underscores are allowed')
+            .optional(),
+    })
+    .strict();
+
+
+// staff marking a KYC verified / not verified by hand, whatever the documents say
+export const setKycStatusSchema = z
+    .object({
+        verified: z.boolean(),
+        reason: z.string().trim().max(300, 'Reason must be 300 characters or fewer').optional(),
+    })
+    .refine((d) => d.verified || !!d.reason, {
+        message: 'Give a reason when marking KYC as not verified',
+        path: ['reason'],
+    });
+
+
 // staff asking a user to upload specific KYC documents
 export const requestKycDocumentsSchema = z.object({
     documentTypes: z.array(z.enum(KYC_DOCUMENT_TYPES))

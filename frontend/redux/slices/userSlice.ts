@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -17,6 +17,9 @@ interface UserState {
     // ids of the KYC documents whose review is being saved
     reviewingDocumentIds: string[];
     requestingKycDocuments: boolean;
+    settingKycStatus: boolean;
+
+    savingUserDetails: boolean;
 
     creatingUser: boolean;
     createUserError: string | null;
@@ -42,6 +45,9 @@ const initialState: UserState = {
 
     reviewingDocumentIds: [],
     requestingKycDocuments: false,
+    settingKycStatus: false,
+
+    savingUserDetails: false,
 
     creatingUser: false,
     createUserError: null,
@@ -131,6 +137,37 @@ const userSlice = createSlice({
             })
             .addCase(requestKycDocuments.rejected, (state) => {
                 state.requestingKycDocuments = false;
+            })
+
+            .addCase(setKycStatus.pending, (state) => {
+                state.settingKycStatus = true;
+            })
+            .addCase(setKycStatus.fulfilled, (state, action) => {
+                state.settingKycStatus = false;
+                const updated = action.payload.data.user;
+                if (state.selectedUser?.uuid === updated.uuid) state.selectedUser = updated;
+                const row = state.users.find((u) => u.uuid === updated.uuid);
+                if (row) row.kyc = updated.kyc;
+            })
+            .addCase(setKycStatus.rejected, (state) => {
+                state.settingKycStatus = false;
+            })
+
+            .addCase(updateUserDetails.pending, (state) => {
+                state.savingUserDetails = true;
+            })
+            .addCase(updateUserDetails.fulfilled, (state, action) => {
+                state.savingUserDetails = false;
+                const updated = action.payload.data.user;
+                if (state.selectedUser?.uuid === updated.uuid) state.selectedUser = updated;
+                const row = state.users.find((u) => u.uuid === updated.uuid);
+                if (row) {
+                    row.username = updated.username;
+                    row.profile = updated.profile;
+                }
+            })
+            .addCase(updateUserDetails.rejected, (state) => {
+                state.savingUserDetails = false;
             })
 
             .addCase(createUser.pending, (state) => {

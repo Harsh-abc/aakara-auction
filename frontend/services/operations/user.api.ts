@@ -2,10 +2,10 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { getErrorMessage } from "@/lib/apiError";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, UploadUserKycPayload, UploadUserKycResponse, UserStats } from "@/lib/types/user.types";
+import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, SetKycStatusPayload, SetKycStatusResponse, UpdateUserDetailsPayload, UpdateUserDetailsResponse, UploadUserKycPayload, UploadUserKycResponse, UserStats } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
-const { GET_ALL_USERS_API, GET_USER_STATS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API } = userEndPoints;
+const { GET_ALL_USERS_API, GET_USER_STATS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API, SET_KYC_STATUS_API, UPDATE_USER_DETAILS_API } = userEndPoints;
 
 const { CREATE_USER_API, CHANGE_USER_ROLE_API, CHANGE_USER_STATUS_API } = adminEndPoints;
 
@@ -176,6 +176,64 @@ export const requestKycDocuments = createAsyncThunk<
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not send the request. Try again."));
+        }
+    }
+);
+
+// staff marking KYC verified / not verified by hand; the response carries the refreshed user
+export const setKycStatus = createAsyncThunk<
+    SetKycStatusResponse,
+    SetKycStatusPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/setKycStatus",
+    async ({ uuid, verified, reason }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<SetKycStatusResponse>({
+                method: "PATCH",
+                url: SET_KYC_STATUS_API(uuid),
+                body: { verified, reason: reason || undefined },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not change the KYC status");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not change the KYC status. Try again."));
+        }
+    }
+);
+
+// staff editing name, date of birth and username; the response carries the refreshed user
+export const updateUserDetails = createAsyncThunk<
+    UpdateUserDetailsResponse,
+    UpdateUserDetailsPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/updateUserDetails",
+    async ({ uuid, ...details }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<UpdateUserDetailsResponse>({
+                method: "PATCH",
+                url: UPDATE_USER_DETAILS_API(uuid),
+                body: details,
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not save the details");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not save the details. Try again."));
         }
     }
 );

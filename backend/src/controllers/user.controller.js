@@ -1,5 +1,5 @@
-import { getAllUsersService, getUserStatsService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService, getMyRegistrationsService, changeMyPasswordService, getMyKycService, submitMyKycService, reviewUserKycService, requestKycDocumentsService } from '../services/user.services.js';
-import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema, changePasswordSchema, submitMyKycSchema, reviewKycSchema, requestKycDocumentsSchema } from '../validations/user.validation.js';
+import { getAllUsersService, getUserStatsService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService, getMyRegistrationsService, changeMyPasswordService, getMyKycService, submitMyKycService, reviewUserKycService, requestKycDocumentsService, updateUserDetailsService, setKycStatusService } from '../services/user.services.js';
+import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema, changePasswordSchema, submitMyKycSchema, reviewKycSchema, requestKycDocumentsSchema, updateUserDetailsSchema, setKycStatusSchema } from '../validations/user.validation.js';
 import { REFRESH_COOKIE_NAME } from './auth.controller.js';
 
 
@@ -243,6 +243,54 @@ export const reviewUserKyc = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: result.kycStatus === 'VERIFIED' ? 'KYC verified' : 'Review saved',
+            data: result,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const updateUserDetails = async (req, res) => {
+    try {
+        const { uuid } = getUserByIdSchema.parse(req.params);
+        const data = updateUserDetailsSchema.parse(req.body ?? {});
+
+        if (Object.keys(data).length === 0) {
+            return res.status(400).json({ success: false, message: 'Send at least one field to update' });
+        }
+
+        const user = await updateUserDetailsService({ uuid, data });
+
+        return res.status(200).json({
+            success: true,
+            message: 'User details updated',
+            data: { user },
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const setKycStatus = async (req, res) => {
+    try {
+        const { uuid } = getUserByIdSchema.parse(req.params);
+        const { verified, reason } = setKycStatusSchema.parse(req.body ?? {});
+
+        const result = await setKycStatusService({ uuid, verified, reason, adminId: BigInt(req.user.userId) });
+
+        return res.status(200).json({
+            success: true,
+            message: verified ? 'KYC marked as verified' : 'KYC marked as not verified',
             data: result,
         });
     } catch (err) {

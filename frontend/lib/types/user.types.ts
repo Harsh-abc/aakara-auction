@@ -198,6 +198,39 @@ export interface RequestKycDocumentsResponse {
     };
 }
 
+export interface SetKycStatusPayload {
+    uuid: string;
+    verified: boolean;
+    // required when marking not verified; the user sees it
+    reason?: string;
+}
+
+export interface SetKycStatusResponse {
+    success: boolean;
+    message: string;
+    data: {
+        kycStatus: string;
+        user: User;
+    };
+}
+
+export interface UpdateUserDetailsPayload {
+    uuid: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    // yyyy-MM-dd
+    dateOfBirth?: string | null;
+    username?: string;
+}
+
+export interface UpdateUserDetailsResponse {
+    success: boolean;
+    message: string;
+    data: {
+        user: User;
+    };
+}
+
 export interface CreateUserPayload {
     fullName: string;
     email: string;
