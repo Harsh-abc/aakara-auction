@@ -16,6 +16,7 @@ import type { MyAccount, MyAuctionRegistration } from "@/lib/types/profile.types
 import { BillingShippingForm } from "./BillingShippingForm"
 import { ChangePasswordForm } from "./ChangePasswordForm"
 import { KycDocumentsForm } from "./KycDocumentsForm"
+import { MyGallery } from "./MyGallery"
 import { PersonalDetailsForm } from "./PersonalDetailsForm"
 import { ProfileSection } from "./ProfileUI"
 import { RegistrationCard } from "./RegistrationCard"
@@ -240,10 +241,17 @@ export function MyProfile() {
                         </TabsContent>
 
                         <TabsContent value="gallery" className="pt-6 md:pt-8">
-                            <ProfileSection title="My auction gallery">
-                                <EmptyState
-                                    title="Nothing shortlisted yet"
-                                    body="Lots you shortlist and bid on will appear here, so you can follow them through the sale."
+                            <ProfileSection
+                                title="My auction gallery"
+                                description="Lots you saved with “Add to my auction gallery”. Click “In my auction gallery” on a lot to remove it."
+                            >
+                                <MyGallery
+                                    empty={
+                                        <EmptyState
+                                            title="Nothing saved yet"
+                                            body="Use “Add to my auction gallery” on any lot to keep it here, so you can follow it through the sale."
+                                        />
+                                    }
                                 />
                             </ProfileSection>
                         </TabsContent>

@@ -113,6 +113,9 @@ export const profileEndpoints = {
     GET_MY_REGISTRATIONS_API: `${BASE_URL}/api/users/me/registrations`,
     // GET to read, POST (multipart) to submit documents
     MY_KYC_API: `${BASE_URL}/api/users/me/kyc`,
+    // GET the saved lots; POST / DELETE one lot by uuid
+    MY_GALLERY_API: `${BASE_URL}/api/users/me/gallery`,
+    MY_GALLERY_LOT_API: (lotUuid: string) => `${BASE_URL}/api/users/me/gallery/${lotUuid}`,
 }
 
 

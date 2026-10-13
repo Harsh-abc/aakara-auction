@@ -171,7 +171,10 @@ const LOT_ORDER = {
     "bid-desc": [{ currentBid: { sort: "desc", nulls: "last" } }, { itemNumber: "asc" }],
 };
 
-const PUBLIC_LOT_SELECT = {
+// any sale the storefront shows, in any public status (the gallery saves lots from these)
+export const publicSaleWhere = () => publicWhere(ALL_PUBLIC_STATUSES);
+
+export const PUBLIC_LOT_SELECT = {
     uuid: true,
     itemNumber: true,
     title: true,
@@ -222,15 +225,18 @@ export const getPublicLotsService = async ({ auctionUuid, search, sort, page, li
     ]);
 
     return serializeBigInt({
-        lots: (await overlayLiveBids(lots)).map(({ images, currency, ...lot }) => ({
-            ...lot,
-            // lots without their own currency are priced in the sale's
-            currency: currency ?? auction.currency,
-            image: images[0] ? images[0].thumbnailUrl ?? images[0].url : null,
-        })),
+        lots: (await overlayLiveBids(lots)).map((lot) => toPublicLot(lot, auction.currency)),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
 };
+
+// a PUBLIC_LOT_SELECT row → the storefront lot shape
+export const toPublicLot = ({ images, currency, ...lot }, saleCurrency) => ({
+    ...lot,
+    // lots without their own currency are priced in the sale's
+    currency: currency ?? saleCurrency,
+    image: images[0] ? images[0].thumbnailUrl ?? images[0].url : null,
+});
 
 // =====================================================================
 // ONE LOT (storefront lot page)

@@ -14,6 +14,11 @@ export const getUserByIdSchema = z.object({
     uuid: z.string().uuid("Invalid user id"),
 });
 
+// My auction gallery: the lot to save / remove
+export const galleryLotSchema = z.object({
+    lotUuid: z.string().uuid("Invalid lot id"),
+});
+
 
 const parseJson = (val) => {
     if (typeof val !== 'string') return val;

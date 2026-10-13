@@ -55,6 +55,7 @@ model User {
   lotBidders               LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
+  galleryItems              UserGalleryItem[]
 
   @@index([roleId])
   @@index([status])
@@ -465,6 +466,7 @@ model AuctionItem {
   currency      Currency?      @relation(fields: [currencyId], references: [id])
   currencyId    BigInt?
   bidders       LotBidder[]
+  savedBy       UserGalleryItem[]
 
   @@unique([auctionId, itemNumber])
   @@index([auctionId])
@@ -939,4 +941,19 @@ model LiveStreamBan {
   @@unique([auctionId, identity])
   @@index([auctionId])
   @@map("live_stream_bans")
+}
+
+// lots a signed-in user saved to "My auction gallery" from the storefront
+model UserGalleryItem {
+  id        BigInt      @id @default(autoincrement())
+  userId    BigInt
+  itemId    BigInt
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item      AuctionItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@index([itemId])
+  @@map("user_gallery_items")
 }

@@ -1,4 +1,5 @@
 import type { AuctionStatus, AuctionType } from "./auction.types"
+import type { PublicLot } from "./publicAuction.types"
 import type { DocumentType, KycType } from "./user.types"
 
 export type Gender = "MALE" | "FEMALE" | "OTHER"
@@ -112,4 +113,18 @@ export interface MyKyc {
     requestedAt: string | null
     // newest document of each type; every "OTHERS" document
     documents: MyKycDocument[]
+}
+
+// GET /users/me/gallery — a lot saved to "My auction gallery", newest first
+export interface GalleryItem {
+    savedAt: string
+    auction: {
+        uuid: string
+        title: string
+        status: AuctionStatus
+        startTime: string
+        endTime: string
+        timezone: string
+    }
+    lot: PublicLot
 }

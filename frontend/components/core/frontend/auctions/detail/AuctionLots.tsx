@@ -13,6 +13,7 @@ import { getErrorMessage } from "@/lib/apiError"
 import { SearchInput } from "../SearchInput"
 import { LotCard, LotRow } from "./LotCard"
 import { LotPagination } from "./LotPagination"
+import { useGallery } from "./useGallery"
 
 const LOTS_PER_PAGE = 12
 
@@ -50,6 +51,9 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
     const loading = result?.key !== queryKey
 
     const topRef = useRef<HTMLDivElement>(null)
+
+    // "Add to my auction gallery" on each lot; guests are sent to log in
+    const { controls: gallery } = useGallery()
 
     useEffect(() => {
         let cancelled = false
@@ -165,13 +169,13 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
                         {view === "grid" ? (
                             <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                                 {result.lots.map((lot) => (
-                                    <LotCard key={lot.uuid} lot={lot} auctionUuid={auctionUuid} />
+                                    <LotCard key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
                                 ))}
                             </div>
                         ) : (
                             <div className="mt-2">
                                 {result.lots.map((lot) => (
-                                    <LotRow key={lot.uuid} lot={lot} auctionUuid={auctionUuid} />
+                                    <LotRow key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
                                 ))}
                             </div>
                         )}

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { changeMyPassword, getAllUsers, getUserStats, getMyKyc, getMyProfile, getMyRegistrations, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, submitMyKyc, updateMyProfile, updateUserDetails, uploadUserKyc } from '../controllers/user.controller.js';
+import { addToGallery, getMyGallery, removeFromGallery } from '../controllers/gallery.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from '../middleware/upload.middleware.js';
@@ -14,6 +15,11 @@ userRouter.patch('/me/change-password', authenticate, changeMyPassword);
 userRouter.get('/me/registrations', authenticate, getMyRegistrations);
 userRouter.get('/me/kyc', authenticate, getMyKyc);
 userRouter.post('/me/kyc', authenticate, uploadAny, submitMyKyc);
+
+// MY AUCTION GALLERY (lots saved from the storefront; signed-in users only)
+userRouter.get('/me/gallery', authenticate, getMyGallery);
+userRouter.post('/me/gallery/:lotUuid', authenticate, addToGallery);
+userRouter.delete('/me/gallery/:lotUuid', authenticate, removeFromGallery);
 
 
 // GET ALL USERS (admin only)
