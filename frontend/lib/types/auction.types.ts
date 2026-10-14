@@ -310,6 +310,103 @@ export interface DashboardCalendar {
     auctions: DashboardCalendarAuction[];
 }
 
+// ---------------------------------------------------------------------
+// LOT BID HISTORY — running and finished sales
+// ---------------------------------------------------------------------
+
+export type BidHistoryFilter = "all" | "live" | "past";
+
+export interface BidHistoryBidder {
+    uuid: string;
+    paddle: string | null;
+    name: string | null;
+    username: string;
+}
+
+export interface BidHistoryAuction {
+    uuid: string;
+    title: string;
+    status: AuctionStatus; // LIVE | PAUSED | ENDED | SETTLED | CANCELLED
+    startTime: string;
+    endTime: string;
+    currency: DashboardCurrency;
+    lotCount: number;
+    totalBids: number;
+}
+
+/** GET /auction/dashboard/bid-history */
+export interface BidHistoryAuctionList {
+    auctions: BidHistoryAuction[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export interface BidHistoryLot {
+    uuid: string;
+    itemNumber: string;
+    title: string;
+    status: LotStatus;
+    imageUrl: string | null;
+    currency: DashboardCurrency;
+    startingPrice: string;
+    bidCount: number;
+    /** People who bid on the lot */
+    bidders: number;
+    topBid: string | null;
+    /** Leading bidder while the lot is open; the winner (or reserve-not-met top bidder) once closed */
+    leader: BidHistoryBidder | null;
+}
+
+/** GET /auction/dashboard/bid-history/:auctionUuid */
+export interface AuctionBidHistory {
+    auction: BidHistoryAuction & { bidders: number };
+    lots: BidHistoryLot[];
+}
+
+export interface LotBidHistoryBid {
+    uuid: string;
+    /** 1 = the lot's first bid */
+    seq: number;
+    amount: string;
+    source: "MANUAL" | "PROXY";
+    placedAt: string;
+    status: DashboardBidStatus;
+    bidder: BidHistoryBidder | null;
+}
+
+export interface LotBidHistoryBidderRow {
+    bidder: BidHistoryBidder | null;
+    bids: number;
+    manualBids: number;
+    proxyBids: number;
+    highestBid: string;
+    firstBidAt: string;
+    lastBidAt: string;
+    /** Placed the lot's top bid */
+    top: boolean;
+}
+
+/** GET /auction/dashboard/bid-history/lots/:lotUuid — bids newest first */
+export interface LotBidHistory {
+    auction: { uuid: string; title: string; status: AuctionStatus };
+    lot: {
+        uuid: string;
+        itemNumber: string;
+        title: string;
+        status: LotStatus;
+        startingPrice: string;
+        currency: DashboardCurrency;
+    };
+    summary: {
+        totalBids: number;
+        bidders: number;
+        topBid: string | null;
+        leader: BidHistoryBidder | null;
+        leaderStatus: DashboardBidStatus | null;
+    };
+    bids: LotBidHistoryBid[];
+    bidders: LotBidHistoryBidderRow[];
+}
+
 export interface Auction {
     id?: string;
     uuid: string;

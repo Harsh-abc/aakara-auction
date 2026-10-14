@@ -4,7 +4,10 @@ import axios from "axios";
 import { apiConnector } from "../apiConnector";
 import { auctionEndPoints } from "../api";
 import {
+    AuctionBidHistory,
     AuctionStats,
+    BidHistoryAuctionList,
+    BidHistoryFilter,
     ChangeAuctionStatusParams,
     ChangeAuctionStatusResponse,
     CreateAuctionResponse,
@@ -19,6 +22,7 @@ import {
     GetAuctionTimelineParams,
     GetAuctionTimelineResponse,
     GetLiveAuctionsResponse,
+    LotBidHistory,
     SetLotLiveParams,
     SetLotLiveResponse,
     UpdateAuctionParams,
@@ -78,6 +82,41 @@ export async function getDashboardCalendar(token: string, month: string): Promis
         method: "GET",
         url: auctionEndPoints.GET_DASHBOARD_CALENDAR_API,
         params: { month },
+        header: authHeader(token),
+    });
+    return response.data.data;
+}
+
+// =====================================================================
+// DASHBOARD HOME — lot bid history (sales → lots → every bid on a lot)
+// =====================================================================
+
+export async function getBidHistoryAuctions(
+    token: string,
+    params: { status: BidHistoryFilter; search?: string; page: number; limit: number }
+): Promise<BidHistoryAuctionList> {
+    const response = await apiConnector<{ success: boolean; message: string; data: BidHistoryAuctionList }>({
+        method: "GET",
+        url: auctionEndPoints.GET_BID_HISTORY_AUCTIONS_API,
+        params: { ...params, search: params.search?.trim() || undefined },
+        header: authHeader(token),
+    });
+    return response.data.data;
+}
+
+export async function getAuctionBidHistory(token: string, auctionUuid: string): Promise<AuctionBidHistory> {
+    const response = await apiConnector<{ success: boolean; message: string; data: AuctionBidHistory }>({
+        method: "GET",
+        url: auctionEndPoints.GET_AUCTION_BID_HISTORY_API(auctionUuid),
+        header: authHeader(token),
+    });
+    return response.data.data;
+}
+
+export async function getLotBidHistory(token: string, lotUuid: string): Promise<LotBidHistory> {
+    const response = await apiConnector<{ success: boolean; message: string; data: LotBidHistory }>({
+        method: "GET",
+        url: auctionEndPoints.GET_LOT_BID_HISTORY_API(lotUuid),
         header: authHeader(token),
     });
     return response.data.data;

@@ -72,6 +72,14 @@ export const getDashboardCalendarQuerySchema = z.object({
         .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "month must look like 2026-10" }),
 });
 
+// dashboard lot bid history — running and finished sales
+export const getBidHistoryAuctionsQuerySchema = z.object({
+    status: z.enum(["all", "live", "past"]).default("all"),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(8),
+    search: z.string().trim().max(100).optional(),
+});
+
 // storefront list — "upcoming" also covers sales that are live right now
 export const getPublicAuctionsQuerySchema = z.object({
     type: z.enum(["past", "upcoming"], { message: 'type must be "past" or "upcoming"' }),

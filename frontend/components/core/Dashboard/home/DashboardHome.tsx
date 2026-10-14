@@ -14,6 +14,7 @@ import { getDashboardOverview } from "@/services/operations/auction.api"
 import { AuctionCalendar } from "./AuctionCalendar"
 import { DashboardStats } from "./DashboardStats"
 import { LiveAuctionsTable } from "./LiveAuctionsTable"
+import { LotBidHistory } from "./LotBidHistory"
 import { QuickActions } from "./QuickActions"
 import { RecentBids } from "./RecentBids"
 import { UpcomingAuctions } from "./UpcomingAuctions"
@@ -85,6 +86,8 @@ export function DashboardHome() {
             <LiveAuctionsTable auctions={overview?.live ?? null} failed={loadFailed} />
 
             <RecentBids bids={overview?.recentBids ?? null} failed={loadFailed} />
+
+            <LotBidHistory />
 
             <QuickActions />
         </div>

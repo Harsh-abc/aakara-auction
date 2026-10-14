@@ -20,37 +20,38 @@ import {
 import { ChevronRightIcon } from "lucide-react"
 import { useAppSelector } from "@/hooks/redux"
 
+interface NavLink {
+  title: string
+  url: string
+  /** only shown to these roles (all roles when omitted) */
+  roles?: string[]
+  /** extra paths that count as this page, e.g. its detail pages */
+  activeOn?: RegExp
+}
+
 export function NavMain({
   items: allItems,
 }: {
-  items: {
-    title: string
-    url: string
+  items: (NavLink & {
     icon?: React.ReactNode
     isActive?: boolean
-    items?: {
-      title: string
-      url: string
-      /** only shown to these roles (all roles when omitted) */
-      roles?: string[]
-      /** extra paths that count as this page, e.g. its detail pages */
-      activeOn?: RegExp
-    }[]
-  }[]
+    items?: NavLink[]
+  })[]
 }) {
   const pathname = usePathname()
   const role = useAppSelector((state) => state.auth.role)
+  const allowed = (link: NavLink) => !link.roles || (!!role && link.roles.includes(role))
 
-  const items = allItems.map((item) => ({
+  const items = allItems.filter(allowed).map((item) => ({
     ...item,
-    items: item.items?.filter((sub) => !sub.roles || (!!role && sub.roles.includes(role))),
+    items: item.items?.filter(allowed),
   }))
 
   // An explicit activeOn match wins; otherwise the most specific URL matching the
   // current path, so "/dashboard" isn't active on every page
-  const subItems = items.flatMap((item) => item.items ?? [])
+  const links = items.flatMap((item) => (item.items?.length ? item.items : [item]))
   const activeUrl =
-    subItems.find((sub) => sub.activeOn?.test(pathname))?.url ??
+    links.find((link) => link.activeOn?.test(pathname))?.url ??
     items
       .flatMap((item) => (item.items?.length ? item.items.map((sub) => sub.url) : [item.url]))
       .filter((url) => pathname === url || pathname.startsWith(url + "/"))

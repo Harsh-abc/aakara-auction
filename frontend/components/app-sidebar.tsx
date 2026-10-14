@@ -18,6 +18,7 @@ import {
   FileChartColumn,
   Gavel,
   HandCoins,
+  History,
   LayoutDashboard,
   Palette,
   Settings,
@@ -247,15 +248,17 @@ const data = {
         { title: "Live Auctions", url: "/dashboard/auctions/live-auctions" },
         { title: "Past Auctions", url: "/dashboard/auctions/past-auctions" },
         { title: "Upcoming Auctions", url: "/dashboard/auctions/upcoming-auctions" },
-        {
-          title: "Manage Bidders",
-          url: "/dashboard/auctions/manage-bidders",
-          roles: ["SUPER_ADMIN", "ADMIN"],
-          // also highlighted on an auction's bidder pages
-          activeOn: /^\/dashboard\/auctions\/[^/]+\/(registrations|lots\/[^/]+\/bidders)/,
-        },
       ],
     },
+    {
+      title: "Manage Bidders",
+      url: "/dashboard/auctions/manage-bidders",
+      icon: <UserCheck />,
+      roles: ["SUPER_ADMIN", "ADMIN"],
+      // also highlighted on an auction's bidder pages
+      activeOn: /^\/dashboard\/auctions\/[^/]+\/(registrations|lots\/[^/]+\/bidders)/,
+    },
+    { title: "Bid History", url: "/dashboard/bid-history", icon: <History /> },
     { title: "Artworks", url: "/dashboard/artworks", icon: <Palette /> },
     // { title: "Bidders", url: "/dashboard/bidders", icon: <UserCheck /> },
     { title: "User", url: "/dashboard/users", icon: <Users /> },

@@ -8,7 +8,7 @@ import type { DashboardBid, DashboardBidStatus } from "@/lib/types/auction.types
 
 import { money, Panel, PanelMessage, StatusPill } from "./dashboardUi"
 
-const STATUS: Record<DashboardBidStatus, { label: string; tone: "green" | "red" | "slate" }> = {
+export const BID_STATUS: Record<DashboardBidStatus, { label: string; tone: "green" | "red" | "slate" }> = {
     LEADING: { label: "Highest bid", tone: "green" },
     OUTBID: { label: "Outbid", tone: "red" },
     WON: { label: "Won", tone: "green" },
@@ -57,7 +57,7 @@ export function RecentBids({ bids, failed }: RecentBidsProps) {
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
                             {bids.map((bid) => {
-                                const status = STATUS[bid.status] ?? STATUS.CANCELLED
+                                const status = BID_STATUS[bid.status] ?? BID_STATUS.CANCELLED
                                 return (
                                     <tr key={`${bid.uuid}:${bid.placedAt}`} className="hover:bg-slate-50/60">
                                         <td className="px-4 py-3">

@@ -36,7 +36,7 @@ export const dayKey = (date: Date) => dayKeyFmt.format(date)
 
 // ---------------------------------------------------------------------
 
-type PillTone = "green" | "amber" | "red" | "slate" | "maroon"
+export type PillTone = "green" | "amber" | "red" | "slate" | "maroon"
 
 const PILL_TONES: Record<PillTone, string> = {
     green: "bg-[#E8F7EE] text-[#1F8A4C]",

@@ -5,7 +5,13 @@ import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from "../middleware/upload.middleware.js";
 import { getLotBidders, getLotSummary, verifyLotBidders } from '../controllers/lotBidder.controller.js';
 import { getAuctionStats, getAuctionTimeline, getLiveAuctions, setLotLive } from '../controllers/liveAuction.controller.js';
-import { getDashboardCalendar, getDashboardOverview } from '../controllers/dashboard.controller.js';
+import {
+    getAuctionBidHistory,
+    getBidHistoryAuctions,
+    getDashboardCalendar,
+    getDashboardOverview,
+    getLotBidHistory,
+} from '../controllers/dashboard.controller.js';
 import {
     addAuctionParticipants,
     addNewUserToAuction,
@@ -66,6 +72,11 @@ auctionRouter.get("/stats", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "A
 // DASHBOARD HOME — overview panels, and the auction calendar (?month=YYYY-MM)
 auctionRouter.get("/dashboard/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getDashboardOverview);
 auctionRouter.get("/dashboard/calendar", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getDashboardCalendar);
+
+// DASHBOARD LOT BID HISTORY — sales, a sale's lots, and every bid / bidder on one lot
+auctionRouter.get("/dashboard/bid-history", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getBidHistoryAuctions);
+auctionRouter.get("/dashboard/bid-history/lots/:lotUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getLotBidHistory);
+auctionRouter.get("/dashboard/bid-history/:auctionUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionBidHistory);
 
 // PAST / UPCOMING auctions (?type=past|upcoming)
 auctionRouter.get("/timeline", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionTimeline);

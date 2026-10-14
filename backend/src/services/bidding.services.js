@@ -804,6 +804,37 @@ export const getSalesBidSnapshot = async (auctions, { feedSize = 10 } = {}) => {
 };
 
 // =====================================================================
+// DASHBOARD BID HISTORY
+// =====================================================================
+
+/**
+ * Every bid still held in Redis for these lots (running sales, or an ended
+ * sale whose bids aren't written yet), oldest first, as a Map keyed by lot
+ * uuid. Lots without bids here are left out — read the bids table for them.
+ */
+export const readLiveLotBids = async (lotUuids) => {
+    const result = new Map();
+    if (lotUuids.length === 0) return result;
+
+    const pipe = redis.pipeline();
+    for (const lotUuid of lotUuids) pipe.lrange(bidKeys.bids(lotUuid), 0, -1);
+    const rows = await pipe.exec();
+
+    lotUuids.forEach((lotUuid, index) => {
+        const [error, raw] = rows[index];
+        if (error || !raw?.length) return;
+        result.set(
+            lotUuid,
+            raw.map((entry) => {
+                const bid = JSON.parse(entry);
+                return { ...toPublicBid(lotUuid, bid), seq: Number(bid.seq), userId: String(bid.u) };
+            })
+        );
+    });
+    return result;
+};
+
+// =====================================================================
 // LOT + AUCTION LIFECYCLE
 // =====================================================================
 

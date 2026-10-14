@@ -193,7 +193,16 @@
       "Bash(cd \"D:/Harsh/projects/aakara-auction/frontend\" && ls node_modules/@date-fns 2>/dev/null; ls node_modules | grep -i -E \"tz|luxon|dayjs\"; grep -rn \"timezone\" ../backend/src/services/auction.services.js ../backend/src/services/publicAuction.services.js | head -30)",
       "Read(//d/Harsh/projects/backend/src/services/**)",
       "Bash(npm ls *)",
-      "Bash(xargs head -1)"
+      "Bash(xargs head -1)",
+      "Bash(grep -v -E \"node_modules|\\\\.\\(png|jpg|svg|ico|woff2?\\)$\")",
+      "Bash(grep -v -E \"node_modules|\\\\.\\(png|jpg|svg|ico|woff2?\\)$|/\\\\.\\(agents|claude|windsurf|cursor|github\\)/|skills/\")",
+      "Bash(curl -s -o /dev/null -w \"frontend %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -w \"\\\\n%{http_code}\\\\n\" http://localhost:5000/api/time)",
+      "Bash(curl -s -w \"\\\\n%{http_code}\\\\n\" http://localhost:8080/api/time)",
+      "Bash(curl -s -w \"\\\\n%{http_code}\\\\n\" \"http://localhost:8080/api/auction/dashboard/bid-history\")",
+      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' http://localhost:8080/api/auction/dashboard/bid-history?limit=5)",
+      "Bash(curl -s -o /dev/null -w \"bid-history page %{http_code}\\\\n\" http://localhost:3000/dashboard/auctions/bid-history)",
+      "Bash(curl -s -o /dev/null -w \"page %{http_code}\\\\n\" http://localhost:3000/dashboard/bid-history)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
