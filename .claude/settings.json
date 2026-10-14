@@ -188,7 +188,8 @@
       "Bash(grep -n \"^export\\\\|^const\\\\|^ \\\\*\\\\|^/\\\\*\\\\*\\\\|^//\" src/services/bidding.services.js)",
       "Bash(grep -n \"^export\\\\|^const\\\\|^/\\\\*\\\\*\\\\|^ \\\\* \\\\|httpError\\(\\\\\"\" src/services/auctionParticipant.services.js src/services/lotBidder.services.js)",
       "Bash(grep -n \"^export\\\\|^const [A-Z_]* =\\\\|^/\\\\*\\\\*\\\\|^ \\\\* \\\\|throw httpError\\\\|error = new Error\\\\|new Error\\(\" src/services/user.services.js)",
-      "Bash(grep -n \"^export\\\\|^ \\\\*\\\\|^//\" backend/src/services/auctionTimeline.services.js backend/src/services/publicAuction.services.js)"
+      "Bash(grep -n \"^export\\\\|^ \\\\*\\\\|^//\" backend/src/services/auctionTimeline.services.js backend/src/services/publicAuction.services.js)",
+      "Bash(git log *)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

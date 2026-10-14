@@ -101,6 +101,13 @@ const dateOnlyToIso = (date: string): string => {
     return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 };
 
+/** "2026-10-14" -> local 23:59:59.999 as ISO, so a deadline date stays open for that whole day. */
+const dateOnlyToEndOfDayIso = (date: string): string => {
+    if (!date) return "";
+    const d = new Date(`${date}T23:59:59.999`);
+    return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+};
+
 const DIMENSION_UNIT_MAP: Record<string, string> = {
     cm: "CM",
     mm: "MM",
@@ -186,7 +193,7 @@ export const buildAuctionFormData = (
 
     formData.append("registrationRequired", String(Boolean(schedule.registrationRequired)));
     appendIfPresent(formData, "registrationStarts", dateOnlyToIso(schedule.registrationStarts));
-    appendIfPresent(formData, "registrationDeadline", dateOnlyToIso(schedule.registrationDeadline));
+    appendIfPresent(formData, "registrationDeadline", dateOnlyToEndOfDayIso(schedule.registrationDeadline));
     formData.append("timezone", schedule.timezone || "Asia/Kolkata");
 
     // LIVE auctions only. Always sent so an edit can switch it off (backend replaces the rule)
