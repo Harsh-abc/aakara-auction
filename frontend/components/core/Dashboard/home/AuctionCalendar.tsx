@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 
 import { useAppSelector } from "@/hooks/redux"
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
+import { serverNow } from "@/lib/serverClock"
 import type { AuctionStatus, DashboardCalendarAuction } from "@/lib/types/auction.types"
 import { cn } from "@/lib/utils"
 import { getDashboardCalendar } from "@/services/operations/auction.api"
@@ -47,7 +48,7 @@ interface DayInfo {
 export function AuctionCalendar() {
     const token = useAppSelector((state) => state.auth.accessToken)
 
-    const todayKey = dayKey(new Date())
+    const todayKey = dayKey(new Date(serverNow()))
     const [view, setView] = useState(() => {
         const [y, m] = todayKey.split("-").map(Number)
         return { year: y, month: m - 1 }

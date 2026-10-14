@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { useServerNow } from "@/hooks/useServerNow";
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus";
 import type { AuctionStatus, AuctionTimelineType, TimelineAuction } from "@/lib/types/auction.types";
 import { formatMoney } from "@/lib/types/LotRow";
@@ -59,7 +60,7 @@ const TYPE_LABEL: Record<TimelineAuction["auctionType"], string> = {
     HYBRID: "Hybrid",
 };
 
-// IST, like the other auction pages
+// Viewer's local time zone, like the other auction pages
 const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
@@ -67,7 +68,7 @@ const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 const formatDateTime = (iso?: string | null) => (iso ? dateTimeFmt.format(new Date(iso)) : "—");
 
@@ -94,12 +95,8 @@ export default function AuctionTimeline({ type }: { type: AuctionTimelineType })
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
 
-    // Clock for "starts in" — ticks every minute
-    const [now, setNow] = useState(() => Date.now());
-    useEffect(() => {
-        const t = setInterval(() => setNow(Date.now()), 60_000);
-        return () => clearInterval(t);
-    }, []);
+    // Clock for "starts in" — server time, ticks every minute
+    const now = useServerNow(60_000);
 
     // Debounce typing -> search, back to page 1
     useEffect(() => {
@@ -142,8 +139,8 @@ export default function AuctionTimeline({ type }: { type: AuctionTimelineType })
 
     const headers =
         type === "upcoming"
-            ? ["Auction", "Type", "Schedule (IST)", "Starts", "Lots", "Verified bidders", "Est. total", "Status", ""]
-            : ["Auction", "Type", "Schedule (IST)", "Lots", "Results", "Total sold", "Status", ""];
+            ? ["Auction", "Type", "Schedule", "Starts", "Lots", "Verified bidders", "Est. total", "Status", ""]
+            : ["Auction", "Type", "Schedule", "Lots", "Results", "Total sold", "Status", ""];
 
     return (
         <div className="space-y-6 px-8 py-8">

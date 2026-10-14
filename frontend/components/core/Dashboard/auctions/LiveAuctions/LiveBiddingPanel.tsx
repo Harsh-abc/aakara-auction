@@ -30,7 +30,7 @@ const timeFmt = new Intl.DateTimeFormat("en-IN", {
     minute: "2-digit",
     second: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 
 const money = (amount: string, code: string) => formatMoney(Number(amount), code);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { ConnectionQuality } from "livekit-client"
 
+import { serverNow } from "@/lib/serverClock"
 import { cn } from "@/lib/utils"
 
 // mm:ss (h:mm:ss past an hour) since the stream went on air
@@ -52,7 +53,7 @@ export const initials = (name: string) =>
 
 export function ago(date?: Date) {
     if (!date) return ""
-    const minutes = Math.floor((Date.now() - date.getTime()) / 60000)
+    const minutes = Math.floor((serverNow() - date.getTime()) / 60000)
     if (minutes < 1) return "just now"
     if (minutes < 60) return `${minutes}m ago`
     return `${Math.floor(minutes / 60)}h ${minutes % 60}m ago`

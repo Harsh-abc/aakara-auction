@@ -5,6 +5,8 @@ import type {
 } from "@/lib/types/AuctionsFormData";
 import type { AuctionStatus } from "@/lib/types/auction.types";
 import { isImageMedia } from "@/utils/lotMedia";
+import { DEFAULT_AUCTION_TIMEZONE, zonedTimeToIso } from "@/utils/auctionTime";
+import { serverNow } from "@/lib/serverClock";
 
 // ============================================================
 // HELPERS
@@ -46,14 +48,13 @@ const normalizeTime = (time: string): string | null => {
 };
 
 /**
- * "2026-10-12" + "10:00" (in the admin's local timezone) -> ISO UTC string.
+ * "2026-10-12" + "10:00" (wall time in the auction's time zone) -> ISO UTC string.
  * Returns "" if either part is missing so the backend can report it.
  */
-export const combineDateTime = (date: string, time: string): string => {
+export const combineDateTime = (date: string, time: string, timeZone: string): string => {
     const hhmm = normalizeTime(time);
     if (!date || !hhmm) return "";
-    const d = new Date(`${date}T${hhmm}:00`);
-    return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+    return zonedTimeToIso(date, hhmm, timeZone);
 };
 
 /**
@@ -65,9 +66,11 @@ export const getLotScheduleError = (
     lot: LotScheduleForm | undefined,
     auction: AuctionScheduleForm
 ): string | null => {
+    // Lot times are entered in the auction's time zone
+    const timeZone = auction.timezone;
     const side = (date = "", time = "", label: string) => {
         if (!date && !time) return { iso: "" };
-        const iso = combineDateTime(date, time);
+        const iso = combineDateTime(date, time, timeZone);
         return iso ? { iso } : { error: `${label}: pick both a date and a time` };
     };
 
@@ -76,8 +79,8 @@ export const getLotScheduleError = (
     const lotEnd = side(lot?.endDate, lot?.endTime, "Lot end");
     if (lotEnd.error) return lotEnd.error;
 
-    const auctionStart = combineDateTime(auction.startDate, auction.startTime);
-    const auctionEnd = combineDateTime(auction.endDate, auction.endTime);
+    const auctionStart = combineDateTime(auction.startDate, auction.startTime, timeZone);
+    const auctionEnd = combineDateTime(auction.endDate, auction.endTime, timeZone);
 
     const start = lotStart.iso || auctionStart;
     const end = lotEnd.iso || auctionEnd;
@@ -94,19 +97,13 @@ export const getLotScheduleError = (
     return null;
 };
 
-/** "2026-10-12" -> local midnight as ISO (avoids UTC off-by-one in IST). */
-const dateOnlyToIso = (date: string): string => {
-    if (!date) return "";
-    const d = new Date(`${date}T00:00:00`);
-    return Number.isNaN(d.getTime()) ? "" : d.toISOString();
-};
+/** "2026-10-12" -> midnight in the auction's time zone, as ISO. */
+const dateOnlyToIso = (date: string, timeZone: string): string =>
+    date ? zonedTimeToIso(date, "00:00", timeZone) : "";
 
-/** "2026-10-14" -> local 23:59:59.999 as ISO, so a deadline date stays open for that whole day. */
-const dateOnlyToEndOfDayIso = (date: string): string => {
-    if (!date) return "";
-    const d = new Date(`${date}T23:59:59.999`);
-    return Number.isNaN(d.getTime()) ? "" : d.toISOString();
-};
+/** "2026-10-14" -> 23:59:59.999 in the auction's time zone, so a deadline date stays open for that whole day. */
+const dateOnlyToEndOfDayIso = (date: string, timeZone: string): string =>
+    date ? zonedTimeToIso(date, "23:59:59.999", timeZone) : "";
 
 const DIMENSION_UNIT_MAP: Record<string, string> = {
     cm: "CM",
@@ -185,23 +182,26 @@ export const buildAuctionFormData = (
     // SCHEDULE
     // ========================================================
 
-    formData.append("startTime", combineDateTime(schedule.startDate, schedule.startTime));
-    formData.append("endTime", combineDateTime(schedule.endDate, schedule.endTime));
-    appendIfPresent(formData, "startDate", dateOnlyToIso(schedule.startDate));
-    appendIfPresent(formData, "endDate", dateOnlyToIso(schedule.endDate));
-    appendIfPresent(formData, "previewStartAt", dateOnlyToIso(schedule.previewStartAt));
+    // Every date / time in the form is wall time in the auction's time zone
+    const timeZone = schedule.timezone || DEFAULT_AUCTION_TIMEZONE;
+
+    formData.append("startTime", combineDateTime(schedule.startDate, schedule.startTime, timeZone));
+    formData.append("endTime", combineDateTime(schedule.endDate, schedule.endTime, timeZone));
+    appendIfPresent(formData, "startDate", dateOnlyToIso(schedule.startDate, timeZone));
+    appendIfPresent(formData, "endDate", dateOnlyToIso(schedule.endDate, timeZone));
+    appendIfPresent(formData, "previewStartAt", dateOnlyToIso(schedule.previewStartAt, timeZone));
 
     formData.append("registrationRequired", String(Boolean(schedule.registrationRequired)));
-    appendIfPresent(formData, "registrationStarts", dateOnlyToIso(schedule.registrationStarts));
+    appendIfPresent(formData, "registrationStarts", dateOnlyToIso(schedule.registrationStarts, timeZone));
     // Deadline on the auction's last day -> open until the auction ends; an earlier day -> open all of that day
     appendIfPresent(
         formData,
         "registrationDeadline",
         schedule.registrationDeadline && schedule.registrationDeadline === schedule.endDate
-            ? combineDateTime(schedule.endDate, schedule.endTime)
-            : dateOnlyToEndOfDayIso(schedule.registrationDeadline)
+            ? combineDateTime(schedule.endDate, schedule.endTime, timeZone)
+            : dateOnlyToEndOfDayIso(schedule.registrationDeadline, timeZone)
     );
-    formData.append("timezone", schedule.timezone || "Asia/Kolkata");
+    formData.append("timezone", timeZone);
 
     // LIVE auctions only. Always sent so an edit can switch it off (backend replaces the rule)
     const extendedBidding = basicInfo.auctionType === "LIVE" && Boolean(schedule.allowExtendedBidding);
@@ -324,7 +324,7 @@ export const buildAuctionFormData = (
             restorationHistory: str(condition.restorationHistory),
 
             authenticateBy: str(authentication.authenticatedBy),
-            auctheticateDate: dateOnlyToIso(authentication.authenticatedDate) || null,
+            auctheticateDate: dateOnlyToIso(authentication.authenticatedDate, timeZone) || null,
 
             editionType: details.editionType || "UNIQUE",
 
@@ -339,8 +339,8 @@ export const buildAuctionFormData = (
             status: lot.status || "DRAFT",
 
             // null -> backend uses the auction's start / end
-            scheduledStartAt: combineDateTime(lot.schedule?.startDate ?? "", lot.schedule?.startTime ?? "") || null,
-            scheduledEndAt: combineDateTime(lot.schedule?.endDate ?? "", lot.schedule?.endTime ?? "") || null,
+            scheduledStartAt: combineDateTime(lot.schedule?.startDate ?? "", lot.schedule?.startTime ?? "", timeZone) || null,
+            scheduledEndAt: combineDateTime(lot.schedule?.endDate ?? "", lot.schedule?.endTime ?? "", timeZone) || null,
 
             shippingInfo: str(lot.shippingInfo) ?? str(shipping.shippingInfo),
             isFeatured: Boolean(lot.isFeatured),
@@ -403,15 +403,16 @@ export const validateAuctionForm = (
         errors.push("Choose a primary currency from the selected currencies");
     }
 
-    const start = combineDateTime(schedule.startDate, schedule.startTime);
-    const end = combineDateTime(schedule.endDate, schedule.endTime);
+    const timeZone = schedule.timezone || DEFAULT_AUCTION_TIMEZONE;
+    const start = combineDateTime(schedule.startDate, schedule.startTime, timeZone);
+    const end = combineDateTime(schedule.endDate, schedule.endTime, timeZone);
     if (!start) errors.push("Auction start date and time are required");
     if (!end) errors.push("Auction end date and time are required");
     if (start && end && new Date(end) <= new Date(start)) {
         errors.push("Auction end must be after the start");
     }
     const startMoved = start !== publishedStart;
-    if (status === "SCHEDULED" && start && startMoved && new Date(start).getTime() < Date.now()) {
+    if (status === "SCHEDULED" && start && startMoved && new Date(start).getTime() < serverNow()) {
         errors.push("Auction start cannot be in the past");
     }
 

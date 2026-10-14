@@ -69,7 +69,6 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
 });
 
 const formatDate = (iso?: string | null) => (iso ? dateFmt.format(new Date(iso)) : "—");
@@ -81,7 +80,7 @@ const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 
 const formatDateTime = (iso?: string | null) => (iso ? dateTimeFmt.format(new Date(iso)) : "—");
@@ -562,10 +561,10 @@ const AuctionOverview = ({ auction, lotCount }: { auction: ParticipantAuction; l
             <p className="truncate text-base font-semibold text-slate-900">{auction.title}</p>
 
             <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
-                <OverviewField label="Starts (IST)" value={formatDateTime(auction.startTime)} />
-                <OverviewField label="Ends (IST)" value={formatDateTime(auction.endTime)} />
+                <OverviewField label="Starts" value={formatDateTime(auction.startTime)} />
+                <OverviewField label="Ends" value={formatDateTime(auction.endTime)} />
                 <OverviewField
-                    label="Registration window (IST)"
+                    label="Registration window"
                     value={
                         auction.registrationRequired
                             ? `${formatDateTime(auction.registrationStarts)} → ${formatDateTime(auction.registrationDeadline)}`

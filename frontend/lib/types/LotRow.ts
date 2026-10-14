@@ -2,6 +2,7 @@ import type { AuctionLotForm, AuctionScheduleForm } from "@/lib/types/AuctionsFo
 import type { AuctionLot, LotStatus, EditionType } from "@/lib/types/auction.types";
 import { isImageMedia, isVideoMedia } from "@/utils/lotMedia";
 import { combineDateTime, getLotScheduleError } from "@/utils/buildAuctionFormData";
+import { DEFAULT_AUCTION_TIMEZONE } from "@/utils/auctionTime";
 
 // =====================================================================
 // One row shape for the lots table — works for:
@@ -83,14 +84,16 @@ export const fromFormLot = (
         missing.push("Valid schedule");
     }
 
-    // A blank side inherits the auction's start / end (same as the backend)
+    // A blank side inherits the auction's start / end (same as the backend);
+    // all of them are entered in the auction's time zone
+    const timeZone = auctionSchedule?.timezone || DEFAULT_AUCTION_TIMEZONE;
     const startsAt =
-        combineDateTime(schedule?.startDate ?? "", schedule?.startTime ?? "") ||
-        combineDateTime(auctionSchedule?.startDate ?? "", auctionSchedule?.startTime ?? "") ||
+        combineDateTime(schedule?.startDate ?? "", schedule?.startTime ?? "", timeZone) ||
+        combineDateTime(auctionSchedule?.startDate ?? "", auctionSchedule?.startTime ?? "", timeZone) ||
         null;
     const endsAt =
-        combineDateTime(schedule?.endDate ?? "", schedule?.endTime ?? "") ||
-        combineDateTime(auctionSchedule?.endDate ?? "", auctionSchedule?.endTime ?? "") ||
+        combineDateTime(schedule?.endDate ?? "", schedule?.endTime ?? "", timeZone) ||
+        combineDateTime(auctionSchedule?.endDate ?? "", auctionSchedule?.endTime ?? "", timeZone) ||
         null;
 
     return {

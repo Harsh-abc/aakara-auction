@@ -7,6 +7,7 @@ import DatePicker from "@/components/common/DatePicker/DatePicker";
 import TimePicker from "@/components/common/DatePicker/TimePicker";
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import { getLotScheduleError } from "@/utils/buildAuctionFormData";
+import { DEFAULT_AUCTION_TIMEZONE } from "@/utils/auctionTime";
 
 interface LotScheduleProps {
     lotIndex: number;
@@ -83,7 +84,7 @@ export default function LotSchedule({ lotIndex }: LotScheduleProps) {
 
             <p className={`mt-1 mb-4 text-xs ${auctionReady ? "text-slate-500" : "text-amber-600"}`}>
                 {auctionReady
-                    ? `Must fall within the auction: ${formatDateTime(auction.startDate, auction.startTime)} → ${formatDateTime(auction.endDate, auction.endTime)}`
+                    ? `Must fall within the auction: ${formatDateTime(auction.startDate, auction.startTime)} → ${formatDateTime(auction.endDate, auction.endTime)} (${auction.timezone || DEFAULT_AUCTION_TIMEZONE} time)`
                     : "Set the auction start and end in Step 2 (Schedule) first."}
             </p>
 

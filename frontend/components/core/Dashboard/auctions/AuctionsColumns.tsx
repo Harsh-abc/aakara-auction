@@ -32,21 +32,20 @@ export interface AuctionTableMeta {
 }
 
 // =====================================================================
-// FORMATTERS (always show IST, whatever the admin's machine timezone)
+// FORMATTERS (the viewer's local time zone, labelled — e.g. IST in India)
 // =====================================================================
 
 const dateFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
 });
 
 const timeFmt = new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 
 const formatDate = (iso?: string | null) => (iso ? dateFmt.format(new Date(iso)) : "—");

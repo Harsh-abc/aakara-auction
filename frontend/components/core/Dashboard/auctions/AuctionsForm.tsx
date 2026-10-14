@@ -158,7 +158,11 @@ export default function AuctionsForm({
         // unchanged start may have passed. Create / draft edits always check it.
         const publishedStart =
             saveStatus === "SCHEDULED"
-                ? combineDateTime(defaultValues.schedule.startDate, defaultValues.schedule.startTime)
+                ? combineDateTime(
+                      defaultValues.schedule.startDate,
+                      defaultValues.schedule.startTime,
+                      defaultValues.schedule.timezone
+                  )
                 : "";
 
         const problems = validateAuctionForm(data, status, { publishedStart });

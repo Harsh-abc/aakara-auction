@@ -1,3 +1,4 @@
+import { serverNow } from "@/lib/serverClock"
 import type { AuctionStatus } from "@/lib/types/auction.types"
 import type { MyAccount } from "@/lib/types/profile.types"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
@@ -41,7 +42,7 @@ export type RegistrationWindow =
     | { open: false; reason: string }
 
 // mirrors the checks in registerForAuctionService so we don't offer a button that will fail
-export function registrationWindow(auction: PublicAuction, now = Date.now()): RegistrationWindow {
+export function registrationWindow(auction: PublicAuction, now = serverNow()): RegistrationWindow {
     if (isFinished(auction)) return { open: false, reason: "Sale closed" }
     if (auction.registrationStarts && now < new Date(auction.registrationStarts).getTime()) {
         return { open: false, reason: "Registration opens soon" }

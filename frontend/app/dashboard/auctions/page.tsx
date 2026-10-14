@@ -19,6 +19,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { serverNow } from "@/lib/serverClock";
 
 import type { Auction } from "@/lib/types/auction.types";
 import { AppDispatch, RootState } from "@/redux/store";
@@ -44,7 +45,7 @@ export default function Auctions() {
     // end time (checks every 30s) — refetch just after the next change is due so the status
     // updates without a reload
     useEffect(() => {
-        const now = Date.now();
+        const now = serverNow();
         const nextChange = auctions
             .flatMap((a) =>
                 a.status === "SCHEDULED" || a.status === "PREVIEW"

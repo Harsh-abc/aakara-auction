@@ -189,7 +189,11 @@
       "Bash(grep -n \"^export\\\\|^const\\\\|^/\\\\*\\\\*\\\\|^ \\\\* \\\\|httpError\\(\\\\\"\" src/services/auctionParticipant.services.js src/services/lotBidder.services.js)",
       "Bash(grep -n \"^export\\\\|^const [A-Z_]* =\\\\|^/\\\\*\\\\*\\\\|^ \\\\* \\\\|throw httpError\\\\|error = new Error\\\\|new Error\\(\" src/services/user.services.js)",
       "Bash(grep -n \"^export\\\\|^ \\\\*\\\\|^//\" backend/src/services/auctionTimeline.services.js backend/src/services/publicAuction.services.js)",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Bash(cd \"D:/Harsh/projects/aakara-auction/frontend\" && ls node_modules/@date-fns 2>/dev/null; ls node_modules | grep -i -E \"tz|luxon|dayjs\"; grep -rn \"timezone\" ../backend/src/services/auction.services.js ../backend/src/services/publicAuction.services.js | head -30)",
+      "Read(//d/Harsh/projects/backend/src/services/**)",
+      "Bash(npm ls *)",
+      "Bash(xargs head -1)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

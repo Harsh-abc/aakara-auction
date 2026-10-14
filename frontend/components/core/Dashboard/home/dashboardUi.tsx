@@ -3,9 +3,10 @@ import { ArrowRight } from "lucide-react"
 
 import { formatMoney } from "@/lib/types/LotRow"
 import { cn } from "@/lib/utils"
+import { VIEWER_TIME_ZONE } from "@/utils/auctionTime"
 
-// auction house dates are shown in India time across the dashboard
-export const DASHBOARD_TIME_ZONE = "Asia/Kolkata"
+// dates are shown in each viewer's own time zone (IST in India, GST in Dubai…)
+export const DASHBOARD_TIME_ZONE = VIEWER_TIME_ZONE
 
 const startFmt = new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -15,9 +16,10 @@ const startFmt = new Intl.DateTimeFormat("en-US", {
     minute: "2-digit",
     hour12: true,
     timeZone: DASHBOARD_TIME_ZONE,
+    timeZoneName: "short",
 })
 
-/** "Oct 28, 2026 · 04:00 PM" */
+/** "Oct 28, 2026 · 04:00 PM GMT+5:30" */
 export const formatStart = (iso: string) => startFmt.format(new Date(iso)).replace(/, (\d{1,2}:)/, " · $1")
 
 export const money = (value: number | string | null, currency = "INR") =>

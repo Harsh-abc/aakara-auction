@@ -77,6 +77,9 @@ export const liveStreamEndPoints = {
 // Socket.IO is served by the same backend
 export const SOCKET_URL = BASE_URL;
 
+// server clock (epoch ms) — see lib/serverClock.ts
+export const TIME_API = `${BASE_URL}/api/time`;
+
 
 export const categoryEndPoints = {
     GET_ALL_CATEGORIES_API: `${BASE_URL}/api/category/get-all-category`,

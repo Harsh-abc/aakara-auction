@@ -42,6 +42,13 @@ app.get("/", (req, res) => {
 })
 
 
+// Server clock in epoch ms — browsers measure their offset from it so countdowns
+// don't depend on the visitor's (possibly wrong) system clock
+app.get("/api/time", (req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.json({ success: true, now: Date.now() });
+});
+
 app.get("/test-redis", async (req, res) => {
     try {
         await redis.set("test:key", "Hello Redis");

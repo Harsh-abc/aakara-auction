@@ -9,9 +9,14 @@ import DatePicker from "@/components/common/DatePicker/DatePicker";
 import TimePicker from "@/components/common/DatePicker/TimePicker";
 import { Input } from "@/components/ui/input";
 import DashboardFormText from "@/components/common/DashboardFormText";
+import { serverNow } from "@/lib/serverClock";
+import { combineDateTime } from "@/utils/buildAuctionFormData";
+import { AUCTION_TIMEZONES, DEFAULT_AUCTION_TIMEZONE, todayInZone } from "@/utils/auctionTime";
 
 // ---------------------------------------------------------------------
-// Date helpers: the form stores "yyyy-MM-dd"; parse/format in LOCAL time
+// Date helpers: the form stores "yyyy-MM-dd" + "HH:mm" as wall time in the
+// auction's time zone. The pickers work on plain calendar dates, so those
+// are parsed / formatted as local Dates purely for display.
 // ---------------------------------------------------------------------
 
 const toDate = (value?: string): Date | undefined =>
@@ -20,7 +25,8 @@ const toDate = (value?: string): Date | undefined =>
 const toFormDate = (date?: Date): string =>
     date ? format(date, "yyyy-MM-dd") : "";
 
-const combine = (date?: string, time?: string): Date | null => {
+/** Wall time as typed, for the "Bidding Starts / Ends" preview */
+const wallTime = (date?: string, time?: string): Date | null => {
     if (!date || !time) return null;
     const d = new Date(`${date}T${time}:00`);
     return Number.isNaN(d.getTime()) ? null : d;
@@ -35,13 +41,20 @@ export default function AuctionSchedule() {
         getValues,
     } = useFormContext<AuctionFormData>();
 
-    const today = useMemo(() => new Date(), []);
-
     const startDate = watch("schedule.startDate");
     const startTime = watch("schedule.startTime");
     const endDate = watch("schedule.endDate");
     const endTime = watch("schedule.endTime");
     const registrationStarts = watch("schedule.registrationStarts");
+    const timeZone = watch("schedule.timezone") || DEFAULT_AUCTION_TIMEZONE;
+
+    // "Today" in the auction's zone — may differ from the admin's own date
+    const today = useMemo(() => toDate(todayInZone(timeZone, serverNow())), [timeZone]);
+
+    // Keep an older auction's zone selectable even if it's not in the list
+    const zoneOptions = AUCTION_TIMEZONES.some((z) => z.value === timeZone)
+        ? AUCTION_TIMEZONES
+        : [{ value: timeZone, label: timeZone }, ...AUCTION_TIMEZONES];
 
     // Lives in form state so it survives step changes and loads on edit
     const extensionEnabled = watch("schedule.allowExtendedBidding");
@@ -50,12 +63,15 @@ export default function AuctionSchedule() {
     const isLiveAuction = watch("basicInfo.auctionType") === "LIVE";
 
     // ---------------- live duration preview ----------------
-    const start = combine(startDate, startTime);
-    const end = combine(endDate, endTime);
+    const start = wallTime(startDate, startTime);
+    const end = wallTime(endDate, endTime);
 
-    const duration = useMemo(() => {
-        if (!start || !end) return null;
-        const minutes = differenceInMinutes(end, start);
+    const duration = (() => {
+        // Real instants in the auction's zone, so a DST change inside the window counts
+        const startIso = startDate && startTime ? combineDateTime(startDate, startTime, timeZone) : "";
+        const endIso = endDate && endTime ? combineDateTime(endDate, endTime, timeZone) : "";
+        if (!startIso || !endIso) return null;
+        const minutes = differenceInMinutes(new Date(endIso), new Date(startIso));
         if (minutes <= 0) return { invalid: true as const };
         const days = Math.floor(minutes / 1440);
         const hours = Math.floor((minutes % 1440) / 60);
@@ -65,8 +81,7 @@ export default function AuctionSchedule() {
             label: `${days} Day${days === 1 ? "" : "s"} ${String(hours).padStart(2, "0")} Hours${mins ? ` ${mins} Min` : ""}`,
             totalHours: Math.round(minutes / 60),
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [startDate, startTime, endDate, endTime]);
+    })();
 
     const sameDay = startDate && endDate && startDate === endDate;
 
@@ -165,14 +180,15 @@ export default function AuctionSchedule() {
                                 className="w-full border rounded-md px-3 py-2 h-11"
                                 {...register("schedule.timezone")}
                             >
-                                <option value="Asia/Kolkata">Asia/Kolkata (IST, UTC+5:30)</option>
-                                <option value="Asia/Dubai">Asia/Dubai (UTC+4)</option>
-                                <option value="Europe/London">Europe/London</option>
-                                <option value="America/New_York">America/New_York</option>
-                                <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
+                                {zoneOptions.map((zone) => (
+                                    <option key={zone.value} value={zone.value}>
+                                        {zone.label}
+                                    </option>
+                                ))}
                             </select>
                             <p className="mt-1 text-xs text-slate-500">
-                                Times above are entered in your computer&apos;s local time.
+                                All dates &amp; times on this page are in {timeZone}, whatever your
+                                computer&apos;s clock. Bidders see them converted to their own local time.
                             </p>
                         </div>
                     </div>

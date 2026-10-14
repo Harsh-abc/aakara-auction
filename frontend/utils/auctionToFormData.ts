@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { DEFAULT_AUCTION_TIMEZONE, isoToZonedParts } from "@/utils/auctionTime";
 
 import type { Auction, AuctionLot, LotStatus } from "@/lib/types/auction.types";
 import type { AuctionFormData, AuctionLotForm } from "@/lib/types/AuctionsFormData";
@@ -17,24 +17,19 @@ const num = (value: unknown): number | null => {
 
 const text = (value: string | null | undefined): string => value ?? "";
 
-/** ISO -> "yyyy-MM-dd" in the admin's LOCAL timezone (form convention). */
-const toFormDate = (iso: string | null | undefined): string => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? "" : format(d, "yyyy-MM-dd");
-};
+/** ISO -> "yyyy-MM-dd" in the auction's time zone (form convention). */
+const toFormDate = (iso: string | null | undefined, timeZone: string): string =>
+    isoToZonedParts(iso, timeZone).date;
 
-/** ISO -> "HH:mm" in LOCAL time. */
-const toFormTime = (iso: string | null | undefined): string => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? "" : format(d, "HH:mm");
-};
+/** ISO -> "HH:mm" in the auction's time zone. */
+const toFormTime = (iso: string | null | undefined, timeZone: string): string =>
+    isoToZonedParts(iso, timeZone).time;
 
 const toLotForm = (
     lot: AuctionLot,
     categoryUuid: string,
-    sharedShippingInfo: string
+    sharedShippingInfo: string,
+    timeZone: string
 ): AuctionLotForm => {
     const dimension = lot.dimension;
     const shippingInfo = text(lot.shippingInfo);
@@ -44,10 +39,10 @@ const toLotForm = (
         status: lot.status as LotStatus,
 
         schedule: {
-            startDate: toFormDate(lot.scheduledStartAt),
-            startTime: toFormTime(lot.scheduledStartAt),
-            endDate: toFormDate(lot.scheduledEndAt),
-            endTime: toFormTime(lot.scheduledEndAt),
+            startDate: toFormDate(lot.scheduledStartAt, timeZone),
+            startTime: toFormTime(lot.scheduledStartAt, timeZone),
+            endDate: toFormDate(lot.scheduledEndAt, timeZone),
+            endTime: toFormTime(lot.scheduledEndAt, timeZone),
         },
 
         details: {
@@ -104,7 +99,7 @@ const toLotForm = (
 
         authentication: {
             authenticatedBy: text(lot.authenticateBy),
-            authenticatedDate: toFormDate(lot.auctheticateDate),
+            authenticatedDate: toFormDate(lot.auctheticateDate, timeZone),
         },
 
         documents: (lot.documents ?? []).map((doc) => ({
@@ -144,6 +139,9 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
     );
     const hasExtension = auction.auctionType === "LIVE" && extensionMinutes !== null;
 
+    // Dates / times are shown as wall time in the auction's own time zone
+    const timeZone = auction.timezone || DEFAULT_AUCTION_TIMEZONE;
+
     return {
         basicInfo: {
             auctionName: auction.title,
@@ -163,20 +161,20 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
         },
 
         schedule: {
-            startDate: toFormDate(auction.startTime),
-            startTime: toFormTime(auction.startTime),
-            endDate: toFormDate(auction.endTime),
-            endTime: toFormTime(auction.endTime),
-            previewStartAt: toFormDate(auction.previewStartAt),
+            startDate: toFormDate(auction.startTime, timeZone),
+            startTime: toFormTime(auction.startTime, timeZone),
+            endDate: toFormDate(auction.endTime, timeZone),
+            endTime: toFormTime(auction.endTime, timeZone),
+            previewStartAt: toFormDate(auction.previewStartAt, timeZone),
             registrationRequired: auction.registrationRequired ?? true,
-            registrationStarts: toFormDate(auction.registrationStarts),
-            registrationDeadline: toFormDate(auction.registrationDeadline),
-            timezone: auction.timezone || "Asia/Kolkata",
+            registrationStarts: toFormDate(auction.registrationStarts, timeZone),
+            registrationDeadline: toFormDate(auction.registrationDeadline, timeZone),
+            timezone: timeZone,
             allowExtendedBidding: hasExtension,
             auctionExtensionTime: hasExtension ? extensionMinutes : null,
         },
 
-        lots: lots.map((lot) => toLotForm(lot, categoryUuid, sharedShippingInfo)),
+        lots: lots.map((lot) => toLotForm(lot, categoryUuid, sharedShippingInfo, timeZone)),
 
         fees: (auction.auctionFees ?? []).map((fee, index) => ({
             feeType: fee.feeType,

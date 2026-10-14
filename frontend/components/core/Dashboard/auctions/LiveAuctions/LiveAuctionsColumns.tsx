@@ -29,18 +29,17 @@ export interface LiveLotTableMeta {
 /** Mirrors STARTABLE_LOT_STATUSES in backend/src/services/liveAuction.services.js */
 const STARTABLE: LotStatus[] = ["DRAFT", "SCHEDULED", "UNSOLD"];
 
-// IST, like the other auction tables
+// Viewer's local time zone, like the other auction tables
 const dateFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
 });
 const timeFmt = new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 
 const DateTimeCell = ({ iso }: { iso?: string | null }) =>

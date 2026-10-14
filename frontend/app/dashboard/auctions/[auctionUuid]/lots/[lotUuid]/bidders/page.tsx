@@ -42,7 +42,7 @@ const FILTERS: { value: LotBidderFilter; label: string }[] = [
 ];
 
 // =====================================================================
-// FORMATTERS (IST, like the rest of the auction pages)
+// FORMATTERS (viewer's local time zone, like the rest of the auction pages)
 // =====================================================================
 
 const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
@@ -52,14 +52,13 @@ const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 
 const dateFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
 });
 
 const formatDateTime = (iso?: string | null) => (iso ? dateTimeFmt.format(new Date(iso)) : "—");
@@ -477,7 +476,7 @@ const LotSummaryCard = ({ lot }: { lot: LotSummary }) => {
                         <dd className="font-medium text-slate-800">{low || high ? `${low ?? "—"} – ${high ?? "—"}` : "—"}</dd>
                     </div>
                     <div>
-                        <dt className="text-[11px] uppercase tracking-wide text-slate-400">Bidding window (IST)</dt>
+                        <dt className="text-[11px] uppercase tracking-wide text-slate-400">Bidding window</dt>
                         <dd className="font-medium text-slate-800">
                             {formatDateTime(lot.scheduledStartAt)} → {formatDateTime(lot.scheduledEndAt)}
                         </dd>

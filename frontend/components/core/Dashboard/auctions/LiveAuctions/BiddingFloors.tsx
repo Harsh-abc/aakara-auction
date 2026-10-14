@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { serverNow } from "@/lib/serverClock";
 import type { AuctionLot } from "@/lib/types/auction.types";
 import type { LiveLotUpdate } from "@/lib/types/bidding.types";
 import { applyLiveLotUpdate } from "@/redux/slices/auctionSlice";
@@ -66,7 +67,7 @@ export default function BiddingFloors() {
     // The server ends sales at their end time (checks every 30s) and closes their lots —
     // refetch just after the next one is due so it drops off the floor without a reload
     useEffect(() => {
-        const now = Date.now();
+        const now = serverNow();
         const nextEnd = liveAuctions
             .map((a) => new Date(a.endTime).getTime())
             .filter((t) => t > now)

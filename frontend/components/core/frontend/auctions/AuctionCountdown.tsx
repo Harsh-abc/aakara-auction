@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
+import { onServerClockSync, serverNow } from "@/lib/serverClock";
 import { cn } from "@/lib/utils";
 
 const SECOND = 1000;
@@ -26,25 +27,32 @@ type AuctionCountdownProps = {
     className?: string;
 };
 
-// one shared 1s clock for every countdown on the page
+// one shared 1s clock for every countdown on the page, on the server's time
+// (not the visitor's system clock) so every machine counts down to the same moment
 let clockNow = Date.now();
 const clockListeners = new Set<() => void>();
 let clockTimer: number | undefined;
+let stopSyncListener: (() => void) | undefined;
+
+const tick = () => {
+    clockNow = serverNow();
+    clockListeners.forEach((notify) => notify());
+};
 
 function subscribeClock(listener: () => void) {
     clockListeners.add(listener);
     if (clockTimer === undefined) {
-        clockNow = Date.now();
-        clockTimer = window.setInterval(() => {
-            clockNow = Date.now();
-            clockListeners.forEach((notify) => notify());
-        }, SECOND);
+        clockNow = serverNow();
+        clockTimer = window.setInterval(tick, SECOND);
+        stopSyncListener = onServerClockSync(tick);
     }
     return () => {
         clockListeners.delete(listener);
         if (clockListeners.size === 0) {
             window.clearInterval(clockTimer);
             clockTimer = undefined;
+            stopSyncListener?.();
+            stopSyncListener = undefined;
         }
     };
 }

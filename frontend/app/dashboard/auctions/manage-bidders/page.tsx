@@ -44,7 +44,6 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
 });
 
 const formatDate = (iso?: string | null) => (iso ? dateFmt.format(new Date(iso)) : "—");

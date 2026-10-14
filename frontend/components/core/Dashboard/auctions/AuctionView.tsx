@@ -107,7 +107,7 @@ const LOT_STATUS_STYLES: Record<LotStatus, string> = {
 const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
 // =====================================================================
-// FORMATTERS (always show IST, like the auctions table)
+// FORMATTERS (viewer's local time zone, like the auctions table)
 // =====================================================================
 
 const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
@@ -117,21 +117,20 @@ const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 
 const dateFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
 });
 
 const timeFmt = new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
+    timeZoneName: "short",
 });
 
 const formatDateTime = (iso?: string | null) => {
@@ -854,7 +853,7 @@ export default function AuctionView({ auction, lots, onLotDeleted }: AuctionView
                     )}
                     <Field label="Timezone" value={auction.timezone} />
                 </FieldGrid>
-                <p className="mt-4 text-[11px] text-slate-400">All times shown in IST.</p>
+                <p className="mt-4 text-[11px] text-slate-400">All times shown in your local time zone.</p>
             </Section>
 
             {/* Lots */}

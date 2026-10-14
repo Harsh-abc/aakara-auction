@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { formatDistanceStrict } from "date-fns"
 import { User } from "lucide-react"
 
+import { useServerNow } from "@/hooks/useServerNow"
 import type { DashboardBid, DashboardBidStatus } from "@/lib/types/auction.types"
 
 import { money, Panel, PanelMessage, StatusPill } from "./dashboardUi"
@@ -30,13 +30,8 @@ interface RecentBidsProps {
 }
 
 export function RecentBids({ bids, failed }: RecentBidsProps) {
-    const [now, setNow] = useState(() => Date.now())
-
-    // keeps "2 min ago" honest between refreshes
-    useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 30 * 1000)
-        return () => clearInterval(id)
-    }, [])
+    // keeps "2 min ago" honest between refreshes (server time, so a wrong PC clock doesn't skew it)
+    const now = useServerNow(30 * 1000)
 
     return (
         <Panel

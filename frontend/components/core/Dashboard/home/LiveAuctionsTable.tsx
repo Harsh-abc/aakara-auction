@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, Gavel, MoreHorizontal, Pencil, Radio, Users } from "lucide-react"
@@ -13,6 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAppSelector } from "@/hooks/redux"
+import { useServerNow } from "@/hooks/useServerNow"
 import type { DashboardLiveAuction } from "@/lib/types/auction.types"
 
 import { money, Panel, PanelMessage, StatusPill } from "./dashboardUi"
@@ -105,12 +105,8 @@ interface LiveAuctionsTableProps {
 }
 
 export function LiveAuctionsTable({ auctions, failed }: LiveAuctionsTableProps) {
-    const [now, setNow] = useState(() => Date.now())
-
-    useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 30 * 1000)
-        return () => clearInterval(id)
-    }, [])
+    // "time left" on the server's clock, not this PC's
+    const now = useServerNow(30 * 1000)
 
     return (
         <Panel
