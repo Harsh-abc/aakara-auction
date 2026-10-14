@@ -178,6 +178,7 @@ export default function AuctionSchedule() {
                     </div>
 
                     {/* ================= REGISTRATION ================= */}
+                    {/* Registration may open on any earlier date and run until the auction ends */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="input-wrapper">
                             <label className="block mb-2">Registration Start Date</label>
@@ -187,9 +188,17 @@ export default function AuctionSchedule() {
                                 render={({ field }) => (
                                     <DatePicker
                                         value={toDate(field.value)}
-                                        minDate={today}
-                                        maxDate={toDate(startDate)}
-                                        onChange={(date) => field.onChange(toFormDate(date))}
+                                        maxDate={toDate(endDate)}
+                                        defaultMonth={toDate(startDate)}
+                                        onChange={(date) => {
+                                            const next = toFormDate(date);
+                                            field.onChange(next);
+                                            // If the deadline is now before the start, clear it
+                                            const currentDeadline = getValues("schedule.registrationDeadline");
+                                            if (next && currentDeadline && currentDeadline < next) {
+                                                setValue("schedule.registrationDeadline", "", { shouldDirty: true });
+                                            }
+                                        }}
                                         placeholder="Select registration start date"
                                     />
                                 )}
@@ -204,8 +213,8 @@ export default function AuctionSchedule() {
                                 render={({ field }) => (
                                     <DatePicker
                                         value={toDate(field.value)}
-                                        minDate={toDate(registrationStarts) ?? today}
-                                        maxDate={toDate(startDate)}
+                                        minDate={toDate(registrationStarts)}
+                                        maxDate={toDate(endDate)}
                                         defaultMonth={toDate(registrationStarts) ?? toDate(startDate)}
                                         onChange={(date) => field.onChange(toFormDate(date))}
                                         placeholder="Select registration deadline"
@@ -225,8 +234,8 @@ export default function AuctionSchedule() {
                                 render={({ field }) => (
                                     <DatePicker
                                         value={toDate(field.value)}
-                                        minDate={today}
                                         maxDate={toDate(startDate)}
+                                        defaultMonth={toDate(startDate)}
                                         onChange={(date) => field.onChange(toFormDate(date))}
                                         placeholder="Select preview start date"
                                     />

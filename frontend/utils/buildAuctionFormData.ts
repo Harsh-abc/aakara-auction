@@ -401,13 +401,20 @@ export const validateAuctionForm = (
         errors.push("Auction start cannot be in the past");
     }
 
+    if (schedule.previewStartAt && schedule.startDate && schedule.previewStartAt > schedule.startDate) {
+        errors.push("Preview start should be on or before the auction start date");
+    }
+
     const regStart = schedule.registrationStarts;
     const regEnd = schedule.registrationDeadline;
     if (regStart && regEnd && regEnd < regStart) {
         errors.push("Registration deadline must be after registration start");
     }
-    if (regEnd && schedule.startDate && regEnd > schedule.startDate) {
-        errors.push("Registration deadline should be on or before the auction start date");
+    if (regStart && schedule.endDate && regStart > schedule.endDate) {
+        errors.push("Registration start should be on or before the auction end date");
+    }
+    if (regEnd && schedule.endDate && regEnd > schedule.endDate) {
+        errors.push("Registration deadline should be on or before the auction end date");
     }
 
     if (basicInfo.auctionType === "LIVE" && schedule.allowExtendedBidding) {

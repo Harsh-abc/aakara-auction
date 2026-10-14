@@ -182,7 +182,13 @@
       "Bash(node --check src/services/dashboard.services.js)",
       "Bash(curl -s -m 120 -o /dev/null -w \"dashboard page: %{http_code}\\\\n\" http://localhost:3000/dashboard)",
       "Bash(curl -s -m 5 -o /dev/null -w \"overview api \\(no token\\): %{http_code}\\\\n\" http://localhost:8080/api/auction/dashboard/overview)",
-      "Bash(curl -s -m 5 -o /dev/null -w \"calendar api \\(no token\\): %{http_code}\\\\n\" \"http://localhost:8080/api/auction/dashboard/calendar?month=2026-10\")"
+      "Bash(curl -s -m 5 -o /dev/null -w \"calendar api \\(no token\\): %{http_code}\\\\n\" \"http://localhost:8080/api/auction/dashboard/calendar?month=2026-10\")",
+      "Bash(grep -v -E '\\\\.\\(png|jpg|jpeg|svg|webp|ico|gif|woff2?|ttf\\)$')",
+      "Bash(grep -v -E '/\\\\.\\(agents|claude|windsurf\\)/')",
+      "Bash(grep -n \"^export\\\\|^const\\\\|^ \\\\*\\\\|^/\\\\*\\\\*\\\\|^//\" src/services/bidding.services.js)",
+      "Bash(grep -n \"^export\\\\|^const\\\\|^/\\\\*\\\\*\\\\|^ \\\\* \\\\|httpError\\(\\\\\"\" src/services/auctionParticipant.services.js src/services/lotBidder.services.js)",
+      "Bash(grep -n \"^export\\\\|^const [A-Z_]* =\\\\|^/\\\\*\\\\*\\\\|^ \\\\* \\\\|throw httpError\\\\|error = new Error\\\\|new Error\\(\" src/services/user.services.js)",
+      "Bash(grep -n \"^export\\\\|^ \\\\*\\\\|^//\" backend/src/services/auctionTimeline.services.js backend/src/services/publicAuction.services.js)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
