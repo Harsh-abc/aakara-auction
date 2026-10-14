@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
 import { getMyKyc, getMyProfile } from "@/services/operations/profile.api"
 import { getPublicAuction } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "@/lib/apiError"
+import { accountName } from "@/lib/accountName"
 
 import { auctionMeta } from "./auctionDisplay"
 
@@ -91,7 +92,7 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
         onOpenChange(next)
     }
 
-    const profile = loaded?.account.profile
+    const name = loaded ? accountName(loaded.account) : null
     const kycStatus: KycStatus = loaded?.kyc?.status ?? loaded?.account.kyc?.status ?? "NOT_SUBMITTED"
     const documents = loaded?.kyc?.documents ?? []
 
@@ -123,18 +124,18 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                             <dl className="mt-3 grid grid-cols-2 gap-4 text-sm">
                                 <div>
                                     <dt className="text-xs text-neutral-500">First name</dt>
-                                    <dd className="mt-1 text-neutral-950">{profile?.firstName || "—"}</dd>
+                                    <dd className="mt-1 text-neutral-950">{name?.firstName || "—"}</dd>
                                 </div>
                                 <div>
                                     <dt className="text-xs text-neutral-500">Last name</dt>
-                                    <dd className="mt-1 text-neutral-950">{profile?.lastName || "—"}</dd>
+                                    <dd className="mt-1 text-neutral-950">{name?.lastName || "—"}</dd>
                                 </div>
                                 <div className="col-span-2">
                                     <dt className="text-xs text-neutral-500">Email</dt>
                                     <dd className="mt-1 break-all text-neutral-950">{loaded.account.email}</dd>
                                 </div>
                             </dl>
-                            {(!profile?.firstName || !profile?.lastName) && (
+                            {(!name?.firstName || !name?.lastName) && (
                                 <p className="mt-3 text-xs text-neutral-500">
                                     Your name is missing.{" "}
                                     <Link href="/my-profile" className="text-neutral-950 underline underline-offset-2">

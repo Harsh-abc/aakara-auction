@@ -41,8 +41,12 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
     const [standing, setStanding] = useState<MyLotStanding | null>(null)
     const [loadError, setLoadError] = useState<{ lotUuid: string; message: string } | null>(null)
     const [reload, setReload] = useState(0)
-    // what the bidder typed, for this lot and kind only ("" = use the suggestion)
+    // the maximum the bidder typed, for this lot and kind only
     const [typed, setTyped] = useState<{ key: string; value: string }>({ key: "", value: "" })
+    // the bid option the bidder picked, for this lot only ("" = the next valid bid)
+    const [picked, setPicked] = useState<{ key: string; amount: string }>({ key: "", amount: "" })
+    // the amount waiting on the bidder's confirmation
+    const [confirming, setConfirming] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
 
     const lotUuid = lot?.uuid
@@ -73,8 +77,10 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
     const money = (amount: string | number | null) => formatMoney(amount, current?.currency ?? lot.currency) ?? "—"
 
     const inputKey = `${lot.uuid}:${kind}`
-    const suggested = kind === "bid" ? current?.nextBid ?? "" : ""
-    const value = typed.key === inputKey ? typed.value : suggested
+    // a new bid moves the options up; a pick that's no longer offered falls back to the next valid bid
+    const options = kind === "bid" ? current?.bidOptions ?? [] : []
+    const pickedAmount = picked.key === inputKey && options.includes(picked.amount) ? picked.amount : options[0] ?? ""
+    const value = kind === "bid" ? pickedAmount : typed.key === inputKey ? typed.value : ""
     const amount = parseAmount(value)
 
     const count = Number(current?.bidCount ?? lot.bidCount) || 0
@@ -113,21 +119,32 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
         }
     }
 
-    const canSubmit = Boolean(current && verified && allowed && !leadingOnBid && amount > 0 && !submitting)
+    const canPlace = Boolean(current && verified && allowed && !leadingOnBid && !submitting)
+    const canSubmit = canPlace && amount > 0
+
+    // someone bid while the bidder was confirming, and the amount no longer reaches the next bid
+    const outpaced = kind === "bid" && confirming !== null && Number(current?.nextBid) > confirming
+
+    const review = () => {
+        if (canSubmit) setConfirming(amount)
+    }
 
     const submit = async () => {
-        if (!canSubmit) return
+        if (!canPlace || confirming === null || outpaced) return
         setSubmitting(true)
         try {
             const { message, data } =
-                kind === "bid" ? await placeBid(lot.uuid, amount, token) : await setProxyBid(lot.uuid, amount, token)
+                kind === "bid" ? await placeBid(lot.uuid, confirming, token) : await setProxyBid(lot.uuid, confirming, token)
             // topped straight away by someone's proxy: say so, but it isn't an error
             if (data.leading || data.status !== "ACTIVE") toast.success(message)
             else toast(message, { icon: "⚠️" })
             setTyped({ key: "", value: "" })
+            setPicked({ key: "", amount: "" })
+            setConfirming(null)
             onClose()
         } catch (err) {
             toast.error(getErrorMessage(err, "Your bid didn't go through. Please try again."))
+            setConfirming(null)
             // someone may have bid first — show the new asking price
             setReload((n) => n + 1)
         } finally {
@@ -137,6 +154,10 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
 
     const handleOpenChange = (open: boolean) => {
         if (!open && !submitting) onClose()
+    }
+
+    const handleConfirmOpenChange = (open: boolean) => {
+        if (!open && !submitting) setConfirming(null)
     }
 
     const rows = current
@@ -218,10 +239,42 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                     </>
                                 )}
                             </p>
+                        ) : kind === "bid" ? (
+                            <div className="mt-5">
+                                <p id="bid-options-label" className={cn(SMALL_CAPS, "text-neutral-500")}>
+                                    Choose your bid
+                                </p>
+                                <div role="radiogroup" aria-labelledby="bid-options-label" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                    {options.map((option) => {
+                                        const selected = option === pickedAmount
+                                        return (
+                                            <button
+                                                key={option}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={selected}
+                                                onClick={() => setPicked({ key: inputKey, amount: option })}
+                                                disabled={submitting}
+                                                className={cn(
+                                                    "h-12 cursor-pointer border px-2 text-sm font-medium tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                                                    selected
+                                                        ? "border-neutral-950 bg-neutral-950 text-white"
+                                                        : "border-neutral-300 bg-white text-neutral-950 hover:border-neutral-950"
+                                                )}
+                                            >
+                                                {money(option)}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+                                    Bids follow the auction&apos;s increments. Bids are binding and can&apos;t be withdrawn.
+                                </p>
+                            </div>
                         ) : (
                             <div className="mt-5">
                                 <label htmlFor="bid-amount" className={cn(SMALL_CAPS, "text-neutral-500")}>
-                                    {kind === "bid" ? "Your bid" : current.proxyMax ? "Raise your maximum to" : "Your maximum bid"}
+                                    {current.proxyMax ? "Raise your maximum to" : "Your maximum bid"}
                                 </label>
                                 <div className="mt-2 flex h-12 items-center border border-neutral-300 bg-white focus-within:border-neutral-950">
                                     <span className="pl-3 text-sm text-neutral-500">{current.currency.symbol ?? current.currency.code}</span>
@@ -232,7 +285,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                         value={value}
                                         onChange={(event) => setTyped({ key: inputKey, value: event.target.value })}
                                         onKeyDown={(event) => {
-                                            if (event.key === "Enter") submit()
+                                            if (event.key === "Enter") review()
                                         }}
                                         placeholder={current.nextBid ? `${Number(current.nextBid)} or more` : ""}
                                         disabled={submitting}
@@ -240,9 +293,8 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                     />
                                 </div>
                                 <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-                                    {kind === "bid"
-                                        ? `Minimum ${money(current.nextBid)}. Bids are binding and can't be withdrawn.`
-                                        : "We bid for you, one increment at a time, only as far as needed to keep you in the lead — never above your maximum. Other bidders don't see it."}
+                                    We bid for you, one increment at a time, only as far as needed to keep you in the lead — never above your
+                                    maximum. Other bidders don&apos;t see it.
                                 </p>
                             </div>
                         )}
@@ -258,18 +310,60 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                     >
                         Cancel
                     </button>
-                    <button type="button" onClick={submit} disabled={!canSubmit} className={cn(ACTION, "bg-neutral-950 text-white hover:bg-neutral-800")}>
-                        {submitting
-                            ? "Sending..."
-                            : kind === "bid"
-                              ? amount > 0
-                                  ? `Bid ${money(amount)}`
-                                  : "Place bid"
-                              : amount > 0
-                                ? `Set maximum ${money(amount)}`
-                                : "Set maximum"}
+                    <button type="button" onClick={review} disabled={!canSubmit} className={cn(ACTION, "bg-neutral-950 text-white hover:bg-neutral-800")}>
+                        {kind === "bid"
+                            ? amount > 0
+                                ? `Bid ${money(amount)}`
+                                : "Place bid"
+                            : amount > 0
+                              ? `Set maximum ${money(amount)}`
+                              : "Set maximum"}
                     </button>
                 </div>
+
+                {/* last look before the bid is sent */}
+                <Dialog open={confirming !== null} onOpenChange={handleConfirmOpenChange}>
+                    <DialogContent showCloseButton={false} className="gap-0 rounded-none p-0 sm:max-w-sm">
+                        <DialogHeader className="border-b border-neutral-200 p-6">
+                            <p className={cn(SMALL_CAPS, "text-neutral-500")}>{lotTag(lot)}</p>
+                            <DialogTitle className="text-xl leading-snug font-light text-neutral-950">
+                                {kind === "bid" ? "Confirm your bid" : "Confirm your maximum bid"}
+                            </DialogTitle>
+                            <DialogDescription className="text-sm text-neutral-600">{lotHeading(lot)}</DialogDescription>
+                        </DialogHeader>
+
+                        <div className="p-6">
+                            <p className={cn(SMALL_CAPS, "text-neutral-500")}>{kind === "bid" ? "Your bid" : "Your maximum bid"}</p>
+                            <p className="mt-2 text-3xl font-light tabular-nums text-neutral-950">{money(confirming)}</p>
+                            <p className={cn("mt-4 text-xs leading-relaxed", outpaced ? "text-red-600" : "text-neutral-500")}>
+                                {outpaced
+                                    ? `Another bidder got there first — the next bid is now ${money(current?.nextBid ?? null)}. Go back and choose again.`
+                                    : kind === "bid"
+                                      ? "By confirming you agree to buy this lot at this price if yours is the winning bid. Bids are binding and can't be withdrawn."
+                                      : "We'll bid for you up to this amount. If it wins, you agree to buy this lot at the winning price."}
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col-reverse gap-3 border-t border-neutral-200 p-6 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => handleConfirmOpenChange(false)}
+                                disabled={submitting}
+                                className={cn(ACTION, "border border-neutral-950 bg-white text-neutral-950 hover:bg-neutral-50")}
+                            >
+                                Back
+                            </button>
+                            <button
+                                type="button"
+                                onClick={submit}
+                                disabled={submitting || !canPlace || outpaced}
+                                className={cn(ACTION, "bg-neutral-950 text-white hover:bg-neutral-800")}
+                            >
+                                {submitting ? "Sending..." : kind === "bid" ? "Confirm bid" : "Confirm maximum"}
+                            </button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </DialogContent>
         </Dialog>
     )

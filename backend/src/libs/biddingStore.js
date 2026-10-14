@@ -108,11 +108,24 @@ local seq = tonumber(lot.seq) or 0
 local itemNumber = lot.itemNumber
 local prevLeader = leader
 
-local function defaultIncrement(value)
-    local r = value * 0.05
-    if r <= 1 then return 1 end
-    local step = math.pow(10, math.floor(math.log10(r))) / 2
-    return math.ceil(r / step) * step
+-- house increment chart, in tenths of a decade (see utils/bidIncrement.js)
+local LADDER = {
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    20, 22, 24, 26, 28,
+    30, 32, 35, 38, 40, 42, 45, 48,
+    50, 55, 60, 65, 70, 75, 80, 85, 90, 95,
+    100,
+}
+
+-- the first step of the chart above value
+local function ladderAbove(value)
+    if value < 10 then return math.floor(value) + 1 end
+    local decade = math.pow(10, math.floor(math.log10(value)))
+    if decade > value then decade = decade / 10 elseif decade * 10 <= value then decade = decade * 10 end
+    local unit = decade / 10
+    for _, tenths in ipairs(LADDER) do
+        if tenths * unit > value then return tenths * unit end
+    end
 end
 
 -- smallest bid the next bidder may place
@@ -128,7 +141,7 @@ local function nextMin(value)
             return value + tonumber(rule.value)
         end
     end
-    return value + defaultIncrement(value)
+    return ladderAbove(value)
 end
 
 local proxies = {}

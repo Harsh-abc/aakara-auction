@@ -21,6 +21,8 @@ export interface MyLotStanding {
     bidCount: string
     /** null once bidding is over */
     nextBid: string | null
+    /** the next valid bid and the two steps of the increment chart above it; empty once bidding is over */
+    bidOptions: string[]
     leading: boolean
     /** the bidder's proxy (maximum) bid on this lot */
     proxyMax: string | null

@@ -17,18 +17,14 @@ import {
     authLabelClass,
 } from "@/components/core/auth/registration/AuthField"
 import { getErrorMessage } from "@/lib/apiError"
+import { accountName, hasProfileName } from "@/lib/accountName"
 import { ProfileButton, ProfileSection } from "./ProfileUI"
-
-// signup stores "First Last" as the username and leaves the profile names empty
-const hasProfileName = (account: MyAccount) => !!(account.profile?.firstName || account.profile?.lastName)
 
 const toForm = (account: MyAccount) => {
     const { countryCode, number } = splitPhone(account.phone)
-    const [usernameFirst = "", ...usernameRest] = hasProfileName(account) ? [] : account.username.trim().split(/\s+/)
 
     return {
-        firstName: account.profile?.firstName || usernameFirst,
-        lastName: account.profile?.lastName || usernameRest.join(" "),
+        ...accountName(account),
         countryCode,
         phone: number,
     }

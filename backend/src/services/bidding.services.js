@@ -14,7 +14,7 @@ import {
     runBidEngine,
 } from "../libs/biddingStore.js";
 import { emitTo, rooms } from "../libs/socket.js";
-import { nextValidBid } from "../utils/bidIncrement.js";
+import { bidOptions, nextValidBid } from "../utils/bidIncrement.js";
 import { serializeBigInt } from "../utils/serialize.js";
 
 // =====================================================================
@@ -552,6 +552,7 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
             currentBid: view.currentBid,
             bidCount: view.bidCount,
             nextBid: biddingOpen ? view.nextBid : null,
+            bidOptions: biddingOpen ? bidOptions(view.nextBid, JSON.parse(state.rules || "[]")).map(String) : [],
             leading: view.leaderId === String(userId),
             proxyMax: proxy ? String(JSON.parse(proxy).max) : null,
         };
@@ -561,6 +562,7 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
             currentBid: count > 0 && lot.currentBid !== null ? lot.currentBid.toString() : null,
             bidCount: String(count),
             nextBid: null,
+            bidOptions: [],
             leading: count > 0 && lot.currentBidderId === user,
             proxyMax: null,
         };
