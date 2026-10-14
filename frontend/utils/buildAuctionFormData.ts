@@ -193,7 +193,14 @@ export const buildAuctionFormData = (
 
     formData.append("registrationRequired", String(Boolean(schedule.registrationRequired)));
     appendIfPresent(formData, "registrationStarts", dateOnlyToIso(schedule.registrationStarts));
-    appendIfPresent(formData, "registrationDeadline", dateOnlyToEndOfDayIso(schedule.registrationDeadline));
+    // Deadline on the auction's last day -> open until the auction ends; an earlier day -> open all of that day
+    appendIfPresent(
+        formData,
+        "registrationDeadline",
+        schedule.registrationDeadline && schedule.registrationDeadline === schedule.endDate
+            ? combineDateTime(schedule.endDate, schedule.endTime)
+            : dateOnlyToEndOfDayIso(schedule.registrationDeadline)
+    );
     formData.append("timezone", schedule.timezone || "Asia/Kolkata");
 
     // LIVE auctions only. Always sent so an edit can switch it off (backend replaces the rule)
