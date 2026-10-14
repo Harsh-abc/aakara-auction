@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { LayoutGrid, List } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
@@ -10,6 +9,7 @@ import type { PublicLotSort, PublicLotsPage } from "@/lib/types/publicAuction.ty
 import { getPublicLots } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "@/lib/apiError"
 
+import { BODY, EYEBROW } from "../../storefront"
 import { SearchInput } from "../SearchInput"
 import { LotCard, LotRow } from "./LotCard"
 import { LotPagination } from "./LotPagination"
@@ -50,7 +50,7 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
     const [result, setResult] = useState<LotsResult | null>(null)
     const loading = result?.key !== queryKey
 
-    const topRef = useRef<HTMLDivElement>(null)
+    const topRef = useRef<HTMLElement>(null)
 
     // "Add to my auction gallery" on each lot; guests are sent to log in
     const { controls: gallery } = useGallery()
@@ -85,113 +85,99 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
 
     return (
         <>
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                <SearchInput
-                    value={searchInput}
-                    onChange={setSearchInput}
-                    label="Search lots"
-                    placeholder="Search by artist name, artwork title, lot number or keyword..."
-                    className="md:max-w-sm"
-                />
-                {aside}
-            </div>
+            {/* search + the sale countdown */}
+            <section>
+                <div className="page-container flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                    <SearchInput value={searchInput} onChange={setSearchInput} label="Search lots" placeholder="Search by artist name, artwork title, lot number or keyword…" className="md:max-w-md" />
+                    {aside}
+                </div>
+            </section>
 
-            <section ref={topRef} className="mt-14 scroll-mt-6">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-3">
-                    <div className="flex items-baseline gap-3">
-                        <h2 className="text-base text-neutral-950">All lots</h2>
-                        <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-                            {result ? `${total} ${total === 1 ? "lot" : "lots"}` : "—"}
-                        </span>
-                    </div>
+            <section ref={topRef} aria-labelledby="all-lots-heading" className="scroll-mt-24">
+                <div className="page-container">
+                    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#cecece] pb-3.25">
+                        <h2 id="all-lots-heading" className="flex items-baseline gap-2.5 text-[18px] leading-7 font-medium tracking-tight text-[#0d0d0d]">
+                            All lots
+                            <span className={EYEBROW}>{result ? `${total} ${total === 1 ? "lot" : "lots"}` : "—"}</span>
+                        </h2>
 
-                    <div className="flex items-center gap-2">
-                        <label className="flex h-8 items-center gap-2 border border-neutral-300 pl-3 text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-                            Sort ·
-                            <select
-                                value={sort}
-                                onChange={(event) => setSort(event.target.value as PublicLotSort)}
-                                className="h-full cursor-pointer bg-transparent pr-2 text-[10px] uppercase tracking-[0.16em] text-neutral-950 outline-none"
-                            >
-                                {(Object.keys(SORT_LABELS) as PublicLotSort[]).map((key) => (
-                                    <option key={key} value={key}>
-                                        {SORT_LABELS[key]}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        <div className="flex items-center gap-3">
+                            <label className="flex h-9.25 items-center gap-1.5 border border-[#cecece] bg-white pl-3.25 text-[11px] leading-[13.2px] tracking-[0.16em] uppercase">
+                                <span className="text-[#717171]/70">Sort ·</span>
+                                <select
+                                    value={sort}
+                                    onChange={(event) => setSort(event.target.value as PublicLotSort)}
+                                    className="h-full cursor-pointer appearance-none bg-transparent pr-8 text-[11px] tracking-[0.16em] text-[#0d0d0d] uppercase outline-none"
+                                >
+                                    {(Object.keys(SORT_LABELS) as PublicLotSort[]).map((key) => (
+                                        <option key={key} value={key}>
+                                            {SORT_LABELS[key]}
+                                        </option>
+                                    ))}
+                                </select>
+                                <span aria-hidden className="pointer-events-none -ml-7 pr-3.25 text-[12px] text-[#717171]">
+                                    ▾
+                                </span>
+                            </label>
 
-                        <div className="flex" role="group" aria-label="Layout">
-                            {(["grid", "list"] as const).map((mode) => {
-                                const Icon = mode === "grid" ? LayoutGrid : List
-                                return (
+                            <div className="flex border border-[#333] p-px" role="group" aria-label="Layout">
+                                {(["grid", "list"] as const).map((mode) => (
                                     <button
                                         key={mode}
                                         type="button"
                                         onClick={() => setView(mode)}
                                         aria-pressed={view === mode}
                                         aria-label={mode === "grid" ? "Grid view" : "List view"}
-                                        className={cn(
-                                            "inline-flex size-8 cursor-pointer items-center justify-center border -ml-px first:ml-0",
-                                            view === mode
-                                                ? "border-neutral-950 bg-neutral-950 text-white"
-                                                : "border-neutral-300 text-neutral-600 hover:text-neutral-950"
-                                        )}
+                                        className={cn("inline-flex size-9 cursor-pointer items-center justify-center transition-colors", view === mode ? "bg-[#0d0d0d]" : "bg-white hover:bg-[#f4f2ef]")}
                                     >
-                                        <Icon className="size-3.5" />
+                                        {/* the grid icon is drawn white, the list icon dark — flip whichever isn't in its own state */}
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={mode === "grid" ? "/icons/view-grid.svg" : "/icons/view-list.svg"} alt="" width={16} height={16} className={cn((mode === "grid") !== (view === mode) && "invert")} />
                                     </button>
-                                )
-                            })}
+                                ))}
+                            </div>
                         </div>
                     </div>
+
+                    {!result ? (
+                        <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            {Array.from({ length: 6 }, (_, i) => (
+                                <div key={i} className="border border-[#cecece] p-4">
+                                    <Skeleton className="h-62.75 w-full rounded-none" />
+                                    <Skeleton className="mt-4 h-3.75 w-16 rounded-none" />
+                                    <Skeleton className="mt-4 h-5 w-40 rounded-none" />
+                                    <Skeleton className="mt-1 h-3.5 w-32 rounded-none" />
+                                    <Skeleton className="mt-4 h-11 w-full rounded-none" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : result.error ? (
+                        <p className={cn(BODY, "py-16 text-center")}>{result.error}</p>
+                    ) : result.lots.length === 0 ? (
+                        <p className={cn(BODY, "py-16 text-center")}>{search ? "No lots match your search. Try an artist, title or lot number." : "Lots for this sale will be published soon."}</p>
+                    ) : (
+                        <div className={cn("transition-opacity", loading && "pointer-events-none opacity-50")} aria-busy={loading}>
+                            {view === "grid" ? (
+                                <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                    {result.lots.map((lot) => (
+                                        <LotCard key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div>
+                                    {result.lots.map((lot) => (
+                                        <LotRow key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="mt-8">
+                                <LotPagination page={result.pagination.page} totalPages={result.pagination.totalPages} onPageChange={goToPage} />
+                            </div>
+                        </div>
+                    )}
                 </div>
-
-                {!result ? (
-                    <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        {Array.from({ length: 6 }, (_, i) => (
-                            <div key={i} className="border border-neutral-200 p-4">
-                                <Skeleton className="aspect-square w-full rounded-none" />
-                                <Skeleton className="mt-4 h-3 w-16 rounded-none" />
-                                <Skeleton className="mt-3 h-4 w-40 rounded-none" />
-                                <Skeleton className="mt-2 h-3 w-32 rounded-none" />
-                                <Skeleton className="mt-4 h-9 w-full rounded-none" />
-                            </div>
-                        ))}
-                    </div>
-                ) : result.error ? (
-                    <p className="py-16 text-center text-sm text-neutral-500">{result.error}</p>
-                ) : result.lots.length === 0 ? (
-                    <p className="py-16 text-center text-sm text-neutral-500">
-                        {search ? "No lots match your search. Try an artist, title or lot number." : "Lots for this sale will be published soon."}
-                    </p>
-                ) : (
-                    <div className={cn("transition-opacity", loading && "pointer-events-none opacity-50")} aria-busy={loading}>
-                        {view === "grid" ? (
-                            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                                {result.lots.map((lot) => (
-                                    <LotCard key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="mt-2">
-                                {result.lots.map((lot) => (
-                                    <LotRow key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="mt-10">
-                            <LotPagination
-                                page={result.pagination.page}
-                                totalPages={result.pagination.totalPages}
-                                total={total}
-                                limit={result.pagination.limit}
-                                onPageChange={goToPage}
-                            />
-                        </div>
-                    </div>
-                )}
             </section>
         </>
-    )
+    );
 }

@@ -7,6 +7,7 @@ import type { PublicAuction } from "@/lib/types/publicAuction.types";
 import { getMyProfile, getMyRegistrations } from "@/services/operations/profile.api";
 import { getFeaturedAuction } from "@/services/operations/publicAuction.api";
 
+import { PAGE_MAIN } from "../storefront";
 import { bidderEligibility, type BidderEligibility } from "./auctionDisplay";
 import { AuctionListings } from "./AuctionListings";
 import { FeaturedAuction, FeaturedAuctionSkeleton } from "./FeaturedAuction";
@@ -31,11 +32,7 @@ export function AuctionsPage() {
 
     // read from the account, not the token's role — KYC status can change mid-session
     const [eligibilityFor, setEligibilityFor] = useState<{ token: string; value: BidderEligibility } | null>(null);
-    const eligibility: BidderEligibility = !token
-        ? "guest"
-        : eligibilityFor?.token === token
-          ? eligibilityFor.value
-          : "loading";
+    const eligibility: BidderEligibility = !token ? "guest" : eligibilityFor?.token === token ? eligibilityFor.value : "loading";
 
     useEffect(() => {
         if (!token) return;
@@ -68,7 +65,7 @@ export function AuctionsPage() {
     }, []);
 
     return (
-        <main className="mx-auto flex w-full max-w-6xl flex-col gap-14 px-4 py-6 md:gap-16 md:px-6 md:py-8">
+        <main className={PAGE_MAIN}>
             {featuredLoading ? <FeaturedAuctionSkeleton /> : <FeaturedAuction auction={featured} />}
             <AuctionListings paddles={paddles} eligibility={eligibility} onRegistered={handleRegistered} />
             <HowToBid />

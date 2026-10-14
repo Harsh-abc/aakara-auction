@@ -1,22 +1,17 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-// small outlined tag — gold for upcoming, maroon for live, grey once a sale has closed
+// small square tag — gold outline before a sale opens, black while it's live, grey once it has closed
 const TONES = {
-    upcoming: "border-[#C9A24B] text-[#9A7524]",
-    live: "border-[#7A3D5E] text-[#7A3D5E]",
-    closed: "border-neutral-300 text-neutral-500",
-}
+    upcoming: "border-[#d0a55d] bg-white text-[#0d0d0d]",
+    live: "border-black bg-black text-white",
+    closed: "border-[#cecece] bg-white text-[#717171]",
+};
 
 export function StatusBadge({ label, tone }: { label: string; tone: keyof typeof TONES }) {
     return (
-        <span
-            className={cn(
-                "inline-flex items-center gap-1.5 border bg-white px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.18em]",
-                TONES[tone]
-            )}
-        >
-            {tone === "live" && <span className="size-1.5 animate-pulse rounded-full bg-[#7A3D5E]" />}
+        <span className={cn("inline-flex items-center gap-1.5 border px-1.75 py-0.75 text-[10px] leading-3.75 tracking-[0.14em] uppercase", TONES[tone])}>
+            {tone === "live" && <span className="size-1 shrink-0 rounded-full bg-[#d0a55d]" />}
             {label}
         </span>
-    )
+    );
 }

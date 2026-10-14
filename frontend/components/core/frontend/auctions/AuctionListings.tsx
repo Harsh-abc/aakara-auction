@@ -9,9 +9,11 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { PublicAuctionsPage, PublicAuctionTab } from "@/lib/types/publicAuction.types";
 import { getPublicAuctions } from "@/services/operations/publicAuction.api";
 import { getErrorMessage } from "@/lib/apiError";
+import { cn } from "@/lib/utils";
 
+import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, SectionHeading } from "../storefront";
 import type { BidderEligibility } from "./auctionDisplay";
-import { AuctionListItem } from "./AuctionListItem";
+import { AuctionListItem, ROW_GRID } from "./AuctionListItem";
 import { SearchInput } from "./SearchInput";
 
 const PAGE_SIZE = 10;
@@ -39,14 +41,11 @@ const EMPTY_PAGE: PublicAuctionsPage = {
     pagination: { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 0 },
 };
 
-// tab styling from the reference design: tinted background + gold underline on the active tab
+// Figma tabs: tinted fill + gold underline on the active tab
 const TAB_TRIGGER =
-    "relative inline-flex h-10 flex-none shrink-0 cursor-pointer items-center whitespace-nowrap rounded-none border-0 bg-transparent px-4 text-[10px] font-normal uppercase tracking-[0.16em] text-[#717171] transition-colors duration-200 hover:text-[#0d0d0d] sm:px-5 " +
-    "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:bg-[#d0a55d] after:transition-transform after:duration-300 " +
-    "data-active:bg-[#fdedd6] data-active:text-[#0d0d0d] data-active:after:scale-x-100 group-data-[variant=default]/tabs-list:data-active:shadow-none";
-
-const LOAD_MORE =
-    "inline-flex h-11 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-none border border-[#333] bg-white px-6 text-[12px] uppercase tracking-[0.12em] text-[#0d0d0d] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-[#d0a55d] hover:bg-[#fdedd6] active:translate-y-px disabled:cursor-not-allowed disabled:border-[#a3a3a3] disabled:bg-[#a3a3a3] disabled:text-white";
+    "relative inline-flex h-10.25 flex-none shrink-0 cursor-pointer items-center whitespace-nowrap rounded-none border-0 bg-transparent px-5 text-[12px] leading-4 font-normal tracking-[0.14em] text-[#717171] uppercase transition-colors duration-200 hover:text-[#0d0d0d] " +
+    "after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:bg-[#cea25a] after:transition-transform after:duration-300 " +
+    "data-active:bg-[#fbe4c8]/50 data-active:font-medium data-active:text-[#0d0d0d] data-active:after:scale-x-100 group-data-[variant=default]/tabs-list:data-active:shadow-none";
 
 type AuctionListingsProps = {
     paddles: Record<string, string>;
@@ -99,81 +98,70 @@ export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionL
     };
 
     return (
-        <section id="auctions" aria-labelledby="auction-list-heading" className="scroll-mt-24 pt-16">
-            <div className="mb-8">
-                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#cecece] pb-3">
-                    <h2 className="text-lg font-normal text-[#0d0d0d]">
-                        <span id="auction-list-heading">Upcoming &amp; Live Auctions</span>
-                    </h2>
+        <section id="auctions" aria-labelledby="auction-list-heading" className="scroll-mt-24">
+            <div className="page-container">
+                <SectionHeading id="auction-list-heading" title="Upcoming & Live Auctions" description={tabDescriptions[tab]} />
+
+                <div className="mt-6 flex flex-col-reverse gap-4 border-b border-[#cecece] md:flex-row md:items-end md:justify-between">
+                    <Tabs value={tab} onValueChange={(value) => setTab(value as PublicAuctionTab)}>
+                        <TabsList className="-mb-px h-auto w-full justify-start rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto">
+                            {(Object.keys(tabLabels) as PublicAuctionTab[]).map((key) => (
+                                <TabsTrigger key={key} value={key} className={TAB_TRIGGER}>
+                                    {tabLabels[key]}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </Tabs>
+
+                    <SearchInput value={searchInput} onChange={setSearchInput} label="Search auctions" placeholder="Search by artist, title, lot number or keyword…" className="md:mb-2 md:max-w-md" />
                 </div>
-                <p className="mt-3 text-[13px] text-[#717171]">{tabDescriptions[tab]}</p>
-            </div>
 
-            <div className="flex flex-col-reverse gap-4 border-b border-[#cecece] md:flex-row md:items-end md:justify-between">
-                <Tabs value={tab} onValueChange={(value) => setTab(value as PublicAuctionTab)}>
-                    <TabsList className="-mb-px h-auto w-full justify-start rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto">
-                        {(Object.keys(tabLabels) as PublicAuctionTab[]).map((key) => (
-                            <TabsTrigger key={key} value={key} className={TAB_TRIGGER}>
-                                {tabLabels[key]}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
+                {search && !loading && !error && (
+                    <p className={cn(BODY, "mt-6")}>
+                        {total} {total === 1 ? "sale" : "sales"} matching “{search}”
+                    </p>
+                )}
 
-                <SearchInput value={searchInput} onChange={setSearchInput} label="Search auctions" placeholder="Search by artist, title, lot number or keyword…" className="mb-3 md:max-w-74" />
-            </div>
-
-            {search && !loading && !error && (
-                <p className="mt-4 text-[13px] text-[#717171]">
-                    {total} {total === 1 ? "sale" : "sales"} matching “{search}”
-                </p>
-            )}
-
-            {loading ? (
-                <div>
-                    {[0, 1].map((i) => (
-                        <div key={i} className="grid gap-6 border-b border-[#e3e3e3] py-8 sm:grid-cols-[180px_1fr] lg:grid-cols-[200px_1fr_300px] lg:gap-10">
-                            <Skeleton className="aspect-4/5 w-full max-w-50 rounded-none bg-[#f4f2ef]" />
-                            <div className="min-w-0">
-                                <Skeleton className="h-5.5 w-20 rounded-none" />
-                                <Skeleton className="mt-3 h-6 w-56 rounded-none" />
-                                <Skeleton className="mt-2 h-3 w-72 rounded-none" />
-                                <Skeleton className="mt-4 h-12 w-full max-w-xl rounded-none" />
-                            </div>
-                            <div className="flex flex-col gap-4 sm:col-span-2 lg:col-span-1 lg:items-end">
-                                <Skeleton className="h-8 w-48 rounded-none" />
-                                <Skeleton className="h-11 w-full rounded-none lg:mt-auto" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : error ? (
-                <p className="py-12 text-center text-[13px] text-[#717171]">{error}</p>
-            ) : auctions.length === 0 ? (
-                <p className="py-12 text-center text-[13px] text-[#717171]">{search ? "No sales match your search. Try an artist, title or lot number." : emptyCopy[tab]}</p>
-            ) : (
-                <>
+                {loading ? (
                     <div>
-                        {auctions.map((auction) => (
-                            <AuctionListItem
-                                key={auction.uuid}
-                                auction={auction}
-                                paddleNumber={paddles[auction.uuid]}
-                                eligibility={eligibility}
-                                onRegistered={onRegistered}
-                            />
+                        {[0, 1].map((i) => (
+                            <div key={i} className={ROW_GRID}>
+                                <Skeleton className="h-52.5 w-full rounded-none bg-[#f4f2ef]" />
+                                <div className="min-w-0">
+                                    <Skeleton className="h-5.75 w-20 rounded-none" />
+                                    <Skeleton className="mt-3.5 h-7 w-56 rounded-none" />
+                                    <Skeleton className="mt-2 h-3.5 w-72 rounded-none" />
+                                    <Skeleton className="mt-4 h-17 w-full rounded-none" />
+                                </div>
+                                <div className="flex flex-col justify-end gap-2">
+                                    <Skeleton className="h-11 w-full rounded-none" />
+                                    <Skeleton className="h-11 w-full rounded-none" />
+                                </div>
+                            </div>
                         ))}
                     </div>
-
-                    {page < totalPages && (
-                        <div className="flex justify-center pt-8">
-                            <button type="button" onClick={loadMore} disabled={loadingMore} className={LOAD_MORE}>
-                                {loadingMore ? "Loading..." : "Load more sales"}
-                            </button>
+                ) : error ? (
+                    <p className={cn(BODY, "py-12 text-center")}>{error}</p>
+                ) : auctions.length === 0 ? (
+                    <p className={cn(BODY, "py-12 text-center")}>{search ? "No sales match your search. Try an artist, title or lot number." : emptyCopy[tab]}</p>
+                ) : (
+                    <>
+                        <div>
+                            {auctions.map((auction) => (
+                                <AuctionListItem key={auction.uuid} auction={auction} paddleNumber={paddles[auction.uuid]} eligibility={eligibility} onRegistered={onRegistered} />
+                            ))}
                         </div>
-                    )}
-                </>
-            )}
+
+                        {page < totalPages && (
+                            <div className="flex justify-center pt-6">
+                                <button type="button" onClick={loadMore} disabled={loadingMore} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
+                                    {loadingMore ? "Loading..." : "Load more sales"}
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
         </section>
     );
 }

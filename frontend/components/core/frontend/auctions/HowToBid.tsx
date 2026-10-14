@@ -1,3 +1,7 @@
+import { cn } from "@/lib/utils";
+
+import { BODY, SectionHeading } from "../storefront";
+
 const steps = [
     {
         title: "Register & verify",
@@ -11,25 +15,23 @@ const steps = [
         title: "Place your bid",
         body: "Enter your maximum bid and we will bid on your behalf in set increments. You will be notified instantly if you are outbid or if the lot is yours.",
     },
-]
+];
 
 export function HowToBid() {
     return (
-        <section>
-            <header className="border-b border-neutral-200 pb-4">
-                <h2 className="text-lg font-normal text-neutral-950">How to bid</h2>
-            </header>
-            <ol className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-10">
-                {steps.map((step, index) => (
-                    <li key={step.title}>
-                        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#C9A24B]">
-                            Step {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <h3 className="mt-4 text-sm font-medium text-neutral-950">{step.title}</h3>
-                        <p className="mt-3 text-sm leading-relaxed text-neutral-500">{step.body}</p>
-                    </li>
-                ))}
-            </ol>
+        <section aria-labelledby="how-to-bid-heading">
+            <div className="page-container">
+                <SectionHeading id="how-to-bid-heading" title="How to bid" />
+                <ol className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+                    {steps.map((step, index) => (
+                        <li key={step.title} className="bg-white p-6">
+                            <span className="text-[11px] leading-[13.2px] font-semibold tracking-[0.16em] text-[#d0a55d] uppercase">Step {String(index + 1).padStart(2, "0")}</span>
+                            <h3 className="mt-3 text-[14px] leading-5 font-medium text-[#0d0d0d]">{step.title}</h3>
+                            <p className={cn(BODY, "mt-3")}>{step.body}</p>
+                        </li>
+                    ))}
+                </ol>
+            </div>
         </section>
-    )
+    );
 }

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils"
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
 
+import { SectionHeading } from "../../storefront"
 import { formatMoney, lotBidLine } from "../detail/lotDisplay"
 import { bidCountLabel, isClosedLot, isUpcomingLot, lotTag } from "./lotPageDisplay"
 
@@ -16,15 +17,15 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
 
     return (
         <section className={className} aria-label="Bid ladder">
-            <div className="flex items-baseline justify-between gap-4 border-b border-[#cecece] pb-3">
-                <h2 className="flex items-baseline gap-2.75">
-                    <span className="text-[18px] leading-7 font-medium tracking-tight text-[#0d0d0d]">Bid ladder</span>
-                    <span className="text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">
-                        {lotTag(lot)}
-                    </span>
-                </h2>
-                <span className={cn(SMALL_CAPS, "text-[#717171]")}>{bidCountLabel(count)} so far</span>
-            </div>
+            <SectionHeading
+                title={
+                    <>
+                        Bid ladder
+                        <span className="text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">{lotTag(lot)}</span>
+                    </>
+                }
+                aside={`${bidCountLabel(count)} so far`}
+            />
 
             <div className="mt-6 border border-[#cecece] bg-white">
                 <div className="flex h-16.5 items-center border-b border-dashed border-[#333]">
