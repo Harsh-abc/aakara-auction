@@ -50,7 +50,7 @@ export function LotGallery({ auctionUuid, lot, lots }: LotGalleryProps) {
                 </div>
             </div>
 
-            <div className="mt-4 flex flex-col-reverse gap-4 sm:flex-row sm:gap-6.5">
+            <div className="mt-4 flex flex-col-reverse gap-4 sm:flex-row sm:gap-7.5">
                 {media.length > 0 && (
                     // beside the image the strip is as tall as the image and scrolls past that
                     <div className="relative shrink-0 sm:w-22">

@@ -171,7 +171,7 @@ select option:checked {
     margin: 0.75rem 0 0.5rem;
 }
 
-.ProseMirror > :first-child {
+.ProseMirror> :first-child {
     margin-top: 0;
 }
 
@@ -378,8 +378,8 @@ select option:checked {
     text-align: left;
 }
 
-.rich-text td > p,
-.rich-text th > p {
+.rich-text td>p,
+.rich-text th>p {
     margin: 0;
 }
 
@@ -411,4 +411,5 @@ select option:checked {
     margin-inline: auto;
     width: 100%;
     max-width: 1200px;
+    padding-inline: calc(var(--spacing) * 6);
 }

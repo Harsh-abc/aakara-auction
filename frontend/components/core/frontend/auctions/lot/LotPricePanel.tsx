@@ -51,7 +51,7 @@ export function LotPricePanel({ lot, onBid, className }: { lot: PublicLotDetail;
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} className="mt-5.5" />
+            <BidButtons lot={lot} onBid={onBid} className="mt-6" />
         </aside>
     )
 }

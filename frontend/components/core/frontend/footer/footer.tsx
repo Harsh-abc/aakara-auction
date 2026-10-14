@@ -35,7 +35,7 @@ function ContactLine({ text }: { text: string }) {
 export function Footer() {
     return (
         <footer className="mt-auto border-t border-[#cecece] bg-[#f4f2ef]">
-            <div className="mx-auto w-full max-w-[1200px] px-6 grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+            <div className="page-container mx-auto w-full grid gap-10 py-13 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
                 <div className="flex flex-col gap-4">
                     <AkaraLogo />
                     <p className="max-w-66 text-sm leading-relaxed text-[#717171]">{FOOTER_CONTENT.aboutText}</p>

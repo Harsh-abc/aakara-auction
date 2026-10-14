@@ -11,6 +11,7 @@ import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { registerForAuction } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "@/lib/apiError"
 
+import { BUTTON, BUTTON_OUTLINE, BUTTON_SOLID } from "../storefront"
 import { registrationWindow, type BidderEligibility } from "./auctionDisplay"
 import { RegisterConfirmDialog } from "./RegisterConfirmDialog"
 
@@ -33,12 +34,12 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
     const [loading, setLoading] = useState(false)
     const [confirmOpen, setConfirmOpen] = useState(false)
 
-    const base =
-        "inline-flex h-11 w-full items-center justify-center px-6 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors"
+    // shared 44px storefront button
+    const base = BUTTON
 
     if (paddleNumber) {
         return (
-            <span className={cn(base, "border border-neutral-950 bg-white text-neutral-950", className)}>
+            <span className={cn(base, BUTTON_OUTLINE, className)}>
                 Registered · Paddle {paddleNumber}
             </span>
         )
@@ -47,7 +48,7 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
     const registration = registrationWindow(auction)
     if (!registration.open || eligibility === "not-bidder" || eligibility === "awaiting-bidder-role") {
         return (
-            <span className={cn(base, "cursor-not-allowed bg-neutral-200 text-neutral-500", className)}>
+            <span className={cn(base, "cursor-not-allowed border-[#cecece] bg-[#f4f2ef] text-[#717171]", className)}>
                 {!registration.open
                     ? registration.reason
                     : eligibility === "awaiting-bidder-role"
@@ -59,7 +60,7 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
 
     if (eligibility === "kyc-pending") {
         return (
-            <Link href={KYC_HREF} className={cn(base, "bg-black text-white", className)}>
+            <Link href={KYC_HREF} className={cn(base, BUTTON_SOLID, className)}>
                 Register to Bid
             </Link>
         )
@@ -96,7 +97,7 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
                 disabled={loading || eligibility === "loading"}
                 className={cn(
                     base,
-                    "cursor-pointer bg-neutral-950 text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-70",
+                    BUTTON_SOLID,
                     className
                 )}
             >

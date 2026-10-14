@@ -1,3 +1,5 @@
+import { EYEBROW, SectionHeading } from "../../storefront"
+
 const FAQS = [
     {
         question: "How do I place a bid on this lot?",
@@ -17,24 +19,29 @@ const FAQS = [
     },
 ]
 
-export function LotFaqs({ className }: { className?: string }) {
+export function LotFaqs() {
     return (
-        <section className={className}>
-            <div className="border-b border-[#cecece] pb-3.25">
-                <h2 className="flex items-baseline gap-3">
-                    <span className="text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">Help</span>
-                    <span className="text-[18px] leading-7 font-medium tracking-tight text-[#0d0d0d]">FAQs</span>
-                </h2>
-            </div>
+        <section aria-labelledby="lot-faqs-heading">
+            <div className="page-container">
+                <SectionHeading
+                    id="lot-faqs-heading"
+                    title={
+                        <>
+                            <span className={EYEBROW}>Help</span>
+                            FAQs
+                        </>
+                    }
+                />
 
-            <dl className="mt-6 divide-y divide-[#cecece] bg-white text-[14px]">
-                {FAQS.map(({ question, answer }) => (
-                    <div key={question} className="px-4 py-4">
-                        <dt className="leading-5 font-medium text-[#0d0d0d]">{question}</dt>
-                        <dd className="mt-2 leading-[22.75px] text-[#717171]">{answer}</dd>
-                    </div>
-                ))}
-            </dl>
+                <dl className="mt-6 divide-y divide-[#cecece] bg-white text-[14px]">
+                    {FAQS.map(({ question, answer }) => (
+                        <div key={question} className="px-4 py-4">
+                            <dt className="leading-5 font-medium text-[#0d0d0d]">{question}</dt>
+                            <dd className="mt-2 leading-[22.75px] text-[#717171]">{answer}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </div>
         </section>
     )
 }

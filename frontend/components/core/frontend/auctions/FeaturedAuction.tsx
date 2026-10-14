@@ -1,60 +1,69 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import RichTextContent from "@/components/common/RichTextContent";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
+import { cn } from "@/lib/utils";
 
+import { BODY, BUTTON, BUTTON_INLINE, BUTTON_SOLID } from "../storefront";
 import { AuctionCountdown } from "./AuctionCountdown";
 import { auctionHref, countdownFor, isLive } from "./auctionDisplay";
 import { StatusBadge } from "./StatusBadge";
 
-// layout + styles from the home page design
-const CARD = "border border-[#cecece] bg-white";
-const BANNER_WRAP = "overflow-hidden border-b border-[#cecece] bg-black";
-const BANNER_FRAME = "relative block aspect-[16/9] w-full overflow-hidden sm:aspect-[8/3]";
-const CARD_BODY = "flex flex-1 flex-col gap-6 p-6 md:flex-row md:items-end md:justify-between md:gap-10";
+// Figma: "Auction Landing page" hero card — 8:3 banner over a 24px body
+const CARD = "border border-[#cecece] bg-white p-px";
+const BANNER = "relative aspect-4/3 w-full overflow-hidden bg-[#ebebeb] sm:aspect-8/3";
+const BODY_ROW = "flex flex-col gap-6 p-6 md:flex-row md:items-end md:justify-between md:gap-10";
+const TITLE = "mt-4 text-[36px] leading-none font-medium tracking-tight text-[#0d0d0d] sm:text-[48px]";
 
-const TITLE = "mt-4 text-[2.25rem] font-medium leading-none tracking-[-0.025em] text-[#0d0d0d] sm:text-5xl";
-const DESC = "mt-4 text-sm leading-relaxed text-[#717171]";
-
-const CTA =
-    "inline-flex h-11 select-none items-center justify-center gap-2 whitespace-nowrap rounded-none border border-black bg-black px-6 text-[12px] uppercase tracking-[0.12em] text-white transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-[#673364] hover:bg-[#673364] active:translate-y-px";
-
-// shown when the sale has no cover image, or there's no sale to feature yet
-function BannerFallback({ title, kicker }: { title: string; kicker: string }) {
-    return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,#5A2A4C_0%,#2A1424_70%)] px-6 text-center">
-            <span className="text-[10px] uppercase tracking-[0.3em] text-[#D9B45A] sm:text-xs">{kicker}</span>
-            <h2 className="mt-3 max-w-3xl font-serif text-3xl leading-tight text-[#F5E6D3] uppercase sm:text-5xl lg:text-6xl">{title}</h2>
-        </div>
-    );
+// the house banner (Figma "hero banner") — used until a sale has its own cover image
+function HouseBanner({ priority }: { priority?: boolean }) {
+    return <Image src="/banners/inaugural-coming-soon.png" alt="Akara — inaugural fine art auction, coming soon" fill priority={priority} sizes="(min-width: 1200px) 1150px, 100vw" className="object-cover" />;
 }
 
 export function FeaturedAuctionSkeleton() {
     return (
-        <section className={CARD}>
-            <div className={BANNER_WRAP}>
-                <Skeleton className={`${BANNER_FRAME} rounded-none`} />
-            </div>
-            <div className={CARD_BODY}>
-                <div className="w-full max-w-xl">
-                    <Skeleton className="h-5.5 w-24 rounded-none" />
-                    <Skeleton className="mt-4 h-10 w-64 rounded-none sm:h-12" />
-                    <Skeleton className="mt-4 h-4 w-full max-w-md rounded-none" />
+        <section>
+            <div className="page-container">
+                <div className={CARD}>
+                    <Skeleton className={cn(BANNER, "rounded-none")} />
+                    <div className={BODY_ROW}>
+                        <div className="w-full max-w-lg">
+                            <Skeleton className="h-5.75 w-24 rounded-none" />
+                            <Skeleton className="mt-4 h-12 w-64 rounded-none" />
+                            <Skeleton className="mt-4 h-4 w-full rounded-none" />
+                        </div>
+                        <Skeleton className="h-11 w-44 rounded-none" />
+                    </div>
                 </div>
-                <Skeleton className="h-11 w-44 rounded-none" />
             </div>
         </section>
     );
 }
 
 export function FeaturedAuction({ auction }: { auction: PublicAuction | null }) {
+    // nothing published yet — the house banner with a way into the listings below
     if (!auction) {
         return (
-            <section className={CARD}>
-                <div className={BANNER_WRAP}>
-                    <div className={BANNER_FRAME}>
-                        <BannerFallback kicker="Coming soon" title="New sales are being prepared" />
+            <section>
+                <div className="page-container">
+                    <div className={CARD}>
+                        <div className={BANNER}>
+                            <HouseBanner priority />
+                        </div>
+                        <div className={BODY_ROW}>
+                            <div className="min-w-0 max-w-lg">
+                                <StatusBadge label="Coming soon" tone="upcoming" />
+                                <h1 className={TITLE}>New sales coming soon</h1>
+                                <p className={cn(BODY, "mt-4")}>
+                                    A new season of modern and contemporary South Asian art is preparing to open. Register early to preview the catalogue and receive alerts when bidding begins.
+                                </p>
+                            </div>
+                            <Link href="#auctions" className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "shrink-0")}>
+                                Browse all auctions
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -65,30 +74,32 @@ export function FeaturedAuction({ auction }: { auction: PublicAuction | null }) 
     const countdown = countdownFor(auction);
 
     return (
-        <section className={CARD}>
-            <div className={BANNER_WRAP}>
-                <div className={BANNER_FRAME}>
-                    {auction.coverImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={auction.coverImageUrl} alt={auction.title} className="absolute inset-0 h-full w-full object-cover" />
-                    ) : (
-                        <BannerFallback kicker={live ? "Live now" : "Coming soon"} title={auction.title} />
-                    )}
-                </div>
-            </div>
+        <section>
+            <div className="page-container">
+                <div className={CARD}>
+                    <div className={BANNER}>
+                        {auction.coverImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={auction.coverImageUrl} alt={auction.title} className="absolute inset-0 h-full w-full object-cover" />
+                        ) : (
+                            <HouseBanner priority />
+                        )}
+                    </div>
 
-            <div className={CARD_BODY}>
-                <div className="min-w-0 max-w-xl">
-                    <StatusBadge label={live ? "Live now" : "Coming soon"} tone={live ? "live" : "upcoming"} />
-                    <h1 className={TITLE}>{auction.title}</h1>
-                    <RichTextContent html={auction.short_description} className={`${DESC} [&_p+p]:mt-2`} />
-                </div>
+                    <div className={BODY_ROW}>
+                        <div className="min-w-0 max-w-lg">
+                            <StatusBadge label={live ? "Live now" : "Coming soon"} tone={live ? "live" : "upcoming"} />
+                            <h1 className={TITLE}>{auction.title}</h1>
+                            <RichTextContent html={auction.short_description} className={cn(BODY, "mt-4 [&_p+p]:mt-2")} />
+                        </div>
 
-                <div className="flex shrink-0 flex-col items-start gap-4 md:items-end">
-                    {countdown && <AuctionCountdown label={countdown.label} target={countdown.target} />}
-                    <Link href={auctionHref(auction)} className={CTA}>
-                        View the auction
-                    </Link>
+                        <div className="flex shrink-0 flex-col items-start gap-3 md:items-end">
+                            {countdown && <AuctionCountdown label={countdown.label} target={countdown.target} />}
+                            <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
+                                View the auction
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

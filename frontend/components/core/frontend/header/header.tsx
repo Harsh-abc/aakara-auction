@@ -26,8 +26,7 @@ export function Header() {
     }, []);
 
     // After logging in, come back to the page you were on
-    const comeBackHere =
-        currentPath && !["/login", "/signup", "/registration"].includes(currentPath) ? `?redirect=${encodeURIComponent(currentPath)}` : "";
+    const comeBackHere = currentPath && !["/login", "/signup", "/registration"].includes(currentPath) ? `?redirect=${encodeURIComponent(currentPath)}` : "";
 
     return (
         <header
@@ -37,7 +36,7 @@ export function Header() {
             )}
         >
             <div className="page-container">
-                <div className="mx-auto w-full px-6 flex h-19 items-center justify-between">
+                <div className="mx-auto w-full flex h-19 items-center justify-between">
                     <AkaraLogo />
                     <div className="flex items-center gap-3">
                         {showDashboard && (

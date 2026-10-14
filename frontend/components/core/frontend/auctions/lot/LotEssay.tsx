@@ -15,14 +15,18 @@ const ESSAY =
     "[&_ul]:mt-3.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mt-3.5 [&_ol]:list-decimal [&_ol]:pl-5 " +
     "[&_hr]:my-9 [&_hr]:border-[#cecece]"
 
-export function LotEssay({ html, className }: { html: string | null; className?: string }) {
+export function LotEssay({ html }: { html: string | null }) {
     // DOMParser is browser-only; this component renders on the client
     const clean = useMemo(() => (html && !isEmptyHtml(html) ? sanitizeHtml(html) : ""), [html])
     if (!clean) return null
 
     return (
-        <section className={cn("border-t border-[#cecece] pt-12", className)}>
-            <div className={cn("rich-text", ESSAY)} dangerouslySetInnerHTML={{ __html: clean }} />
+        <section aria-label="Catalogue essay">
+            <div className="page-container">
+                <div className="border-t border-[#cecece] pt-12 md:pt-13">
+                    <div className={cn("rich-text", ESSAY)} dangerouslySetInnerHTML={{ __html: clean }} />
+                </div>
+            </div>
         </section>
     )
 }
