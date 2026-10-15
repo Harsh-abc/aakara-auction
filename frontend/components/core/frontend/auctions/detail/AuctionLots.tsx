@@ -15,7 +15,8 @@ import { LotCard, LotRow } from "./LotCard"
 import { LotPagination } from "./LotPagination"
 import { useGallery } from "./useGallery"
 
-const LOTS_PER_PAGE = 12
+// Figma "All lots": two rows of three, then the pager
+const LOTS_PER_PAGE = 6
 
 const SORT_LABELS: Record<PublicLotSort, string> = {
     lot: "Lot no.",
@@ -172,7 +173,7 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
                             )}
 
                             <div className="mt-8">
-                                <LotPagination page={result.pagination.page} totalPages={result.pagination.totalPages} onPageChange={goToPage} />
+                                <LotPagination page={result.pagination.page} totalPages={result.pagination.totalPages} total={total} limit={result.pagination.limit} onPageChange={goToPage} />
                             </div>
                         </div>
                     )}
