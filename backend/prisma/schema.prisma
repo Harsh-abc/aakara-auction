@@ -867,9 +867,11 @@ enum BidStatus {
   RETRACTED
 }
 
+// MANUAL = placed online by the bidder, FLOOR = entered by the auctioneer for a paddle in the room
 enum BidSource {
   MANUAL
   PROXY
+  FLOOR
 }
 
 enum AuctionFeeType {

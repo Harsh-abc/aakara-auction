@@ -1,6 +1,7 @@
-import { ImageOff } from "lucide-react";
+import Link from "next/link";
+import { ImageOff, MonitorPlay } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import type { LiveAuctionSummary } from "@/lib/types/auction.types";
 import { formatMoney } from "@/lib/types/LotRow";
 import { cn } from "@/lib/utils";
@@ -81,19 +82,32 @@ export default function LiveAuctionsCard({ auction, selected = false, onManage }
                     <Stat label="Auctioneer" value={auction.auctioneer ?? "—"} />
                 </div>
 
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => onManage?.(auction)}
-                    className={cn(
-                        "mt-4 h-11 w-full cursor-pointer rounded-lg text-sm font-medium",
-                        selected
-                            ? "border-[#E5A000] bg-[#FFF8E6] text-[#414141]"
-                            : "border-[#777777] bg-white text-[#414141]"
-                    )}
-                >
-                    {selected ? "Managing below" : "Manage Auction"}
-                </Button>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => onManage?.(auction)}
+                        className={cn(
+                            "h-11 w-full cursor-pointer rounded-lg text-sm font-medium",
+                            selected
+                                ? "border-[#E5A000] bg-[#FFF8E6] text-[#414141]"
+                                : "border-[#777777] bg-white text-[#414141]"
+                        )}
+                    >
+                        {selected ? "Managing below" : "Manage Auction"}
+                    </Button>
+                    {/* auctioneer console: the live lot, floor bids and the hammer */}
+                    <Link
+                        href={`/dashboard/auctions/live-auctions/${auction.uuid}`}
+                        className={cn(
+                            buttonVariants(),
+                            "h-11 w-full rounded-lg bg-[#491B3A] text-sm font-medium text-white hover:bg-[#491B3A]/90"
+                        )}
+                    >
+                        <MonitorPlay className="h-4 w-4" />
+                        Open Console
+                    </Link>
+                </div>
             </div>
         </div>
     );

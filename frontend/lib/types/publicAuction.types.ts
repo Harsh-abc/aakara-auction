@@ -49,11 +49,14 @@ export interface PublicLot {
     image: string | null
 }
 
+/** MANUAL = placed online, FLOOR = entered by the auctioneer for a paddle in the room */
+export type BidSource = "MANUAL" | "PROXY" | "FLOOR"
+
 // one rung of the bid ladder — bidders stay anonymous
 export interface PublicBid {
     uuid: string
     amount: string
-    source: "MANUAL" | "PROXY"
+    source: BidSource
     placedAt: string
 }
 

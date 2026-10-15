@@ -48,6 +48,20 @@ const PROXY_LOT_STATUSES = ["ACTIVE", "DRAFT", "SCHEDULED"];
 
 const BLOCKED_USER_STATUSES = ["SUSPENDED", "BANNED", "DEACTIVATED"];
 
+/** Verified lot bidders who may actually bid: a bidder moved back to USER, or whose KYC approval was taken back, keeps their lot rows but can't bid */
+const ELIGIBLE_LOT_BIDDER_WHERE = {
+    status: "VERIFIED",
+    user: {
+        deletedAt: null,
+        status: { notIn: BLOCKED_USER_STATUSES },
+        role: { name: "BIDDER" },
+        kyc: { is: { status: "VERIFIED" } },
+    },
+};
+
+/** Bid sources as stored in Redis (M = online, F = floor, P = proxy) */
+const BID_SOURCES = { M: "MANUAL", F: "FLOOR", P: "PROXY" };
+
 const MAX_BIDS_PER_SECOND = 5;
 
 const displayName = (user) => {
@@ -189,17 +203,7 @@ const isVerifiedBidder = async (lotUuid, lotId, userId) => {
     if (loaded) return member === 1;
 
     const rows = await prisma.lotBidder.findMany({
-        where: {
-            itemId: BigInt(lotId),
-            status: "VERIFIED",
-            // a bidder moved back to USER, or whose KYC approval was taken back, keeps their lot rows but can't bid
-            user: {
-                deletedAt: null,
-                status: { notIn: BLOCKED_USER_STATUSES },
-                role: { name: "BIDDER" },
-                kyc: { is: { status: "VERIFIED" } },
-            },
-        },
+        where: { itemId: BigInt(lotId), ...ELIGIBLE_LOT_BIDDER_WHERE },
         select: { userId: true },
     });
     const ids = rows.map((row) => row.userId.toString());
@@ -302,7 +306,7 @@ const biddersById = async (auctionUuid, auctionId, userIds) => {
 const toPublicBid = (lotUuid, bid) => ({
     uuid: `${lotUuid}:${bid.seq}`,
     amount: String(bid.a),
-    source: bid.s === "M" ? "MANUAL" : "PROXY",
+    source: BID_SOURCES[bid.s] ?? "PROXY",
     placedAt: new Date(bid.t).toISOString(),
 });
 
@@ -375,6 +379,8 @@ const broadcastLot = async (lotUuid, state, result = null) => {
             emitTo(rooms.staff(auctionUuid), "bid:new", {
                 ...update,
                 title: state.title,
+                // the console's quick increments: the next ask and the two steps above it
+                bidOptions: bidOptions(view.nextBid, JSON.parse(state.rules || "[]")).map(String),
                 bids: bids
                     .map((bid) => ({ ...toPublicBid(lotUuid, bid), bidder: bidders.get(String(bid.u)) ?? null }))
                     .reverse(),
@@ -432,6 +438,11 @@ const runForUser = async ({ mode, lotUuid, userId, amount, ip, userAgent }) => {
     const lot = await ensureLotState(lotUuid);
     if (!(await isVerifiedBidder(lotUuid, lot.lotId, userId))) throw await notVerifiedError(lot.lotId, userId);
 
+    return settleBid({ mode, lot, lotUuid, userId, amount, ip, userAgent });
+};
+
+/** Runs the engine for a bidder already checked as eligible, broadcasts, and returns the bidder's view of the lot. */
+const settleBid = async ({ mode, lot, lotUuid, userId, amount, ip, userAgent, errors = ENGINE_ERRORS }) => {
     // paddle + name, so the broadcast never waits on the database
     await biddersById(lot.auctionUuid, lot.auctionId, [userId]);
 
@@ -447,7 +458,7 @@ const runForUser = async ({ mode, lotUuid, userId, amount, ip, userAgent }) => {
     }
 
     if (result.err) {
-        const [message, status] = (ENGINE_ERRORS[result.err] ?? (() => ["Could not place the bid", 409]))(lot, result);
+        const [message, status] = (errors[result.err] ?? (() => ["Could not place the bid", 409]))(lot, result);
         throw httpError(message, status, result.nextBid !== undefined ? { nextBid: String(result.nextBid) } : undefined);
     }
 
@@ -494,6 +505,55 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
     else message = `Your maximum bid of ${max} was topped by another bidder — the bid is now ${money(result.currentBid)}`;
 
     return { message, data: result };
+};
+
+// =====================================================================
+// FLOOR BID (auctioneer console)
+// The auctioneer enters a bid for a paddle raised in the room. The paddle
+// holder must be verified on the lot, like any online bidder. Online-only
+// (LIVE type) sales take no floor bids.
+// =====================================================================
+
+export const placeFloorBidService = async ({ lotUuid, paddleNumber, amount, ip, userAgent }) => {
+    const lot = await ensureLotState(lotUuid);
+    const paddle = `#${paddleNumber}`;
+
+    const auction = await prisma.auction.findUnique({
+        where: { id: BigInt(lot.auctionId) },
+        select: {
+            auctionType: true,
+            participants: { where: { paddleNumber }, select: { userId: true } },
+        },
+    });
+    if (!auction) throw httpError("Auction not found", 404);
+    if (auction.auctionType === "LIVE") {
+        throw httpError("This is an online-only sale — bids can't be entered from the floor", 409);
+    }
+
+    const userId = auction.participants[0]?.userId?.toString();
+    if (!userId) throw httpError(`No bidder holds paddle ${paddle} in this auction`, 404);
+    if (!(await isVerifiedBidder(lotUuid, lot.lotId, userId))) {
+        throw httpError(`Paddle ${paddle} isn't verified to bid on Lot #${lot.itemNumber}`, 403);
+    }
+
+    const { result } = await settleBid({
+        mode: "FLOOR",
+        lot,
+        lotUuid,
+        userId,
+        amount,
+        ip,
+        userAgent,
+        errors: { ...ENGINE_ERRORS, ALREADY_LEADING: () => [`Paddle ${paddle} is already the highest bidder`, 409] },
+    });
+    const money = (value) => formatMoney(value, lot.currencyCode);
+
+    return {
+        message: result.leading
+            ? `Floor bid of ${money(amount)} for paddle ${paddle} is the highest bid`
+            : `Floor bid of ${money(amount)} for paddle ${paddle} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
+        data: result,
+    };
 };
 
 // =====================================================================
@@ -730,6 +790,160 @@ export const getAuctionActivityService = async ({ auctionUuid }) => {
 };
 
 // =====================================================================
+// AUCTIONEER CONSOLE (the sale's live lot; bid:new keeps it current)
+// =====================================================================
+
+/** Bids shown in the console's log */
+const CONSOLE_LADDER = 100;
+
+/** Lots the auctioneer can open next (mirrors STARTABLE_LOT_STATUSES in liveAuction.services.js) */
+const NEXT_LOT_STATUSES = ["DRAFT", "SCHEDULED"];
+const CLOSED_LOT_STATUSES = ["SOLD", "UNSOLD", "PASSED", "WITHDRAWN"];
+
+const byPaddle = (a, b) => (Number(a.paddle) || 0) - (Number(b.paddle) || 0);
+
+export const getAuctionConsoleService = async ({ auctionUuid }) => {
+    const auction = await prisma.auction.findUnique({
+        where: { uuid: auctionUuid },
+        select: {
+            id: true,
+            uuid: true,
+            title: true,
+            status: true,
+            auctionType: true,
+            deletedAt: true,
+            currency: { select: { code: true, symbol: true } },
+            category: { select: { name: true } },
+            auctionFees: {
+                where: { feeType: "BUYER_PREMIUM", isActive: true },
+                orderBy: { sortOrder: "asc" },
+                select: { name: true, calculationType: true, value: true },
+            },
+            items: { orderBy: { itemNumber: "asc" }, select: { uuid: true, itemNumber: true, title: true, status: true } },
+        },
+    });
+    if (!auction || auction.deletedAt) throw httpError("Auction not found", 404);
+
+    const { items } = auction;
+    const live = items.find((lot) => lot.status === "ACTIVE");
+    // first lot not yet offered, else the first one that got no bids (re-offer)
+    const next = items.find((lot) => NEXT_LOT_STATUSES.includes(lot.status)) ?? items.find((lot) => lot.status === "UNSOLD");
+
+    const base = {
+        auction: {
+            uuid: auction.uuid,
+            title: auction.title,
+            status: auction.status,
+            auctionType: auction.auctionType,
+            currency: auction.currency,
+            lotCount: items.length,
+            closedLots: items.filter((lot) => CLOSED_LOT_STATUSES.includes(lot.status)).length,
+        },
+        buyerPremium: auction.auctionFees,
+        nextLot: next ? { uuid: next.uuid, itemNumber: next.itemNumber, title: next.title, status: next.status } : null,
+        lot: null,
+        position: null,
+        bids: [],
+        floorBidders: [],
+    };
+    if (!live) return serializeBigInt(base);
+
+    const lotUuid = live.uuid;
+    const lot = await prisma.auctionItem.findUnique({
+        where: { uuid: lotUuid },
+        select: {
+            id: true,
+            uuid: true,
+            itemNumber: true,
+            title: true,
+            artistName: true,
+            medium: true,
+            yearCreated: true,
+            status: true,
+            startingPrice: true,
+            reservePrice: true,
+            estimateLow: true,
+            estimateHigh: true,
+            currency: { select: { code: true, symbol: true } },
+            category: { select: { name: true } },
+            images: {
+                where: { mediaType: "IMAGE" },
+                orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+                take: 1,
+                select: { url: true, thumbnailUrl: true },
+            },
+        },
+    });
+
+    const biddingOpen = BIDDING_AUCTION_STATUSES.includes(auction.status);
+    const state = biddingOpen ? await ensureLotState(lotUuid) : await readLotState(lotUuid);
+    const rawBids = state ? await redis.lrange(bidKeys.bids(lotUuid), -CONSOLE_LADDER, -1) : [];
+    const ladder = rawBids.map((raw) => JSON.parse(raw)).reverse(); // newest first
+
+    let position;
+    if (state) {
+        const view = liveView(lotUuid, state);
+        position = {
+            currentBid: view.currentBid,
+            bidCount: view.bidCount,
+            nextBid: view.nextBid,
+            bidOptions: auction.status === "LIVE" ? bidOptions(view.nextBid, JSON.parse(state.rules || "[]")).map(String) : [],
+            leaderId: view.leaderId,
+        };
+    } else {
+        position = { currentBid: null, bidCount: "0", nextBid: String(lot.startingPrice), bidOptions: [], leaderId: null };
+    }
+
+    const bidders = await biddersById(auctionUuid, auction.id, [position.leaderId, ...ladder.map((bid) => bid.u)]);
+    const { leaderId, ...openPosition } = position;
+    const top = ladder[0];
+    const reserve = lot.reservePrice === null ? null : Number(lot.reservePrice);
+
+    // paddles the auctioneer can enter floor bids for
+    let floorBidders = [];
+    if (auction.auctionType !== "LIVE") {
+        const rows = await prisma.lotBidder.findMany({
+            where: { itemId: lot.id, ...ELIGIBLE_LOT_BIDDER_WHERE },
+            select: {
+                user: {
+                    select: {
+                        uuid: true,
+                        username: true,
+                        profile: { select: { displayName: true, firstName: true, lastName: true } },
+                        auctionParticipations: { where: { auctionId: auction.id }, select: { paddleNumber: true } },
+                    },
+                },
+            },
+        });
+        floorBidders = rows
+            .map(({ user }) => ({ uuid: user.uuid, paddle: user.auctionParticipations[0]?.paddleNumber ?? null, name: displayName(user) }))
+            .filter((bidder) => bidder.paddle)
+            .sort(byPaddle);
+    }
+
+    const { images, category, id, ...lotFields } = lot; // eslint-disable-line no-unused-vars
+    return serializeBigInt({
+        ...base,
+        lot: {
+            ...lotFields,
+            category: category?.name ?? auction.category?.name ?? null,
+            imageUrl: images[0]?.url ?? null,
+            currency: lot.currency ?? auction.currency,
+        },
+        position: {
+            ...openPosition,
+            reserveMet: openPosition.currentBid !== null && (reserve === null || Number(openPosition.currentBid) >= reserve),
+            leader:
+                leaderId && top
+                    ? { ...(bidders.get(String(leaderId)) ?? { uuid: null, paddle: null, name: null }), source: toPublicBid(lotUuid, top).source }
+                    : null,
+        },
+        bids: ladder.map((bid) => ({ ...toPublicBid(lotUuid, bid), bidder: bidders.get(String(bid.u)) ?? null })),
+        floorBidders,
+    });
+};
+
+// =====================================================================
 // DASHBOARD HOME (every running sale at a glance — Redis only)
 // =====================================================================
 
@@ -950,7 +1164,7 @@ const persistLot = async ({ state, rawBids, rawProxies, auctionStatus }) => {
                         itemId,
                         bidderId: BigInt(bid.u),
                         amount: String(bid.a),
-                        source: bid.s === "M" ? "MANUAL" : "PROXY",
+                        source: BID_SOURCES[bid.s] ?? "PROXY",
                         status: finalBidStatus({ isTop: index === last, lotStatus: item.status, auctionStatus }),
                         ipAddress: bid.ip || null,
                         userAgent: bid.ua || null,
@@ -958,6 +1172,17 @@ const persistLot = async ({ state, rawBids, rawProxies, auctionStatus }) => {
                         createdAt: new Date(bid.t),
                     })),
                 });
+
+                // a sold lot's winner row was written at the hammer, before its bids existed here
+                if (item.status === "SOLD") {
+                    const winning = await tx.bid.findFirst({ where: { itemId, status: "WON" }, select: { id: true } });
+                    if (winning) {
+                        await tx.auctionWinner.updateMany({
+                            where: { itemId, winningBidId: null },
+                            data: { winningBidId: winning.id },
+                        });
+                    }
+                }
             }
 
             const proxies = Object.entries(rawProxies);

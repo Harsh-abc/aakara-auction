@@ -1,9 +1,10 @@
 import { ZodError } from "zod";
 
-import { getLiveAuctionsService, setLotLiveService } from "../services/liveAuction.services.js";
+import { getLiveAuctionsService, hammerLotService, setLotLiveService } from "../services/liveAuction.services.js";
 import { getAuctionStatsService, getAuctionTimelineService } from "../services/auctionTimeline.services.js";
 import {
     getAuctionTimelineQuerySchema,
+    hammerLotSchema,
     lotUuidParamSchema,
     setLotLiveSchema,
 } from "../validations/auction.validation.js";
@@ -100,5 +101,28 @@ export const setLotLive = async (req, res) => {
         });
     } catch (error) {
         return handleError(res, error, "Set lot live", "Failed to update the lot");
+    }
+};
+
+// -----------------------------------------------------------------
+// POST /api/auction/lots/:lotUuid/hammer   Body: { bidCount }
+// Sells the live lot to the leading bidder (auctioneer console)
+// -----------------------------------------------------------------
+
+export const hammerLot = async (req, res) => {
+    try {
+        const { lotUuid } = lotUuidParamSchema.parse(req.params);
+        const { bidCount } = hammerLotSchema.parse(req.body ?? {});
+
+        const data = await hammerLotService({ lotUuid, bidCount });
+        const paddle = data.winner.paddle ? `paddle #${data.winner.paddle}` : data.winner.name ?? "the leading bidder";
+
+        return res.status(200).json({
+            success: true,
+            message: `Lot #${data.lot.itemNumber} sold to ${paddle}`,
+            data,
+        });
+    } catch (error) {
+        return handleError(res, error, "Hammer lot", "Failed to sell the lot");
     }
 };

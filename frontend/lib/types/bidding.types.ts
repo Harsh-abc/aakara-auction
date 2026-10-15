@@ -1,5 +1,5 @@
-import type { AuctionStatus } from "./auction.types"
-import type { LotStatus, PublicBid } from "./publicAuction.types"
+import type { AuctionStatus, AuctionType, FeeCalculationType } from "./auction.types"
+import type { BidSource, LotStatus, PublicBid } from "./publicAuction.types"
 
 // money and counts arrive as strings, like the rest of the API
 
@@ -106,6 +106,8 @@ export interface BiddingStats {
 export interface StaffBidEvent extends Required<Omit<LiveLotUpdate, "bids">> {
     title: string
     bids: StaffBid[]
+    /** the next ask and the two steps above it */
+    bidOptions: string[]
     stats: BiddingStats
 }
 
@@ -133,4 +135,69 @@ export interface AuctionActivity {
     feed: ActivityFeedItem[]
     topBidders: { bidder: BidderRef | null; bids: number }[]
     proxies: ActiveProxy[]
+}
+
+// ---------------------------------------------------------------------
+// auctioneer console
+// ---------------------------------------------------------------------
+
+export interface ConsoleLot {
+    uuid: string
+    itemNumber: string
+    title: string
+    artistName: string | null
+    medium: string | null
+    yearCreated: string | null
+    status: LotStatus
+    category: string | null
+    imageUrl: string | null
+    startingPrice: string
+    reservePrice: string | null
+    estimateLow: string | null
+    estimateHigh: string | null
+    currency: Currency
+}
+
+export interface ConsolePosition {
+    currentBid: string | null
+    bidCount: string
+    nextBid: string
+    /** the next ask and the two steps above it; empty unless the auction is LIVE */
+    bidOptions: string[]
+    reserveMet: boolean
+    leader: (BidderRef & { source: BidSource }) | null
+}
+
+// GET /api/bidding/auctions/:auctionUuid/console
+export interface AuctionConsole {
+    auction: {
+        uuid: string
+        title: string
+        status: AuctionStatus
+        auctionType: AuctionType
+        currency: Currency
+        lotCount: number
+        closedLots: number
+    }
+    /** the sale's active BUYER_PREMIUM fees */
+    buyerPremium: { name: string; calculationType: FeeCalculationType; value: string }[]
+    /** the lot to open when none is live */
+    nextLot: { uuid: string; itemNumber: string; title: string; status: LotStatus } | null
+    /** the live lot (null between lots) */
+    lot: ConsoleLot | null
+    position: ConsolePosition | null
+    /** the live lot's bids, newest first */
+    bids: StaffBid[]
+    /** paddles verified on the live lot — floor / hybrid sales only */
+    floorBidders: (BidderRef & { paddle: string })[]
+}
+
+// POST /api/auction/lots/:lotUuid/hammer
+export interface HammerResult {
+    lot: { uuid: string; itemNumber: string; title: string; status: LotStatus; currentBid: string; bidCount: string }
+    currency: Currency
+    hammerPrice: string
+    buyerPremium: string
+    totalAmountDue: string
+    winner: BidderRef
 }

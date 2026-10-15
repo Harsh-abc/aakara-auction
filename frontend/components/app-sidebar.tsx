@@ -20,6 +20,7 @@ import {
   HandCoins,
   History,
   LayoutDashboard,
+  MonitorPlay,
   Palette,
   Settings,
   ShoppingBag,
@@ -249,6 +250,13 @@ const data = {
         { title: "Past Auctions", url: "/dashboard/auctions/past-auctions" },
         { title: "Upcoming Auctions", url: "/dashboard/auctions/upcoming-auctions" },
       ],
+    },
+    {
+      title: "Bidding Console",
+      url: "/dashboard/bidding-console",
+      icon: <MonitorPlay />,
+      // also highlighted on a sale's console opened from the bidding floors
+      activeOn: /^\/dashboard\/auctions\/live-auctions\/[^/]+/,
     },
     {
       title: "Manage Bidders",

@@ -78,6 +78,7 @@ export function RecentBids({ bids, failed }: RecentBidsProps) {
                                             <p className="text-[10px] text-[#8A8D94]">
                                                 Lot {bid.lot.itemNumber}
                                                 {bid.source === "PROXY" && " · proxy"}
+                                                {bid.source === "FLOOR" && " · floor"}
                                             </p>
                                         </td>
                                         <td className="px-3 py-3 font-semibold text-slate-900">

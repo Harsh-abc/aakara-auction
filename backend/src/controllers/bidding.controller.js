@@ -2,12 +2,14 @@ import { ZodError } from "zod";
 
 import {
     getAuctionActivityService,
+    getAuctionConsoleService,
     getMyLotStandingService,
     placeBidService,
+    placeFloorBidService,
     setProxyBidService,
 } from "../services/bidding.services.js";
 import { auctionUuidParamSchema, lotUuidParamSchema } from "../validations/auction.validation.js";
-import { placeBidSchema, setProxyBidSchema } from "../validations/bidding.validation.js";
+import { placeBidSchema, placeFloorBidSchema, setProxyBidSchema } from "../validations/bidding.validation.js";
 
 const handleError = (res, error, label, fallback) => {
     if (error instanceof ZodError) {
@@ -87,5 +89,36 @@ export const getAuctionActivity = async (req, res) => {
         return res.status(200).json({ success: true, message: "Bidding activity fetched successfully", data });
     } catch (error) {
         return handleError(res, error, "Get auction activity", "Failed to fetch bidding activity");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/bidding/auctions/:auctionUuid/console
+// Auctioneer console: the live lot, its position, bid log and floor paddles
+// -----------------------------------------------------------------
+
+export const getAuctionConsole = async (req, res) => {
+    try {
+        const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
+        const data = await getAuctionConsoleService({ auctionUuid });
+        return res.status(200).json({ success: true, message: "Console fetched successfully", data });
+    } catch (error) {
+        return handleError(res, error, "Get auction console", "Failed to load the bidding console");
+    }
+};
+
+// -----------------------------------------------------------------
+// POST /api/bidding/lots/:lotUuid/floor-bids   Body: { paddleNumber, amount }
+// Auctioneer enters a bid for a paddle in the room (floor / hybrid sales)
+// -----------------------------------------------------------------
+
+export const placeFloorBid = async (req, res) => {
+    try {
+        const { lotUuid } = lotUuidParamSchema.parse(req.params);
+        const { paddleNumber, amount } = placeFloorBidSchema.parse(req.body ?? {});
+        const { message, data } = await placeFloorBidService({ lotUuid, paddleNumber, amount, ...clientInfo(req) });
+        return res.status(201).json({ success: true, message, data });
+    } catch (error) {
+        return handleError(res, error, "Place floor bid", "Failed to place the floor bid");
     }
 };

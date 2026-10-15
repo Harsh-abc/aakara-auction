@@ -533,8 +533,9 @@ export const getLotBidHistoryService = async ({ lotUuid }) => {
             lastBidAt: bid.placedAt,
         };
         row.bids += 1;
-        if (bid.source === "MANUAL") row.manualBids += 1;
-        else row.proxyBids += 1;
+        // floor bids are placed by the bidder too (through the auctioneer)
+        if (bid.source === "PROXY") row.proxyBids += 1;
+        else row.manualBids += 1;
         row.highestBid = Math.max(row.highestBid, Number(bid.amount));
         row.lastBidAt = bid.placedAt;
         perBidder.set(bid.userId, row);

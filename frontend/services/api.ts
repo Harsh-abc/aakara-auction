@@ -32,6 +32,7 @@ export const auctionEndPoints = {
     GET_AUCTION_BID_HISTORY_API: (auctionUuid: string) => `${BASE_URL}/api/auction/dashboard/bid-history/${auctionUuid}`,
     GET_LOT_BID_HISTORY_API: (lotUuid: string) => `${BASE_URL}/api/auction/dashboard/bid-history/lots/${lotUuid}`,
     SET_LOT_LIVE_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/live`,
+    HAMMER_LOT_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/hammer`,
     DELETE_LOT_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}`,
     GET_LOT_SUMMARY_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/summary`,
     GET_LOT_BIDDERS_API: (lotUuid: string) => `${BASE_URL}/api/auction/lots/${lotUuid}/bidders`,
@@ -63,6 +64,9 @@ export const biddingEndPoints = {
     PLACE_BID_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/bids`,
     SET_PROXY_BID_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/proxy`,
     AUCTION_ACTIVITY_API: (auctionUuid: string) => `${BASE_URL}/api/bidding/auctions/${auctionUuid}/activity`,
+    // auctioneer console
+    AUCTION_CONSOLE_API: (auctionUuid: string) => `${BASE_URL}/api/bidding/auctions/${auctionUuid}/console`,
+    FLOOR_BID_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/floor-bids`,
 };
 
 // live video (LiveKit) — viewers watch (login optional); the dashboard studio goes live and moderates

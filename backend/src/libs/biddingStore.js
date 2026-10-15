@@ -60,13 +60,16 @@ return 1
 `;
 
 // ---------------------------------------------------------------------
-// BID ENGINE — one atomic run per manual bid, proxy bid, or "resolve"
-// (when a lot opens / the sale resumes, so waiting proxies bid).
+// BID ENGINE — one atomic run per manual bid, floor bid, proxy bid, or
+// "resolve" (when a lot opens / the sale resumes, so waiting proxies bid).
+// A floor bid is a manual bid the auctioneer enters for a paddle in the room.
 //
 // KEYS: 1 lot, 2 bids, 3 proxies, 4 auction status, 5 auction feed,
 //       6 auction stats, 7 auction bid counts, 8 dirty set
-// ARGV: 1 mode (BID | PROXY | RESOLVE), 2 userId, 3 amount, 4 now (ms),
+// ARGV: 1 mode (BID | FLOOR | PROXY | RESOLVE), 2 userId, 3 amount, 4 now (ms),
 //       5 lotUuid, 6 feed size, 7 ip, 8 user agent
+//
+// Bid sources: M = online (manual), F = floor, P = proxy
 //
 // Proxy rules:
 //   - a proxy bids for its owner only as much as it takes to lead, up to its max
@@ -158,14 +161,15 @@ local function record(uid, amt, src)
     current = amt
     leader = uid
     local bid = { seq = seq, u = uid, a = amt, s = src, t = now }
-    if src == 'M' then
+    if src ~= 'P' then
         bid.ip = ip
         bid.ua = ua
     end
     redis.call('RPUSH', bidsKey, cjson.encode(bid))
     redis.call('LPUSH', feedKey, cjson.encode({ lot = lotUuid, n = itemNumber, seq = seq, u = uid, a = amt, s = src, t = now }))
     redis.call('HINCRBY', statsKey, 'total', 1)
-    redis.call('HINCRBY', statsKey, src == 'M' and 'manual' or 'proxy', 1)
+    -- floor bids are placed by bidders too (counted with online bids)
+    redis.call('HINCRBY', statsKey, src == 'P' and 'proxy' or 'manual', 1)
     redis.call('ZINCRBY', countsKey, 1, uid)
     out[#out + 1] = { seq = seq, u = uid, a = amt, s = src, t = now }
 end
@@ -237,14 +241,14 @@ local function isOneOf(value, list)
     return false
 end
 
-if mode == 'BID' then
+if mode == 'BID' or mode == 'FLOOR' then
     if status ~= 'ACTIVE' then return fail('LOT_NOT_LIVE') end
     if auctionStatus ~= 'LIVE' then return fail('AUCTION_NOT_LIVE', { auctionStatus = auctionStatus }) end
     if leader == userId then return fail('ALREADY_LEADING') end
     local need = nextMin(current)
     if amount < need then return fail('BID_TOO_LOW', { nextBid = need }) end
 
-    record(userId, amount, 'M')
+    record(userId, amount, mode == 'FLOOR' and 'F' or 'M')
     -- an earlier proxy with exactly this max holds the tie
     local tie = strongest(function(max) return max == amount end, userId)
     if tie then record(tie.uid, amount, 'P') end
