@@ -18,3 +18,13 @@ export const placeBidSchema = z.object({
 export const setProxyBidSchema = z.object({
     maxAmount: money("Maximum bid"),
 });
+
+// console: a bid the auctioneer enters for a paddle in the room ("#1042" or "1042")
+export const placeFloorBidSchema = z.object({
+    paddleNumber: z.coerce
+        .string()
+        .trim()
+        .transform((value) => value.replace(/^#/, ""))
+        .pipe(z.string().min(1, "Enter the bidder's paddle number").max(20, "Paddle number is too long")),
+    amount: money("Bid"),
+});

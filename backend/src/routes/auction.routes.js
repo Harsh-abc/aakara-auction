@@ -4,7 +4,7 @@ import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from "../middleware/upload.middleware.js";
 import { getLotBidders, getLotSummary, verifyLotBidders } from '../controllers/lotBidder.controller.js';
-import { getAuctionStats, getAuctionTimeline, getLiveAuctions, setLotLive } from '../controllers/liveAuction.controller.js';
+import { getAuctionStats, getAuctionTimeline, getLiveAuctions, hammerLot, setLotLive } from '../controllers/liveAuction.controller.js';
 import {
     getAuctionBidHistory,
     getBidHistoryAuctions,
@@ -81,6 +81,8 @@ auctionRouter.get("/dashboard/bid-history/:auctionUuid", authenticate, requireRo
 // PAST / UPCOMING auctions (?type=past|upcoming)
 auctionRouter.get("/timeline", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionTimeline);
 auctionRouter.patch("/lots/:lotUuid/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), setLotLive);
+// CONSOLE — sell the live lot to its leading bidder
+auctionRouter.post("/lots/:lotUuid/hammer", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), hammerLot);
 
 // AUCTION REGISTRATIONS — registering for an auction registers the user on every
 // open lot (pending); the super admin then verifies them per lot or on all lots

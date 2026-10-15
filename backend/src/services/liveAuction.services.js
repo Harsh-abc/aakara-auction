@@ -147,6 +147,59 @@ const closedLotStatus = (lot) => {
     return reserveMet ? "SOLD" : hasBid ? "PASSED" : "UNSOLD";
 };
 
+const roundMoney = (value) => Math.round(value * 100) / 100;
+
+/**
+ * Writes the winner of a sold lot: hammer price, buyer's premium (the sale's
+ * active BUYER_PREMIUM fees) and the total due. The winning bid is linked once
+ * the sale's bids are written to the database (see persistLot).
+ */
+const recordWinner = async (tx, { auctionId, itemId, winnerId, hammerPrice }) => {
+    if (!winnerId || hammerPrice === null || hammerPrice === undefined) return null;
+
+    const hammer = Number(hammerPrice);
+    const fees = await tx.auctionFee.findMany({
+        where: { auctionId, feeType: "BUYER_PREMIUM", isActive: true },
+        select: { calculationType: true, value: true },
+    });
+    const premium = roundMoney(
+        fees.reduce((sum, fee) => sum + (fee.calculationType === "PERCENTAGE" ? (hammer * Number(fee.value)) / 100 : Number(fee.value)), 0)
+    );
+    const amounts = {
+        winnerId,
+        finalHammerPrice: String(hammer),
+        buyerPremiumAmount: String(premium),
+        totalAmountDue: String(roundMoney(hammer + premium)),
+        wonAt: new Date(),
+    };
+
+    return tx.auctionWinner.upsert({
+        where: { itemId },
+        create: { auctionId, itemId, ...amounts },
+        update: amounts,
+        select: { finalHammerPrice: true, buyerPremiumAmount: true, totalAmountDue: true },
+    });
+};
+
+/**
+ * Runs a closing transaction for a lot (`work` gets an onFrozen callback for when its bids
+ * were stopped). On success the lot's new state is published; if the transaction fails
+ * after bids were stopped, the lot is reopened — it's still live in the database.
+ */
+const closingLot = async (lotUuid, work) => {
+    let frozen = false;
+
+    try {
+        const result = await work(() => (frozen = true));
+        // open the lot for bids (waiting proxies bid now) or publish its result
+        await syncLotBidding(lotUuid).catch((error) => console.error(`[bidding] could not sync lot ${lotUuid}:`, error));
+        return result;
+    } catch (error) {
+        if (frozen) await syncLotBidding(lotUuid).catch((err) => console.error(`[bidding] could not reopen lot ${lotUuid}:`, err));
+        throw error;
+    }
+};
+
 /**
  * Closes every open lot of an ending auction: the live lot closes as if stopped,
  * lots never offered become UNSOLD. Call inside a transaction that already locked the auction row;
@@ -155,18 +208,22 @@ const closedLotStatus = (lot) => {
 export const closeAuctionLots = async (tx, auctionId) => {
     const live = await tx.auctionItem.findFirst({
         where: { auctionId, status: "ACTIVE" },
-        select: { id: true, uuid: true, currentBid: true, reservePrice: true, bidCount: true },
+        select: { id: true, uuid: true, currentBid: true, currentBidderId: true, reservePrice: true, bidCount: true },
     });
 
     let liveLot = null;
     if (live) {
         // bids are settled in Redis — stop them and close on the final position
         const final = await freezeLotBidding(live.uuid);
+        const closed = { ...live, ...final };
         liveLot = await tx.auctionItem.update({
             where: { id: live.id },
-            data: { status: closedLotStatus({ ...live, ...final }), ...final },
+            data: { status: closedLotStatus(closed), ...final },
             select: { itemNumber: true, status: true },
         });
+        if (liveLot.status === "SOLD") {
+            await recordWinner(tx, { auctionId, itemId: live.id, winnerId: closed.currentBidderId, hammerPrice: closed.currentBid });
+        }
     }
 
     const { count: unoffered } = await tx.auctionItem.updateMany({
@@ -182,20 +239,8 @@ export const closeAuctionLots = async (tx, auctionId) => {
 // Only one lot per auction can be live (ACTIVE) at a time.
 // =====================================================================
 
-export const setLotLiveService = async ({ lotUuid, action }) => {
-    let frozen = false;
-
-    try {
-        const lot = await setLotLiveTx({ lotUuid, action, onFrozen: () => (frozen = true) });
-        // open the lot for bids (waiting proxies bid now) or publish its result
-        await syncLotBidding(lotUuid).catch((error) => console.error(`[bidding] could not sync lot ${lotUuid}:`, error));
-        return lot;
-    } catch (error) {
-        // the stop failed after bids were stopped — the lot is still live, reopen it
-        if (frozen) await syncLotBidding(lotUuid).catch((err) => console.error(`[bidding] could not reopen lot ${lotUuid}:`, err));
-        throw error;
-    }
-};
+export const setLotLiveService = ({ lotUuid, action }) =>
+    closingLot(lotUuid, (onFrozen) => setLotLiveTx({ lotUuid, action, onFrozen }));
 
 const setLotLiveTx = ({ lotUuid, action, onFrozen }) =>
     prisma.$transaction(
@@ -218,6 +263,7 @@ const setLotLiveTx = ({ lotUuid, action, onFrozen }) =>
                     itemNumber: true,
                     status: true,
                     currentBid: true,
+                    currentBidderId: true,
                     reservePrice: true,
                     bidCount: true,
                     auction: { select: { status: true, deletedAt: true } },
@@ -257,7 +303,110 @@ const setLotLiveTx = ({ lotUuid, action, onFrozen }) =>
                 select: { uuid: true, itemNumber: true, title: true, status: true, currentBid: true, bidCount: true },
             });
 
+            if (status === "SOLD") {
+                const closed = { ...lot, ...final };
+                await recordWinner(tx, {
+                    auctionId: lot.auctionId,
+                    itemId: lot.id,
+                    winnerId: closed.currentBidderId,
+                    hammerPrice: closed.currentBid,
+                });
+            }
+
             return serializeBigInt(updated);
+        },
+        { maxWait: 10_000, timeout: 20_000 }
+    );
+
+// =====================================================================
+// HAMMER (auctioneer console)
+// Sells the live lot to the leading bidder at the current bid, whether or
+// not the reserve is met (the auctioneer's call — the console warns). The
+// console sends the bid count it showed, so a bid that lands while the
+// auctioneer confirms stops the hammer instead of selling to someone else.
+// =====================================================================
+
+export const hammerLotService = ({ lotUuid, bidCount }) =>
+    closingLot(lotUuid, (onFrozen) => hammerLotTx({ lotUuid, expectedBidCount: bidCount, onFrozen }));
+
+const hammerLotTx = ({ lotUuid, expectedBidCount, onFrozen }) =>
+    prisma.$transaction(
+        async (tx) => {
+            const ref = await tx.auctionItem.findUnique({
+                where: { uuid: lotUuid },
+                select: { auctionId: true },
+            });
+            if (!ref) throw httpError("Lot not found", 404);
+
+            // Same lock as start / stop, so the lot can't be stopped while it's hammered
+            await tx.$queryRaw`SELECT id FROM auctions WHERE id = ${ref.auctionId} FOR UPDATE`;
+
+            const lot = await tx.auctionItem.findUnique({
+                where: { uuid: lotUuid },
+                select: {
+                    id: true,
+                    auctionId: true,
+                    itemNumber: true,
+                    title: true,
+                    status: true,
+                    currentBid: true,
+                    currentBidderId: true,
+                    bidCount: true,
+                    currency: { select: { code: true, symbol: true } },
+                    auction: { select: { deletedAt: true, currency: { select: { code: true, symbol: true } } } },
+                },
+            });
+            if (!lot || lot.auction.deletedAt) throw httpError("Lot not found", 404);
+            if (lot.status !== "ACTIVE") throw httpError(`Lot #${lot.itemNumber} isn't live`, 409);
+
+            // bids are settled in Redis — stop them and sell on the final position
+            const frozen = await freezeLotBidding(lotUuid);
+            if (frozen) onFrozen();
+            const final = frozen ?? {
+                bidCount: lot.bidCount,
+                currentBid: lot.currentBid === null ? null : lot.currentBid.toString(),
+                currentBidderId: lot.currentBidderId,
+            };
+
+            if (Number(final.bidCount) === 0 || final.currentBid === null || !final.currentBidderId) {
+                throw httpError(`Lot #${lot.itemNumber} has no bids to hammer. Stop the lot to close it unsold.`, 409);
+            }
+            if (expectedBidCount !== undefined && Number(final.bidCount) !== expectedBidCount) {
+                throw httpError(`A new bid came in on Lot #${lot.itemNumber} — check the winning bid and hammer again`, 409);
+            }
+
+            const updated = await tx.auctionItem.update({
+                where: { id: lot.id },
+                data: { status: "SOLD", ...final },
+                select: { uuid: true, itemNumber: true, title: true, status: true, currentBid: true, bidCount: true },
+            });
+
+            const winner = await recordWinner(tx, {
+                auctionId: lot.auctionId,
+                itemId: lot.id,
+                winnerId: final.currentBidderId,
+                hammerPrice: final.currentBid,
+            });
+
+            const [participant, user] = await Promise.all([
+                tx.auctionParticipant.findUnique({
+                    where: { auctionId_userId: { auctionId: lot.auctionId, userId: final.currentBidderId } },
+                    select: { paddleNumber: true },
+                }),
+                tx.user.findUnique({
+                    where: { id: final.currentBidderId },
+                    select: { uuid: true, username: true, profile: { select: { displayName: true, firstName: true, lastName: true } } },
+                }),
+            ]);
+
+            return serializeBigInt({
+                lot: updated,
+                currency: lot.currency ?? lot.auction.currency,
+                hammerPrice: winner.finalHammerPrice,
+                buyerPremium: winner.buyerPremiumAmount,
+                totalAmountDue: winner.totalAmountDue,
+                winner: { uuid: user?.uuid ?? null, paddle: participant?.paddleNumber ?? null, name: displayName(user) },
+            });
         },
         { maxWait: 10_000, timeout: 20_000 }
     );

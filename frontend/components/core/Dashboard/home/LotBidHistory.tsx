@@ -113,7 +113,7 @@ function downloadLotCsv(history: LotBidHistory) {
             bid.bidder?.username ?? "",
             bid.amount,
             history.lot.currency.code,
-            bid.source === "PROXY" ? "Proxy" : "Manual",
+            bid.source === "PROXY" ? "Proxy" : bid.source === "FLOOR" ? "Floor" : "Manual",
             BID_STATUS[bid.status]?.label ?? bid.status,
         ])
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")
@@ -631,7 +631,7 @@ function LotBids({ token, lotUuid, refresh }: { token: string; lotUuid: string; 
                                             <BidderCell bidder={bid.bidder} />
                                         </td>
                                         <td className="px-3 py-2.5 font-semibold text-slate-900">{money(bid.amount, currency)}</td>
-                                        <td className="px-3 py-2.5">{bid.source === "PROXY" ? "Proxy" : "Manual"}</td>
+                                        <td className="px-3 py-2.5">{bid.source === "PROXY" ? "Proxy" : bid.source === "FLOOR" ? "Floor" : "Manual"}</td>
                                         <td className="px-3 py-2.5 whitespace-nowrap text-[#62666F]">{formatBidTime(bid.placedAt)}</td>
                                         <td className="px-4 py-2.5">
                                             <StatusPill tone={status.tone}>{status.label}</StatusPill>

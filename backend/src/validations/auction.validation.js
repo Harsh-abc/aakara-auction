@@ -102,6 +102,14 @@ export const setLotLiveSchema = z.object({
     action: z.enum(["start", "stop"], { message: 'action must be "start" or "stop"' }),
 });
 
+// the bid count the console showed when the auctioneer confirmed the hammer
+export const hammerLotSchema = z.object({
+    bidCount: z.coerce
+        .number({ message: "bidCount must be a number" })
+        .int("bidCount must be a whole number")
+        .positive("The lot has no bids to hammer"),
+});
+
 export const changeAuctionStatusSchema = z.object({
     status: z.enum(AUCTION_STATUSES, { message: "Invalid auction status" }),
     reason: z

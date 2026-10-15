@@ -8,6 +8,8 @@
 //   - DateTime columns arrive as ISO strings
 // =====================================================================
 
+import type { BidSource } from "./publicAuction.types";
+
 // =====================================================================
 // ENUMS
 // =====================================================================
@@ -279,7 +281,7 @@ export type DashboardBidStatus = "LEADING" | "OUTBID" | "WON" | "LOST" | "CANCEL
 export interface DashboardBid {
     uuid: string;
     amount: string;
-    source: "MANUAL" | "PROXY";
+    source: BidSource;
     placedAt: string;
     status: DashboardBidStatus;
     bidder: { uuid: string | null; paddle: string | null; name: string | null } | null;
@@ -367,7 +369,7 @@ export interface LotBidHistoryBid {
     /** 1 = the lot's first bid */
     seq: number;
     amount: string;
-    source: "MANUAL" | "PROXY";
+    source: BidSource;
     placedAt: string;
     status: DashboardBidStatus;
     bidder: BidHistoryBidder | null;

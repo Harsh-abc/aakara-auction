@@ -4,6 +4,13 @@ export const DASHBOARD_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"]
 export const canAccessDashboard = (role: string | null | undefined) =>
     !!role && DASHBOARD_ROLES.includes(role)
 
+// roles that run the floor: start / stop lots, enter floor bids, hammer
+// (mirrors the lot /live, /hammer and /floor-bids routes in the backend)
+export const LOT_CONTROL_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"]
+
+export const canControlLots = (role: string | null | undefined) =>
+    !!role && LOT_CONTROL_ROLES.includes(role)
+
 // must match changeRoleSchema in backend/src/validations/role.validation.js
 export const ALL_ROLES = ["SUPER_ADMIN", "ADMIN", "STAFF", "AUCTIONEER", "BIDDER", "USER"] as const
 

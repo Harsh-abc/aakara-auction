@@ -863,6 +863,15 @@ const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy }) =>
                 await closeAuctionLots(tx, auction.id);
             }
 
+            // Back to draft: a lot left live (ACTIVE) goes back to draft too, so the
+            // auction can be edited — the edit form only takes DRAFT / SCHEDULED lots
+            if (status === "DRAFT") {
+                await tx.auctionItem.updateMany({
+                    where: { auctionId: auction.id, status: "ACTIVE" },
+                    data: { status: "DRAFT" },
+                });
+            }
+
             return tx.auction.findUnique({
                 where: { id: auction.id },
                 select: { uuid: true, title: true, status: true, publishedAt: true, updatedAt: true },

@@ -202,7 +202,11 @@
       "Bash(curl -s -w \"\\\\n%{http_code}\\\\n\" \"http://localhost:8080/api/auction/dashboard/bid-history\")",
       "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' http://localhost:8080/api/auction/dashboard/bid-history?limit=5)",
       "Bash(curl -s -o /dev/null -w \"bid-history page %{http_code}\\\\n\" http://localhost:3000/dashboard/auctions/bid-history)",
-      "Bash(curl -s -o /dev/null -w \"page %{http_code}\\\\n\" http://localhost:3000/dashboard/bid-history)"
+      "Bash(curl -s -o /dev/null -w \"page %{http_code}\\\\n\" http://localhost:3000/dashboard/bid-history)",
+      "Bash(grep -E \"^\\(tsc|eslint\\)$\")",
+      "Bash(timeout 30 node -e \"Promise.all\\([import\\('./src/routes/bidding.routes.js'\\), import\\('./src/routes/auction.routes.js'\\)]\\).then\\(\\(\\) => { console.log\\('imports OK'\\); process.exit\\(0\\) }\\).catch\\(e => { console.error\\('IMPORT FAIL', e.message\\); process.exit\\(1\\) }\\)\")",
+      "Bash(node -e \"const f=\\(n,c\\)=>new Intl.NumberFormat\\(c==='INR'?'en-IN':'en-US',{style:'currency',currency:c,notation:'compact',maximumFractionDigits:1}\\).format\\(n\\); console.log\\([50000,100000,150000,5000,2500000].map\\(n=>f\\(n,'INR'\\)\\).join\\(' | '\\), '||', f\\(50000,'USD'\\)\\)\")",
+      "Bash(timeout 20 node -e \"import\\('./src/libs/redis.js'\\).then\\(async \\({default: r}\\) => { try { console.log\\('PING', await r.ping\\(\\)\\); } catch \\(e\\) { console.log\\('NO REDIS', e.message\\) } process.exit\\(0\\) }\\)\")"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

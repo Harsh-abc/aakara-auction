@@ -14,6 +14,7 @@ import type {
     LiveAuctionStatus,
     LiveLotUpdate,
 } from "@/lib/types/bidding.types";
+import type { BidSource } from "@/lib/types/publicAuction.types";
 import { formatMoney } from "@/lib/types/LotRow";
 import { cn } from "@/lib/utils";
 import { getAuctionActivity } from "@/services/operations/bidding.api";
@@ -272,14 +273,20 @@ const Stat = ({ icon, label, value, hint }: { icon: ReactNode; label: string; va
     </div>
 );
 
-const SourceBadge = ({ source }: { source: "MANUAL" | "PROXY" }) => (
+const SOURCE_BADGES: Record<BidSource, { label: string; className: string }> = {
+    MANUAL: { label: "Bid", className: "bg-sky-50 text-sky-700" },
+    FLOOR: { label: "Floor", className: "bg-amber-50 text-amber-700" },
+    PROXY: { label: "Proxy", className: "bg-violet-50 text-[#7b365d]" },
+};
+
+const SourceBadge = ({ source }: { source: BidSource }) => (
     <span
         className={cn(
             "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-            source === "PROXY" ? "bg-violet-50 text-[#7b365d]" : "bg-sky-50 text-sky-700"
+            (SOURCE_BADGES[source] ?? SOURCE_BADGES.MANUAL).className
         )}
     >
-        {source === "PROXY" ? "Proxy" : "Bid"}
+        {(SOURCE_BADGES[source] ?? SOURCE_BADGES.MANUAL).label}
     </span>
 );
 

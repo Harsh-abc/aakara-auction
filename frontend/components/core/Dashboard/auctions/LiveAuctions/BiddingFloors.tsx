@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { canControlLots } from "@/lib/constants/roles";
 import { serverNow } from "@/lib/serverClock";
 import type { AuctionLot } from "@/lib/types/auction.types";
 import type { LiveLotUpdate } from "@/lib/types/bidding.types";
@@ -29,9 +30,6 @@ import LiveAuctionsCard from "./LiveAuctionsCard";
 import { LiveAuctionDataTable } from "./LiveAuctionDataTable";
 import LiveBiddingPanel from "./LiveBiddingPanel";
 import type { LiveLotTableMeta } from "./LiveAuctionsColumns";
-
-/** Roles that can start / stop lots (mirrors the PATCH /lots/:lotUuid/live route) */
-const CONTROL_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"];
 
 export default function BiddingFloors() {
     const dispatch = useAppDispatch();
@@ -121,7 +119,7 @@ export default function BiddingFloors() {
 
     const tableMeta: LiveLotTableMeta = {
         auctionStatus: selected?.status,
-        canControl: Boolean(role && CONTROL_ROLES.includes(role)),
+        canControl: canControlLots(role),
         liveLot,
         controllingUuid: lotControlUuid,
         onStart: (lot) => runControl(lot, "start"),
