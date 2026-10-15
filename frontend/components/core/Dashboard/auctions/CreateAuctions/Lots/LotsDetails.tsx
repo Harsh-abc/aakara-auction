@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFormContext, Controller, useWatch } from "react-hook-form";
 import { Lock } from "lucide-react";
+import { useAppSelector } from "@/hooks/redux";
 
 import DashboardFormText from "@/components/common/DashboardFormText";
+import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import { getCategories, getSubCategories } from "@/services/operations/category.api";
+import { uploadEditorImage } from "@/services/operations/upload.api";
 import type { Category, SubCategory } from "@/lib/types/category.types";
 
 import LotSchedule from "./LotSchedule";
@@ -74,6 +77,11 @@ export function useAuctionCategoryName(categoryUuid?: string, subCategoryUuid?: 
 
 export default function LotsDetail({ lotIndex }: LotsDetailProps) {
     const { register, control, setValue, getValues } = useFormContext<AuctionFormData>();
+
+    const token = useAppSelector((state) => state.auth.accessToken);
+
+    // images inside the artwork description go straight to S3; the HTML keeps their URLs
+    const handleDescriptionImageUpload = useCallback((file: File) => uploadEditorImage(file, token), [token]);
 
     const auctionCategoryUuid = useWatch({ control, name: "basicInfo.categoryUuid" });
     const auctionSubCategoryUuid = useWatch({ control, name: "basicInfo.subCategoryUuid" });
@@ -294,10 +302,17 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
 
             <div className="mt-6">
                 <label className="block mb-2">Artwork Description</label>
-                <textarea
-                    placeholder="Describe the artwork..."
-                    className="w-full min-h-[120px] border rounded-md px-3 py-2"
-                    {...register(`lots.${lotIndex}.details.description`)}
+                <Controller
+                    name={`lots.${lotIndex}.details.description`}
+                    control={control}
+                    render={({ field }) => (
+                        <RichTextEditor
+                            placeholder="Describe the artwork..."
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onImageUpload={handleDescriptionImageUpload}
+                        />
+                    )}
                 />
             </div>
         </div>

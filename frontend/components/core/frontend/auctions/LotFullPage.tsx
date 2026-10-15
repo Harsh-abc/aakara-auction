@@ -128,7 +128,7 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                 </div>
             </section>
 
-            <LotEssay images={lot.media.filter((item) => item.mediaType === "IMAGE").map((item) => item.url)} />
+            <LotEssay description={lot.description} />
 
             <LotFaqs />
 
