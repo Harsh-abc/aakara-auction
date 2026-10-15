@@ -12,14 +12,23 @@ import { auctionHref, countdownFor, isLive } from "./auctionDisplay";
 import { StatusBadge } from "./StatusBadge";
 
 // Figma: "Auction Landing page" hero card — 8:3 banner over a 24px body
-const CARD = "border border-[#cecece] bg-white p-px";
+const CARD = "border border-[#cecece] bg-white";
 const BANNER = "relative aspect-4/3 w-full overflow-hidden bg-[#ebebeb] sm:aspect-8/3";
 const BODY_ROW = "flex flex-col gap-6 p-6 md:flex-row md:items-end md:justify-between md:gap-10";
 const TITLE = "mt-4 text-[36px] leading-none font-medium tracking-tight text-[#0d0d0d] sm:text-[48px]";
 
 // the house banner (Figma "hero banner") — used until a sale has its own cover image
 function HouseBanner({ priority }: { priority?: boolean }) {
-    return <Image src="/banners/inaugural-coming-soon.png" alt="Akara — inaugural fine art auction, coming soon" fill priority={priority} sizes="(min-width: 1200px) 1150px, 100vw" className="object-cover" />;
+    return (
+        <Image
+            src="/banners/inaugural-coming-soon.png"
+            alt="Akara — inaugural fine art auction, coming soon"
+            fill
+            priority={priority}
+            sizes="(min-width: 1200px) 1150px, 100vw"
+            className="object-cover"
+        />
+    );
 }
 
 export function FeaturedAuctionSkeleton() {

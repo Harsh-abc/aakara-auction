@@ -1,5 +1,5 @@
 import Link from "next/link";
-import AkaraLogoImage from "@/public/logo.png";
+import AkaraLogoImage from "@/public/logo_black.png";
 import { joinClassNames } from "@/lib/frontendHelpers";
 import Image from "next/image";
 

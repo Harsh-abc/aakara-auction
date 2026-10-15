@@ -1,27 +1,27 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import Link from "next/link"
-import { ImageOff } from "lucide-react"
+import { useEffect, useRef } from "react";
+import Link from "next/link";
+import { ImageOff } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import type { PublicLot } from "@/lib/types/publicAuction.types"
+import { cn } from "@/lib/utils";
+import type { PublicLot } from "@/lib/types/publicAuction.types";
 
-import { formatMoney, lotHeading, lotHref } from "../detail/lotDisplay"
-import { LivePlayer } from "./LivePlayer"
-import { Tag } from "./LotTag"
-import { auctioneerCall, closedLabel, isClosedLot, lotTag, lotNo, upNextLot } from "./lotPageDisplay"
+import { formatMoney, lotHeading, lotHref } from "../detail/lotDisplay";
+import { LivePlayer } from "./LivePlayer";
+import { Tag } from "./LotTag";
+import { auctioneerCall, closedLabel, isClosedLot, lotTag, lotNo, upNextLot } from "./lotPageDisplay";
 
 type OrderOfSaleProps = {
-    auctionUuid: string
-    lots: PublicLot[]
+    auctionUuid: string;
+    lots: PublicLot[];
     /** the lot this page is showing */
-    currentLotUuid: string
-    saleClosed: boolean
+    currentLotUuid: string;
+    saleClosed: boolean;
     /** the sale is live — show the auctioneer's video stream */
-    streaming: boolean
-    className?: string
-}
+    streaming: boolean;
+    className?: string;
+};
 
 // what's on the block — the auctioneer's live video (the live lot's image until it starts), with their call under it
 function OnTheBlock({ auctionUuid, lot, saleClosed, streaming }: { auctionUuid: string; lot: PublicLot | null; saleClosed: boolean; streaming: boolean }) {
@@ -34,7 +34,7 @@ function OnTheBlock({ auctionUuid, lot, saleClosed, streaming }: { auctionUuid: 
                 <ImageOff className="size-6 text-neutral-400" />
             )}
         </div>
-    )
+    );
 
     return (
         <div className="border-b border-[#cecece] p-4">
@@ -52,26 +52,26 @@ function OnTheBlock({ auctionUuid, lot, saleClosed, streaming }: { auctionUuid: 
                 )}
             </div>
 
-            <p className="mt-4 text-[12px] leading-[19.5px] text-[#717171]">
+            {/* <p className="mt-4 text-[12px] leading-[19.5px] text-[#717171]">
                 {lot ? auctioneerCall(lot) : saleClosed ? "This sale has closed." : "No lot is on the block right now."}
-            </p>
+            </p> */}
         </div>
-    )
+    );
 }
 
 export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, streaming, className }: OrderOfSaleProps) {
-    const liveLot = lots.find((lot) => lot.status === "ACTIVE") ?? null
-    const upNext = upNextLot(lots)
-    const hammered = lots.filter(isClosedLot).length
+    const liveLot = lots.find((lot) => lot.status === "ACTIVE") ?? null;
+    const upNext = upNextLot(lots);
+    const hammered = lots.filter(isClosedLot).length;
 
     // bring the lot on the block (or the one being viewed) into the list's view, without moving the page
-    const listRef = useRef<HTMLOListElement>(null)
-    const focusUuid = liveLot?.uuid ?? currentLotUuid
+    const listRef = useRef<HTMLOListElement>(null);
+    const focusUuid = liveLot?.uuid ?? currentLotUuid;
     useEffect(() => {
-        const list = listRef.current
-        const row = list?.querySelector<HTMLElement>(`[data-lot="${focusUuid}"]`)
-        if (list && row) list.scrollTop = Math.max(0, row.offsetTop - list.clientHeight / 3)
-    }, [focusUuid])
+        const list = listRef.current;
+        const row = list?.querySelector<HTMLElement>(`[data-lot="${focusUuid}"]`);
+        if (list && row) list.scrollTop = Math.max(0, row.offsetTop - list.clientHeight / 3);
+    }, [focusUuid]);
 
     return (
         <aside className={cn("self-start border border-[#cecece] bg-white", className)}>
@@ -86,11 +86,11 @@ export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, str
 
             <ol ref={listRef} className="relative max-h-152 overflow-y-auto">
                 {lots.map((lot) => {
-                    const live = lot.status === "ACTIVE"
-                    const next = lot.uuid === upNext?.uuid
-                    const closed = isClosedLot(lot)
-                    const current = lot.uuid === currentLotUuid
-                    const sold = lot.status === "SOLD" ? formatMoney(lot.currentBid, lot.currency) : null
+                    const live = lot.status === "ACTIVE";
+                    const next = lot.uuid === upNext?.uuid;
+                    const closed = isClosedLot(lot);
+                    const current = lot.uuid === currentLotUuid;
+                    const sold = lot.status === "SOLD" ? formatMoney(lot.currentBid, lot.currency) : null;
 
                     return (
                         <li key={lot.uuid} data-lot={lot.uuid} className={cn("border-b", live ? "border-black" : "border-[#cecece]")}>
@@ -100,23 +100,11 @@ export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, str
                                 className={cn(
                                     "flex items-center px-4",
                                     live ? "h-11.75 bg-[#0d0d0d] text-white" : next ? "h-10.75" : "h-10",
-                                    !live && (current ? "bg-[#f5f5f5]" : "hover:bg-[#fafafa]")
+                                    !live && (current ? "bg-[#f5f5f5]" : "hover:bg-[#fafafa]"),
                                 )}
                             >
-                                <span
-                                    className={cn(
-                                        "w-14 shrink-0 text-[11px] leading-[13.2px] tracking-[0.16em] uppercase",
-                                        live ? "text-white" : "text-[#717171]"
-                                    )}
-                                >
-                                    {lotNo(lot)}
-                                </span>
-                                <span
-                                    className={cn(
-                                        "min-w-0 flex-1 truncate text-[14px] leading-5",
-                                        live ? "font-medium text-white" : closed ? "text-[#717171]" : "text-[#0d0d0d]"
-                                    )}
-                                >
+                                <span className={cn("w-14 shrink-0 text-[11px] leading-[13.2px] tracking-[0.16em] uppercase", live ? "text-white" : "text-[#717171]")}>{lotNo(lot)}</span>
+                                <span className={cn("min-w-0 flex-1 truncate text-[14px] leading-5", live ? "font-medium text-white" : closed ? "text-[#717171]" : "text-[#0d0d0d]")}>
                                     {lotHeading(lot)}
                                 </span>
                                 {live ? (
@@ -128,9 +116,9 @@ export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, str
                                 ) : null}
                             </Link>
                         </li>
-                    )
+                    );
                 })}
             </ol>
         </aside>
-    )
+    );
 }
