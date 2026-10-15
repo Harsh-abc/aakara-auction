@@ -57,11 +57,11 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                                     <span className={cn(SMALL_CAPS, "w-15 shrink-0 pl-4")}>{count - index}</span>
                                     <span className={cn("flex-1", top ? "text-[18px] leading-7 font-medium" : "text-[14px] leading-5")}>
                                         {money(bid.amount)}
-                                        {bid.source === "PROXY" && (
+                                        {/* {bid.source === "PROXY" && (
                                             <span className={cn(SMALL_CAPS, "ml-3 text-[10px]", top ? "text-white/60" : "text-[#717171]")}>
                                                 Proxy
                                             </span>
-                                        )}
+                                        )} */}
                                     </span>
                                     <span className={SMALL_CAPS}>{top ? topBidLabel(lot) : "Outbid"}</span>
                                 </li>
