@@ -12,7 +12,8 @@ import { lotHeading } from "./detail/lotDisplay";
 import { useGallery } from "./detail/useGallery";
 import { BidDialog } from "./lot/BidDialog";
 import { LotCatalogueDetails } from "./lot/LotCatalogueDetails";
-import { LotEssay } from "./lot/LotEssay";
+// import { LotEssay } from "./lot/LotEssay"; // the editor-driven essay — back in once the API part is done
+import { StaticLotEssay } from "./lot/StaticLotEssay";
 import { LotFaqs } from "./lot/LotFaqs";
 import { LotGallery } from "./lot/LotGallery";
 import { LotPageMessage } from "./lot/LotPageChrome";
@@ -77,6 +78,9 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
 
     const { auction, lot, lots } = state.data;
     const saved = gallery.isSaved(lot.uuid);
+    // the static essay's figures use the lot's own artwork images (or the main image)
+    const galleryImages = lot.media.filter((item) => item.mediaType === "IMAGE").map((item) => item.url);
+    const essayImages = galleryImages.length ? galleryImages : lot.image ? [lot.image] : [];
 
     return (
         <main className={PAGE_MAIN}>
@@ -128,7 +132,9 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                 </div>
             </section>
 
-            <LotEssay description={lot.description} />
+            {/* STATIC essay for the client demo — switch back to the editor's description later:
+                <LotEssay description={lot.description} /> */}
+            <StaticLotEssay images={essayImages} />
 
             <LotFaqs />
 
