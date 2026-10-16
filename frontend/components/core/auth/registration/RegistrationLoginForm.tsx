@@ -62,9 +62,9 @@ export function RegistrationLoginForm({ redirectTo, newAccountEmail }: Registrat
     }
 
     return (
-        <form onSubmit={handleLogin} className="flex flex-col gap-6" noValidate>
+        <form onSubmit={handleLogin} className="flex flex-col gap-4" noValidate>
             {newAccountEmail && (
-                <p role="status" className="border border-[#C9A36A] bg-[#FBEEDC] px-3.5 py-3 text-xs leading-relaxed text-neutral-900">
+                <p role="status" className="border border-[#cea25a] bg-[#fdf1e3] px-3.5 py-3 text-[12px] leading-[19.5px] text-[#0d0d0d]">
                     Your account has been created. Log in with your new password to continue.
                 </p>
             )}
@@ -91,14 +91,14 @@ export function RegistrationLoginForm({ redirectTo, newAccountEmail }: Registrat
                 onChange={handleChange}
             />
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
                 <AuthSubmitButton loading={loading} loadingText="Logging in...">
                     Log in
                 </AuthSubmitButton>
 
                 <Link
                     href="/forgot-password"
-                    className="text-center text-[11px] uppercase tracking-[0.18em] text-neutral-500 hover:text-neutral-900"
+                    className="text-center text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase hover:text-[#0d0d0d]"
                 >
                     Forgot your password? Reset here
                 </Link>

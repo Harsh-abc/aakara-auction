@@ -106,7 +106,7 @@ export function ChangePasswordForm() {
 
     return (
         <ProfileSection title="Change password">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
                 <AuthField
                     id={fieldId("currentPassword")}
                     name="currentPassword"
@@ -120,7 +120,7 @@ export function ChangePasswordForm() {
                 />
 
                 <div>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <AuthField
                             id={fieldId("newPassword")}
                             name="newPassword"
@@ -146,12 +146,12 @@ export function ChangePasswordForm() {
                             error={errors.confirmPassword}
                         />
                     </div>
-                    <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                    <p className="mt-3 text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">
                         Minimum 8 characters, with at least one number and one symbol.
                     </p>
                 </div>
 
-                <div>
+                <div className="mt-2">
                     <ProfileButton loading={saving} loadingText="Updating...">
                         Update password
                     </ProfileButton>

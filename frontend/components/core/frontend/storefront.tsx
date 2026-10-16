@@ -41,9 +41,9 @@ export function SectionHeading({ id, title, aside, description, className }: { i
 
 export type Crumb = { label: string; href?: string };
 
-// HOME › AUCTIONS › …crumbs  (11px, the current page in ink)
-export function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
-    const all: Crumb[] = [{ label: "Home", href: "/" }, { label: "Auctions", href: "/#auctions" }, ...crumbs];
+// HOME › AUCTIONS › …crumbs  (11px, the current page in ink); account pages leave out AUCTIONS
+export function Breadcrumb({ crumbs, auctions = true }: { crumbs: Crumb[]; auctions?: boolean }) {
+    const all: Crumb[] = [{ label: "Home", href: "/" }, ...(auctions ? [{ label: "Auctions", href: "/#auctions" }] : []), ...crumbs];
     return (
         <nav aria-label="Breadcrumb" className="text-[11px] leading-[16.5px] tracking-[0.12em] text-[#717171] uppercase">
             <ol className="flex flex-wrap items-center gap-x-2">

@@ -2,8 +2,10 @@ import Link from "next/link"
 
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
 import type { KycStatus, MyAuctionRegistration } from "@/lib/types/profile.types"
+import { cn } from "@/lib/utils"
 import { formatDateRange } from "@/utils/formatDateRange"
 import { auctionHref } from "../auctions/auctionDisplay"
+import { BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, EYEBROW } from "../storefront"
 
 const KYC_LABELS: Record<KycStatus, string> = {
     NOT_SUBMITTED: "KYC not submitted",
@@ -24,24 +26,21 @@ export function RegistrationCard({ registration, bidderName, kycStatus }: Regist
     const registrationLabel = status === "APPROVED" ? "Registered bidder" : "Registration pending"
 
     return (
-        <article className="flex flex-col gap-5 border border-neutral-500 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+        <article className="flex flex-col gap-5 border border-[#cecece] bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                <p className={EYEBROW}>
                     {registrationLabel} · {AUCTION_STATUS_LABELS[auction.status]}
                 </p>
-                <h3 className="mt-2 truncate text-sm text-neutral-950">{auction.title}</h3>
-                <p className="mt-1 text-sm text-neutral-900">
+                <h3 className="mt-2 truncate text-[14px] leading-5 font-medium text-[#0d0d0d]">{auction.title}</h3>
+                <p className="mt-1 text-[14px] leading-5 text-[#0d0d0d]">
                     {bidderName} · Paddle {paddleNumber}
                 </p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                <p className={cn(EYEBROW, "mt-1.5")}>
                     {KYC_LABELS[kycStatus]} · {formatDateRange(auction.startTime, auction.endTime, auction.timezone)}
                 </p>
             </div>
 
-            <Link
-                href={auctionHref(auction)}
-                className="inline-flex h-10 shrink-0 items-center justify-center self-start bg-neutral-950 px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-neutral-800 sm:self-auto"
-            >
+            <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE, "shrink-0 self-start sm:self-auto")}>
                 Browse
             </Link>
         </article>

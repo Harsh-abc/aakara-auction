@@ -77,17 +77,17 @@ export function AuthComboboxField({
                     />
                     <Combobox.Trigger
                         aria-label={`Show ${label.toLowerCase()} options`}
-                        className="absolute right-0 top-0 flex h-full w-11 cursor-pointer items-center justify-center text-neutral-400 hover:text-neutral-900 disabled:cursor-not-allowed"
+                        className="absolute right-0 top-0 flex h-full w-11 cursor-pointer items-center justify-center text-[#717171] hover:text-[#0d0d0d] disabled:cursor-not-allowed"
                     >
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="size-4" />
                     </Combobox.Trigger>
                 </div>
 
                 <Combobox.Portal>
                     <Combobox.Positioner className="z-50 outline-none" sideOffset={4}>
-                        <Combobox.Popup className="w-(--anchor-width) max-w-(--available-width) border border-neutral-300 bg-white text-neutral-900 shadow-lg">
+                        <Combobox.Popup className="w-(--anchor-width) max-w-(--available-width) border border-[#cecece] bg-white text-[#0d0d0d] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)]">
                             <Combobox.Empty>
-                                <div className="px-3.5 py-3 text-sm text-neutral-500">{emptyText}</div>
+                                <div className="px-3.5 py-3 text-[14px] text-[#717171]">{emptyText}</div>
                             </Combobox.Empty>
                             <Combobox.List className="p-0">
                                 <VirtualizedOptions open={open} virtualizerRef={virtualizerRef} />
@@ -159,7 +159,7 @@ function VirtualizedOptions({
                             value={item}
                             aria-setsize={filteredItems.length}
                             aria-posinset={virtualItem.index + 1}
-                            className="grid cursor-pointer grid-cols-[1rem_1fr] items-center gap-2 px-3.5 text-sm outline-none select-none data-highlighted:bg-neutral-100"
+                            className="grid cursor-pointer grid-cols-[1rem_1fr] items-center gap-2 px-3.5 text-[14px] outline-none select-none data-highlighted:bg-[#fdf1e3]"
                             style={{
                                 position: "absolute",
                                 top: 0,

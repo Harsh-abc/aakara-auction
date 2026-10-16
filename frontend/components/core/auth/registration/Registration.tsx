@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { ChevronRight } from "lucide-react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { BODY, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "@/components/core/frontend/storefront"
+import { cn } from "@/lib/utils"
 
 import { RegistrationBenefits } from "./RegistrationBenefits"
 import { RegistrationLoginForm } from "./RegistrationLoginForm"
@@ -54,71 +54,57 @@ export function Registration() {
     }
 
     return (
-        <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-12 md:py-12">
-            <nav aria-label="Breadcrumb" className="text-[11px] uppercase tracking-[0.18em]">
-                <ol className="flex items-center gap-2">
-                    <li>
-                        <Link href="/" className="text-neutral-500 hover:text-neutral-900">
-                            Auctions
-                        </Link>
-                    </li>
-                    <li aria-hidden className="text-neutral-400">
-                        <ChevronRight className="h-3 w-3" />
-                    </li>
-                    <li aria-current="page" className="text-neutral-900">
-                        {tabLabels[activeTab]}
-                    </li>
-                </ol>
-            </nav>
-
-            <header className="mt-6">
-                <h1 className="text-4xl font-normal tracking-tight text-neutral-950 md:text-5xl">
-                    Log in / Sign up
-                </h1>
-                <p className="mt-4 text-sm text-neutral-500">
-                    Log in or create an account to continue to auction registration.
-                </p>
-            </header>
-
-            <div className="mt-10 grid grid-cols-1 gap-12 md:mt-12 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-16">
-                <div className="order-2 lg:order-1">
-                    <RegistrationBenefits />
+        <main className={PAGE_MAIN}>
+            <section>
+                <div className="page-container">
+                    <Breadcrumb auctions={false} crumbs={[{ label: tabLabels[activeTab] }]} />
+                    <h1 className={cn(PAGE_TITLE, "mt-6")}>Log in / Sign up</h1>
+                    <p className={cn(BODY, "mt-3")}>Log in or create an account to continue to auction registration.</p>
                 </div>
+            </section>
 
-                <div className="order-1 lg:order-2">
-                    <Tabs
-                        value={activeTab}
-                        onValueChange={(value) => handleTabChange(value as AuthTab)}
-                        className="gap-0 border border-neutral-500 bg-white p-5 md:p-6"
-                    >
-                        {/* overrides restyle shadcn's default pill tabs into the flat underline design */}
-                        <TabsList className="w-full justify-start rounded-none border-b border-neutral-200 bg-transparent p-0 group-data-horizontal/tabs:h-auto">
-                            {(Object.keys(tabLabels) as AuthTab[]).map((tab) => (
-                                <TabsTrigger
-                                    key={tab}
-                                    value={tab}
-                                    className="-mb-px h-auto flex-none cursor-pointer rounded-none border-0 border-b-2 border-transparent px-3 py-2.5 text-xs font-normal uppercase tracking-[0.18em] text-neutral-900 hover:bg-[#FBEEDC]/60 hover:text-neutral-900 data-active:border-[#C9A36A] data-active:bg-[#FBEEDC] group-data-[variant=default]/tabs-list:data-active:shadow-none"
-                                >
-                                    {tabLabels[tab]}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
+            <section>
+                {/* benefits | 420px log in / sign up box */}
+                <div className="page-container grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-10">
+                    <div className="order-2 lg:order-1">
+                        <RegistrationBenefits />
+                    </div>
 
-                        {/* keepMounted so switching tabs doesn't wipe what the user typed */}
-                        <TabsContent value="login" keepMounted className="pt-7">
-                            <RegistrationLoginForm
-                                key={newAccount?.version ?? 0}
-                                redirectTo={redirectTo}
-                                newAccountEmail={newAccount?.email}
-                            />
-                        </TabsContent>
+                    <div className="order-1 lg:order-2">
+                        <Tabs
+                            value={activeTab}
+                            onValueChange={(value) => handleTabChange(value as AuthTab)}
+                            className="gap-0 border border-[#333] bg-white p-5 sm:p-6.5"
+                        >
+                            {/* overrides restyle shadcn's default pill tabs into the flat underline design */}
+                            <TabsList className="w-full justify-start rounded-none border-b border-[#cecece] bg-transparent p-0 group-data-horizontal/tabs:h-auto">
+                                {(Object.keys(tabLabels) as AuthTab[]).map((tab) => (
+                                    <TabsTrigger
+                                        key={tab}
+                                        value={tab}
+                                        className="-mb-px h-8.75 flex-none cursor-pointer rounded-none border-0 border-b-2 border-transparent px-4 text-[12px] leading-4.5 font-normal tracking-[0.14em] text-[#717171] uppercase hover:bg-[#fdf1e3]/60 hover:text-[#0d0d0d] data-active:border-[#cea25a] data-active:bg-[#fdf1e3] data-active:font-medium data-active:text-[#0d0d0d] group-data-[variant=default]/tabs-list:data-active:shadow-none"
+                                    >
+                                        {tabLabels[tab]}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
 
-                        <TabsContent value="signup" keepMounted className="pt-7">
-                            <RegistrationSignupForm onAccountCreated={handleAccountCreated} />
-                        </TabsContent>
-                    </Tabs>
+                            {/* keepMounted so switching tabs doesn't wipe what the user typed */}
+                            <TabsContent value="login" keepMounted className="pt-6">
+                                <RegistrationLoginForm
+                                    key={newAccount?.version ?? 0}
+                                    redirectTo={redirectTo}
+                                    newAccountEmail={newAccount?.email}
+                                />
+                            </TabsContent>
+
+                            <TabsContent value="signup" keepMounted className="pt-6">
+                                <RegistrationSignupForm onAccountCreated={handleAccountCreated} />
+                            </TabsContent>
+                        </Tabs>
+                    </div>
                 </div>
-            </div>
+            </section>
         </main>
     )
 }

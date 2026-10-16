@@ -104,7 +104,7 @@ function validate(data: FormData): FieldErrors {
 
     if (!data.city.trim()) errors.city = "Select your city"
 
-    if (!data.terms) errors.terms = "Please accept the Terms of Service to continue"
+    if (!data.terms) errors.terms = "Please accept the terms and conditions to continue"
 
     return errors
 }
@@ -331,10 +331,10 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
     }
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
             <AuthField
                 id="email"
-                label="Email address"
+                label="Email *"
                 type="email"
                 autoComplete="email"
                 maxLength={254}
@@ -345,7 +345,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
 
             <AuthField
                 id="password"
-                label="Password"
+                label="Password *"
                 type="password"
                 autoComplete="new-password"
                 maxLength={64}
@@ -356,7 +356,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
 
             <AuthField
                 id="confirmPassword"
-                label="Confirm password"
+                label="Confirm password *"
                 type="password"
                 autoComplete="new-password"
                 maxLength={64}
@@ -365,10 +365,10 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 error={errors.confirmPassword}
             />
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <AuthField
                     id="firstName"
-                    label="First name"
+                    label="First name *"
                     autoComplete="given-name"
                     maxLength={50}
                     value={formData.firstName}
@@ -377,7 +377,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 />
                 <AuthField
                     id="lastName"
-                    label="Last name"
+                    label="Last name *"
                     autoComplete="family-name"
                     maxLength={50}
                     value={formData.lastName}
@@ -388,19 +388,19 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
 
             <div>
                 <label htmlFor="phone" className={authLabelClass}>
-                    Mobile number
+                    Mobile number *
                 </label>
                 <div className="flex">
                     {/* the box shows just the code; the transparent native select on top lists full country names */}
                     <div
                         className={cn(
                             authInputClass,
-                            "relative flex w-24 shrink-0 items-center justify-between border-r-0 px-3 focus-within:border-neutral-900",
+                            "relative flex w-24 shrink-0 items-center justify-between border-r-0 px-3 focus-within:border-[#0d0d0d]",
                             errors.phone && authInputErrorClass
                         )}
                     >
                         <span>{dialCodeOf(formData.phoneCountry)}</span>
-                        <ChevronDown className="h-4 w-4 text-neutral-400" />
+                        <ChevronDown className="size-4 text-[#717171]" />
                         <select
                             aria-label="Country code"
                             value={formData.phoneCountry}
@@ -428,12 +428,15 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                     />
                 </div>
                 <AuthFieldError id="phone-error" message={errors.phone} />
+                <p className="mt-2 text-[12px] leading-4 text-[#717171]">
+                    We will send a one-time code to this number to verify your account.
+                </p>
             </div>
 
             {countryIsFreeText ? (
                 <AuthField
                     id="country"
-                    label="Country"
+                    label="Country *"
                     autoComplete="country-name"
                     maxLength={100}
                     value={formData.country}
@@ -443,12 +446,12 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
             ) : (
                 <AuthComboboxField
                     id="country"
-                    label="Country"
+                    label="Country *"
                     items={countries?.map((item) => item.name) ?? []}
                     value={formData.country}
                     onValueChange={handleCountryChange}
                     error={errors.country}
-                    placeholder={countries ? "Search country" : "Loading countries..."}
+                    placeholder={countries ? "Select country" : "Loading countries..."}
                     disabled={!countries}
                     emptyText="No country found"
                 />
@@ -457,7 +460,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
             {cityIsFreeText ? (
                 <AuthField
                     id="city"
-                    label="City"
+                    label="City *"
                     autoComplete="address-level2"
                     maxLength={100}
                     value={formData.city}
@@ -469,14 +472,14 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                     // remount per country, so the search text from the previous country's list is cleared
                     key={formData.country}
                     id="city"
-                    label="City"
+                    label="City *"
                     items={cities}
                     value={formData.city}
                     onValueChange={handleCityChange}
                     error={errors.city}
                     placeholder={
                         !formData.country
-                            ? "Select a country first"
+                            ? "Select country first"
                             : citiesLoading
                               ? "Loading cities..."
                               : "Search city"
@@ -487,7 +490,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
             )}
 
             <div>
-                <label htmlFor="terms" className="flex cursor-pointer items-start gap-3 text-xs text-neutral-500">
+                <label htmlFor="terms" className="flex cursor-pointer items-start gap-3 text-[12px] leading-4.5 text-[#717171]">
                     <input
                         id="terms"
                         type="checkbox"
@@ -499,21 +502,27 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                         }}
                         aria-invalid={errors.terms ? true : undefined}
                         aria-describedby={errors.terms ? "terms-error" : undefined}
-                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-neutral-900"
+                        className="size-4.5 shrink-0 cursor-pointer rounded-none accent-[#0d0d0d]"
                     />
                     <span>
-                        I agree to the{" "}
-                        <Link href="/terms" className="text-neutral-900 underline underline-offset-2">
-                            Terms of Service
-                        </Link>
+                        I accept the{" "}
+                        <Link href="/terms" className="text-[#0d0d0d] underline underline-offset-2">
+                            terms and conditions
+                        </Link>{" "}
+                        and privacy policy.
                     </span>
                 </label>
                 <AuthFieldError id="terms-error" message={errors.terms} />
             </div>
 
-            <AuthSubmitButton loading={loading} loadingText="Sending code...">
-                Create account
-            </AuthSubmitButton>
+            <div className="mt-2 flex flex-col gap-3">
+                <AuthSubmitButton loading={loading} loadingText="Sending code...">
+                    Continue
+                </AuthSubmitButton>
+                <p className="text-center text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">
+                    Next: verify your email and mobile number
+                </p>
+            </div>
         </form>
     )
 }
