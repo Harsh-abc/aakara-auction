@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Select } from "@base-ui/react/select";
+import { Check, ChevronDown } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -103,23 +105,39 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
                         </h2>
 
                         <div className="flex items-center gap-3">
-                            <label className="flex h-9.25 items-center gap-1.5 border border-[#cecece] bg-white pl-3.25 text-[11px] leading-[13.2px] tracking-[0.16em] uppercase">
-                                <span className="text-[#717171]/70">Sort ·</span>
-                                <select
-                                    value={sort}
-                                    onChange={(event) => setSort(event.target.value as PublicLotSort)}
-                                    className="h-full cursor-pointer appearance-none bg-transparent pr-8 text-[11px] tracking-[0.16em] text-[#0d0d0d] uppercase outline-none"
+                            {/* Base UI select rather than a native one, so the open list can be styled */}
+                            <Select.Root value={sort} onValueChange={(value) => value && setSort(value as PublicLotSort)}>
+                                <Select.Trigger
+                                    aria-label="Sort lots"
+                                    className="flex h-9.25 cursor-pointer items-center gap-1.5 border border-[#cecece] bg-white px-3.25 text-[11px] leading-[13.2px] tracking-[0.16em] uppercase outline-none hover:border-[#0d0d0d] focus-visible:border-[#0d0d0d] data-popup-open:border-[#0d0d0d]"
                                 >
-                                    {(Object.keys(SORT_LABELS) as PublicLotSort[]).map((key) => (
-                                        <option key={key} value={key}>
-                                            {SORT_LABELS[key]}
-                                        </option>
-                                    ))}
-                                </select>
-                                <span aria-hidden className="pointer-events-none -ml-7 pr-3.25 text-[12px] text-[#717171]">
-                                    ▾
-                                </span>
-                            </label>
+                                    <span className="text-[#717171]/70">Sort ·</span>
+                                    <Select.Value className="text-[#0d0d0d]">{(value: PublicLotSort) => SORT_LABELS[value]}</Select.Value>
+                                    <Select.Icon className="ml-2 text-[#717171]">
+                                        <ChevronDown className="size-3.5" />
+                                    </Select.Icon>
+                                </Select.Trigger>
+                                <Select.Portal>
+                                    <Select.Positioner side="bottom" align="end" sideOffset={4} alignItemWithTrigger={false} className="z-50 outline-none">
+                                        <Select.Popup className="min-w-(--anchor-width) border border-[#cecece] bg-white py-1 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)] outline-none">
+                                            <Select.List>
+                                                {(Object.keys(SORT_LABELS) as PublicLotSort[]).map((key) => (
+                                                    <Select.Item
+                                                        key={key}
+                                                        value={key}
+                                                        className="flex cursor-pointer items-center justify-between gap-4 px-3.25 py-3 text-[11px] leading-[13.2px] tracking-[0.16em] whitespace-nowrap text-[#717171] uppercase outline-none select-none data-highlighted:bg-[#f4f2ef] data-highlighted:text-[#0d0d0d] data-selected:text-[#0d0d0d]"
+                                                    >
+                                                        <Select.ItemText>{SORT_LABELS[key]}</Select.ItemText>
+                                                        <Select.ItemIndicator>
+                                                            <Check className="size-3.5" />
+                                                        </Select.ItemIndicator>
+                                                    </Select.Item>
+                                                ))}
+                                            </Select.List>
+                                        </Select.Popup>
+                                    </Select.Positioner>
+                                </Select.Portal>
+                            </Select.Root>
 
                             <div className="flex border border-[#333]" role="group" aria-label="Layout">
                                 {(["grid", "list"] as const).map((mode) => (
