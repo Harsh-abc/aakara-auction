@@ -27,7 +27,8 @@ function LotImage({ lot, className }: { lot: PublicLot; className?: string }) {
 
 function LotNumberLine({ lot }: { lot: PublicLot }) {
     return (
-        <div className="flex items-center justify-between gap-2">
+        // as tall as the status tag, so cards without one line up with those that have it
+        <div className="flex min-h-5 items-center justify-between gap-2">
             <span className="text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">{lotNumber(lot)}</span>
             <LotBadge lot={lot} />
         </div>

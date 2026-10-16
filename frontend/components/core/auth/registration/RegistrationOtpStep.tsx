@@ -158,25 +158,25 @@ export function RegistrationOtpStep({
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                <p className="text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">
                     Step {isPhone ? 2 : 1} of 2
                 </p>
-                <h2 className="mt-2 text-lg text-neutral-900">
+                <h2 className="mt-2 text-[18px] leading-7 font-medium tracking-tight text-[#0d0d0d]">
                     {isPhone ? "Verify your mobile number" : "Verify your email"}
                 </h2>
-                <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+                <p className="mt-2 text-[12px] leading-[19.5px] text-[#717171]">
                     {isPhone ? (
                         <>
                             Enter the {OTP_LENGTH}-digit code to verify{" "}
-                            <span className="text-neutral-900">{payload.phone}</span>.{" "}
+                            <span className="text-[#0d0d0d]">{payload.phone}</span>.{" "}
                             {/* temporary: no SMS provider yet, so the phone step reuses the emailed code */}
                             For now, use the same code we sent to{" "}
-                            <span className="break-all text-neutral-900">{payload.email}</span>
+                            <span className="break-all text-[#0d0d0d]">{payload.email}</span>
                         </>
                     ) : (
                         <>
                             Enter the {OTP_LENGTH}-digit code we sent to{" "}
-                            <span className="break-all text-neutral-900">{payload.email}</span>
+                            <span className="break-all text-[#0d0d0d]">{payload.email}</span>
                         </>
                     )}
                 </p>
@@ -184,7 +184,7 @@ export function RegistrationOtpStep({
                     type="button"
                     onClick={onEditDetails}
                     disabled={verifying}
-                    className="mt-3 cursor-pointer text-[11px] uppercase tracking-[0.18em] text-neutral-900 underline underline-offset-4 hover:text-neutral-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-3 cursor-pointer text-[11px] leading-[13.2px] tracking-[0.16em] text-[#0d0d0d] uppercase underline underline-offset-4 hover:text-[#717171] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Edit details
                 </button>
@@ -212,7 +212,7 @@ export function RegistrationOtpStep({
                                     disabled={verifying || codeIsDead}
                                     autoComplete="one-time-code"
                                     className={cn(
-                                        "h-12 w-full min-w-0 flex-1 rounded-none border border-neutral-300 bg-white text-center text-lg text-neutral-900 outline-none transition-colors focus:border-neutral-900 disabled:bg-neutral-50 disabled:opacity-60",
+                                        "h-12 w-full min-w-0 flex-1 rounded-none border border-[#cecece] bg-white text-center text-[18px] text-[#0d0d0d] outline-none transition-colors focus:border-[#0d0d0d] disabled:bg-[#f7f7f7] disabled:opacity-60",
                                         error && authInputErrorClass
                                     )}
                                 />
@@ -223,7 +223,7 @@ export function RegistrationOtpStep({
                     <AuthFieldError id="otp-error" message={error ?? undefined} />
 
                     {!codeIsDead && (
-                        <p className={cn("mt-2 text-xs", expired ? "text-red-600" : "text-neutral-500")}>
+                        <p className={cn("mt-2 text-[12px] leading-4.5", expired ? "text-[#cf4533]" : "text-[#717171]")}>
                             {expired
                                 ? "This code has expired. Request a new one below."
                                 : `Code expires in ${formatCountdown(secondsLeft)}`}
@@ -231,18 +231,18 @@ export function RegistrationOtpStep({
                     )}
                 </div>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                     <AuthSubmitButton loading={verifying} loadingText="Verifying..." disabled={!canVerify}>
                         {isPhone ? <>Verify &amp; create account</> : "Verify email"}
                     </AuthSubmitButton>
 
-                    <p className="text-center text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                    <p className="text-center text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">
                         Didn&apos;t get the code?{" "}
                         <button
                             type="button"
                             onClick={handleResend}
                             disabled={resendIn > 0 || resending || verifying}
-                            className="cursor-pointer uppercase text-neutral-900 underline underline-offset-4 disabled:cursor-not-allowed disabled:text-neutral-400 disabled:no-underline"
+                            className="cursor-pointer text-[#0d0d0d] uppercase underline underline-offset-4 disabled:cursor-not-allowed disabled:text-[#717171]/70 disabled:no-underline"
                         >
                             {resending ? "Sending..." : resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
                         </button>

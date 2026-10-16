@@ -24,7 +24,7 @@ function groupBySale(items: GalleryItem[]) {
 export function MyGallery({ empty }: { empty: React.ReactNode }) {
     const { items, error, controls } = useGallery()
 
-    if (error && !items) return <p className="py-6 text-center text-sm text-neutral-500">{error}</p>
+    if (error && !items) return <p className="py-6 text-center text-[14px] leading-[22.75px] text-[#717171]">{error}</p>
 
     if (!items) {
         return (
@@ -43,10 +43,10 @@ export function MyGallery({ empty }: { empty: React.ReactNode }) {
             {groupBySale(items).map(({ auction, items: saleItems }) => (
                 <div key={auction.uuid}>
                     <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-                        <Link href={`/auctions/${auction.uuid}`} className="text-base text-neutral-950 hover:underline">
+                        <Link href={`/auctions/${auction.uuid}`} className="text-[16px] leading-6 font-medium text-[#0d0d0d] hover:underline">
                             {auction.title}
                         </Link>
-                        <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                        <span className="text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">
                             {STOREFRONT_STATUS_LABELS[auction.status] ?? auction.status} · {saleItems.length}{" "}
                             {saleItems.length === 1 ? "lot" : "lots"} saved
                         </span>

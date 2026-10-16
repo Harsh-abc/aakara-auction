@@ -3,16 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ChevronRight } from "lucide-react"
 import toast from "react-hot-toast"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppSelector } from "@/hooks/redux"
+import { cn } from "@/lib/utils"
 import { refreshSession, SESSION_EXPIRED_EVENT } from "@/services/authSession"
 import { getMyProfile, getMyRegistrations } from "@/services/operations/profile.api"
 import type { AuctionStatus } from "@/lib/types/auction.types"
 import type { MyAccount, MyAuctionRegistration } from "@/lib/types/profile.types"
 
+import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_SOLID, PAGE_MAIN, PAGE_TITLE } from "../storefront"
 import { BillingShippingForm } from "./BillingShippingForm"
 import { ChangePasswordForm } from "./ChangePasswordForm"
 import { KycDocumentsForm } from "./KycDocumentsForm"
@@ -128,135 +129,124 @@ export function MyProfile() {
     const allApproved = sales.length > 0 && sales.every((r) => r.status === "APPROVED")
 
     return (
-        <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-12 md:py-12">
-            <nav aria-label="Breadcrumb" className="text-[11px] uppercase tracking-[0.18em]">
-                <ol className="flex flex-wrap items-center gap-2">
-                    <li>
-                        <Link href="/" className="text-neutral-500 hover:text-neutral-900">
-                            Auctions
-                        </Link>
-                    </li>
-                    <li aria-hidden className="text-neutral-400">
-                        <ChevronRight className="h-3 w-3" />
-                    </li>
-                    <li>
-                        <Link href="/my-profile" className="text-neutral-500 hover:text-neutral-900">
-                            My profile
-                        </Link>
-                    </li>
-                    <li aria-hidden className="text-neutral-400">
-                        <ChevronRight className="h-3 w-3" />
-                    </li>
-                    <li aria-current="page" className="text-neutral-900">
-                        {tabLabels[activeTab]}
-                    </li>
-                </ol>
-            </nav>
+        <main className={PAGE_MAIN}>
+            <section>
+                <div className="page-container">
+                    <Breadcrumb
+                        auctions={false}
+                        crumbs={[{ label: "My profile", href: "/my-profile" }, { label: tabLabels[activeTab] }]}
+                    />
 
-            {loadError ? (
-                <div className="mt-10 border border-neutral-200 p-6 text-sm text-neutral-600">
-                    <p>We couldn&apos;t load your profile.</p>
-                    <button
-                        type="button"
-                        onClick={() => (token ? load(token) : refreshSession().catch(() => setLoadError(true)))}
-                        className="mt-4 h-10 cursor-pointer bg-neutral-950 px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-white hover:bg-neutral-800"
-                    >
-                        Try again
-                    </button>
-                </div>
-            ) : !account ? (
-                <ProfileSkeleton />
-            ) : (
-                <>
-                    <header className="mt-6">
-                        <h1 className="text-4xl font-normal tracking-tight text-neutral-950 md:text-5xl">
-                            Welcome, {displayName(account)}
-                        </h1>
-                        <p className="mt-4 max-w-xl text-sm leading-relaxed text-neutral-500">
-                            {sales.length > 0
-                                ? `${allApproved ? "Registration complete — y" : "Y"}ou hold a paddle number for each sale below.`
-                                : "Register for an upcoming sale to receive your paddle number."}{" "}
-                            Track your shortlist and bidding activity in My auction gallery.
-                        </p>
-                    </header>
-
-                    {sales.length > 0 && (
-                        <div className="mt-8 flex flex-col gap-4 md:mt-10">
-                            {sales.map((registration) => (
-                                <RegistrationCard
-                                    key={registration.auction.uuid}
-                                    registration={registration}
-                                    bidderName={displayName(account)}
-                                    kycStatus={account.kyc?.status ?? "NOT_SUBMITTED"}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    <Tabs
-                        value={activeTab}
-                        onValueChange={(value) => handleTabChange(value as ProfileTab)}
-                        className="mt-10 gap-0 md:mt-12"
-                    >
-                        {/* overrides restyle shadcn's default pill tabs into the flat boxed design */}
-                        <TabsList className="w-full justify-start overflow-x-auto rounded-none border-b border-neutral-300 bg-transparent p-0 group-data-horizontal/tabs:h-auto">
-                            {(Object.keys(tabLabels) as ProfileTab[]).map((tab) => (
-                                <TabsTrigger
-                                    key={tab}
-                                    value={tab}
-                                    className="h-auto flex-none cursor-pointer rounded-none border border-transparent px-4 py-3 text-[11px] font-normal uppercase tracking-[0.18em] text-neutral-500 hover:text-neutral-900 data-active:border-neutral-900 data-active:bg-white data-active:text-neutral-900 group-data-[variant=default]/tabs-list:data-active:shadow-none"
-                                >
-                                    {tabLabels[tab]}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-
-                        {/* keepMounted so switching tabs doesn't wipe what the user typed */}
-                        <TabsContent value="personal" keepMounted className="flex flex-col gap-6 pt-6 md:pt-8">
-                            <PersonalDetailsForm account={account} onSaved={setAccount} />
-                            <ChangePasswordForm />
-                        </TabsContent>
-
-                        <TabsContent value="billing" keepMounted className="pt-6 md:pt-8">
-                            <BillingShippingForm account={account} onSaved={setAccount} />
-                        </TabsContent>
-
-                        <TabsContent value="kyc" keepMounted className="pt-6 md:pt-8">
-                            <KycDocumentsForm
-                                onKycChange={({ kycType, status, verifiedAt, rejectionReason }) =>
-                                    setAccount((prev) =>
-                                        prev && { ...prev, kyc: { kycType, status, verifiedAt, rejectionReason } }
-                                    )
-                                }
-                            />
-                        </TabsContent>
-
-                        <TabsContent value="orders" className="pt-6 md:pt-8">
-                            <ProfileSection title="My orders">
-                                <EmptyState
-                                    title="No orders yet"
-                                    body="Lots you win will appear here with their invoice, payment and shipping status."
-                                />
-                            </ProfileSection>
-                        </TabsContent>
-
-                        <TabsContent value="gallery" className="pt-6 md:pt-8">
-                            <ProfileSection
-                                title="My auction gallery"
-                                description="Lots you saved with “Add to my auction gallery”. Click “In my auction gallery” on a lot to remove it."
+                    {loadError ? (
+                        <div className="mt-6 border border-[#cecece] p-6">
+                            <p className={BODY}>We couldn&apos;t load your profile.</p>
+                            <button
+                                type="button"
+                                onClick={() => (token ? load(token) : refreshSession().catch(() => setLoadError(true)))}
+                                className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "mt-4")}
                             >
-                                <MyGallery
-                                    empty={
-                                        <EmptyState
-                                            title="Nothing saved yet"
-                                            body="Use “Add to my auction gallery” on any lot to keep it here, so you can follow it through the sale."
-                                        />
+                                Try again
+                            </button>
+                        </div>
+                    ) : !account ? (
+                        <ProfileSkeleton />
+                    ) : (
+                        <>
+                            <h1 className={cn(PAGE_TITLE, "mt-6")}>Welcome, {displayName(account)}</h1>
+                            <p className={cn(BODY, "mt-3 max-w-168.5")}>
+                                {sales.length > 0
+                                    ? `${allApproved ? "Registration complete — y" : "Y"}ou hold a paddle number for each sale below.`
+                                    : "Register for an upcoming sale to receive your paddle number."}{" "}
+                                Track your shortlist and bidding activity in My auction gallery.
+                            </p>
+                        </>
+                    )}
+                </div>
+            </section>
+
+            {account && sales.length > 0 && (
+                <section aria-label="Your paddles">
+                    <div className="page-container flex flex-col gap-4">
+                        {sales.map((registration) => (
+                            <RegistrationCard
+                                key={registration.auction.uuid}
+                                registration={registration}
+                                bidderName={displayName(account)}
+                                kycStatus={account.kyc?.status ?? "NOT_SUBMITTED"}
+                            />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {account && (
+                <section>
+                    <div className="page-container">
+                        <Tabs
+                            value={activeTab}
+                            onValueChange={(value) => handleTabChange(value as ProfileTab)}
+                            className="gap-0 md:mt-4"
+                        >
+                            {/* overrides restyle shadcn's default pill tabs into the flat underline design */}
+                            <TabsList className="scrollbar-none w-full justify-start overflow-x-auto rounded-none border-b border-[#cecece] bg-transparent p-0 group-data-horizontal/tabs:h-auto">
+                                {(Object.keys(tabLabels) as ProfileTab[]).map((tab) => (
+                                    <TabsTrigger
+                                        key={tab}
+                                        value={tab}
+                                        className="-mb-px h-10.25 flex-none cursor-pointer rounded-none border-0 border-b-2 border-transparent px-5 text-[12px] leading-4.5 font-normal tracking-[0.14em] text-[#717171] uppercase hover:bg-[#fdf1e3]/60 hover:text-[#0d0d0d] data-active:border-[#cea25a] data-active:bg-[#fdf1e3] data-active:font-medium data-active:text-[#0d0d0d] group-data-[variant=default]/tabs-list:data-active:shadow-none"
+                                    >
+                                        {tabLabels[tab]}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+
+                            {/* keepMounted so switching tabs doesn't wipe what the user typed */}
+                            <TabsContent value="personal" keepMounted className="flex flex-col gap-12 pt-8">
+                                <PersonalDetailsForm account={account} onSaved={setAccount} />
+                                <ChangePasswordForm />
+                            </TabsContent>
+
+                            <TabsContent value="billing" keepMounted className="pt-8">
+                                <BillingShippingForm account={account} onSaved={setAccount} />
+                            </TabsContent>
+
+                            <TabsContent value="kyc" keepMounted className="pt-8">
+                                <KycDocumentsForm
+                                    onKycChange={({ kycType, status, verifiedAt, rejectionReason }) =>
+                                        setAccount((prev) =>
+                                            prev && { ...prev, kyc: { kycType, status, verifiedAt, rejectionReason } }
+                                        )
                                     }
                                 />
-                            </ProfileSection>
-                        </TabsContent>
-                    </Tabs>
-                </>
+                            </TabsContent>
+
+                            <TabsContent value="orders" className="pt-8">
+                                <ProfileSection title="My orders">
+                                    <EmptyState
+                                        title="No orders yet"
+                                        body="Lots you win will appear here with their invoice, payment and shipping status."
+                                    />
+                                </ProfileSection>
+                            </TabsContent>
+
+                            <TabsContent value="gallery" className="pt-8">
+                                <ProfileSection
+                                    title="My auction gallery"
+                                    description="Lots you saved with “Add to my auction gallery”. Click “In my auction gallery” on a lot to remove it."
+                                >
+                                    <MyGallery
+                                        empty={
+                                            <EmptyState
+                                                title="No saved lots yet"
+                                                body="Tap “+ Add to my auction gallery” on any artwork while browsing and it will be collected here."
+                                            />
+                                        }
+                                    />
+                                </ProfileSection>
+                            </TabsContent>
+                        </Tabs>
+                    </div>
+                </section>
             )}
         </main>
     )
@@ -264,14 +254,11 @@ export function MyProfile() {
 
 function EmptyState({ title, body }: { title: string; body: string }) {
     return (
-        <div className="py-6 text-center">
-            <p className="text-sm text-neutral-900">{title}</p>
-            <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-neutral-500">{body}</p>
-            <Link
-                href="/"
-                className="mt-5 inline-flex h-10 items-center bg-neutral-950 px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-neutral-800"
-            >
-                Browse auctions
+        <div className="border border-[#cecece] px-6 py-8 text-center">
+            <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{title}</p>
+            <p className="mx-auto mt-2 max-w-lg text-[12px] leading-[19.5px] text-[#717171]">{body}</p>
+            <Link href="/" className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "mt-4")}>
+                Browse lots
             </Link>
         </div>
     )
@@ -280,11 +267,11 @@ function EmptyState({ title, body }: { title: string; body: string }) {
 function ProfileSkeleton() {
     return (
         <div aria-busy="true" aria-label="Loading your profile" className="mt-6 animate-pulse">
-            <div className="h-12 w-2/3 max-w-md bg-neutral-100" />
-            <div className="mt-4 h-4 w-full max-w-xl bg-neutral-100" />
-            <div className="mt-10 h-28 border border-neutral-200" />
-            <div className="mt-12 h-11 border-b border-neutral-200" />
-            <div className="mt-8 h-80 border border-neutral-200" />
+            <div className="h-12 w-2/3 max-w-md bg-[#f4f2ef]" />
+            <div className="mt-4 h-4 w-full max-w-xl bg-[#f4f2ef]" />
+            <div className="mt-12 h-28 border border-[#cecece]" />
+            <div className="mt-12 h-10.25 border-b border-[#cecece]" />
+            <div className="mt-8 h-80 bg-[#f4f2ef]" />
         </div>
     )
 }

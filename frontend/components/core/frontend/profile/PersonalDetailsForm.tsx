@@ -159,8 +159,8 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
 
     return (
         <ProfileSection title="Personal details">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <AuthField
                         id={fieldId("firstName")}
                         name="firstName"
@@ -195,12 +195,12 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
                         readOnly
                         aria-describedby="profile-email-hint"
                     />
-                    <p id="profile-email-hint" className="mt-1.5 text-xs text-neutral-400">
+                    <p id="profile-email-hint" className="mt-1.5 text-[12px] leading-4.5 text-[#717171]">
                         Your email is used to log in and can&apos;t be changed here.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                         <label htmlFor={fieldId("countryCode")} className={authLabelClass}>
                             Country code
@@ -243,7 +243,7 @@ export function PersonalDetailsForm({ account, onSaved }: PersonalDetailsFormPro
                     </div>
                 </div>
 
-                <div>
+                <div className="mt-2">
                     <ProfileButton loading={saving} loadingText="Saving...">
                         Save changes
                     </ProfileButton>
