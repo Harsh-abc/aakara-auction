@@ -56,6 +56,7 @@ model User {
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
   galleryItems              UserGalleryItem[]
+  activityLogs              ActivityLog[]          @relation("ActivityLogActor")
 
   @@index([roleId])
   @@index([status])
@@ -958,4 +959,39 @@ model UserGalleryItem {
   @@index([userId])
   @@index([itemId])
   @@map("user_gallery_items")
+}
+
+// audit trail of who did what, from where — written by src/middleware/activityLogger.js
+// (every API change, sign-ins, key views) and by the scheduler; read by super admins only.
+// The actor's name / email / role are copied in, so a row still reads right after the
+// user is renamed, changes role or is deleted. userId is null for guests and the system.
+model ActivityLog {
+  id          BigInt   @id @default(autoincrement())
+  userId      BigInt?
+  actorName   String?  @db.VarChar(160)
+  actorEmail  String?  @db.VarChar(255)
+  actorRole   String?  @db.VarChar(40)
+  module      String   @db.VarChar(40)
+  action      String   @db.VarChar(80)
+  description String?
+  method      String?  @db.VarChar(10)
+  path        String?  @db.VarChar(500)
+  statusCode  Int?
+  success     Boolean  @default(true)
+  ipAddress   String?  @db.VarChar(64)
+  userAgent   String?  @db.VarChar(500)
+  targetType  String?  @db.VarChar(40)
+  targetId    String?  @db.VarChar(100)
+  targetLabel String?  @db.VarChar(300)
+  metadata    Json?
+  durationMs  Int?
+  createdAt   DateTime @default(now())
+  user        User?    @relation("ActivityLogActor", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([module, createdAt])
+  @@index([action])
+  @@index([ipAddress])
+  @@map("activity_logs")
 }

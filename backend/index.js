@@ -18,10 +18,20 @@ import biddingRouter from "./src/routes/bidding.routes.js";
 import liveStreamRouter from "./src/routes/liveStream.routes.js";
 import { startAuctionScheduler } from "./src/jobs/auctionScheduler.js";
 import { initSocket } from "./src/libs/socket.js";
+import { activityLogger } from "./src/middleware/activityLogger.js";
 
 
 const app = express();
 
+// read the visitor's IP from X-Forwarded-For, but only when a trusted proxy (nginx,
+// a load balancer) set it — by default proxies on this machine or a private network.
+// TRUST_PROXY can be true, a hop count ("1") or a list of addresses / subnets.
+const parseTrustProxy = (value) => {
+    if (value === undefined || value === "") return "loopback, linklocal, uniquelocal";
+    if (value === "true" || value === "false") return value === "true";
+    return /^\d+$/.test(value) ? Number(value) : value;
+};
+app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
 
 app.use(
     cors({
@@ -31,6 +41,8 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+// audit trail for Settings → Activity Logs (see src/middleware/activityLogger.js)
+app.use(activityLogger);
 
 
 

@@ -208,7 +208,11 @@
       "Bash(node -e \"const f=\\(n,c\\)=>new Intl.NumberFormat\\(c==='INR'?'en-IN':'en-US',{style:'currency',currency:c,notation:'compact',maximumFractionDigits:1}\\).format\\(n\\); console.log\\([50000,100000,150000,5000,2500000].map\\(n=>f\\(n,'INR'\\)\\).join\\(' | '\\), '||', f\\(50000,'USD'\\)\\)\")",
       "Bash(timeout 20 node -e \"import\\('./src/libs/redis.js'\\).then\\(async \\({default: r}\\) => { try { console.log\\('PING', await r.ping\\(\\)\\); } catch \\(e\\) { console.log\\('NO REDIS', e.message\\) } process.exit\\(0\\) }\\)\")",
       "PowerShell(git rm -q components/core/frontend/auctions/lot/lotEssayContent.ts)",
-      "PowerShell(npx tsc --noEmit -p . 2>&1)"
+      "PowerShell(npx tsc --noEmit -p . 2>&1)",
+      "Bash(node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/c6e26986-6bec-4b6f-9361-7a8f2463eb68/scratchpad/smoke.mjs\")",
+      "Bash(DIRECT_URL=postgresql://x:y@127.0.0.1:1/z node -e ' *)",
+      "Bash(DIRECT_URL=postgresql://x:y@127.0.0.1:1/z timeout 60 node --input-type=module -e ' *)",
+      "Bash(grep -v \"^$\")"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

@@ -282,6 +282,7 @@ const data = {
       items: [
         { title: "General Settings", url: "/dashboard/settings/general" },
         { title: "Team", url: "/dashboard/settings/team" },
+        { title: "Activity Logs", url: "/dashboard/settings/activity-logs", roles: ["SUPER_ADMIN"] },
         // { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
       ],
     },

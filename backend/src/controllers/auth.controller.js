@@ -1,6 +1,8 @@
 import { registerSchema, verifyOtpSchema, loginSchema } from '../validations/auth.validation.js';
 import { registerService, verifyOtpService, verifyPhoneOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
 import { ZodError } from 'zod';
+import { getClientIp } from '../utils/clientIp.js';
+import { setActivityActor } from '../libs/activityLog.js';
 
 export const register = async (req, res, next) => {
     try {
@@ -82,20 +84,6 @@ const clearRefreshCookie = (res) => {
     if (COOKIE_DOMAIN) res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
 };
 
-const normalizeIp = (ip) => {
-    if (!ip) return "unknown";
-
-    if (ip === "::1") {
-        return "127.0.0.1";
-    }
-
-    if (ip.startsWith("::ffff:")) {
-        return ip.replace("::ffff:", "");
-    }
-
-    return ip;
-};
-
 export const login = async (req, res, next) => {
     try {
         const parsed = loginSchema.safeParse(req.body);
@@ -110,7 +98,7 @@ export const login = async (req, res, next) => {
 
         const { email, password } = parsed.data;
 
-        const ip = normalizeIp(req.ip);
+        const ip = getClientIp(req);
         const userAgent = req.headers['user-agent'] ?? null;
 
         const { user, role, permissions, accessToken, refreshToken } = await loginService({
@@ -170,7 +158,8 @@ export const refresh = async (req, res) => {
 export const logout = async (req, res) => {
     const token = req.cookies?.[REFRESH_COOKIE_NAME];
     try {
-        await logoutService(token);
+        // the session is gone once this returns, so say who it was for the activity log
+        setActivityActor(req, await logoutService(token));
     } catch (err) {
         console.error('logoutService error:', err);
     } finally {
