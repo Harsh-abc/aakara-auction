@@ -495,7 +495,11 @@ export const refreshService = async (refreshToken) => {
     };
 };
 
+// returns the signed-out user's id (null when there was no session)
 export const logoutService = async (refreshToken) => {
-    if (!refreshToken) return;
-    await prisma.userSession.deleteMany({ where: { refreshTokenHash: hashToken(refreshToken) } });
+    if (!refreshToken) return null;
+    const tokenHash = hashToken(refreshToken);
+    const session = await prisma.userSession.findUnique({ where: { refreshTokenHash: tokenHash }, select: { userId: true } });
+    await prisma.userSession.deleteMany({ where: { refreshTokenHash: tokenHash } });
+    return session?.userId ?? null;
 };

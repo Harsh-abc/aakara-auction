@@ -1,4 +1,5 @@
 import prisma from "../libs/prisma.js";
+import { logActivity, SYSTEM_ACTOR } from "../libs/activityLog.js";
 import { closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
 import { flushPendingAuctions, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
 
@@ -97,19 +98,36 @@ const endSale = (auctionId, now) =>
 const syncBidding = (uuid) =>
     syncAuctionBidding(uuid).catch((err) => console.error(`[scheduler] could not sync bidding for auction ${uuid}:`, err));
 
-const runDue = async (label, where, action, describe) => {
-    const now = new Date();
-    const due = await prisma.auction.findMany({ where: { deletedAt: null, ...where(now) }, select: { id: true, uuid: true } });
+const logSystem = (activity, uuid, title, description, success = true) =>
+    logActivity({
+        actor: SYSTEM_ACTOR,
+        module: "SYSTEM",
+        action: success ? activity : `${activity}_FAILED`,
+        description,
+        success,
+        targetType: "AUCTION",
+        targetId: uuid,
+        targetLabel: title,
+    });
 
-    for (const { id, uuid } of due) {
+const runDue = async (label, activity, where, action, describe) => {
+    const now = new Date();
+    const due = await prisma.auction.findMany({
+        where: { deletedAt: null, ...where(now) },
+        select: { id: true, uuid: true, title: true },
+    });
+
+    for (const { id, uuid, title } of due) {
         try {
             const result = await action(id, now);
             if (result) {
                 console.info(`[scheduler] ${describe(result)}`);
+                await logSystem(activity, uuid, title, describe(result));
                 await syncBidding(uuid);
             }
         } catch (err) {
             console.error(`[scheduler] failed to ${label} auction ${id}:`, err);
+            await logSystem(activity, uuid, title, `Could not ${label} "${title}" automatically: ${err.message}`, false);
             await syncBidding(uuid);
         }
     }
@@ -118,6 +136,7 @@ const runDue = async (label, where, action, describe) => {
 const endDueAuctions = () =>
     runDue(
         "end",
+        "AUCTION_AUTO_END",
         (now) => ({ status: { in: ENDABLE_AUCTION_STATUSES }, endTime: { lte: now } }),
         endSale,
         ({ title, liveLot, unoffered }) =>
@@ -129,6 +148,7 @@ const endDueAuctions = () =>
 const startDueAuctions = () =>
     runDue(
         "start",
+        "AUCTION_AUTO_START",
         (now) => ({ status: { in: STARTABLE_AUCTION_STATUSES }, startTime: { lte: now }, endTime: { gt: now } }),
         goLive,
         ({ title, lot }) => `"${title}" is now LIVE` + (lot ? ` — opened lot #${lot.itemNumber}` : " — no lot to open")

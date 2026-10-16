@@ -10,6 +10,7 @@ import {
 } from "../services/bidding.services.js";
 import { auctionUuidParamSchema, lotUuidParamSchema } from "../validations/auction.validation.js";
 import { placeBidSchema, placeFloorBidSchema, setProxyBidSchema } from "../validations/bidding.validation.js";
+import { getClientIp } from "../utils/clientIp.js";
 
 const handleError = (res, error, label, fallback) => {
     if (error instanceof ZodError) {
@@ -28,7 +29,7 @@ const handleError = (res, error, label, fallback) => {
     });
 };
 
-const clientInfo = (req) => ({ ip: req.ip ?? null, userAgent: req.get("user-agent") ?? null });
+const clientInfo = (req) => ({ ip: getClientIp(req), userAgent: req.get("user-agent") ?? null });
 
 // -----------------------------------------------------------------
 // GET /api/bidding/lots/:lotUuid/me

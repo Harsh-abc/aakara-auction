@@ -140,4 +140,8 @@ export const adminEndPoints = {
     CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
     CHANGE_USER_ROLE_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/role`,
     CHANGE_USER_STATUS_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/status`,
+    // Settings → Activity Logs (super admin only)
+    ACTIVITY_LOGS_API: `${BASE_URL}/api/admin/activity-logs`,
+    ACTIVITY_LOG_SUMMARY_API: `${BASE_URL}/api/admin/activity-logs/summary`,
+    ACTIVITY_LOGS_EXPORT_API: `${BASE_URL}/api/admin/activity-logs/export`,
 }

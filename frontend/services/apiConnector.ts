@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios'
+import axios, { AxiosResponse, ResponseType } from 'axios'
 
 export const axiosInstance = axios.create({
     withCredentials: true,
@@ -10,6 +10,8 @@ interface ApiConnectorProps {
     body?: any
     header?: any
     params?: any
+    /** e.g. "blob" for file downloads */
+    responseType?: ResponseType
 }
 
 export const apiConnector = <T = any>({
@@ -18,6 +20,7 @@ export const apiConnector = <T = any>({
     body,
     header,
     params,
+    responseType,
 }: ApiConnectorProps): Promise<AxiosResponse<T>> => {
     return axiosInstance({
         method: `${method}`,
@@ -25,5 +28,6 @@ export const apiConnector = <T = any>({
         data: body ? body : null,
         headers: header ? header : null,
         params: params ? params : null,
+        ...(responseType && { responseType }),
     })
 }
