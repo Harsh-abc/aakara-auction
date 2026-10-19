@@ -85,7 +85,10 @@ export function MenuDrawer() {
                             >
                                 <div className="flex items-center justify-between px-7.5 pt-7.5">
                                     <AkaraLogo />
-                                    <Dialog.Close aria-label="Close menu" className="inline-flex size-10 items-center justify-center border border-[#cecece] transition-colors hover:border-[#0d0d0d]">
+                                    <Dialog.Close
+                                        aria-label="Close menu"
+                                        className="inline-flex size-10 items-center justify-center border border-[#cecece] transition-colors hover:border-[#0d0d0d] cursor-pointer"
+                                    >
                                         <X className="size-4" strokeWidth={1.5} />
                                     </Dialog.Close>
                                 </div>
