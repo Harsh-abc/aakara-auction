@@ -13,8 +13,11 @@ mg.domains.get(domain)
     .catch((error) => console.error("Mailer connection failed:", error));
 
 const mailer = {
-    sendMail: async ({ from, to, subject, html, text }) => {
-        const res = await mg.messages.create(domain, { from, to, subject, html, text });
+    sendMail: async ({ from, to, cc, bcc, subject, html, text }) => {
+        const message = { from, to, subject, html, text };
+        if (cc) message.cc = cc;
+        if (bcc) message.bcc = bcc;
+        const res = await mg.messages.create(domain, message);
         return { ...res, messageId: res.id };
     },
 };
