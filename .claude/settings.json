@@ -212,7 +212,8 @@
       "Bash(node \"C:/Users/opera/AppData/Local/Temp/claude/d--Harsh-projects-aakara-auction/c6e26986-6bec-4b6f-9361-7a8f2463eb68/scratchpad/smoke.mjs\")",
       "Bash(DIRECT_URL=postgresql://x:y@127.0.0.1:1/z node -e ' *)",
       "Bash(DIRECT_URL=postgresql://x:y@127.0.0.1:1/z timeout 60 node --input-type=module -e ' *)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Read(//c/Users/opera/AppData/Local/Temp/scp49134/etc/nginx/sites-available/**)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"
