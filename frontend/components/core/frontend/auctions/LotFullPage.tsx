@@ -109,7 +109,7 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                             disabled={gallery.isPending(lot.uuid)}
                             aria-pressed={saved}
                             className={cn(
-                                "mt-6 inline-flex h-7.75 cursor-pointer items-center gap-1.5 border px-2.75 text-[11px] leading-[16.5px] tracking-[0.12em] text-[#0d0d0d] uppercase transition-colors duration-200 hover:border-[#d0a55d] hover:bg-[#fdedd6] disabled:cursor-wait disabled:opacity-60",
+                                "mt-6 inline-flex h-7.75 cursor-pointer items-center gap-1.5 border px-2.75 text-[11px] leading-[16.5px] tracking-[0.12em] text-[#0d0d0d] uppercase transition-colors duration-200 not-disabled:hover:border-[#d0a55d] not-disabled:hover:bg-[#fdedd6] disabled:cursor-wait disabled:opacity-60",
                                 saved ? "border-[#d0a55d] bg-[#fdedd6]" : "border-[#333] bg-white",
                             )}
                         >

@@ -223,7 +223,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                     title={closed ? "Proxy bids close when the lot opens" : undefined}
                                     className={cn(
                                         "h-9 cursor-pointer text-[11px] tracking-[0.18em] uppercase transition-colors disabled:cursor-not-allowed disabled:text-neutral-400",
-                                        kind === option ? "bg-neutral-950 text-white" : "bg-white text-neutral-950 hover:bg-neutral-50 disabled:hover:bg-white"
+                                        kind === option ? "bg-neutral-950 text-white" : "bg-white text-neutral-950 not-disabled:hover:bg-neutral-50"
                                     )}
                                 >
                                     {option === "bid" ? "Place a bid" : "Proxy bid"}
@@ -276,7 +276,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                                     "h-12 cursor-pointer border px-2 text-sm font-medium tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                                                     selected
                                                         ? "border-neutral-950 bg-neutral-950 text-white"
-                                                        : "border-neutral-300 bg-white text-neutral-950 hover:border-neutral-950"
+                                                        : "border-neutral-300 bg-white text-neutral-950 not-disabled:hover:border-neutral-950"
                                                 )}
                                             >
                                                 {money(option)}
@@ -325,11 +325,11 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                         type="button"
                         onClick={() => handleOpenChange(false)}
                         disabled={submitting}
-                        className={cn(ACTION, "border border-neutral-950 bg-white text-neutral-950 hover:bg-neutral-50")}
+                        className={cn(ACTION, "border border-neutral-950 bg-white text-neutral-950 not-disabled:hover:bg-neutral-50")}
                     >
                         Cancel
                     </button>
-                    <button type="button" onClick={review} disabled={!canSubmit} className={cn(ACTION, "bg-neutral-950 text-white hover:bg-neutral-800")}>
+                    <button type="button" onClick={review} disabled={!canSubmit} className={cn(ACTION, "bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}>
                         {kind === "bid"
                             ? amount > 0
                                 ? `Bid ${money(amount)}`
@@ -368,7 +368,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                 type="button"
                                 onClick={() => handleConfirmOpenChange(false)}
                                 disabled={submitting}
-                                className={cn(ACTION, "border border-neutral-950 bg-white text-neutral-950 hover:bg-neutral-50")}
+                                className={cn(ACTION, "border border-neutral-950 bg-white text-neutral-950 not-disabled:hover:bg-neutral-50")}
                             >
                                 Back
                             </button>
@@ -376,7 +376,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                 type="button"
                                 onClick={submit}
                                 disabled={submitting || !canPlace || outpaced}
-                                className={cn(ACTION, "bg-neutral-950 text-white hover:bg-neutral-800")}
+                                className={cn(ACTION, "bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}
                             >
                                 {submitting ? "Sending..." : kind === "bid" ? "Confirm bid" : "Confirm maximum"}
                             </button>

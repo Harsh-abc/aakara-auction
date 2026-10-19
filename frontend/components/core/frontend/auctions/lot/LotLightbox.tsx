@@ -22,7 +22,7 @@ type View = { scale: number; x: number; y: number };
 const FIT: View = { scale: 1, x: 0, y: 0 };
 
 const CONTROL =
-    "flex size-10 cursor-pointer items-center justify-center border border-white/25 bg-black/40 text-white transition-colors duration-200 hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30";
+    "flex size-10 cursor-pointer items-center justify-center border border-white/25 bg-black/40 text-white transition-colors duration-200 not-disabled:hover:border-white not-disabled:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 

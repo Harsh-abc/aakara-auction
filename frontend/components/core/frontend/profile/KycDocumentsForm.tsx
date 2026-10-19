@@ -171,7 +171,7 @@ export function KycDocumentsForm({ onKycChange }: KycDocumentsFormProps) {
                         <button
                             type="button"
                             onClick={load}
-                            className="mt-4 h-10 cursor-pointer bg-neutral-950 px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-white hover:bg-neutral-800"
+                            className="mt-4 h-10 cursor-pointer bg-neutral-950 px-5 text-[11px] font-medium uppercase tracking-[0.2em] text-white not-disabled:hover:bg-neutral-800"
                         >
                             Try again
                         </button>
@@ -429,7 +429,7 @@ function DocumentRow({
                         type="button"
                         onClick={onRemove}
                         disabled={disabled}
-                        className="cursor-pointer text-[11px] uppercase tracking-[0.18em] text-neutral-500 underline underline-offset-2 hover:text-neutral-900 disabled:cursor-not-allowed"
+                        className="cursor-pointer text-[11px] uppercase tracking-[0.18em] text-neutral-500 underline underline-offset-2 not-disabled:hover:text-neutral-900 disabled:cursor-not-allowed"
                     >
                         Remove
                     </button>

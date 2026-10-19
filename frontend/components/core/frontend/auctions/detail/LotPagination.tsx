@@ -39,7 +39,7 @@ export function LotPagination({ page, totalPages, total, limit, onPageChange }: 
 
     const first = (page - 1) * limit + 1;
     const last = Math.min(page * limit, total);
-    const arrow = cn(PAGE_BUTTON, "bg-white text-[#0d0d0d] hover:border-[#0d0d0d] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#cecece]");
+    const arrow = cn(PAGE_BUTTON, "bg-white text-[#0d0d0d] not-disabled:hover:border-[#0d0d0d] disabled:cursor-not-allowed disabled:opacity-40");
 
     return (
         <nav aria-label="Lot pages" className="flex flex-col items-center gap-4">

@@ -62,7 +62,7 @@ export function TopLots({ auctionUuid, lots, saleStatus, onBid }: TopLotsProps) 
                                                 type="button"
                                                 onClick={() => gallery.toggle(lot.uuid)}
                                                 disabled={gallery.isPending(lot.uuid)}
-                                                className="mt-3.5 cursor-pointer text-[11px] leading-3.75 tracking-[0.12em] text-[#0d0d0d] uppercase underline underline-offset-2 hover:text-[#673364] disabled:cursor-wait disabled:opacity-60"
+                                                className="mt-3.5 cursor-pointer text-[11px] leading-3.75 tracking-[0.12em] text-[#0d0d0d] uppercase underline underline-offset-2 not-disabled:hover:text-[#673364] disabled:cursor-wait disabled:opacity-60"
                                             >
                                                 {saved ? "In my auction gallery" : "Add to my auction gallery"}
                                             </button>

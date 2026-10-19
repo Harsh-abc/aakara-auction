@@ -20,8 +20,10 @@ export const BODY = "text-[14px] leading-[22.75px] text-[#717171]";
 // 44px buttons — full width by default; add "w-auto px-4.25" for inline ones
 export const BUTTON =
     "inline-flex h-11 w-full cursor-pointer items-center justify-center border text-[12px] leading-4.5 tracking-[0.12em] whitespace-nowrap uppercase transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40";
-export const BUTTON_SOLID = "border-black bg-black text-white hover:border-[#673364] hover:bg-[#673364]";
-export const BUTTON_OUTLINE = "border-[#0d0d0d] bg-white text-[#0d0d0d] hover:border-[#d0a55d] hover:bg-[#fdedd6]";
+// hover only while the button can be used — a disabled button keeps its resting colours
+// (`not-disabled:` rather than `enabled:` so it still works on <Link>s, which are never :disabled)
+export const BUTTON_SOLID = "border-black bg-black text-white not-disabled:hover:border-[#673364] not-disabled:hover:bg-[#673364]";
+export const BUTTON_OUTLINE = "border-[#0d0d0d] bg-white text-[#0d0d0d] not-disabled:hover:border-[#d0a55d] not-disabled:hover:bg-[#fdedd6]";
 export const BUTTON_INLINE = "w-auto px-4.25";
 
 // a section's title row: 18px title on a hairline, optional right-hand note, optional description under it

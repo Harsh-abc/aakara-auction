@@ -212,7 +212,7 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                         type="button"
                         onClick={() => handleOpenChange(false)}
                         disabled={submitting}
-                        className="inline-flex h-11 cursor-pointer items-center justify-center border border-neutral-950 bg-white px-6 text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-950 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex h-11 cursor-pointer items-center justify-center border border-neutral-950 bg-white px-6 text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-950 transition-colors not-disabled:hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         Cancel
                     </button>
@@ -220,7 +220,7 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                         type="button"
                         onClick={onConfirm}
                         disabled={!loaded || kycStatus !== "VERIFIED" || !accepted || submitting}
-                        className="inline-flex h-11 cursor-pointer items-center justify-center bg-neutral-950 px-6 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-11 cursor-pointer items-center justify-center bg-neutral-950 px-6 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors not-disabled:hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {submitting ? "Registering..." : "Confirm registration"}
                     </button>
