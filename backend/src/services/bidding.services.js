@@ -1350,6 +1350,9 @@ const persistLot = async ({ state, rawBids, rawProxies, auctionStatus }) => {
                         });
                     }
                 }
+            } else if (item._count.bids > 0 && auctionStatus === "CANCELLED") {
+                // saved when the lot closed (saveClosedLotBids), before the sale was called off
+                await tx.bid.updateMany({ where: { itemId }, data: { status: "CANCELLED" } });
             }
 
             // proxies are saved when they're set — this only catches any left before that (older Redis state)
@@ -1377,6 +1380,33 @@ const persistLot = async ({ state, rawBids, rawProxies, auctionStatus }) => {
         },
         { maxWait: 10_000, timeout: 60_000 }
     );
+};
+
+/**
+ * Writes a lot's bids to the database as soon as it closes (hammer / stop), so
+ * its history doesn't depend on Redis for the rest of the sale. Its Redis keys
+ * stay until the auction ends (flushAuctionBids skips lots already written).
+ * Never fails the close — the flush at the end of the sale writes them anyway.
+ */
+export const saveClosedLotBids = async (lotUuid) => {
+    try {
+        const [[, state], [, rawBids]] = await redis
+            .pipeline()
+            .hgetall(bidKeys.lot(lotUuid))
+            .lrange(bidKeys.bids(lotUuid), 0, -1)
+            .exec();
+        if (!state || Object.keys(state).length === 0 || rawBids.length === 0) return;
+
+        const lot = await prisma.auctionItem.findUnique({
+            where: { uuid: lotUuid },
+            select: { status: true, auction: { select: { status: true } } },
+        });
+        if (!lot || !CLOSED_LOT_STATUSES.includes(lot.status)) return;
+
+        await persistLot({ state, rawBids, rawProxies: {}, auctionStatus: lot.auction.status });
+    } catch (error) {
+        console.error(`[bidding] could not save the bids of closed lot ${lotUuid} (saved when the sale ends):`, error);
+    }
 };
 
 /**

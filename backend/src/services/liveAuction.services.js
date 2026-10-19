@@ -1,6 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
-import { freezeLotBidding, syncLotBidding } from "./bidding.services.js";
+import { freezeLotBidding, saveClosedLotBids, syncLotBidding } from "./bidding.services.js";
 
 const httpError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -193,6 +193,8 @@ const closingLot = async (lotUuid, work) => {
         const result = await work(() => (frozen = true));
         // open the lot for bids (proxies wait for the hammer) or publish its result
         await syncLotBidding(lotUuid).catch((error) => console.error(`[bidding] could not sync lot ${lotUuid}:`, error));
+        // a closed lot's bids go to the database now, not only when the sale ends
+        await saveClosedLotBids(lotUuid);
         return result;
     } catch (error) {
         if (frozen) await syncLotBidding(lotUuid).catch((err) => console.error(`[bidding] could not reopen lot ${lotUuid}:`, err));
