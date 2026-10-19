@@ -3,7 +3,7 @@
  *  MENU DRAWER  —  the panel that slides in from the right (☰ button)
  * ════════════════════════════════════════════════════════════════════
  *  Follows the client wireframe (menu.png): logo top-left, × top-right,
- *  grey links, the current page in black, "Auction" opens a small sub-menu.
+ *  grey links, the current page in black, "Auction" has a small sub-menu (open by default).
  *
  *  TO CHANGE THE LINKS → constants/site-text.ts → MAIN_MENU_LINKS
  *
@@ -17,7 +17,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog } from "radix-ui";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
@@ -39,17 +39,27 @@ function isCurrentPage(currentPath: string, link: MenuLink) {
 export function MenuDrawer() {
     const currentPath = usePathname();
     const [isOpen, setIsOpen] = useState(false);
-    const [openSubMenu, setOpenSubMenu] = useState<string | null>(null);
+    // sub-menus start unfolded; this holds the ones the user has folded away
+    const [foldedSubMenus, setFoldedSubMenus] = useState<Set<string>>(() => new Set());
 
-    // When the drawer opens, unfold the sub-menu that contains the current page
-    useEffect(() => {
-        if (isOpen) setOpenSubMenu(MAIN_MENU_LINKS.find((link) => link.children && isCurrentPage(currentPath, link))?.label ?? null);
-    }, [isOpen, currentPath]);
+    // every time the drawer opens, all sub-menus are unfolded again
+    const openChange = (open: boolean) => {
+        if (open) setFoldedSubMenus(new Set());
+        setIsOpen(open);
+    };
+
+    const toggleSubMenu = (label: string) =>
+        setFoldedSubMenus((prev) => {
+            const next = new Set(prev);
+            if (next.has(label)) next.delete(label);
+            else next.add(label);
+            return next;
+        });
 
     const closeDrawer = () => setIsOpen(false);
 
     return (
-        <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog.Root open={isOpen} onOpenChange={openChange}>
             {/* The ☰ button in the header */}
             <Dialog.Trigger
                 aria-label="Open menu"
@@ -90,8 +100,8 @@ export function MenuDrawer() {
                                                     <SubMenu
                                                         link={link}
                                                         isActive={isCurrentPage(currentPath, link)}
-                                                        isOpen={openSubMenu === link.label}
-                                                        onToggle={() => setOpenSubMenu(openSubMenu === link.label ? null : link.label)}
+                                                        isOpen={!foldedSubMenus.has(link.label)}
+                                                        onToggle={() => toggleSubMenu(link.label)}
                                                         onLinkClick={closeDrawer}
                                                     />
                                                 ) : (

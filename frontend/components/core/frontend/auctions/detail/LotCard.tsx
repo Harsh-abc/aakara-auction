@@ -64,8 +64,8 @@ function GalleryButton({ lot, gallery, className }: { lot: PublicLot; gallery: G
             aria-pressed={saved}
             title={saved ? "Remove from my auction gallery" : "Add to my auction gallery"}
             className={cn(
-                "inline-flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 border border-[#333] px-3.25 text-[11px] leading-[16.5px] tracking-[0.12em] text-[#0d0d0d] uppercase transition-colors duration-200 hover:border-[#d0a55d] hover:bg-[#fdedd6] disabled:cursor-wait disabled:opacity-60",
-                saved ? "bg-[#fdedd6]" : "bg-white",
+                "inline-flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 border px-3.25 text-[11px] leading-[16.5px] tracking-[0.12em] text-[#0d0d0d] uppercase transition-colors duration-200 hover:border-[#d0a55d] hover:bg-[#fdedd6] disabled:cursor-wait disabled:opacity-60",
+                saved ? "border-[#d0a55d] bg-[#fdedd6]" : "border-[#333] bg-white",
                 className,
             )}
         >
