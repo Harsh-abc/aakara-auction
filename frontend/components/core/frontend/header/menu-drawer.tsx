@@ -63,7 +63,7 @@ export function MenuDrawer() {
             {/* The ☰ button in the header */}
             <Dialog.Trigger
                 aria-label="Open menu"
-                className="group inline-flex size-10 shrink-0 flex-col items-center justify-center gap-1.5 border border-[#cecece] bg-white transition-colors hover:border-[#0d0d0d]"
+                className="group inline-flex size-10 shrink-0 flex-col items-center justify-center gap-1.5 border border-[#cecece] bg-white transition-colors hover:border-[#0d0d0d] cursor-pointer"
             >
                 <span className="h-[1.13px] w-4 bg-[#0d0d0d] transition-transform duration-300" />
                 <span className="h-[1.13px] w-4 bg-[#0d0d0d] transition-transform duration-300" />
