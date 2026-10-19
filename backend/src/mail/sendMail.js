@@ -1,6 +1,6 @@
 import mailer from "../config/mail.js";
 
-const sendEmail = async (to, subject, html) => {
+const sendEmail = async (to, subject, html, cc = process.env.MAILGUN_CC) => {
     try {
         const mailOptions = {
             from: process.env.MAILGUN_FROM,
@@ -8,6 +8,7 @@ const sendEmail = async (to, subject, html) => {
             subject,
             html,
         };
+        if (cc) mailOptions.cc = cc;
         const info = await mailer.sendMail(mailOptions);
         console.log("Email sent:", info.messageId);
         return info;
