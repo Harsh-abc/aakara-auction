@@ -213,7 +213,10 @@
       "Bash(DIRECT_URL=postgresql://x:y@127.0.0.1:1/z node -e ' *)",
       "Bash(DIRECT_URL=postgresql://x:y@127.0.0.1:1/z timeout 60 node --input-type=module -e ' *)",
       "Bash(grep -v \"^$\")",
-      "Read(//c/Users/opera/AppData/Local/Temp/scp49134/etc/nginx/sites-available/**)"
+      "Read(//c/Users/opera/AppData/Local/Temp/scp49134/etc/nginx/sites-available/**)",
+      "Bash(curl -s -o /tmp/uat.html -w \"HTTP %{http_code}\\\\n\" https://uat.auction.akaraart.com/)",
+      "Read(//tmp/**)",
+      "Bash(xargs grep -il proxy)"
     ],
     "additionalDirectories": [
       "D:\\Harsh\\projects\\aakara-auction\\frontend\\components\\core\\frontend\\home"

@@ -13,7 +13,7 @@ const steps = [
     },
     {
         title: "Place your bid",
-        body: "Enter your maximum bid and we will bid on your behalf in set increments. You will be notified instantly if you are outbid or if the lot is yours.",
+        body: "Enter your maximum bid before the lot opens. When the auctioneer calls the hammer, the highest maximum wins at one increment above the next-highest bid. You will be notified instantly if you are outbid or if the lot is yours.",
     },
 ];
 

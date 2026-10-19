@@ -34,7 +34,7 @@ type BidDialogProps = {
     onClose: () => void
 }
 
-// place a bid on a live lot, or set / raise a proxy (maximum) bid on a live or upcoming one
+// place a bid on a live lot, or leave a proxy (maximum) bid on an upcoming one — once, before it opens
 export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: BidDialogProps) {
     const token = useAppSelector((state) => state.auth.accessToken)
 
@@ -87,6 +87,10 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
     const verified = current?.registration === "VERIFIED"
     const allowed = kind === "bid" ? current?.canBid : current?.canProxy
     const leadingOnBid = kind === "bid" && current?.leading
+    // proxy bids close as soon as the lot opens (the page's live status can be ahead of the dialog's)
+    const proxyOpen = UPCOMING_LOT_STATUSES.includes(lot.status) && (!current || UPCOMING_LOT_STATUSES.includes(current.status))
+    // a proxy can be left once and isn't changed after
+    const proxySet = kind === "proxy" && Boolean(current?.proxyMax)
 
     // why this kind of bid can't be placed right now (null = it can)
     let blocker: ReactNode = null
@@ -101,16 +105,40 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
         )
     } else if (current && current.registration === "PENDING") {
         blocker = "Your registration is awaiting verification by the auction house. You can bid once it's approved."
+    } else if (current && proxySet) {
+        blocker = (
+            <>
+                Your maximum bid of <span className="font-medium text-neutral-950">{money(current.proxyMax)}</span> is set.{" "}
+                {proxyOpen
+                    ? `It's placed for you when the auctioneer calls the hammer on ${lotTag(lot)}. A proxy bid can only be set once, so it can't be changed.`
+                    : "A proxy bid can only be set once, so it can't be changed."}
+            </>
+        )
+    } else if (current && kind === "proxy" && !proxyOpen && current.status === "ACTIVE") {
+        blocker = (
+            <>
+                {lotTag(lot)} is live — proxy bids close when a lot opens.{" "}
+                {current.canBid && (
+                    <button type="button" onClick={() => onKindChange("bid")} className="cursor-pointer text-neutral-950 underline underline-offset-2">
+                        Place a bid instead
+                    </button>
+                )}
+            </>
+        )
     } else if (current && !allowed) {
-        if (kind === "bid" && UPCOMING_LOT_STATUSES.includes(current.status) && current.canProxy) {
-            blocker = (
+        if (kind === "bid" && UPCOMING_LOT_STATUSES.includes(current.status)) {
+            blocker = current.canProxy ? (
                 <>
                     {lotTag(lot)} isn&apos;t on the block yet.{" "}
                     <button type="button" onClick={() => onKindChange("proxy")} className="cursor-pointer text-neutral-950 underline underline-offset-2">
                         Leave a proxy bid
                     </button>{" "}
-                    and it bids for you when the lot opens.
+                    and it&apos;s placed for you when the auctioneer calls the hammer.
                 </>
+            ) : current.proxyMax ? (
+                `${lotTag(lot)} isn't on the block yet. Your maximum bid of ${money(current.proxyMax)} is placed for you when the auctioneer calls the hammer.`
+            ) : (
+                `${lotTag(lot)} isn't on the block yet. You can bid when it opens.`
             )
         } else if (kind === "bid" && current.status === "ACTIVE" && current.auctionStatus === "PAUSED") {
             blocker = "Bidding is paused. It resumes when the auctioneer restarts the sale."
@@ -119,7 +147,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
         }
     }
 
-    const canPlace = Boolean(current && verified && allowed && !leadingOnBid && !submitting)
+    const canPlace = Boolean(current && verified && allowed && !leadingOnBid && !submitting && (kind === "bid" || proxyOpen))
     const canSubmit = canPlace && amount > 0
 
     // someone bid while the bidder was confirming, and the amount no longer reaches the next bid
@@ -180,24 +208,28 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                         {kind === "bid" ? "Place a bid on this lot" : "Set the most you're willing to pay for this lot"}
                     </DialogDescription>
 
-                    {/* bid now / proxy */}
+                    {/* bid now / proxy (proxy closes once the lot opens) */}
                     <div className="mt-4 grid grid-cols-2 border border-neutral-950" role="tablist">
-                        {(["bid", "proxy"] as const).map((option) => (
-                            <button
-                                key={option}
-                                type="button"
-                                role="tab"
-                                aria-selected={kind === option}
-                                onClick={() => onKindChange(option)}
-                                disabled={submitting}
-                                className={cn(
-                                    "h-9 cursor-pointer text-[11px] tracking-[0.18em] uppercase transition-colors",
-                                    kind === option ? "bg-neutral-950 text-white" : "bg-white text-neutral-950 hover:bg-neutral-50"
-                                )}
-                            >
-                                {option === "bid" ? "Place a bid" : "Proxy bid"}
-                            </button>
-                        ))}
+                        {(["bid", "proxy"] as const).map((option) => {
+                            const closed = option === "proxy" && !proxyOpen && kind !== "proxy"
+                            return (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={kind === option}
+                                    onClick={() => onKindChange(option)}
+                                    disabled={submitting || closed}
+                                    title={closed ? "Proxy bids close when the lot opens" : undefined}
+                                    className={cn(
+                                        "h-9 cursor-pointer text-[11px] tracking-[0.18em] uppercase transition-colors disabled:cursor-not-allowed disabled:text-neutral-400",
+                                        kind === option ? "bg-neutral-950 text-white" : "bg-white text-neutral-950 hover:bg-neutral-50 disabled:hover:bg-white"
+                                    )}
+                                >
+                                    {option === "bid" ? "Place a bid" : "Proxy bid"}
+                                </button>
+                            )
+                        })}
                     </div>
                 </DialogHeader>
 
@@ -223,22 +255,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                         {blocker ? (
                             <p className="mt-5 text-sm leading-relaxed text-neutral-600">{blocker}</p>
                         ) : leadingOnBid ? (
-                            <p className="mt-5 text-sm leading-relaxed text-neutral-600">
-                                You&apos;re the highest bidder.{" "}
-                                {current.canProxy && (
-                                    <>
-                                        To stay ahead without watching,{" "}
-                                        <button
-                                            type="button"
-                                            onClick={() => onKindChange("proxy")}
-                                            className="cursor-pointer text-neutral-950 underline underline-offset-2"
-                                        >
-                                            set a maximum bid
-                                        </button>
-                                        .
-                                    </>
-                                )}
-                            </p>
+                            <p className="mt-5 text-sm leading-relaxed text-neutral-600">You&apos;re the highest bidder.</p>
                         ) : kind === "bid" ? (
                             <div className="mt-5">
                                 <p id="bid-options-label" className={cn(SMALL_CAPS, "text-neutral-500")}>
@@ -274,7 +291,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                         ) : (
                             <div className="mt-5">
                                 <label htmlFor="bid-amount" className={cn(SMALL_CAPS, "text-neutral-500")}>
-                                    {current.proxyMax ? "Raise your maximum to" : "Your maximum bid"}
+                                    Your maximum bid
                                 </label>
                                 <div className="mt-2 flex h-12 items-center border border-neutral-300 bg-white focus-within:border-neutral-950">
                                     <span className="pl-3 text-sm text-neutral-500">{current.currency.symbol ?? current.currency.code}</span>
@@ -293,8 +310,10 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                     />
                                 </div>
                                 <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-                                    We bid for you, one increment at a time, only as far as needed to keep you in the lead — never above your
-                                    maximum. Other bidders don&apos;t see it.
+                                    When the auctioneer calls the hammer, your maximum is placed for you: if it&apos;s the highest, you win at one
+                                    increment above the next-highest bid — never above your maximum. The highest maximum always wins; if two bidders leave the same maximum, the one
+                                    who set it first wins. Other bidders don&apos;t see it. You can set it once, and it can&apos;t be changed
+                                    afterwards.
                                 </p>
                             </div>
                         )}
@@ -340,7 +359,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
                                     ? `Another bidder got there first — the next bid is now ${money(current?.nextBid ?? null)}. Go back and choose again.`
                                     : kind === "bid"
                                       ? "By confirming you agree to buy this lot at this price if yours is the winning bid. Bids are binding and can't be withdrawn."
-                                      : "We'll bid for you up to this amount. If it wins, you agree to buy this lot at the winning price."}
+                                      : "We'll bid for you up to this amount when the auctioneer calls the hammer. If it wins, you agree to buy this lot at the winning price. A proxy bid can only be set once — it can't be changed or withdrawn."}
                             </p>
                         </div>
 

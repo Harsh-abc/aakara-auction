@@ -13,7 +13,7 @@ import redis from "./redis.js";
 // Keys (all under "bid:"):
 //   lot:{lotUuid}                  HASH  lot facts + live state (currentBid, leaderId, bidCount, seq, nextBid)
 //   lot:{lotUuid}:bids             LIST  every bid, oldest first (JSON)
-//   lot:{lotUuid}:proxies          HASH  userId -> { max, at }
+//   lot:{lotUuid}:proxies          HASH  userId -> { max, at } (also in the auto_bids table; reloaded from it with the lot)
 //   lot:{lotUuid}:eligible         SET   verified bidder ids + "__loaded__" (cache, expires)
 //   auction:{auctionUuid}:status   STR   auction status (cache, expires)
 //   auction:{auctionUuid}:lots     SET   lots of the sale that have state here
@@ -60,22 +60,32 @@ return 1
 `;
 
 // ---------------------------------------------------------------------
-// BID ENGINE — one atomic run per manual bid, floor bid, proxy bid, or
-// "resolve" (when a lot opens / the sale resumes, so waiting proxies bid).
+// BID ENGINE — one atomic run per manual bid, floor bid, proxy bid, the
+// hammer (EXECUTE: the proxies are placed), a close (CLOSE: proxies placed and
+// bids stopped together), or "resolve" (lot opened / sale resumed: next ask only).
 // A floor bid is a manual bid the auctioneer enters for a paddle in the room.
 //
 // KEYS: 1 lot, 2 bids, 3 proxies, 4 auction status, 5 auction feed,
 //       6 auction stats, 7 auction bid counts, 8 dirty set
-// ARGV: 1 mode (BID | FLOOR | PROXY | RESOLVE), 2 userId, 3 amount, 4 now (ms),
-//       5 lotUuid, 6 feed size, 7 ip, 8 user agent
+// ARGV: 1 mode (BID | FLOOR | PROXY | RESOLVE | EXECUTE | CLOSE), 2 userId, 3 amount,
+//       4 now (ms), 5 lotUuid, 6 feed size, 7 ip, 8 user agent
 //
 // Bid sources: M = online (manual), F = floor, P = proxy
 //
 // Proxy rules:
-//   - a proxy bids for its owner only as much as it takes to lead, up to its max
-//   - the strongest proxy (highest max, then earliest) opens the lot at the starting price
+//   - a bidder leaves one proxy per lot, before the lot opens; it can't be changed
+//   - proxies don't bid while the lot is live — they're placed when the auctioneer
+//     calls the hammer (or the lot closes any other way), against the standing bid
+//   - the highest proxy always wins the proxy contest: it bids only as much as it
+//     takes to lead (one increment over the next-highest), up to its max
 //   - a proxy may top a bid by less than a full increment when its max is that close
-//   - equal maximums: the earlier one holds the lead
+//   - equal maximums: the proxy set first wins. Both bid the max (the ladder shows
+//     the tie) and the earlier one holds it. "First" is the order the engine accepted
+//     them — 'at' is unique per lot and saved with the proxy, so a reload keeps it
+//   - a standing manual / floor bid equal to a proxy's max loses to the proxy (set
+//     earlier); only a bid above every proxy's max beats them
+//   - a lot with no live bids goes to the strongest proxy (highest max, then
+//     earliest), from the starting price
 // Increments mirror utils/bidIncrement.js — keep the two in step.
 // ---------------------------------------------------------------------
 
@@ -194,9 +204,9 @@ local function strongest(test, exclude)
     return best
 end
 
--- let waiting proxies bid until no one can top the leader
+-- let the proxies bid until no one can top the leader (only at the hammer / close)
 local function resolve()
-    if status ~= 'ACTIVE' or auctionStatus ~= 'LIVE' then return end
+    if status ~= 'ACTIVE' then return end
     for _ = 1, 1000 do
         if current == nil then
             local opener = strongest(function(max) return max >= start end, nil)
@@ -219,16 +229,20 @@ local function resolve()
                 local amt = nextMin(current)
                 if amt > challenger.max then amt = challenger.max end
                 record(challenger.uid, amt, 'P')
-            elseif challenger.max == cap and not holderWinsTie then
-                record(challenger.uid, cap, 'P')
             elseif challenger.max < cap then
                 -- the challenger runs out; the leader's proxy answers
                 record(challenger.uid, challenger.max, 'P')
                 local amt = nextMin(current)
                 if amt > cap then amt = cap end
                 record(holder, amt, 'P')
-            else
+            elseif holderWinsTie then
+                -- equal maximums, the leader's proxy came first: both bid the max, the leader keeps it
+                record(challenger.uid, cap, 'P')
                 record(holder, cap, 'P')
+            else
+                -- equal maximums, the challenger's proxy came first: both bid the max, the challenger takes it
+                record(holder, cap, 'P')
+                record(challenger.uid, cap, 'P')
             end
         end
     end
@@ -248,30 +262,51 @@ if mode == 'BID' or mode == 'FLOOR' then
     local need = nextMin(current)
     if amount < need then return fail('BID_TOO_LOW', { nextBid = need }) end
 
+    -- proxies don't answer live bids; they're placed when the lot is hammered (EXECUTE / CLOSE)
     record(userId, amount, mode == 'FLOOR' and 'F' or 'M')
-    -- an earlier proxy with exactly this max holds the tie
-    local tie = strongest(function(max) return max == amount end, userId)
-    if tie then record(tie.uid, amount, 'P') end
-    resolve()
 elseif mode == 'PROXY' then
-    if not isOneOf(status, { 'ACTIVE', 'DRAFT', 'SCHEDULED' }) then return fail('LOT_CLOSED') end
+    -- proxies are left before the lot opens, once per bidder
+    if status == 'ACTIVE' or status == 'CLOSING' then return fail('LOT_STARTED') end
+    if not isOneOf(status, { 'DRAFT', 'SCHEDULED' }) then return fail('LOT_CLOSED') end
     if not isOneOf(auctionStatus, { 'SCHEDULED', 'PREVIEW', 'LIVE', 'PAUSED' }) then
         return fail('AUCTION_CLOSED', { auctionStatus = auctionStatus })
     end
     local existing = proxies[userId]
-    if existing and amount <= existing.max then return fail('PROXY_NOT_HIGHER', { proxyMax = existing.max }) end
-    if leader == userId then
-        if amount <= current then return fail('PROXY_TOO_LOW', { nextBid = nextMin(current) }) end
-    else
-        local need = nextMin(current)
-        if amount < need then return fail('PROXY_TOO_LOW', { nextBid = need }) end
-    end
+    if existing then return fail('PROXY_ALREADY_SET', { proxyMax = existing.max }) end
+    local need = nextMin(current)
+    if amount < need then return fail('PROXY_TOO_LOW', { nextBid = need }) end
 
-    proxies[userId] = { max = amount, at = now }
-    redis.call('HSET', proxiesKey, userId, cjson.encode({ max = amount, at = now }))
-    resolve()
+    -- 'at' decides equal maximums, so no two proxies on a lot share one: a proxy
+    -- accepted later always gets a later 'at' (even within the same millisecond)
+    local at = now
+    for _, p in pairs(proxies) do
+        if p.at >= at then at = p.at + 1 end
+    end
+    proxies[userId] = { max = amount, at = at }
+    redis.call('HSET', proxiesKey, userId, cjson.encode({ max = amount, at = at }))
 elseif mode == 'RESOLVE' then
+    -- the lot opened / the sale resumed: proxies wait for the hammer, only the next ask is refreshed
+elseif mode == 'EXECUTE' or mode == 'CLOSE' then
+    -- the hammer (EXECUTE), or the lot closing any other way (CLOSE): the proxies are placed now
+    if status ~= 'ACTIVE' then return fail('LOT_NOT_LIVE') end
+    local before = #out
     resolve()
+    if #out == before and current ~= nil then
+        -- no proxy tops the standing bid — but one whose max equals it takes it: it was set before the lot
+        -- opened, so before that bid (unless the leader's own proxy is as high and was set first)
+        local tie = strongest(function(max) return max == current end, leader)
+        if tie then
+            local own = proxies[leader]
+            local ownHolds = own ~= nil and own.max >= current
+                and (own.max > current or own.at < tie.at or (own.at == tie.at and leader < tie.uid))
+            if not ownHolds then record(tie.uid, current, 'P') end
+        end
+    end
+    -- CLOSE stops bids in the same atomic run, so no bid can slip in after the proxies
+    if mode == 'CLOSE' then
+        status = 'CLOSING'
+        redis.call('HSET', lotKey, 'status', 'CLOSING')
+    end
 else
     return fail('BAD_MODE')
 end
@@ -290,6 +325,7 @@ return cjson.encode({
     bids = out,
     prevLeader = prevLeader,
     proxyMax = mine and mine.max or nil,
+    proxyAt = mine and mine.at or nil,
     state = {
         status = status,
         currentBid = current,
@@ -312,7 +348,7 @@ export const hydrateLotState = async ({ lotUuid, auctionUuid, fields }) => {
 
 /**
  * Runs the bid engine for a lot. Resolves to the script's result:
- *   { ok: true, bids, prevLeader, proxyMax, state }  or  { err: CODE, ... }
+ *   { ok: true, bids, prevLeader, proxyMax, proxyAt, state }  or  { err: CODE, ... }
  * Amounts come back as numbers.
  */
 export const runBidEngine = async ({ mode, lotUuid, auctionUuid, userId = "", amount = 0, ip = "", userAgent = "" }) => {

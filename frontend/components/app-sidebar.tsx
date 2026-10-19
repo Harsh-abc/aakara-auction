@@ -14,6 +14,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import {
+  Bot,
   CreditCard,
   FileChartColumn,
   Gavel,
@@ -267,6 +268,7 @@ const data = {
       activeOn: /^\/dashboard\/auctions\/[^/]+\/(registrations|lots\/[^/]+\/bidders)/,
     },
     { title: "Bid History", url: "/dashboard/bid-history", icon: <History /> },
+    { title: "Proxy Bids", url: "/dashboard/proxy-bids", icon: <Bot />, roles: ["SUPER_ADMIN", "ADMIN"] },
     { title: "Artworks", url: "/dashboard/artworks", icon: <Palette /> },
     // { title: "Bidders", url: "/dashboard/bidders", icon: <UserCheck /> },
     { title: "User", url: "/dashboard/users", icon: <Users /> },

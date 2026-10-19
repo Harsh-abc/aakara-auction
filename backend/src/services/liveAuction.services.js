@@ -191,7 +191,7 @@ const closingLot = async (lotUuid, work) => {
 
     try {
         const result = await work(() => (frozen = true));
-        // open the lot for bids (waiting proxies bid now) or publish its result
+        // open the lot for bids (proxies wait for the hammer) or publish its result
         await syncLotBidding(lotUuid).catch((error) => console.error(`[bidding] could not sync lot ${lotUuid}:`, error));
         return result;
     } catch (error) {

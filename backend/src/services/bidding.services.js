@@ -26,8 +26,10 @@ import { serializeBigInt } from "../utils/serialize.js";
 //   - each scheduler tick writes the current bid / bid count of lots that
 //     changed (syncDirtyLots), so other pages stay roughly current
 //   - closing a lot writes its result (see liveAuction.services.js)
-//   - once the auction ends, every bid and proxy is written to the bids /
-//     auto_bids tables and the Redis keys are dropped (flushAuctionBids)
+//   - proxy bids are written to auto_bids as soon as they're set (with the
+//     bidder's IP and device), and reloaded from there with the lot
+//   - once the auction ends, every bid is written to the bids table, the
+//     proxies are marked inactive and the Redis keys are dropped (flushAuctionBids)
 // =====================================================================
 
 const httpError = (message, statusCode = 400, details) => {
@@ -43,8 +45,10 @@ export const BIDDING_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW", "LIVE", "PAUSED
 /** Auctions whose bid history is written to the database and cleared from Redis */
 const FINISHED_AUCTION_STATUSES = ["ENDED", "SETTLED", "CANCELLED"];
 
-/** Lots that can still take a proxy bid */
-const PROXY_LOT_STATUSES = ["ACTIVE", "DRAFT", "SCHEDULED"];
+/** Lots that can still take a proxy bid: only before they open (mirrors the PROXY check in biddingStore.js) */
+export const PROXY_LOT_STATUSES = ["DRAFT", "SCHEDULED"];
+
+const MAX_USER_AGENT = 500;
 
 const BLOCKED_USER_STATUSES = ["SUSPENDED", "BANNED", "DEACTIVATED"];
 
@@ -170,6 +174,29 @@ const ensureAuctionStatus = async (auctionUuid) => {
     return status;
 };
 
+/**
+ * Puts the lot's saved proxy bids back into Redis (after its state was created
+ * there), so proxies left days before the lot opens survive a Redis restart.
+ * HSETNX: a proxy set in the meantime is never overwritten.
+ */
+const restoreProxies = async (lotUuid, lotId) => {
+    const rows = await prisma.autoBid.findMany({
+        where: { itemId: BigInt(lotId), isActive: true, withdrawnAt: null },
+        select: { bidderId: true, maxAmount: true, createdAt: true },
+    });
+    if (rows.length === 0) return;
+
+    const pipe = redis.pipeline();
+    for (const row of rows) {
+        pipe.hsetnx(
+            bidKeys.proxies(lotUuid),
+            row.bidderId.toString(),
+            JSON.stringify({ max: Number(row.maxAmount), at: row.createdAt.getTime() })
+        );
+    }
+    await pipe.exec();
+};
+
 /** The lot's live state, loaded from the database the first time it's needed. */
 const ensureLotState = async (lotUuid) => {
     const existing = await readLotState(lotUuid);
@@ -180,11 +207,12 @@ const ensureLotState = async (lotUuid) => {
         throw httpError("Bidding is closed for this auction", 409);
     }
 
-    await hydrateLotState({
+    const created = await hydrateLotState({
         lotUuid,
         auctionUuid: lot.auction.uuid,
         fields: { ...staticFields(lot), ...savedPosition(lot) },
     });
+    if (created) await restoreProxies(lotUuid, lot.id);
     await setAuctionStatusCache(lot.auction.uuid, lot.auction.status);
     return readLotState(lotUuid);
 };
@@ -258,6 +286,18 @@ export const invalidateBidderAccess = async ({ auctionId, lotUuids, revokedUserI
             if (revokedUserIds.length) pipe.hdel(bidKeys.proxies(uuid), ...revokedUserIds.map(String));
         }
         await pipe.exec();
+
+        // the saved rows stay for the record, marked withdrawn (lots already closed keep theirs as they ran)
+        if (revokedUserIds.length) {
+            await prisma.autoBid.updateMany({
+                where: {
+                    item: { uuid: { in: uuids }, status: { in: [...PROXY_LOT_STATUSES, "ACTIVE"] } },
+                    bidderId: { in: revokedUserIds.map((id) => BigInt(id)) },
+                    isActive: true,
+                },
+                data: { isActive: false, withdrawnAt: new Date(), withdrawnReason: "The bidder's access to the lot was withdrawn" },
+            });
+        }
     } catch (error) {
         // the cache expires on its own (ELIGIBLE_TTL_SECONDS)
         console.error("[bidding] could not refresh bidder access:", error);
@@ -415,10 +455,11 @@ const ENGINE_ERRORS = {
     AUCTION_NOT_LIVE: (lot, r) => [r.auctionStatus === "PAUSED" ? "Bidding is paused for this auction" : "This auction isn't live", 409],
     ALREADY_LEADING: () => ["You're already the highest bidder", 409],
     BID_TOO_LOW: (lot, r) => [`The next bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
-    PROXY_NOT_HIGHER: (lot, r) => [
-        `Your maximum bid is already ${formatMoney(r.proxyMax, lot.currencyCode)}. Enter a higher amount to raise it.`,
-        400,
+    PROXY_ALREADY_SET: (lot, r) => [
+        `You've already left a maximum bid of ${formatMoney(r.proxyMax, lot.currencyCode)} on Lot #${lot.itemNumber}. A proxy bid can only be set once.`,
+        409,
     ],
+    LOT_STARTED: (lot) => [`Lot #${lot.itemNumber} has opened — proxy bids can only be left before a lot opens`, 409],
     PROXY_TOO_LOW: (lot, r) => [`Your maximum bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
     LOT_CLOSED: (lot) => [`Lot #${lot.itemNumber} has closed`, 409],
     AUCTION_CLOSED: () => ["Bidding is closed for this auction", 409],
@@ -478,6 +519,8 @@ const settleBid = async ({ mode, lot, lotUuid, userId, amount, ip, userAgent, er
             nextBid: view.nextBid,
             leading: view.leaderId === String(userId),
             proxyMax: result.proxyMax !== undefined ? String(result.proxyMax) : null,
+            // when the engine accepted the bidder's proxy — it settles equal maximums (earliest wins)
+            proxySetAt: result.proxyAt !== undefined ? new Date(result.proxyAt).toISOString() : null,
             bidsPlaced: result.bids.length,
         },
     };
@@ -494,17 +537,60 @@ export const placeBidService = async ({ lotUuid, userId, amount, ip, userAgent }
     };
 };
 
+/**
+ * A proxy (maximum) bid: once per bidder per lot, before the lot opens. The
+ * engine settles it in Redis, then it's saved to auto_bids with the bidder's
+ * IP and device; if that save fails the proxy is taken back out of Redis.
+ */
 export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userAgent }) => {
+    if (!userId) throw httpError("Authenticated user is required", 401);
+
+    const item = await prisma.auctionItem.findUnique({
+        where: { uuid: lotUuid },
+        select: { id: true, itemNumber: true, status: true, currency: { select: { code: true } }, auction: { select: { currency: { select: { code: true } } } } },
+    });
+    if (!item) throw httpError("Lot not found", 404);
+    if (item.status === "ACTIVE") throw httpError(...ENGINE_ERRORS.LOT_STARTED({ itemNumber: item.itemNumber }));
+
+    // a proxy taken away with the bidder's access may be left again once access is back
+    const saved = await prisma.autoBid.findUnique({
+        where: { itemId_bidderId: { itemId: item.id, bidderId: BigInt(userId) } },
+        select: { maxAmount: true, withdrawnAt: true },
+    });
+    if (saved && !saved.withdrawnAt) {
+        const currencyCode = (item.currency ?? item.auction.currency).code;
+        throw httpError(...ENGINE_ERRORS.PROXY_ALREADY_SET({ itemNumber: item.itemNumber, currencyCode }, { proxyMax: Number(saved.maxAmount) }));
+    }
+
     const { lot, result } = await runForUser({ mode: "PROXY", lotUuid, userId, amount: maxAmount, ip, userAgent });
-    const money = (value) => formatMoney(value, lot.currencyCode);
-    const max = money(maxAmount);
 
-    let message;
-    if (result.status !== "ACTIVE") message = `Your maximum bid of ${max} is set. It bids for you when Lot #${result.itemNumber} opens.`;
-    else if (result.leading) message = `Your maximum bid of ${max} is set — you're the highest bidder at ${money(result.currentBid)}`;
-    else message = `Your maximum bid of ${max} was topped by another bidder — the bid is now ${money(result.currentBid)}`;
+    const record = {
+        maxAmount: String(maxAmount),
+        isActive: true,
+        ipAddress: ip || null,
+        userAgent: userAgent ? userAgent.slice(0, MAX_USER_AGENT) : null,
+        withdrawnAt: null,
+        withdrawnReason: null,
+        // the exact time the engine ranked it by, so a reload from here (restoreProxies) keeps who came first
+        createdAt: result.proxySetAt ? new Date(result.proxySetAt) : new Date(),
+    };
+    try {
+        await prisma.autoBid.upsert({
+            where: { itemId_bidderId: { itemId: item.id, bidderId: BigInt(userId) } },
+            create: { itemId: item.id, bidderId: BigInt(userId), ...record },
+            update: record,
+        });
+    } catch (error) {
+        // the lot hasn't opened, so the proxy hasn't bid — safe to take back
+        await redis.hdel(bidKeys.proxies(lotUuid), String(userId)).catch(() => {});
+        throw error;
+    }
 
-    return { message, data: result };
+    const max = formatMoney(maxAmount, lot.currencyCode);
+    return {
+        message: `Your maximum bid of ${max} is set. It's placed for you when the auctioneer calls the hammer on Lot #${result.itemNumber}, and can't be changed.`,
+        data: result,
+    };
 };
 
 // =====================================================================
@@ -553,6 +639,62 @@ export const placeFloorBidService = async ({ lotUuid, paddleNumber, amount, ip, 
             ? `Floor bid of ${money(amount)} for paddle ${paddle} is the highest bid`
             : `Floor bid of ${money(amount)} for paddle ${paddle} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
         data: result,
+    };
+};
+
+// =====================================================================
+// HAMMER: PLACE THE PROXIES (auctioneer console)
+// Proxies don't bid while the lot is live. When the auctioneer clicks Sell,
+// they're placed against the standing bid — the highest takes the lead at one
+// increment over the next-highest (equal maximums: the one set first) — and
+// broadcast like any bid. The console then counts down and the auctioneer
+// confirms the sale (POST /api/auction/lots/:lotUuid/hammer).
+// =====================================================================
+
+export const executeProxiesService = async ({ lotUuid }) => {
+    const lot = await ensureLotState(lotUuid);
+    if (lot.status !== "ACTIVE") throw httpError(`Lot #${lot.itemNumber} isn't live`, 409);
+
+    const run = async () => {
+        await ensureAuctionStatus(lot.auctionUuid);
+        return runBidEngine({ mode: "EXECUTE", lotUuid, auctionUuid: lot.auctionUuid });
+    };
+    let result = await run();
+    if (result.err === "NOT_LOADED") {
+        await ensureLotState(lotUuid);
+        result = await run();
+    }
+    if (result.err) {
+        const [message, status] = (ENGINE_ERRORS[result.err] ?? (() => ["Could not place the proxy bids", 409]))(lot, result);
+        throw httpError(message, status);
+    }
+
+    const merged = { ...lot, ...result.state };
+    if (result.bids.length > 0) await broadcastLot(lotUuid, merged, result);
+
+    const view = liveView(lotUuid, merged);
+    const bidders = await biddersById(lot.auctionUuid, lot.auctionId, [view.leaderId]);
+    const leader = view.leaderId ? bidders.get(String(view.leaderId)) ?? null : null;
+    const proxyCount = await redis.hlen(bidKeys.proxies(lotUuid));
+    const money = (value) => formatMoney(value, lot.currencyCode);
+    const who = leader?.paddle ? `Paddle #${leader.paddle}` : leader?.name ?? "the top bidder";
+
+    let message;
+    if (result.bids.length > 0) message = `Proxy bid placed — ${who} leads at ${money(view.currentBid)}`;
+    else if (proxyCount === 0) message = "No proxy bids on this lot";
+    else if (view.currentBid !== null) message = `No proxy bid beats ${money(view.currentBid)} — ${who} keeps the lead`;
+    else message = "No proxy bid reaches the starting price";
+
+    return {
+        message,
+        data: {
+            lotUuid,
+            proxyCount,
+            proxyBidsPlaced: result.bids.length,
+            currentBid: view.currentBid,
+            bidCount: view.bidCount,
+            leader,
+        },
     };
 };
 
@@ -642,7 +784,8 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
         paddleNumber: participant?.paddleNumber ?? null,
         ...position,
         canBid: verified && lot.status === "ACTIVE" && auctionStatus === "LIVE",
-        canProxy: verified && biddingOpen && PROXY_LOT_STATUSES.includes(lot.status),
+        // once, before the lot opens
+        canProxy: verified && biddingOpen && PROXY_LOT_STATUSES.includes(lot.status) && !position.proxyMax,
     });
 };
 
@@ -845,6 +988,7 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
         position: null,
         bids: [],
         floorBidders: [],
+        proxyBook: { count: 0, topMax: null },
     };
     if (!live) return serializeBigInt(base);
 
@@ -877,8 +1021,13 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
 
     const biddingOpen = BIDDING_AUCTION_STATUSES.includes(auction.status);
     const state = biddingOpen ? await ensureLotState(lotUuid) : await readLotState(lotUuid);
-    const rawBids = state ? await redis.lrange(bidKeys.bids(lotUuid), -CONSOLE_LADDER, -1) : [];
+    const [rawBids, rawProxies] = state
+        ? await Promise.all([redis.lrange(bidKeys.bids(lotUuid), -CONSOLE_LADDER, -1), redis.hgetall(bidKeys.proxies(lotUuid))])
+        : [[], {}];
     const ladder = rawBids.map((raw) => JSON.parse(raw)).reverse(); // newest first
+    // proxies waiting for the hammer: the console places them when the auctioneer clicks Sell
+    const proxyMaxes = Object.values(rawProxies).map((raw) => Number(JSON.parse(raw).max));
+    const proxyBook = { count: proxyMaxes.length, topMax: proxyMaxes.length ? String(Math.max(...proxyMaxes)) : null };
 
     let position;
     if (state) {
@@ -940,6 +1089,7 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
         },
         bids: ladder.map((bid) => ({ ...toPublicBid(lotUuid, bid), bidder: bidders.get(String(bid.u)) ?? null })),
         floorBidders,
+        proxyBook,
     });
 };
 
@@ -1059,9 +1209,25 @@ export const readLiveLotBids = async (lotUuids) => {
  */
 export const freezeLotBidding = async (lotUuid) => {
     const key = bidKeys.lot(lotUuid);
-    if (!(await redis.exists(key))) return null;
+    const before = await readLotState(lotUuid);
+    if (!before) return null;
 
-    await redis.hset(key, "status", "CLOSING");
+    // the proxies are placed and bids stopped in one atomic run, so a lot closed any way
+    // (hammer, stop, auction end) still goes to its highest proxy — a no-op when the
+    // hammer already placed them and nothing came in since
+    let closed = false;
+    try {
+        await ensureAuctionStatus(before.auctionUuid);
+        const result = await runBidEngine({ mode: "CLOSE", lotUuid, auctionUuid: before.auctionUuid });
+        if (result.ok) {
+            closed = true;
+            if (result.bids.length > 0) await broadcastLot(lotUuid, { ...before, ...result.state }, result);
+        }
+    } catch (error) {
+        console.error(`[bidding] could not place proxies on lot ${lotUuid} before closing:`, error);
+    }
+    if (!closed) await redis.hset(key, "status", "CLOSING");
+
     const state = await redis.hgetall(key);
     const count = Number(state.bidCount) || 0;
     return {
@@ -1073,7 +1239,7 @@ export const freezeLotBidding = async (lotUuid) => {
 
 /**
  * Brings a lot's live state in line with the database (after it starts, stops,
- * or a failed close), lets waiting proxies bid if it's live, and broadcasts.
+ * or a failed close) and broadcasts. Proxies wait for the hammer (executeProxiesService).
  */
 export const syncLotBidding = async (lotUuid) => {
     const lot = await loadLotSource(lotUuid);
@@ -1094,7 +1260,8 @@ export const syncLotBidding = async (lotUuid) => {
     const fields = staticFields(lot);
     const created = await hydrateLotState({ lotUuid, auctionUuid, fields: { ...fields, ...savedPosition(lot) } });
     // existing state keeps its bids; only the lot facts are refreshed
-    if (!created) await redis.hset(bidKeys.lot(lotUuid), fields);
+    if (created) await restoreProxies(lotUuid, lot.id);
+    else await redis.hset(bidKeys.lot(lotUuid), fields);
 
     const state = await readLotState(lotUuid);
     const result = await runBidEngine({ mode: "RESOLVE", lotUuid, auctionUuid });
@@ -1103,7 +1270,7 @@ export const syncLotBidding = async (lotUuid) => {
 
 /**
  * Call after an auction's status changes (manually or by the scheduler):
- * refreshes the cached status, reopens its live lot (waiting proxies bid on
+ * refreshes the cached status, reopens its live lot (proxies still wait for the hammer on
  * resume), and once the sale is over writes its bids to the database.
  */
 export const syncAuctionBidding = async (auctionUuid) => {
@@ -1185,6 +1352,7 @@ const persistLot = async ({ state, rawBids, rawProxies, auctionStatus }) => {
                 }
             }
 
+            // proxies are saved when they're set — this only catches any left before that (older Redis state)
             const proxies = Object.entries(rawProxies);
             if (proxies.length > 0) {
                 await tx.autoBid.createMany({
@@ -1241,6 +1409,9 @@ export const flushAuctionBids = async (auctionUuid) => {
         await redis.del(...lotKeyList(lotUuid));
         await redis.srem(bidKeys.dirty, lotUuid);
     }
+
+    // the sale is over: its proxies won't bid again (every lot, including any Redis never loaded)
+    await prisma.autoBid.updateMany({ where: { item: { auction: { uuid: auctionUuid } }, isActive: true }, data: { isActive: false } });
 
     await redis.del(...auctionKeyList(auctionUuid));
     await redis.srem(bidKeys.flushPending, auctionUuid);

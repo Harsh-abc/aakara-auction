@@ -214,6 +214,13 @@ const ROUTES = [
         failAction: "PROXY_BID_REJECTED",
         describe: ({ body }) => `Set a maximum (proxy) bid of ${body.maxAmount ?? "?"}`,
     }),
+    route("POST", "/api/bidding/lots/:lotUuid/execute-proxies", "BIDDING", "PROXY_EXECUTE", "Placed proxy bids at the hammer", {
+        target: LOT,
+        failAction: "PROXY_EXECUTE_FAILED",
+        describe: ({ ok, response }) => (ok && response?.message ? `Hammer: ${response.message}` : "Tried to place the proxy bids at the hammer"),
+    }),
+    route("GET", "/api/bidding/proxy-bids", "BIDDING", "PROXY_BIDS_VIEW", "Viewed the proxy bids", { view: true }),
+    route("GET", "/api/bidding/proxy-bids/export", "BIDDING", "PROXY_BIDS_EXPORT", "Exported the proxy bids (CSV)"),
     route("POST", "/api/bidding/lots/:lotUuid/floor-bids", "BIDDING", "FLOOR_BID", "Entered a floor bid", {
         target: LOT,
         failAction: "FLOOR_BID_REJECTED",

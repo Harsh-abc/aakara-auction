@@ -316,7 +316,7 @@ export interface DashboardCalendar {
 // LOT BID HISTORY — running and finished sales
 // ---------------------------------------------------------------------
 
-export type BidHistoryFilter = "all" | "live" | "past";
+export type BidHistoryFilter = "all" | "live" | "upcoming" | "past";
 
 export interface BidHistoryBidder {
     uuid: string;
@@ -353,6 +353,8 @@ export interface BidHistoryLot {
     bidCount: number;
     /** People who bid on the lot */
     bidders: number;
+    /** Proxy (maximum) bids left on the lot, not counting withdrawn ones */
+    proxyCount: number;
     topBid: string | null;
     /** Leading bidder while the lot is open; the winner (or reserve-not-met top bidder) once closed */
     leader: BidHistoryBidder | null;
@@ -360,7 +362,7 @@ export interface BidHistoryLot {
 
 /** GET /auction/dashboard/bid-history/:auctionUuid */
 export interface AuctionBidHistory {
-    auction: BidHistoryAuction & { bidders: number };
+    auction: BidHistoryAuction & { bidders: number; proxyBids: number };
     lots: BidHistoryLot[];
 }
 

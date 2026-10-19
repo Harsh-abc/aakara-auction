@@ -13,10 +13,11 @@ import { canControlLots } from "@/lib/constants/roles";
 import type { AuctionConsole as ConsoleData, ConsoleLot, ConsolePosition, HammerResult, StaffBid } from "@/lib/types/bidding.types";
 import { cn } from "@/lib/utils";
 import { setLotLive } from "@/services/operations/auction.api";
-import { getAuctionConsole, hammerLot, placeFloorBid } from "@/services/operations/bidding.api";
+import { executeProxies, getAuctionConsole, hammerLot, placeFloorBid } from "@/services/operations/bidding.api";
 
 import FloorBidDialog from "./FloorBidDialog";
-import HammerDialog from "./HammerDialog";
+import HammerDialog, { type ProxyStep } from "./HammerDialog";
+import ProxyBook from "./ProxyBook";
 import { compactMoney, money, paddleLabel, sourceBadge } from "./consoleDisplay";
 
 /** Bids kept in the log (the server sends the latest 100) */
@@ -49,8 +50,10 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
     const [picked, setPicked] = useState<string | null>(null);
     const [floorOpen, setFloorOpen] = useState(false);
     const [hammerOpen, setHammerOpen] = useState(false);
-    const [busy, setBusy] = useState<"floor" | "hammer" | null>(null);
+    const [busy, setBusy] = useState<"floor" | "proxy" | "hammer" | null>(null);
     const [lastSale, setLastSale] = useState<HammerResult | null>(null);
+    // what placing the proxy bids did when Sell was clicked (null = the lot has no proxies: the usual hammer)
+    const [proxyStep, setProxyStep] = useState<ProxyStep | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -116,6 +119,35 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
         }
     };
 
+    // Sell: the lot's proxy bids are placed first (the highest takes the lead), then the
+    // dialog counts 1-2-3 before the sale can be confirmed. No proxies: straight to the dialog.
+    const openHammer = async () => {
+        if (!lot) return;
+        if (!data?.proxyBook.count) {
+            setProxyStep(null);
+            setHammerOpen(true);
+            return;
+        }
+        setBusy("proxy");
+        try {
+            const res = await executeProxies(lot.uuid, token);
+            setProxyStep({ message: res.message, placed: res.data.proxyBidsPlaced, bidCount: res.data.bidCount });
+            // the new bids come in over the socket; without it, read them
+            if (!connected || res.data.proxyBidsPlaced > 0) refetch();
+            setHammerOpen(true);
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Couldn't place the proxy bids"));
+            refetch();
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    const changeHammerOpen = (open: boolean) => {
+        setHammerOpen(open);
+        if (!open) setProxyStep(null);
+    };
+
     const confirmHammer = async (bidCount: number) => {
         if (!lot) return;
         setBusy("hammer");
@@ -123,7 +155,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
             const res = await hammerLot(lot.uuid, bidCount, token);
             toast.success(res.message);
             setLastSale(res.data);
-            setHammerOpen(false);
+            changeHammerOpen(false);
         } catch (err) {
             // e.g. a bid landed while confirming — the dialog stays open on the new figures
             toast.error(getErrorMessage(err, "Couldn't sell the lot"));
@@ -177,6 +209,14 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
     const options = position?.bidOptions ?? [];
     const selectedAmount = picked && options.includes(picked) ? picked : options[0] ?? null;
     const hasBids = Number(position?.bidCount ?? 0) > 0;
+    // a lot with no bids can still be sold to a proxy that reaches the starting price
+    const proxyCanOpen = Boolean(lot && data.proxyBook.topMax !== null && Number(data.proxyBook.topMax) >= Number(lot.startingPrice));
+    // proxies of the lot on the block, or of the next lot so the auctioneer sees them before opening it
+    const proxyLot = lot
+        ? { uuid: lot.uuid, itemNumber: lot.itemNumber, live: true }
+        : data.nextLot
+          ? { uuid: data.nextLot.uuid, itemNumber: data.nextLot.itemNumber, live: false }
+          : null;
 
     return (
         <ConsoleFrame title={auction.title} status={auction.status} lots={`${auction.closedLots} / ${auction.lotCount} lots closed`}>
@@ -254,12 +294,18 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                                     <Button
                                         type="button"
                                         className="h-10 rounded-[6px] bg-[#F59E0B] text-[13px] font-medium text-white hover:bg-[#F59E0B]/90"
-                                        disabled={!hasBids || busy !== null}
-                                        title={hasBids ? undefined : "No bids yet — there's no one to sell to"}
-                                        onClick={() => setHammerOpen(true)}
+                                        disabled={!(hasBids || proxyCanOpen) || busy !== null}
+                                        title={
+                                            hasBids || proxyCanOpen
+                                                ? data.proxyBook.count > 0
+                                                    ? "Places the proxy bids, then counts down to the sale"
+                                                    : undefined
+                                                : "No bids yet — there's no one to sell to"
+                                        }
+                                        onClick={openHammer}
                                     >
-                                        <Gavel className="h-4 w-4" />
-                                        Sell (Hammer)
+                                        {busy === "proxy" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="h-4 w-4" />}
+                                        {busy === "proxy" ? "Placing proxy bids…" : "Sell (Hammer)"}
                                     </Button>
                                 </div>
                             )}
@@ -275,18 +321,33 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                     )}
                 </div>
 
-                {/* right: bid log */}
-                <BidLog bids={data.bids} code={code} connected={connected} />
+                {/* right: bid log, and the proxy book of the live lot (or the next one up) */}
+                <div className="flex min-w-0 flex-col gap-5">
+                    <BidLog bids={data.bids} code={code} connected={connected} />
+                    {proxyLot && (
+                        <ProxyBook
+                            token={token}
+                            lotUuid={proxyLot.uuid}
+                            itemNumber={proxyLot.itemNumber}
+                            live={proxyLot.live}
+                            startingPrice={lot?.startingPrice ?? null}
+                            position={position}
+                            code={code}
+                            reload={reload}
+                        />
+                    )}
+                </div>
             </div>
 
             {lot && position && (
                 <>
                     <HammerDialog
                         open={hammerOpen}
-                        onOpenChange={setHammerOpen}
+                        onOpenChange={changeHammerOpen}
                         lot={lot}
                         position={position}
                         buyerPremium={data.buyerPremium}
+                        proxyStep={proxyStep}
                         busy={busy === "hammer"}
                         onConfirm={confirmHammer}
                     />

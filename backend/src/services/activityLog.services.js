@@ -1,5 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { ACTIVITY_ACTIONS } from "../middleware/activityLogger.js";
+import { toCsv } from "../utils/csv.js";
 
 const EXPORT_MAX_ROWS = 10_000;
 
@@ -95,14 +96,6 @@ export const getActivityLogSummaryService = async () => {
 // CSV
 // ---------------------------------------------------------------------
 
-const csvCell = (value) => {
-    if (value === null || value === undefined) return "";
-    let text = typeof value === "object" ? JSON.stringify(value) : String(value);
-    // stop a spreadsheet reading "=HYPERLINK(…)" typed into a field as a formula
-    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
-
 export const exportActivityLogsService = async (filters) => {
     const logs = await prisma.activityLog.findMany({
         where: buildWhere(filters),
@@ -134,6 +127,5 @@ export const exportActivityLogsService = async (filters) => {
         log.metadata,
     ]);
 
-    // BOM so Excel reads names in UTF-8
-    return "﻿" + [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+    return toCsv(header, rows);
 };

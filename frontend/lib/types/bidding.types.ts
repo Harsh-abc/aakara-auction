@@ -41,6 +41,8 @@ export interface BidResult {
     nextBid: string
     leading: boolean
     proxyMax: string | null
+    /** when the bidder's proxy was accepted — equal maximums go to the earliest */
+    proxySetAt: string | null
     /** bids this call put on the ladder (including proxies that answered) */
     bidsPlaced: number
 }
@@ -190,6 +192,19 @@ export interface AuctionConsole {
     bids: StaffBid[]
     /** paddles verified on the live lot — floor / hybrid sales only */
     floorBidders: (BidderRef & { paddle: string })[]
+    /** proxy bids on the live lot, placed when the auctioneer clicks Sell */
+    proxyBook: { count: number; topMax: string | null }
+}
+
+// POST /api/bidding/lots/:lotUuid/execute-proxies — hammer step 1
+export interface ExecuteProxiesResult {
+    lotUuid: string
+    proxyCount: number
+    /** bids the proxies just placed (0 = none could top the standing bid) */
+    proxyBidsPlaced: number
+    currentBid: string | null
+    bidCount: string
+    leader: BidderRef | null
 }
 
 // POST /api/auction/lots/:lotUuid/hammer

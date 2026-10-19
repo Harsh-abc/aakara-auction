@@ -21,8 +21,11 @@ import type {
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
 import { cn } from "@/lib/utils"
 import { getAuctionBidHistory, getBidHistoryAuctions, getLotBidHistory } from "@/services/operations/auction.api"
+import { getLotProxies } from "@/services/operations/proxyBid.api"
+import type { LotProxies } from "@/lib/types/proxyBid.types"
 
-import { DASHBOARD_TIME_ZONE, money, Panel, PanelMessage, type PillTone, StatusPill } from "./dashboardUi"
+import { DASHBOARD_TIME_ZONE, describeDevice, money, Panel, PanelMessage, type PillTone, StatusPill } from "./dashboardUi"
+import { PROXY_OUTCOMES } from "../proxyBids/proxyDisplay"
 import { BID_STATUS } from "./RecentBids"
 
 export const BID_HISTORY_PATH = "/dashboard/bid-history"
@@ -33,10 +36,14 @@ const STANDALONE_PAGE_SIZE = 12
 const FILTERS: { value: BidHistoryFilter; label: string }[] = [
     { value: "all", label: "All" },
     { value: "live", label: "Live" },
+    // not started yet — lots can already hold proxy bids
+    { value: "upcoming", label: "Upcoming" },
     { value: "past", label: "Past" },
 ]
 
 const AUCTION_TONE: Partial<Record<AuctionStatus, PillTone>> = {
+    SCHEDULED: "amber",
+    PREVIEW: "amber",
     LIVE: "green",
     PAUSED: "amber",
     ENDED: "slate",
@@ -306,7 +313,9 @@ export function LotBidHistory({ standalone = false, initialAuction = null }: Lot
                 )
             ) : auctions.length === 0 ? (
                 <PanelMessage>
-                    {search ? "No auctions match your search." : "No live or finished auctions yet — bids show up here once a sale goes live."}
+                    {search
+                        ? "No auctions match your search."
+                        : "No scheduled, live or finished auctions yet — proxy bids show up here once a sale is scheduled, bids once it goes live."}
                 </PanelMessage>
             ) : (
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.6fr)]">
@@ -431,6 +440,7 @@ function AuctionLots({ token, auctionUuid, refresh }: { token: string; auctionUu
                         ["Lots", auction.lotCount],
                         ["Bids", auction.totalBids],
                         ["Bidders", auction.bidders],
+                        ["Proxy bids", auction.proxyBids],
                     ].map(([label, value]) => (
                         <div key={label}>
                             <dt className="text-[#8A8D94]">{label}</dt>
@@ -452,6 +462,7 @@ function AuctionLots({ token, auctionUuid, refresh }: { token: string; auctionUu
                                 <th className="px-3 py-2.5">Status</th>
                                 <th className="px-3 py-2.5">Bids</th>
                                 <th className="px-3 py-2.5">Bidders</th>
+                                <th className="px-3 py-2.5">Proxies</th>
                                 <th className="px-3 py-2.5">Top Bid</th>
                                 <th className="px-4 py-2.5">Top Bidder</th>
                             </tr>
@@ -461,17 +472,19 @@ function AuctionLots({ token, auctionUuid, refresh }: { token: string; auctionUu
                                 const isOpen = open === lot.uuid
                                 const status = LOT_STATUS[lot.status] ?? LOT_STATUS.DRAFT
                                 const hasBids = lot.bidCount > 0
+                                // a lot that hasn't opened can still hold proxy bids
+                                const expandable = hasBids || lot.proxyCount > 0
                                 return (
                                     <Fragment key={lot.uuid}>
                                         <tr
                                             className={cn(
-                                                hasBids ? "cursor-pointer hover:bg-slate-50/60" : "text-slate-500",
+                                                expandable ? "cursor-pointer hover:bg-slate-50/60" : "text-slate-500",
                                                 isOpen && "bg-slate-50/80"
                                             )}
-                                            onClick={hasBids ? () => setOpen(isOpen ? null : lot.uuid) : undefined}
+                                            onClick={expandable ? () => setOpen(isOpen ? null : lot.uuid) : undefined}
                                         >
                                             <td className="py-3 pl-3">
-                                                {hasBids && (
+                                                {expandable && (
                                                     <button
                                                         type="button"
                                                         aria-expanded={isOpen}
@@ -505,6 +518,13 @@ function AuctionLots({ token, auctionUuid, refresh }: { token: string; auctionUu
                                             </td>
                                             <td className="px-3 py-3">{count(lot.bidCount)}</td>
                                             <td className="px-3 py-3">{count(lot.bidders)}</td>
+                                            <td className="px-3 py-3">
+                                                {lot.proxyCount > 0 ? (
+                                                    <StatusPill tone="maroon">{count(lot.proxyCount)}</StatusPill>
+                                                ) : (
+                                                    <span className="text-[#8A8D94]">—</span>
+                                                )}
+                                            </td>
                                             <td className="px-3 py-3 font-semibold text-slate-900">
                                                 {hasBids ? money(lot.topBid, lot.currency.code) : (
                                                     <span className="font-normal text-[#8A8D94]">
@@ -531,8 +551,14 @@ function AuctionLots({ token, auctionUuid, refresh }: { token: string; auctionUu
                                         </tr>
                                         {isOpen && (
                                             <tr>
-                                                <td colSpan={7} className="bg-[#FBFBFC] px-3 py-3">
-                                                    <LotBids token={token} lotUuid={lot.uuid} refresh={refresh} />
+                                                <td colSpan={8} className="bg-[#FBFBFC] px-3 py-3">
+                                                    <LotBids
+                                                        token={token}
+                                                        lotUuid={lot.uuid}
+                                                        refresh={refresh}
+                                                        proxyCount={lot.proxyCount}
+                                                        initialView={hasBids ? "bids" : "proxies"}
+                                                    />
                                                 </td>
                                             </tr>
                                         )}
@@ -551,12 +577,24 @@ function AuctionLots({ token, auctionUuid, refresh }: { token: string; auctionUu
 // ONE LOT — every bid, or a line per bidder
 // =====================================================================
 
-type LotView = "bids" | "bidders"
+type LotView = "bids" | "bidders" | "proxies"
 
-function LotBids({ token, lotUuid, refresh }: { token: string; lotUuid: string; refresh: number }) {
+function LotBids({
+    token,
+    lotUuid,
+    refresh,
+    proxyCount,
+    initialView,
+}: {
+    token: string
+    lotUuid: string
+    refresh: number
+    proxyCount: number
+    initialView: LotView
+}) {
     const key = `${lotUuid}|${refresh}`
     const [state, setState] = useState<{ key: string; data: LotBidHistory | null; failed: boolean } | null>(null)
-    const [view, setView] = useState<LotView>("bids")
+    const [view, setView] = useState<LotView>(initialView)
 
     useEffect(() => {
         let cancelled = false
@@ -592,21 +630,26 @@ function LotBids({ token, lotUuid, refresh }: { token: string; lotUuid: string; 
                     options={[
                         { value: "bids", label: `All bids (${count(history.summary.totalBids)})` },
                         { value: "bidders", label: `Bidders (${count(history.summary.bidders)})` },
+                        { value: "proxies", label: `Proxy bids (${count(proxyCount)})` },
                     ]}
                 />
-                <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 gap-1.5 bg-white text-[11px]"
-                    onClick={() => downloadLotCsv(history)}
-                    disabled={history.bids.length === 0}
-                >
-                    <Download className="h-3.5 w-3.5" />
-                    Export CSV
-                </Button>
+                {view !== "proxies" && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 gap-1.5 bg-white text-[11px]"
+                        onClick={() => downloadLotCsv(history)}
+                        disabled={history.bids.length === 0}
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        Export CSV
+                    </Button>
+                )}
             </div>
 
-            {history.bids.length === 0 ? (
+            {view === "proxies" ? (
+                <LotProxyTable token={token} lotUuid={lotUuid} refresh={refresh} />
+            ) : history.bids.length === 0 ? (
                 <PanelMessage>No bids on this lot.</PanelMessage>
             ) : view === "bids" ? (
                 <div className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white">
@@ -682,6 +725,100 @@ function LotBids({ token, lotUuid, refresh }: { token: string; lotUuid: string; 
                     </table>
                 </div>
             )}
+        </div>
+    )
+}
+
+// =====================================================================
+// ONE LOT — its proxy (maximum) bids, strongest first
+// =====================================================================
+
+function LotProxyTable({ token, lotUuid, refresh }: { token: string; lotUuid: string; refresh: number }) {
+    const key = `${lotUuid}|${refresh}`
+    const [state, setState] = useState<{ key: string; data: LotProxies | null; failed: boolean } | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+        getLotProxies(lotUuid, token)
+            .then((data) => {
+                if (!cancelled) setState({ key, data, failed: false })
+            })
+            .catch(() => {
+                if (!cancelled) setState((prev) => ({ key, data: prev?.data ?? null, failed: true }))
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [token, lotUuid, key])
+
+    const data = state?.data
+    if (!data) {
+        return state?.failed ? <PanelMessage>Couldn&apos;t load the proxy bids on this lot.</PanelMessage> : <Loading>Loading proxy bids…</Loading>
+    }
+    if (data.proxies.length === 0) return <PanelMessage>No proxy bids on this lot.</PanelMessage>
+
+    const { canSeeOrigin } = data
+
+    return (
+        <div className={cn("max-h-96 overflow-auto rounded-lg border border-slate-200 bg-white", state?.key !== key && "opacity-60")}>
+            <table className="w-full min-w-170 text-left text-[12px]">
+                <thead className="sticky top-0 bg-[#F6F6F7] text-[11px] font-semibold text-slate-700">
+                    <tr>
+                        <th className="px-4 py-2">#</th>
+                        <th className="px-3 py-2">Bidder</th>
+                        <th className="px-3 py-2">Maximum Bid</th>
+                        <th className="px-3 py-2">Bids Placed</th>
+                        <th className="px-3 py-2">Set At</th>
+                        {canSeeOrigin && <th className="px-3 py-2">IP Address</th>}
+                        <th className="px-4 py-2">Result</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {data.proxies.map((row, index) => {
+                        const outcome = PROXY_OUTCOMES[row.outcome]
+                        const code = row.currency.code
+                        return (
+                            <tr key={row.id} className={cn(row.withdrawnAt && "text-slate-400")}>
+                                <td className="px-4 py-2.5 text-[#8A8D94]">{row.withdrawnAt ? "—" : index + 1}</td>
+                                <td className="px-3 py-2.5">
+                                    <BidderCell bidder={row.bidder} />
+                                    {canSeeOrigin && (row.bidder.email || row.bidder.phone) && (
+                                        <p className="mt-0.5 truncate pl-9.5 text-[10px] text-[#8A8D94]">
+                                            {[row.bidder.email, row.bidder.phone].filter(Boolean).join(" · ")}
+                                        </p>
+                                    )}
+                                </td>
+                                <td className={cn("px-3 py-2.5 font-semibold", row.withdrawnAt ? "line-through" : "text-slate-900")}>
+                                    {money(row.maxAmount, code)}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                    {row.proxyBids.count === 0 ? (
+                                        <span className="text-[#8A8D94]">None yet</span>
+                                    ) : (
+                                        <>
+                                            {count(row.proxyBids.count)}
+                                            <p className="text-[10px] text-[#8A8D94]">up to {money(row.proxyBids.highest, code)}</p>
+                                        </>
+                                    )}
+                                </td>
+                                <td className="px-3 py-2.5 whitespace-nowrap text-[#62666F]">{formatBidTime(row.createdAt)}</td>
+                                {canSeeOrigin && (
+                                    <td className="px-3 py-2.5 whitespace-nowrap">
+                                        <p className="font-mono text-[11px] text-slate-900">{row.ipAddress ?? "—"}</p>
+                                        <p className="text-[10px] text-[#8A8D94]">{describeDevice(row.userAgent) ?? ""}</p>
+                                        {row.ipSharedBy > 1 && <StatusPill tone="red">Shared · {row.ipSharedBy} bidders</StatusPill>}
+                                    </td>
+                                )}
+                                <td className="px-4 py-2.5">
+                                    <span title={outcome.hint}>
+                                        <StatusPill tone={outcome.tone}>{outcome.label}</StatusPill>
+                                    </span>
+                                </td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
         </div>
     )
 }

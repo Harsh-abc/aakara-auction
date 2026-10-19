@@ -67,6 +67,14 @@ export const biddingEndPoints = {
     // auctioneer console
     AUCTION_CONSOLE_API: (auctionUuid: string) => `${BASE_URL}/api/bidding/auctions/${auctionUuid}/console`,
     FLOOR_BID_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/floor-bids`,
+    // hammer step 1: place the lot's proxy bids
+    EXECUTE_PROXIES_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/execute-proxies`,
+    // proxy bids page (super admin / admin)
+    PROXY_BIDS_API: `${BASE_URL}/api/bidding/proxy-bids`,
+    PROXY_BIDS_SUMMARY_API: `${BASE_URL}/api/bidding/proxy-bids/summary`,
+    PROXY_BIDS_EXPORT_API: `${BASE_URL}/api/bidding/proxy-bids/export`,
+    // one lot's proxy bids (bid history, console)
+    LOT_PROXIES_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/proxies`,
 };
 
 // live video (LiveKit) — viewers watch (login optional); the dashboard studio goes live and moderates

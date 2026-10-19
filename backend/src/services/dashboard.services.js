@@ -249,11 +249,12 @@ const httpError = (message, statusCode = 400) => {
     return error;
 };
 
-/** Sales that can have bids: running, or over */
+/** Sales that can have bids: running, or over — and upcoming ones, which can already hold proxy bids */
 const HISTORY_STATUSES = {
     live: LIVE_STATUSES,
+    upcoming: TIMELINE.upcoming.statuses,
     past: TIMELINE.past.statuses,
-    all: [...LIVE_STATUSES, ...TIMELINE.past.statuses],
+    all: [...LIVE_STATUSES, ...TIMELINE.upcoming.statuses, ...TIMELINE.past.statuses],
 };
 
 /** Lots that are still open — their top bid is "leading", not won / lost yet */
@@ -393,6 +394,16 @@ export const getAuctionBidHistoryService = async ({ auctionUuid }) => {
     const live = await readLiveLotBids(auction.items.map((lot) => lot.uuid));
     const savedLotIds = auction.items.filter((lot) => !live.has(lot.uuid)).map((lot) => lot.id);
 
+    // proxy bids left on each lot (withdrawn ones aren't counted)
+    const proxyRows = auction.items.length
+        ? await prisma.autoBid.groupBy({
+              by: ["itemId"],
+              where: { itemId: { in: auction.items.map((lot) => lot.id) }, withdrawnAt: null },
+              _count: { _all: true },
+          })
+        : [];
+    const proxiesByLot = new Map(proxyRows.map((row) => [row.itemId.toString(), row._count._all]));
+
     // one row per (lot, bidder) for lots whose bids are in the database
     const savedRows = savedLotIds.length
         ? await prisma.bid.groupBy({
@@ -441,6 +452,7 @@ export const getAuctionBidHistoryService = async ({ auctionUuid }) => {
             lotCount: items.length,
             totalBids: lots.reduce((sum, row) => sum + row.bidCount, 0),
             bidders: allBidders.size,
+            proxyBids: proxyRows.reduce((sum, row) => sum + row._count._all, 0),
         },
         lots: lots.map(({ lot, bidCount, bidders: bidderCount, topBid, leaderId }) => ({
             uuid: lot.uuid,
@@ -452,6 +464,7 @@ export const getAuctionBidHistoryService = async ({ auctionUuid }) => {
             startingPrice: lot.startingPrice,
             bidCount,
             bidders: bidderCount,
+            proxyCount: proxiesByLot.get(lot.id.toString()) ?? 0,
             topBid,
             leader: leaderId ? bidders.get(leaderId) ?? null : null,
         })),

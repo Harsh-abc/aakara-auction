@@ -1,9 +1,23 @@
 import { apiConnector } from "../apiConnector"
 import { auctionEndPoints, biddingEndPoints } from "../api"
-import type { AuctionActivity, AuctionConsole, BidResult, HammerResult, MyLotStanding } from "@/lib/types/bidding.types"
+import type {
+    AuctionActivity,
+    AuctionConsole,
+    BidResult,
+    ExecuteProxiesResult,
+    HammerResult,
+    MyLotStanding,
+} from "@/lib/types/bidding.types"
 
-const { MY_LOT_STANDING_API, PLACE_BID_API, SET_PROXY_BID_API, AUCTION_ACTIVITY_API, AUCTION_CONSOLE_API, FLOOR_BID_API } =
-    biddingEndPoints
+const {
+    MY_LOT_STANDING_API,
+    PLACE_BID_API,
+    SET_PROXY_BID_API,
+    AUCTION_ACTIVITY_API,
+    AUCTION_CONSOLE_API,
+    FLOOR_BID_API,
+    EXECUTE_PROXIES_API,
+} = biddingEndPoints
 const { HAMMER_LOT_API } = auctionEndPoints
 
 const authHeader = (token: string | null) => ({ Authorization: `Bearer ${token}` })
@@ -60,6 +74,12 @@ export async function placeFloorBid(
         body: { paddleNumber, amount },
         header: authHeader(token),
     })
+    return { message: response.data.message, data: response.data.data }
+}
+
+// console, hammer step 1: place the lot's proxy bids — the highest takes the lead
+export async function executeProxies(lotUuid: string, token: string | null): Promise<{ message: string; data: ExecuteProxiesResult }> {
+    const response = await apiConnector({ method: "POST", url: EXECUTE_PROXIES_API(lotUuid), header: authHeader(token) })
     return { message: response.data.message, data: response.data.data }
 }
 

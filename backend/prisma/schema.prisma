@@ -713,20 +713,31 @@ model Bid {
   @@map("bids")
 }
 
+/// A proxy (maximum) bid. Bidders leave one per lot, once, before the lot
+/// opens; it's written here as soon as it's set (Redis runs it while the sale
+/// is live — see services/bidding.services.js). isActive goes false once the
+/// sale ends, or when the bidder loses access to the lot (withdrawnAt set).
 model AutoBid {
-  id        BigInt      @id @default(autoincrement())
-  itemId    BigInt
-  bidderId  BigInt
-  maxAmount Decimal     @db.Decimal(12, 2)
-  isActive  Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  bidder    User        @relation(fields: [bidderId], references: [id])
-  item      AuctionItem @relation(fields: [itemId], references: [id])
+  id              BigInt      @id @default(autoincrement())
+  itemId          BigInt
+  bidderId        BigInt
+  maxAmount       Decimal     @db.Decimal(12, 2)
+  isActive        Boolean     @default(true)
+  // where the bidder set it from
+  ipAddress       String?     @db.VarChar(64)
+  userAgent       String?     @db.VarChar(500)
+  withdrawnAt     DateTime?
+  withdrawnReason String?     @db.VarChar(200)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  bidder          User        @relation(fields: [bidderId], references: [id])
+  item            AuctionItem @relation(fields: [itemId], references: [id])
 
   @@unique([itemId, bidderId])
   @@index([itemId])
   @@index([bidderId])
+  @@index([createdAt])
+  @@index([ipAddress])
   @@map("auto_bids")
 }
 

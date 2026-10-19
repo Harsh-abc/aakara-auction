@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 
 import {
+    executeProxiesService,
     getAuctionActivityService,
     getAuctionConsoleService,
     getMyLotStandingService,
@@ -121,5 +122,21 @@ export const placeFloorBid = async (req, res) => {
         return res.status(201).json({ success: true, message, data });
     } catch (error) {
         return handleError(res, error, "Place floor bid", "Failed to place the floor bid");
+    }
+};
+
+// -----------------------------------------------------------------
+// POST /api/bidding/lots/:lotUuid/execute-proxies
+// Hammer step 1: the lot's proxy bids are placed against the standing bid
+// (the highest takes the lead); the console then counts down and sells
+// -----------------------------------------------------------------
+
+export const executeProxies = async (req, res) => {
+    try {
+        const { lotUuid } = lotUuidParamSchema.parse(req.params);
+        const { message, data } = await executeProxiesService({ lotUuid });
+        return res.status(200).json({ success: true, message, data });
+    } catch (error) {
+        return handleError(res, error, "Execute proxy bids", "Failed to place the proxy bids");
     }
 };

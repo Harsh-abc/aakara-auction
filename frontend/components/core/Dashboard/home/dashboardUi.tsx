@@ -87,6 +87,87 @@ export function Panel({ title, description, action, className, children }: Panel
     )
 }
 
+/** Icon + label + number card (activity logs, proxy bids) */
+export function StatTile({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number | null; tone?: "red" }) {
+    return (
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <span
+                className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                    tone === "red" ? "bg-[#FDECEC] text-[#C93B3B]" : "bg-[#F6E9EF] text-[#7B2D52]"
+                )}
+            >
+                {icon}
+            </span>
+            <div className="min-w-0">
+                <p className="text-[11px] text-[#62666F]">{label}</p>
+                <p className="text-[18px] font-bold leading-tight text-slate-900">{value === null ? "—" : value.toLocaleString("en-IN")}</p>
+            </div>
+        </div>
+    )
+}
+
+/** Pill-style single choice (e.g. All / Success / Failed) */
+export function Segmented<T extends string>({
+    value,
+    options,
+    onChange,
+}: {
+    value: T
+    options: { value: T; label: string }[]
+    onChange: (value: T) => void
+}) {
+    return (
+        <div className="flex h-10 items-center gap-1 rounded-lg bg-white p-1 ring-1 ring-slate-200">
+            {options.map((option) => (
+                <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onChange(option.value)}
+                    className={cn(
+                        "h-full cursor-pointer rounded-md px-3 text-[12px] font-semibold transition-colors",
+                        value === option.value ? "bg-[#7B2D52] text-white" : "text-slate-500 hover:text-slate-800"
+                    )}
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    )
+}
+
+/** "Chrome on Windows" — enough to tell devices apart at a glance */
+export const describeDevice = (ua: string | null) => {
+    if (!ua) return null
+    const browser = /Edg\//.test(ua)
+        ? "Edge"
+        : /OPR\//.test(ua)
+          ? "Opera"
+          : /Chrome\//.test(ua)
+            ? "Chrome"
+            : /Firefox\//.test(ua)
+              ? "Firefox"
+              : /Safari\//.test(ua)
+                ? "Safari"
+                : /PostmanRuntime/.test(ua)
+                  ? "Postman"
+                  : /curl\//.test(ua)
+                    ? "curl"
+                    : null
+    const os = /Windows/.test(ua)
+        ? "Windows"
+        : /Android/.test(ua)
+          ? "Android"
+          : /iPhone|iPad/.test(ua)
+            ? "iOS"
+            : /Mac OS X/.test(ua)
+              ? "macOS"
+              : /Linux/.test(ua)
+                ? "Linux"
+                : null
+    return [browser, os].filter(Boolean).join(" on ") || "Other client"
+}
+
 export function PanelMessage({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex min-h-24 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-6 text-center text-[13px] text-[#62666F]">
