@@ -1,14 +1,8 @@
 import jwt from 'jsonwebtoken'
-import { isUserBlocked } from '../libs/accountBlock.js'
+import { tokenAccessProblem } from '../libs/accountBlock.js'
 
 export async function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
-
-    console.log("========== AUTH DEBUG ==========");
-    console.log("METHOD:", req.method);
-    console.log("URL:", req.originalUrl);
-    console.log("Authorization:", authHeader);
-    console.log("================================");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({
@@ -19,16 +13,12 @@ export async function authenticate(req, res, next) {
 
     const token = authHeader.substring(7).trim();
 
-    console.log("TOKEN EXISTS:", !!token);
-    console.log("TOKEN LENGTH:", token.length);
-
+    let decoded;
     try {
-        const decoded = jwt.verify(
+        decoded = jwt.verify(
             token,
             process.env.JWT_ACCESS_SECRET
         );
-
-        console.log("DECODED:", decoded);
 
         req.user = {
             uuid: decoded.sub,
@@ -38,23 +28,22 @@ export async function authenticate(req, res, next) {
             role: decoded.role,
             permissions: decoded.permissions ?? [],
         };
-
-        console.log("REQ.USER:", req.user);
-    } catch (err) {
-        console.error("JWT ERROR:", err);
-
+    } catch {
+        // expired / invalid token — the app refreshes on a 401
         return res.status(401).json({
             success: false,
             message: "Invalid access token",
         });
     }
 
-    // suspended after this token was issued — 401 so the app tries to refresh, which the
-    // suspended account can't, and logs the user out
-    if (await isUserBlocked(req.user.userId)) {
+    // suspended, or role / password changed, after this token was issued — 401 so the app
+    // tries to refresh: a suspended or demoted account can't (its sessions are gone) and is
+    // logged out; after a password change this browser's session gets a fresh token
+    const problem = await tokenAccessProblem(decoded);
+    if (problem) {
         return res.status(401).json({
             success: false,
-            message: "Your account has been suspended",
+            message: problem === "SUSPENDED" ? "Your account has been suspended" : "Your access has changed. Please log in again.",
         });
     }
 
@@ -68,8 +57,8 @@ export async function optionalAuthenticate(req, res, next) {
 
     try {
         const decoded = jwt.verify(authHeader.substring(7).trim(), process.env.JWT_ACCESS_SECRET);
-        // a suspended account is treated as a guest
-        if (!(await isUserBlocked(decoded.userId))) {
+        // a suspended account, or a token from before a role / password change, is treated as a guest
+        if (!(await tokenAccessProblem(decoded))) {
             req.user = {
                 uuid: decoded.sub,
                 userId: decoded.userId,

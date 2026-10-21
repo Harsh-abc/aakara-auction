@@ -3,6 +3,7 @@ import { registerService, verifyOtpService, verifyPhoneOtpService, loginService,
 import { ZodError } from 'zod';
 import { getClientIp } from '../utils/clientIp.js';
 import { setActivityActor } from '../libs/activityLog.js';
+import { SESSION_TTL_MS } from '../libs/session.js';
 
 export const register = async (req, res, next) => {
     try {
@@ -58,7 +59,6 @@ export const verifyPhoneOtp = async (req, res, next) => {
 
 
 export const REFRESH_COOKIE_NAME = 'aakara_refresh';
-const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days, matches REFRESH_TOKEN_TTL_SECONDS
 
 // on UAT/prod the frontend and API sit on different subdomains, so the cookie must be scoped to the
 // parent domain (e.g. ".example.com") or the Next proxy never sees it. left host-only on localhost.
@@ -73,10 +73,11 @@ const refreshCookieScope = {
     domain: COOKIE_DOMAIN,
 };
 
-const setRefreshCookie = (res, token) => {
+// the cookie goes when the session ends (24h after login), so the user has to log in again
+const setRefreshCookie = (res, token, maxAgeMs) => {
     // drop any older host-only copy on the API subdomain so it can't shadow the parent-domain one
     if (COOKIE_DOMAIN) res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
-    res.cookie(REFRESH_COOKIE_NAME, token, { ...refreshCookieScope, maxAge: REFRESH_COOKIE_MAX_AGE_MS });
+    res.cookie(REFRESH_COOKIE_NAME, token, { ...refreshCookieScope, maxAge: maxAgeMs });
 };
 
 const clearRefreshCookie = (res) => {
@@ -108,9 +109,7 @@ export const login = async (req, res, next) => {
             userAgent,
         });
 
-        setRefreshCookie(res, refreshToken);
-
-        console.log(user)
+        setRefreshCookie(res, refreshToken, SESSION_TTL_MS);
 
         return res.status(200).json({
             success: true,
@@ -135,7 +134,7 @@ export const refresh = async (req, res) => {
         const token = req.cookies?.[REFRESH_COOKIE_NAME];
         const result = await refreshService(token);
 
-        setRefreshCookie(res, result.refreshToken);
+        setRefreshCookie(res, result.refreshToken, Math.max(result.sessionExpiresAt.getTime() - Date.now(), 0));
 
         return res.status(200).json({
             success: true,

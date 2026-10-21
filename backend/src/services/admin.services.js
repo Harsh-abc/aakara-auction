@@ -2,7 +2,7 @@ import prisma from '../libs/prisma.js';
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { invalidateBidderAccess } from './bidding.services.js';
-import { blockUserAccess, unblockUserAccess } from '../libs/accountBlock.js';
+import { blockUserAccess, revokeUserTokens, unblockUserAccess } from '../libs/accountBlock.js';
 import { disconnectUser } from '../libs/socket.js';
 
 const MAX_SUPER_ADMINS = 3;
@@ -48,6 +48,10 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
         throw error;
     }
 
+    // their tokens carry the old role: stop them now, not when they expire (up to 24h). Done before
+    // the change so a Redis failure refuses the change instead of leaving the old access working
+    await revokeUserTokens(targetUser.id);
+
     let updatedUser;
     try {
         // Serializable so two concurrent promotions can't both pass the limit check
@@ -90,6 +94,13 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
         }
         throw error;
     }
+
+    // again now it's saved: a token refreshed while the change ran still had the old role
+    await revokeUserTokens(targetUser.id).catch((error) =>
+        console.error(`[admin] could not revoke tokens of user ${targetUser.id} after their role change:`, error)
+    );
+    // live connections drop out of staff rooms; they come back as whatever their token allows
+    disconnectUser(targetUser.id);
 
     // only BIDDERs may bid, so gaining or losing the role refreshes who may bid on their lots
     const oldRole = await prisma.role.findUnique({ where: { id: targetUser.roleId }, select: { name: true } });

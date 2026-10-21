@@ -3,6 +3,7 @@ import prisma from '../libs/prisma.js';
 
 import { uploadToS3, deleteFromS3 } from "../services/s3.services.js"
 import { hashToken } from './auth.services.js';
+import { revokeUserTokens } from '../libs/accountBlock.js';
 import { serializeBigInt } from '../utils/serialize.js';
 import { invalidateBidderAccess } from './bidding.services.js';
 import sendEmail from '../mail/sendMail.js';
@@ -595,6 +596,12 @@ export const changeMyPasswordService = async ({ userId, currentPassword, newPass
             where: { userId: user.id, ...(keepHash && { NOT: { refreshTokenHash: keepHash } }) },
         }),
     ]);
+
+    // other devices' access tokens stop now, not when they expire (up to 24h) — this browser's
+    // next request gets a 401, refreshes with the session it kept and carries on
+    await revokeUserTokens(user.id).catch((error) =>
+        console.error(`[auth] could not revoke tokens of user ${user.id} after a password change:`, error)
+    );
 };
 
 

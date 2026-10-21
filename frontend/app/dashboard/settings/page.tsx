@@ -19,6 +19,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useAppSelector } from "@/hooks/redux"
+import { useCanAccessPage } from "@/hooks/useCanAccessPage"
 import { getErrorMessage } from "@/lib/apiError"
 import { ROLE_LABELS, type RoleName } from "@/lib/constants/roles"
 import { MyAccount } from "@/lib/types/profile.types"
@@ -65,6 +66,8 @@ export default function Settings() {
     const authUser = useAppSelector((state) => state.auth.user)
     const role = useAppSelector((state) => state.auth.role)
     const token = useAppSelector((state) => state.auth.accessToken)
+    // e.g. Team is super admin only (lib/constants/dashboardAccess.ts)
+    const canAccess = useCanAccessPage()
 
     const [account, setAccount] = useState<MyAccount | null>(null)
     const [loading, setLoading] = useState(true)
@@ -172,7 +175,7 @@ export default function Settings() {
                         Manage
                     </h2>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        {SETTINGS_LINKS.map(({ title, description, href, icon: Icon, comingSoon }) => {
+                        {SETTINGS_LINKS.filter((link) => !link.href || canAccess(link.href)).map(({ title, description, href, icon: Icon, comingSoon }) => {
                             const body = (
                                 <>
                                     <div className="flex items-start justify-between gap-4">

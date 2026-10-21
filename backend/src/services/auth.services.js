@@ -7,10 +7,7 @@ import { generateOtp } from '../utils/otp.utils.js';
 import sendEmail from '../mail/sendMail.js';
 import { otpVerificationTemplate } from '../mail/templates/otpVerifications.js';
 import { getRolePermissions } from '../libs/rolePermission.js'
-
-
-
-console.log("OTP utility loaded:", generateOtp);
+import { SESSION_TTL_SECONDS } from '../libs/session.js'
 
 const PENDING_TTL = 10 * 60;
 const RESEND_WINDOW = 10 * 60;
@@ -24,9 +21,11 @@ const attemptsKey = (email) => `register:otp:verify-attempts:${email}`;
 
 // LOGIN
 
-const ACCESS_TOKEN_TTL = '300m';
-const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
-const REFRESH_TOKEN_TTL_STRING = '7d';
+// A login lasts SESSION_TTL_SECONDS (24h) from sign-in, however often it's refreshed:
+// the access token, refresh token and cookie never outlive the session's end, so
+// after 24h the user has to log in again (storefront and dashboard alike).
+const sessionEndOf = (session) =>
+    new Date(Math.min(session.expiresAt.getTime(), session.createdAt.getTime() + SESSION_TTL_SECONDS * 1000));
 
 // const IP_BLOCK_WINDOW = 15 * 60;   // 15 minutes
 // const IP_BLOCK_THRESHOLD = 3;
@@ -76,8 +75,6 @@ export const registerService = async ({ username, email, password, phone, city, 
 
     const passwordHash = await bcrypt.hash(password, 12);
     const otp = generateOtp();
-
-    console.log("Generated OTP:", otp);
 
     const pendingData = {
         username, email, passwordHash, otp,
@@ -236,14 +233,7 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
 
 const isIpBlocked = async (ip) => {
     try {
-        // const blocked = await redis.get(ipBlockKey(ip));
-        const key = ipBlockKey(ip);
-
-        const blocked = await redis.get(key);
-
-        console.log("IP:", ip);
-        console.log("Block key:", key);
-        console.log("Block value:", blocked);
+        const blocked = await redis.get(ipBlockKey(ip));
         return Boolean(blocked);
     } catch (err) {
         // Fail open: never let a Redis outage lock out every login
@@ -288,7 +278,8 @@ const logAttempt = async ({ userId, email, ip, userAgent, success, failureReason
     });
 };
 
-const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions }) => {
+// both tokens expire when the session does (`ttlSeconds` = time left in it)
+const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, ttlSeconds }) => {
     const accessToken = jwt.sign(
         {
             sub: uuid,
@@ -297,15 +288,17 @@ const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions })
             sessionId,
             role: roleName,
             permissions,
+            // exact issue time — a role / password change revokes tokens issued before it (libs/accountBlock.js)
+            iatMs: Date.now(),
         },
         process.env.JWT_ACCESS_SECRET,
-        { expiresIn: ACCESS_TOKEN_TTL }
+        { expiresIn: ttlSeconds }
     );
 
     const refreshToken = jwt.sign(
         { sub: uuid, sessionId },
         process.env.JWT_REFRESH_SECRET,
-        { expiresIn: REFRESH_TOKEN_TTL_STRING }
+        { expiresIn: ttlSeconds }
     );
 
     return { accessToken, refreshToken };
@@ -390,7 +383,8 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
         roleId: user.roleId,
         sessionId,
         roleName,
-        permissions
+        permissions,
+        ttlSeconds: SESSION_TTL_SECONDS,
     });
 
     await prisma.$transaction([
@@ -410,7 +404,7 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
                 refreshTokenHash: hashToken(refreshToken),
                 ipAddress: ip,
                 userAgent,
-                expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000),
+                expiresAt: new Date(Date.now() + SESSION_TTL_SECONDS * 1000),
             },
         }),
     ]);
@@ -451,8 +445,13 @@ export const refreshService = async (refreshToken) => {
         where: { refreshTokenHash: tokenHash, expiresAt: { gt: new Date() } },
     });
 
-    if (!session) {
-        const error = new Error('Session not found or expired');
+    // older sessions were saved with a 7-day expiry — they end 24h after sign-in too
+    const sessionEnd = session ? sessionEndOf(session) : null;
+    const ttlSeconds = sessionEnd ? Math.floor((sessionEnd.getTime() - Date.now()) / 1000) : 0;
+
+    if (!session || ttlSeconds <= 0) {
+        if (session) await prisma.userSession.delete({ where: { id: session.id } }).catch(() => {});
+        const error = new Error('Session expired. Please log in again.');
         error.statusCode = 401;
         throw error;
     }
@@ -475,20 +474,23 @@ export const refreshService = async (refreshToken) => {
         sessionId,
         roleName,
         permissions,
+        ttlSeconds,
     });
 
-    // rotate: same session row, new hash + fresh expiry
+    // rotate: same session row, new hash — the expiry stays where login set it
     await prisma.userSession.update({
         where: { id: session.id },
         data: {
             refreshTokenHash: hashToken(newRefreshToken),
-            expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000),
+            expiresAt: sessionEnd,
+            lastUsedAt: new Date(),
         },
     });
 
     return {
         accessToken,
         refreshToken: newRefreshToken,
+        sessionExpiresAt: sessionEnd,
         user: { uuid: user.uuid, username: user.username, email: user.email, roleId: user.roleId.toString() },
         role: roleName,
         permissions,

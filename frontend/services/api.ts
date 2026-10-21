@@ -18,6 +18,10 @@ export const auctionEndPoints = {
     GET_AUCTION_API: `${BASE_URL}/api/auction/getAuction`,
     GET_LOTS_BY_AUCTION: (auctionUuid: string) =>
         `${BASE_URL}/api/auction/getLots/${auctionUuid}/lots`,
+    // Artworks — every lot of every auction (dashboard catalogue)
+    ARTWORKS_API: `${BASE_URL}/api/auction/artworks`,
+    ARTWORKS_SUMMARY_API: `${BASE_URL}/api/auction/artworks/summary`,
+    ARTWORK_API: (lotUuid: string) => `${BASE_URL}/api/auction/artworks/${lotUuid}`,
     DELETE_AUCTION_API: (auctionUuid: string) =>
         `${BASE_URL}/api/auction/delete-auction/${auctionUuid}`,
     UPDATE_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/update-auction/${auctionUuid}`,

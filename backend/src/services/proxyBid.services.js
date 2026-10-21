@@ -17,7 +17,7 @@ const EXPORT_MAX_ROWS = 10_000;
 const EXPORT_BATCH = 500;
 
 /** Roles that see where a proxy was set from (IP, device) and the bidder's contact details */
-const ORIGIN_ROLES = ["SUPER_ADMIN", "ADMIN"];
+const ORIGIN_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"];
 
 const httpError = (message, statusCode = 400) => {
     const error = new Error(message);

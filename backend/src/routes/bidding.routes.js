@@ -25,7 +25,8 @@ biddingRouter.post("/lots/:lotUuid/proxy", authenticate, setProxyBid);
 biddingRouter.get("/auctions/:auctionUuid/activity", authenticate, requireRole(...STAFF_ROLES), getAuctionActivity);
 
 // PROXY BIDS — every proxy left on a lot, with the bidder's IP and device (admins only)
-const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN"];
+// the dashboard's Proxy Bids page is for super admins and auctioneers (frontend lib/constants/dashboardAccess.ts)
+const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"];
 biddingRouter.get("/proxy-bids", authenticate, requireRole(...PROXY_AUDIT_ROLES), getProxyBids);
 biddingRouter.get("/proxy-bids/summary", authenticate, requireRole(...PROXY_AUDIT_ROLES), getProxyBidSummary);
 biddingRouter.get("/proxy-bids/export", authenticate, requireRole(...PROXY_AUDIT_ROLES), exportProxyBids);

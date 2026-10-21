@@ -241,6 +241,7 @@ const data = {
   //   },
   // ],
 
+  // each role sees only the pages it can open — see lib/constants/dashboardAccess.ts
   navMain: [
     { title: "Dashboard", url: "/dashboard", icon: <LayoutDashboard className="w-6 h-6" /> },
     // { title: "Live Auctions", url: "/dashboard/live-auctions", icon: <Gavel className="rotate-270" /> },
@@ -263,12 +264,11 @@ const data = {
       title: "Manage Bidders",
       url: "/dashboard/auctions/manage-bidders",
       icon: <UserCheck />,
-      roles: ["SUPER_ADMIN", "ADMIN"],
       // also highlighted on an auction's bidder pages
       activeOn: /^\/dashboard\/auctions\/[^/]+\/(registrations|lots\/[^/]+\/bidders)/,
     },
     { title: "Bid History", url: "/dashboard/bid-history", icon: <History /> },
-    { title: "Proxy Bids", url: "/dashboard/proxy-bids", icon: <Bot />, roles: ["SUPER_ADMIN", "ADMIN"] },
+    { title: "Proxy Bids", url: "/dashboard/proxy-bids", icon: <Bot /> },
     { title: "Artworks", url: "/dashboard/artworks", icon: <Palette /> },
     // { title: "Bidders", url: "/dashboard/bidders", icon: <UserCheck /> },
     { title: "User", url: "/dashboard/users", icon: <Users /> },
@@ -284,7 +284,7 @@ const data = {
       items: [
         { title: "General Settings", url: "/dashboard/settings/general" },
         { title: "Team", url: "/dashboard/settings/team" },
-        { title: "Activity Logs", url: "/dashboard/settings/activity-logs", roles: ["SUPER_ADMIN"] },
+        { title: "Activity Logs", url: "/dashboard/settings/activity-logs" },
         // { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
       ],
     },

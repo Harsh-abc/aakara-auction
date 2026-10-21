@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
+import { useCanAccessPage } from "@/hooks/useCanAccessPage"
 import { formatMoney } from "@/lib/types/LotRow"
 import { cn } from "@/lib/utils"
 import { VIEWER_TIME_ZONE } from "@/utils/auctionTime"
@@ -64,8 +65,11 @@ interface PanelProps {
     children: React.ReactNode
 }
 
-/** Grey section with a heading, an optional "View all" link, and white content inside */
+/** Grey section with a heading, an optional "View all" link (hidden when the role can't open it), and white content inside */
 export function Panel({ title, description, action, className, children }: PanelProps) {
+    const canAccess = useCanAccessPage()
+    const showAction = action && (!action.href.startsWith("/dashboard") || canAccess(action.href))
+
     return (
         <section className={cn("rounded-xl bg-[#F6F6F7] p-4 md:p-5", className)}>
             <div className="mb-3 flex items-start justify-between gap-3">
@@ -73,7 +77,7 @@ export function Panel({ title, description, action, className, children }: Panel
                     <h2 className="text-[15px] font-bold text-slate-900">{title}</h2>
                     {description && <p className="mt-0.5 text-[11px] text-[#62666F]">{description}</p>}
                 </div>
-                {action && (
+                {showAction && (
                     <Link
                         href={action.href}
                         className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[#7B2D52] hover:underline"
@@ -87,10 +91,22 @@ export function Panel({ title, description, action, className, children }: Panel
     )
 }
 
-/** Icon + label + number card (activity logs, proxy bids) */
-export function StatTile({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number | null; tone?: "red" }) {
+/** Icon + label + number card (activity logs, proxy bids, artworks) — a string value (e.g. "64%", an amount) shows as is */
+export function StatTile({
+    icon,
+    label,
+    value,
+    tone,
+    title,
+}: {
+    icon: React.ReactNode
+    label: string
+    value: number | string | null
+    tone?: "red"
+    title?: string
+}) {
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3" title={title}>
             <span
                 className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
@@ -101,7 +117,9 @@ export function StatTile({ icon, label, value, tone }: { icon: React.ReactNode; 
             </span>
             <div className="min-w-0">
                 <p className="text-[11px] text-[#62666F]">{label}</p>
-                <p className="text-[18px] font-bold leading-tight text-slate-900">{value === null ? "—" : value.toLocaleString("en-IN")}</p>
+                <p className="truncate text-[18px] font-bold leading-tight text-slate-900">
+                    {value === null ? "—" : typeof value === "number" ? value.toLocaleString("en-IN") : value}
+                </p>
             </div>
         </div>
     )

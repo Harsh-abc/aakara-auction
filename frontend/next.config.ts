@@ -3,7 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async redirects() {
     // the auctions listing lives at "/" — keep old /auctions links working (sale pages stay under /auctions/:uuid)
-    return [{ source: "/auctions", destination: "/", permanent: false }];
+    return [
+      { source: "/auctions", destination: "/", permanent: false },
+      // the old staff login / sign-up pages are gone — /registration is the one login page (query, e.g. ?redirect=, is kept)
+      { source: "/login", destination: "/registration", permanent: true },
+      { source: "/signup", destination: "/registration?tab=signup", permanent: true },
+    ];
   },
   async headers() {
     return [

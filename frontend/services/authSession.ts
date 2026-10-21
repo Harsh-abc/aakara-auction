@@ -8,7 +8,7 @@ import { RefreshTokenApiResponse } from "@/lib/types/auth.types"
 
 const { REFRESH_API } = authEndPoints
 
-// fired when the refresh token is rejected — DashboardGuard listens and redirects to /login
+// fired when the refresh token is rejected — DashboardGuard and SessionWatcher listen and redirect to /registration
 export const SESSION_EXPIRED_EVENT = "auth:session-expired"
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }

@@ -4,6 +4,7 @@ import { addToGallery, getMyGallery, removeFromGallery } from '../controllers/ga
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from '../middleware/upload.middleware.js';
+import { STAFF_ROLES } from '../libs/socket.js';
 
 const userRouter = Router();
 
@@ -22,8 +23,8 @@ userRouter.post('/me/gallery/:lotUuid', authenticate, addToGallery);
 userRouter.delete('/me/gallery/:lotUuid', authenticate, removeFromGallery);
 
 
-// GET ALL USERS (admin only)
-userRouter.get('/get-all-users', getAllUsers);
+// GET ALL USERS (dashboard roles only — contact details, DOB and last login IP)
+userRouter.get('/get-all-users', authenticate, requireRole(...STAFF_ROLES), getAllUsers);
 
 // counts for the users page cards (before /:uuid so "stats" isn't read as a uuid)
 userRouter.get('/stats', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF', 'AUCTIONEER'), getUserStats);

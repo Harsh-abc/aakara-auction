@@ -8,8 +8,11 @@ import { requireRole } from '../middleware/rbac.middleware.js';
 
 const uploadRouter = express.Router()
 
+// standalone image upload (not used by the app) — super admin / admin only
 uploadRouter.post(
     "/upload-image",
+    authenticate,
+    requireRole("SUPER_ADMIN", "ADMIN"),
     upload.single("image"),
     uploadTestImage
 );

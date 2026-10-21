@@ -26,7 +26,7 @@ export function Header() {
     }, []);
 
     // After logging in, come back to the page you were on
-    const comeBackHere = currentPath && !["/login", "/signup", "/registration"].includes(currentPath) ? `?redirect=${encodeURIComponent(currentPath)}` : "";
+    const comeBackHere = currentPath && currentPath !== "/registration" ? `?redirect=${encodeURIComponent(currentPath)}` : "";
 
     return (
         <header

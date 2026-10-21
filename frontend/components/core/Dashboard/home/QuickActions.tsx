@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { ArrowUpRight, CalendarPlus, Gavel, ImagePlus, type LucideIcon } from "lucide-react"
 
+import { useCanAccessPage } from "@/hooks/useCanAccessPage"
+
 const ACTIONS: { title: string; description: string; href: string; icon: LucideIcon }[] = [
     {
         title: "Schedule Auction",
@@ -24,11 +26,16 @@ const ACTIONS: { title: string; description: string; href: string; icon: LucideI
 ]
 
 export function QuickActions() {
+    // only the shortcuts to pages this role can open
+    const canAccess = useCanAccessPage()
+    const actions = ACTIONS.filter((action) => canAccess(action.href))
+    if (actions.length === 0) return null
+
     return (
         <section>
             <h2 className="mb-3 text-[15px] font-bold text-slate-900">Quick Actions</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {ACTIONS.map(({ title, description, href, icon: Icon }) => (
+                {actions.map(({ title, description, href, icon: Icon }) => (
                     <Link
                         key={title}
                         href={href}

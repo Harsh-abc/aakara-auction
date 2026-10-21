@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Activity, CalendarDays, CircleCheck, Gavel, type LucideIcon } from "lucide-react"
 
+import { useCanAccessPage } from "@/hooks/useCanAccessPage"
 import type { AuctionStats } from "@/lib/types/auction.types"
 import { cn } from "@/lib/utils"
 
@@ -17,11 +18,9 @@ interface StatCardProps {
 }
 
 function StatCard({ title, value, note, href, icon: Icon, iconClassName, noteClassName }: StatCardProps) {
-    return (
-        <Link
-            href={href}
-            className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 transition-shadow hover:shadow-md"
-        >
+    const canAccess = useCanAccessPage()
+    const content = (
+        <>
             <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", iconClassName)}>
                 <Icon className="h-5 w-5" />
             </span>
@@ -30,6 +29,16 @@ function StatCard({ title, value, note, href, icon: Icon, iconClassName, noteCla
                 <p className="text-[24px] font-bold leading-tight text-slate-900">{value}</p>
                 <p className={cn("truncate text-[11px] text-[#8A8D94]", noteClassName)}>{note}</p>
             </div>
+        </>
+    )
+    const box = "flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4"
+
+    // the number still shows; it only links when the role can open that list
+    if (!canAccess(href)) return <div className={box}>{content}</div>
+
+    return (
+        <Link href={href} className={cn(box, "transition-shadow hover:shadow-md")}>
+            {content}
         </Link>
     )
 }

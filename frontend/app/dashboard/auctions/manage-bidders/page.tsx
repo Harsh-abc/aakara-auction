@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 import { AppDispatch, RootState } from "@/redux/store";
 import { getAuctions } from "@/services/operations/auction.api";
 
-// Admins can view bidders; only a super admin can change them (enforced by the API)
-const BIDDER_MANAGER_ROLES = ["SUPER_ADMIN", "ADMIN"];
+// Admins and auctioneers can view bidders; only a super admin can change them (enforced by the API)
+const BIDDER_MANAGER_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"];
 
 /** Mirrors EDITABLE_AUCTION_STATUSES in backend/src/services/lotBidder.services.js */
 const ACTIVE_STATUSES: AuctionStatus[] = ["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
@@ -97,7 +97,7 @@ export default function ManageBiddersPage() {
             <div className="px-8 py-8">
                 <div className="flex items-start gap-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700">
                     <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                    Only admins and super admins can manage auction bidders.
+                    Only super admins, admins and auctioneers can manage auction bidders.
                 </div>
             </div>
         );

@@ -38,7 +38,8 @@ import { PROXY_OUTCOMES } from "./proxyDisplay"
 
 const PAGE_SIZES = [25, 50, 100]
 const ALL = "ALL"
-const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN"]
+// mirrors PROXY_AUDIT_ROLES in backend/src/routes/bidding.routes.js
+const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"]
 
 const STAGE_OPTIONS: { value: ProxyStage; label: string }[] = [
     { value: "all", label: "All" },
@@ -300,7 +301,7 @@ export function ProxyBids() {
         return (
             <PanelMessage>
                 <ShieldAlert className="mr-2 h-4 w-4" />
-                Only super admins and admins can view proxy bids.
+                Only super admins and auctioneers can view proxy bids.
             </PanelMessage>
         )
     }

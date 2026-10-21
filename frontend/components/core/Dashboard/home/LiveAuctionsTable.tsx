@@ -11,7 +11,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAppSelector } from "@/hooks/redux"
+import { useCanAccessPage } from "@/hooks/useCanAccessPage"
 import { useServerNow } from "@/hooks/useServerNow"
 import type { DashboardLiveAuction } from "@/lib/types/auction.types"
 
@@ -30,13 +30,14 @@ const timeLeft = (endTime: string, now: number) => {
     return days > 0 ? `${days}d ${pad(hours)}h` : `${pad(hours)}h ${pad(minutes % 60)}m`
 }
 
-// edit + registrations follow the API's role checks
-const MANAGER_ROLES = ["SUPER_ADMIN", "ADMIN"]
-
+// each action only for the roles that can open its page (lib/constants/dashboardAccess.ts)
 function RowActions({ auction }: { auction: DashboardLiveAuction }) {
     const router = useRouter()
-    const role = useAppSelector((state) => state.auth.role)
-    const canManage = !!role && MANAGER_ROLES.includes(role)
+    const canAccess = useCanAccessPage()
+    const studio = `/dashboard/go-live?auction=${auction.uuid}`
+    const registrations = `/dashboard/auctions/${auction.uuid}/registrations`
+    const edit = `/dashboard/auctions/${auction.uuid}/edit`
+    const showMenu = canAccess(studio) || canAccess(registrations) || canAccess(edit)
 
     return (
         <div className="flex items-center justify-end gap-0.5 text-slate-500">
@@ -48,14 +49,17 @@ function RowActions({ auction }: { auction: DashboardLiveAuction }) {
             >
                 <Eye className="h-4 w-4" />
             </Link>
-            <Link
-                href="/dashboard/auctions/live-auctions"
-                className="rounded-md p-1.5 hover:bg-slate-100 hover:text-slate-900"
-                aria-label="Open the bidding floor"
-                title="Bidding floor"
-            >
-                <Gavel className="h-4 w-4" />
-            </Link>
+            {canAccess("/dashboard/auctions/live-auctions") && (
+                <Link
+                    href="/dashboard/auctions/live-auctions"
+                    className="rounded-md p-1.5 hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Open the bidding floor"
+                    title="Bidding floor"
+                >
+                    <Gavel className="h-4 w-4" />
+                </Link>
+            )}
+            {showMenu && (
             <DropdownMenu>
                 <DropdownMenuTrigger
                     render={
@@ -71,30 +75,24 @@ function RowActions({ auction }: { auction: DashboardLiveAuction }) {
                     <MoreHorizontal className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                        className="py-2 text-[13px]"
-                        onClick={() => router.push(`/dashboard/go-live?auction=${auction.uuid}`)}
-                    >
-                        <Radio /> Live studio
-                    </DropdownMenuItem>
-                    {canManage && (
-                        <>
-                            <DropdownMenuItem
-                                className="py-2 text-[13px]"
-                                onClick={() => router.push(`/dashboard/auctions/${auction.uuid}/registrations`)}
-                            >
-                                <Users /> Registrations
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="py-2 text-[13px]"
-                                onClick={() => router.push(`/dashboard/auctions/${auction.uuid}/edit`)}
-                            >
-                                <Pencil /> Edit auction
-                            </DropdownMenuItem>
-                        </>
+                    {canAccess(studio) && (
+                        <DropdownMenuItem className="py-2 text-[13px]" onClick={() => router.push(studio)}>
+                            <Radio /> Live studio
+                        </DropdownMenuItem>
+                    )}
+                    {canAccess(registrations) && (
+                        <DropdownMenuItem className="py-2 text-[13px]" onClick={() => router.push(registrations)}>
+                            <Users /> Registrations
+                        </DropdownMenuItem>
+                    )}
+                    {canAccess(edit) && (
+                        <DropdownMenuItem className="py-2 text-[13px]" onClick={() => router.push(edit)}>
+                            <Pencil /> Edit auction
+                        </DropdownMenuItem>
                     )}
                 </DropdownMenuContent>
             </DropdownMenu>
+            )}
         </div>
     )
 }

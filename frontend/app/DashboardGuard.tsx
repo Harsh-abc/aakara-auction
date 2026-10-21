@@ -1,62 +1,38 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 
 import { useAppSelector } from "@/hooks/redux"
+import { canAccessPage } from "@/lib/constants/dashboardAccess"
 import { canAccessDashboard } from "@/lib/constants/roles"
-import { refreshSession, SESSION_EXPIRED_EVENT } from "@/services/authSession"
+import { SESSION_EXPIRED_EVENT } from "@/services/authSession"
 
-// refresh this long before the access token actually expires
-const REFRESH_LEEWAY_MS = 60 * 1000
-
-// read "exp" from the JWT payload (no library needed)
-const getTokenExpiry = (token: string): number | null => {
-    try {
-        const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
-        const payload = JSON.parse(atob(base64))
-        return payload.exp ? payload.exp * 1000 : null
-    } catch {
-        return null
-    }
-}
-
+// keeping the access token fresh (and ending the session after 24h) is SessionWatcher's job (app/providers.tsx)
 export default function DashboardGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const token = useAppSelector((state) => state.auth.accessToken)
     const role = useAppSelector((state) => state.auth.role)
-    const user = useAppSelector((state) => state.auth.user)
+
+    const pathname = usePathname()
 
     const hasAccess = canAccessDashboard(role)
+    // which pages each role can open: lib/constants/dashboardAccess.ts
+    const pageAllowed = canAccessPage(pathname, role)
 
-    // 1. refresh token rejected (expired / revoked) → back to login
+    // 1. refresh token rejected (expired / revoked) → back to login, returning to this page afterwards
     useEffect(() => {
         const onSessionExpired = () => {
             toast.error("Session expired. Please log in again.")
-            router.replace("/login")
+            const { pathname, search } = window.location
+            router.replace(`/registration?redirect=${encodeURIComponent(pathname + search)}`)
         }
         window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
         return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
     }, [router])
 
-    // 2. keep the access token fresh: refresh now if missing/expired/unreadable,
-    //    otherwise just before it expires. failures are handled via SESSION_EXPIRED_EVENT.
-    //    skipped once logged out (no user), so logging out doesn't trigger a failed refresh → "Session expired"
-    useEffect(() => {
-        if (!user) return
-
-        const expiresAt = token ? getTokenExpiry(token) : null
-        const delay = expiresAt ? Math.max(expiresAt - Date.now() - REFRESH_LEEWAY_MS, 0) : 0
-
-        const timer = setTimeout(() => {
-            refreshSession().catch(() => {})
-        }, delay)
-
-        return () => clearTimeout(timer)
-    }, [token, user])
-
-    // 3. logged in, but role isn't allowed in the dashboard (e.g. BIDDER)
+    // 2. logged in, but role isn't allowed in the dashboard (e.g. BIDDER)
     useEffect(() => {
         if (token && role && !hasAccess) {
             toast.error("You don't have access to the dashboard")
@@ -64,8 +40,16 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
         }
     }, [token, role, hasAccess, router])
 
+    // 3. a dashboard role on a page it can't open (typed URL, old link) → its dashboard home
+    useEffect(() => {
+        if (token && hasAccess && !pageAllowed) {
+            toast.error("You don't have access to that page")
+            router.replace("/dashboard")
+        }
+    }, [token, hasAccess, pageAllowed, router])
+
     // render nothing until we have a session with a dashboard role, so protected content never flashes
-    if (!token || !hasAccess) return null
+    if (!token || !hasAccess || !pageAllowed) return null
 
     return <>{children}</>
 }

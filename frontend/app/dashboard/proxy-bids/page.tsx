@@ -10,7 +10,7 @@ export default function ProxyBidsPage() {
                 <DashboardFormText text="Proxy Bids" className="text-[24px]" />
                 <p className="text-[13px] text-[#62666F]">
                     Every maximum bid left on a lot before it opened: who set it, how much, from which IP and device, and how it did.
-                    Visible to super admins and admins only.
+                    Visible to super admins and auctioneers only.
                 </p>
             </div>
             <ProxyBids />

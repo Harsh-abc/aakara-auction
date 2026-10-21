@@ -18,13 +18,11 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { ChevronRightIcon } from "lucide-react"
-import { useAppSelector } from "@/hooks/redux"
+import { useCanAccessPage } from "@/hooks/useCanAccessPage"
 
 interface NavLink {
   title: string
   url: string
-  /** only shown to these roles (all roles when omitted) */
-  roles?: string[]
   /** extra paths that count as this page, e.g. its detail pages */
   activeOn?: RegExp
 }
@@ -39,13 +37,13 @@ export function NavMain({
   })[]
 }) {
   const pathname = usePathname()
-  const role = useAppSelector((state) => state.auth.role)
-  const allowed = (link: NavLink) => !link.roles || (!!role && link.roles.includes(role))
+  // who sees what: lib/constants/dashboardAccess.ts (the same rules block the pages)
+  const canAccess = useCanAccessPage()
 
-  const items = allItems.filter(allowed).map((item) => ({
-    ...item,
-    items: item.items?.filter(allowed),
-  }))
+  // a group shows the pages the role can open, and is left out when that's none of them
+  const items = allItems
+    .map((item) => ({ ...item, items: item.items?.filter((sub) => canAccess(sub.url)) }))
+    .filter((item) => (item.items ? item.items.length > 0 : canAccess(item.url)))
 
   // An explicit activeOn match wins; otherwise the most specific URL matching the
   // current path, so "/dashboard" isn't active on every page

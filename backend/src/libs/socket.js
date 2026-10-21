@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 import prisma from "./prisma.js";
 import redis from "./redis.js";
-import { isUserBlocked } from "./accountBlock.js";
+import { tokenAccessProblem } from "./accountBlock.js";
 
 // =====================================================================
 // Real-time channel (Socket.IO over the Redis adapter, so an event sent
@@ -54,14 +54,14 @@ export const initSocket = (server) => {
         adapter: createAdapter(redis.duplicate(), redis.duplicate()),
     });
 
-    // A token is optional — guests can watch public sales. A bad or expired token, or a
-    // suspended account, is treated as a guest.
+    // A token is optional — guests can watch public sales. A bad or expired token, a
+    // suspended account, or a token from before a role / password change is treated as a guest.
     io.use(async (socket, next) => {
         const token = socket.handshake.auth?.token;
         if (token) {
             try {
                 const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-                socket.data.user = (await isUserBlocked(decoded.userId))
+                socket.data.user = (await tokenAccessProblem(decoded))
                     ? null
                     : { userId: decoded.userId, role: decoded.role };
             } catch {
@@ -113,7 +113,7 @@ export const emitTo = (room, event, payload) => {
     io?.to(room).emit(event, payload);
 };
 
-/** Drops a user's open connections on every API instance (e.g. when suspended); they reconnect as a guest. */
+/** Drops a user's open connections on every API instance (suspended, role or password changed); they reconnect with whatever token they hold now. */
 export const disconnectUser = (userId) => {
     io?.in(rooms.user(userId)).disconnectSockets(true);
 };

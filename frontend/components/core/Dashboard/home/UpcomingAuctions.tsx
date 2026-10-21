@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ImageOff } from "lucide-react"
 
+import { useCanAccessPage } from "@/hooks/useCanAccessPage"
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
 import type { DashboardUpcomingAuction } from "@/lib/types/auction.types"
 
@@ -12,6 +13,8 @@ interface UpcomingAuctionsProps {
 }
 
 export function UpcomingAuctions({ auctions, failed }: UpcomingAuctionsProps) {
+    const canAccess = useCanAccessPage()
+
     return (
         <Panel
             title="Upcoming Auctions"
@@ -23,9 +26,11 @@ export function UpcomingAuctions({ auctions, failed }: UpcomingAuctionsProps) {
             ) : auctions.length === 0 ? (
                 <PanelMessage>
                     No auctions are scheduled.{" "}
-                    <Link href="/dashboard/auctions/create-auctions" className="ml-1 font-semibold text-[#7B2D52] hover:underline">
-                        Schedule one
-                    </Link>
+                    {canAccess("/dashboard/auctions/create-auctions") && (
+                        <Link href="/dashboard/auctions/create-auctions" className="ml-1 font-semibold text-[#7B2D52] hover:underline">
+                            Schedule one
+                        </Link>
+                    )}
                 </PanelMessage>
             ) : (
                 <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">

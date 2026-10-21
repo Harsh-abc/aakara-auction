@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import toast from "react-hot-toast"
+import { useSearchParams } from "next/navigation"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppSelector } from "@/hooks/redux"
 import { cn } from "@/lib/utils"
-import { refreshSession, SESSION_EXPIRED_EVENT } from "@/services/authSession"
+import { refreshSession } from "@/services/authSession"
 import { getMyProfile, getMyRegistrations } from "@/services/operations/profile.api"
 import type { AuctionStatus } from "@/lib/types/auction.types"
 import type { MyAccount, MyAuctionRegistration } from "@/lib/types/profile.types"
@@ -34,8 +33,6 @@ const tabLabels: Record<ProfileTab, string> = {
 
 const isProfileTab = (value: string | null): value is ProfileTab => !!value && value in tabLabels
 
-const LOGIN_HREF = `/registration?redirect=${encodeURIComponent("/my-profile")}`
-
 // sales worth showing a paddle card for: not finished, and the registration still stands
 const UPCOMING_STATUSES: AuctionStatus[] = ["LIVE", "PAUSED", "PREVIEW", "SCHEDULED"]
 const IN_PROGRESS_STATUSES: AuctionStatus[] = ["LIVE", "PAUSED"]
@@ -60,7 +57,6 @@ function displayName(account: MyAccount) {
 }
 
 export function MyProfile() {
-    const router = useRouter()
     const searchParams = useSearchParams()
     const token = useAppSelector((state) => state.auth.accessToken)
 
@@ -73,15 +69,7 @@ export function MyProfile() {
     const [registrations, setRegistrations] = useState<MyAuctionRegistration[]>([])
     const [loadError, setLoadError] = useState(false)
 
-    // refresh token rejected (expired / revoked) → back to log in
-    useEffect(() => {
-        const onSessionExpired = () => {
-            toast.error("Session expired. Please log in again.")
-            router.replace(LOGIN_HREF)
-        }
-        window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
-        return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
-    }, [router])
+    // a rejected refresh token (expired / revoked) sends the user to /registration — see app/SessionWatcher.tsx
 
     // the refresh cookie got us past the proxy, but the store has no access token
     // (e.g. site storage was cleared) — get one; a rejected cookie fires SESSION_EXPIRED_EVENT

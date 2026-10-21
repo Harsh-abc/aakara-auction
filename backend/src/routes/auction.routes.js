@@ -22,6 +22,8 @@ import {
     verifyAuctionParticipants,
 } from '../controllers/auctionParticipant.controller.js';
 import { getFeaturedAuction, getPublicAuction, getPublicAuctions, getPublicLot, getPublicLots } from '../controllers/publicAuction.controller.js';
+import { STAFF_ROLES } from '../libs/socket.js';
+import { getArtwork, getArtworks, getArtworkSummary } from '../controllers/artwork.controller.js';
 
 
 const auctionRouter = express.Router()
@@ -43,9 +45,11 @@ auctionRouter.post(
 
 
 
-auctionRouter.get('/getAuction', authenticate, getAuction)
+// DASHBOARD — every auction (drafts, invite-only) and every lot with its reserve price and
+// leading bidder, so dashboard roles only; bidders use the /public routes above
+auctionRouter.get('/getAuction', authenticate, requireRole(...STAFF_ROLES), getAuction)
 
-auctionRouter.get('/getLots/:auctionUuid/lots', authenticate, getLotByAuctionIdController)
+auctionRouter.get('/getLots/:auctionUuid/lots', authenticate, requireRole(...STAFF_ROLES), getLotByAuctionIdController)
 
 auctionRouter.delete('/delete-auction/:auctionUuid', authenticate, requireRole("SUPER_ADMIN", "ADMIN"), deleteAuction)
 
@@ -59,8 +63,8 @@ auctionRouter.put("/update-auction/:auctionUuid", authenticate, requireRole("SUP
 auctionRouter.patch("/change-status/:auctionUuid", authenticate, requireRole("SUPER_ADMIN"), changeAuctionStatus);
 
 // LOT BIDDERS — users registered via the auction; admins can view, only super admin can verify
-auctionRouter.get("/lots/:lotUuid/summary", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), getLotSummary);
-auctionRouter.get("/lots/:lotUuid/bidders", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), getLotBidders);
+auctionRouter.get("/lots/:lotUuid/summary", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), getLotSummary);
+auctionRouter.get("/lots/:lotUuid/bidders", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), getLotBidders);
 auctionRouter.patch("/lots/:lotUuid/bidders/verify", authenticate, requireRole("SUPER_ADMIN"), verifyLotBidders);
 
 // LIVE FLOOR — live/paused auctions, and start/stop a lot (one live lot per auction)
@@ -78,6 +82,11 @@ auctionRouter.get("/dashboard/bid-history", authenticate, requireRole("SUPER_ADM
 auctionRouter.get("/dashboard/bid-history/lots/:lotUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getLotBidHistory);
 auctionRouter.get("/dashboard/bid-history/:auctionUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionBidHistory);
 
+// ARTWORKS — every lot of every auction (catalogue, pricing incl. reserve, sale result)
+auctionRouter.get("/artworks", authenticate, requireRole(...STAFF_ROLES), getArtworks);
+auctionRouter.get("/artworks/summary", authenticate, requireRole(...STAFF_ROLES), getArtworkSummary); // before /artworks/:lotUuid
+auctionRouter.get("/artworks/:lotUuid", authenticate, requireRole(...STAFF_ROLES), getArtwork);
+
 // PAST / UPCOMING auctions (?type=past|upcoming)
 auctionRouter.get("/timeline", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionTimeline);
 auctionRouter.patch("/lots/:lotUuid/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), setLotLive);
@@ -86,7 +95,7 @@ auctionRouter.post("/lots/:lotUuid/hammer", authenticate, requireRole("SUPER_ADM
 
 // AUCTION REGISTRATIONS — registering for an auction registers the user on every
 // open lot (pending); the super admin then verifies them per lot or on all lots
-auctionRouter.get("/:auctionUuid/participants", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), getAuctionParticipants);
+auctionRouter.get("/:auctionUuid/participants", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), getAuctionParticipants);
 auctionRouter.get("/:auctionUuid/participants/candidates", authenticate, requireRole("SUPER_ADMIN"), getParticipantCandidates);
 auctionRouter.post("/:auctionUuid/participants", authenticate, requireRole("SUPER_ADMIN"), addAuctionParticipants);
 auctionRouter.post("/:auctionUuid/participants/new", authenticate, requireRole("SUPER_ADMIN"), addNewUserToAuction);

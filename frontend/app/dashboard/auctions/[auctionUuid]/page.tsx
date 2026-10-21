@@ -28,8 +28,8 @@ export default function ViewAuction() {
     const { auctions } = useSelector((state: RootState) => state.auction);
     const role = useSelector((state: RootState) => state.auth.role);
     const isSuperAdmin = role === "SUPER_ADMIN";
-    // Admins can view registrations; only a super admin can change them (enforced by the API)
-    const canSeeRegistrations = isSuperAdmin || role === "ADMIN";
+    // Admins and auctioneers can view registrations; only a super admin can change them (enforced by the API)
+    const canSeeRegistrations = isSuperAdmin || role === "ADMIN" || role === "AUCTIONEER";
 
     // Tagged with the uuid it was loaded for, so a different uuid reads as "loading"
     const [loaded, setLoaded] = useState<
