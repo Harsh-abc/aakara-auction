@@ -348,6 +348,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 label="Password *"
                 type="password"
                 autoComplete="new-password"
+                placeholder="At least 8 characters"
                 maxLength={64}
                 value={formData.password}
                 onChange={handleChange}
@@ -359,6 +360,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 label="Confirm password *"
                 type="password"
                 autoComplete="new-password"
+                placeholder="At least 8 characters"
                 maxLength={64}
                 value={formData.confirmPassword}
                 onChange={handleChange}
@@ -481,8 +483,8 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                         !formData.country
                             ? "Select country first"
                             : citiesLoading
-                              ? "Loading cities..."
-                              : "Search city"
+                                ? "Loading cities..."
+                                : "Search city"
                     }
                     disabled={!formData.country || citiesLoading}
                     emptyText="No city found"
