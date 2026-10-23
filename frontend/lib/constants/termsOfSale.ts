@@ -73,9 +73,9 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                     items: [
                         "references to Clauses are to the clauses of these Conditions;",
                         "headings are for convenience only and do not affect interpretation;",
-                        "“including” and similar words mean “including without limitation”;",
+                        '"including" and similar words mean "including without limitation";',
                         "the singular includes the plural and vice versa;",
-                        "“writing” and “written” include email; and",
+                        '"writing" and "written" include email; and',
                         "a reference to a Bidder includes the Buyer, and a reference to the Buyer includes any person who is jointly and severally liable with the Buyer under Clause 3.3.",
                     ],
                 },
