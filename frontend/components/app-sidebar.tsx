@@ -284,6 +284,7 @@ const data = {
       items: [
         { title: "General Settings", url: "/dashboard/settings/general" },
         { title: "Team", url: "/dashboard/settings/team" },
+        { title: "Website", url: "/dashboard/settings/website" },
         { title: "Activity Logs", url: "/dashboard/settings/activity-logs" },
         // { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
       ],

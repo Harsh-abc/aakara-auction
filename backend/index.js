@@ -16,6 +16,7 @@ import userRouter from "./src/routes/user.routes.js";
 import locationRouter from "./src/routes/location.routes.js";
 import biddingRouter from "./src/routes/bidding.routes.js";
 import liveStreamRouter from "./src/routes/liveStream.routes.js";
+import websiteRouter from "./src/routes/website.routes.js";
 import { startAuctionScheduler } from "./src/jobs/auctionScheduler.js";
 import { initSocket } from "./src/libs/socket.js";
 import { activityLogger } from "./src/middleware/activityLogger.js";
@@ -91,6 +92,7 @@ app.use('/api/users', userRouter)
 app.use('/api/location', locationRouter)
 app.use('/api/bidding', biddingRouter)
 app.use('/api/live', liveStreamRouter)
+app.use('/api/website', websiteRouter)
 
 const PORT = process.env.PORT || 8080;
 

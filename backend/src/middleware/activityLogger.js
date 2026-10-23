@@ -255,6 +255,23 @@ const ROUTES = [
     // ── uploads ───────────────────────────────────────────────────────
     route("POST", "/api/image/upload-image", "UPLOAD", "IMAGE_UPLOAD", "Uploaded an image"),
     route("POST", "/api/image/editor-image", "UPLOAD", "EDITOR_IMAGE_UPLOAD", "Uploaded an image into the description editor"),
+
+    // ── website (Settings → Website) ──────────────────────────────────
+    route("POST", "/api/website/home-banners", "WEBSITE", "HOME_BANNER_ADD", "Added a home page banner"),
+    route("PATCH", "/api/website/home-banners/reorder", "WEBSITE", "HOME_BANNER_REORDER", "Reordered the home page banners"),
+    route("PATCH", "/api/website/home-banners/:uuid", "WEBSITE", "HOME_BANNER_UPDATE", "Edited a home page banner", {
+        describe: ({ body }) =>
+            typeof body.isActive === "boolean" && Object.keys(body).length === 1
+                ? `${body.isActive ? "Showed" : "Hid"} a home page banner`
+                : `Edited a home page banner (${fields(body)})`,
+    }),
+    route("DELETE", "/api/website/home-banners/:uuid", "WEBSITE", "HOME_BANNER_DELETE", "Deleted a home page banner"),
+    route("PUT", "/api/website/home-banners/:uuid/images/:device", "WEBSITE", "HOME_BANNER_IMAGE_SET", "Uploaded a home page banner image", {
+        describe: ({ params }) => `Uploaded the ${params.device === "desktop" ? "laptop" : params.device} image of a home page banner`,
+    }),
+    route("DELETE", "/api/website/home-banners/:uuid/images/:device", "WEBSITE", "HOME_BANNER_IMAGE_REMOVE", "Removed a home page banner image", {
+        describe: ({ params }) => `Removed the ${params.device} image of a home page banner`,
+    }),
 ];
 
 // "/api/users/:uuid" → regex; *uuid params only match a UUID, so /api/users/stats isn't a user
@@ -289,6 +306,7 @@ const MODULE_BY_PREFIX = {
     bidding: "BIDDING",
     live: "LIVE",
     image: "UPLOAD",
+    website: "WEBSITE",
 };
 
 const matchRoute = (method, path) => {

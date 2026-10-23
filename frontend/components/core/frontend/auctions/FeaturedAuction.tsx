@@ -1,35 +1,22 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import RichTextContent from "@/components/common/RichTextContent";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
+import type { PublicHomeBanner } from "@/lib/types/website.types";
 import { cn } from "@/lib/utils";
 
 import { BODY, BUTTON, BUTTON_INLINE, BUTTON_SOLID } from "../storefront";
 import { AuctionCountdown } from "./AuctionCountdown";
 import { auctionHref, countdownFor, isLive } from "./auctionDisplay";
+import { HomeBannerHero } from "./HomeBannerSlides";
 import { StatusBadge } from "./StatusBadge";
 
 // Figma: "Auction Landing page" hero card — 8:3 banner over a 24px body
 const CARD = "border border-[#cecece] bg-white";
-const BANNER = "relative aspect-4/3 w-full overflow-hidden bg-[#ebebeb] sm:aspect-8/3";
+const BANNER ="relative aspect-4/3 w-full overflow-hidden bg-[#ebebeb] sm:aspect-8/3";
 const BODY_ROW = "flex flex-col gap-6 p-6 md:flex-row md:items-end md:justify-between md:gap-10";
 const TITLE = "mt-4 text-[36px] leading-none font-medium tracking-tight text-[#0d0d0d] sm:text-[48px]";
-
-// the house banner (Figma "hero banner") — used until a sale has its own cover image
-function HouseBanner({ priority }: { priority?: boolean }) {
-    return (
-        <Image
-            src="/banners/inaugural-coming-soon.png"
-            alt="Akara — inaugural fine art auction, coming soon"
-            fill
-            priority={priority}
-            sizes="(min-width: 1200px) 1150px, 100vw"
-            className="object-cover"
-        />
-    );
-}
 
 export function FeaturedAuctionSkeleton() {
     return (
@@ -51,16 +38,15 @@ export function FeaturedAuctionSkeleton() {
     );
 }
 
-export function FeaturedAuction({ auction }: { auction: PublicAuction | null }) {
-    // nothing published yet — the house banner with a way into the listings below
+// `banners` are the default images from Settings → Website (the house banner when empty)
+export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuction | null; banners?: PublicHomeBanner[] }) {
+    // nothing published yet — the default banners with a way into the listings below
     if (!auction) {
         return (
             <section>
                 <div className="page-container">
                     <div className={CARD}>
-                        <div className={BANNER}>
-                            <HouseBanner priority />
-                        </div>
+                        <HomeBannerHero banners={banners} priority />
                         <div className={BODY_ROW}>
                             <div className="min-w-0 max-w-lg">
                                 <StatusBadge label="Coming soon" tone="upcoming" />
@@ -86,14 +72,14 @@ export function FeaturedAuction({ auction }: { auction: PublicAuction | null }) 
         <section>
             <div className="page-container">
                 <div className={CARD}>
-                    <div className={BANNER}>
-                        {auction.coverImageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
+                    {auction.coverImageUrl ? (
+                        <div className={BANNER}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={auction.coverImageUrl} alt={auction.title} className="absolute inset-0 h-full w-full object-cover" />
-                        ) : (
-                            <HouseBanner priority />
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <HomeBannerHero banners={banners} priority />
+                    )}
 
                     <div className={BODY_ROW}>
                         <div className="min-w-0 max-w-lg">

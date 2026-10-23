@@ -8,6 +8,7 @@ import {
     BadgeCheckIcon,
     CalendarIcon,
     CircleAlertIcon,
+    GlobeIcon,
     MailIcon,
     PencilIcon,
     PhoneIcon,
@@ -53,6 +54,12 @@ const SETTINGS_LINKS = [
         description: "See who has dashboard access, add members and change their roles.",
         href: "/dashboard/settings/team",
         icon: UsersIcon,
+    },
+    {
+        title: "Website",
+        description: "Homepage hero images shown when no auction is live or scheduled.",
+        href: "/dashboard/settings/website",
+        icon: GlobeIcon,
     },
     {
         title: "Roles & Permissions",

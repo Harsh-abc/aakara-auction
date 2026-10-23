@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useAppSelector } from "@/hooks/redux";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
+import type { PublicHomeBanner } from "@/lib/types/website.types";
 import { getMyProfile, getMyRegistrations } from "@/services/operations/profile.api";
 import { getFeaturedAuction } from "@/services/operations/publicAuction.api";
+import { getHomeBanners } from "@/services/operations/website.api";
 
 import { PAGE_MAIN } from "../storefront";
 import { bidderEligibility, type BidderEligibility } from "./auctionDisplay";
@@ -42,12 +44,21 @@ export function AuctionsPage() {
             .catch(() => setEligibilityFor({ token, value: "eligible" }));
     }, [token]);
 
+    // the hero's default images (Settings → Website), for when there's no sale or it has no cover
+    const [banners, setBanners] = useState<PublicHomeBanner[]>([]);
+
     useEffect(() => {
-        getFeaturedAuction()
-            .then(setFeatured)
-            // the hero falls back to its "coming soon" state; the list below shows the error
-            .catch(() => setFeatured(null))
-            .finally(() => setFeaturedLoading(false));
+        // wait for both so the hero doesn't flash the house banner before the real images
+        Promise.all([
+            getFeaturedAuction()
+                .then(setFeatured)
+                // the hero falls back to its "coming soon" state; the list below shows the error
+                .catch(() => setFeatured(null)),
+            getHomeBanners()
+                .then(setBanners)
+                // not critical — the hero keeps the built-in house banner
+                .catch(() => setBanners([])),
+        ]).finally(() => setFeaturedLoading(false));
     }, []);
 
     useEffect(() => {
@@ -66,7 +77,7 @@ export function AuctionsPage() {
 
     return (
         <main className={PAGE_MAIN}>
-            {featuredLoading ? <FeaturedAuctionSkeleton /> : <FeaturedAuction auction={featured} />}
+            {featuredLoading ? <FeaturedAuctionSkeleton /> : <FeaturedAuction auction={featured} banners={banners} />}
             <AuctionListings paddles={paddles} eligibility={eligibility} onRegistered={handleRegistered} />
             <HowToBid />
         </main>

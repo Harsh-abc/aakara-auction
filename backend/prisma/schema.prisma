@@ -983,6 +983,41 @@ model UserGalleryItem {
   @@map("user_gallery_items")
 }
 
+// storefront hero images (Settings → Website), shown when no sale is featured or the
+// featured sale has no cover image. Active rows rotate in sortOrder.
+// Each banner has a laptop image (required) and optional tablet / mobile versions; the
+// hero takes the shape (width × height) of the image for the visitor's screen size.
+model HomeBanner {
+  id                BigInt   @id @default(autoincrement())
+  uuid              String   @unique @default(uuid()) @db.Uuid
+  /// laptop / desktop image (≥ 1024px wide screens) — also the fallback for the others
+  imageUrl          String
+  /// S3 keys, so the files can be removed with the banner
+  imageKey          String?
+  imageWidth        Int?
+  imageHeight       Int?
+  /// tablet image (768–1023px screens); null = use the laptop image
+  tabletImageUrl    String?
+  tabletImageKey    String?
+  tabletImageWidth  Int?
+  tabletImageHeight Int?
+  /// mobile image (< 768px screens); null = the tablet / laptop image, cropped to 4:3
+  mobileImageUrl    String?
+  mobileImageKey    String?
+  mobileImageWidth  Int?
+  mobileImageHeight Int?
+  altText           String?  @db.VarChar(200)
+  /// where a click on the banner goes: a site path ("/auctions/…") or a full URL
+  linkUrl   String?  @db.VarChar(500)
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("home_banners")
+}
+
 // audit trail of who did what, from where — written by src/middleware/activityLogger.js
 // (every API change, sign-ins, key views) and by the scheduler; read by super admins only.
 // The actor's name / email / role are copied in, so a row still reads right after the

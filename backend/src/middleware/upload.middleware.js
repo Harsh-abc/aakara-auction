@@ -69,28 +69,48 @@ export const uploadAny = (req, res, next) => {
  */
 const EDITOR_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
 
+const imageOnlyFilter = (req, file, cb) => {
+    if (EDITOR_IMAGE_TYPES.includes(file.mimetype)) return cb(null, true);
+    const error = new Error("Only JPG, PNG, WEBP or GIF images are allowed");
+    error.statusCode = 400;
+    cb(error, false);
+};
+
 const editorImageUpload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024, files: 1 },
-    fileFilter: (req, file, cb) => {
-        if (EDITOR_IMAGE_TYPES.includes(file.mimetype)) return cb(null, true);
-        const error = new Error("Only JPG, PNG, WEBP or GIF images are allowed");
-        error.statusCode = 400;
-        cb(error, false);
-    },
+    fileFilter: imageOnlyFilter,
 });
 
+const imageUploadError = (res, err) => {
+    let message = err.message || "Image upload failed";
+    if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") message = "Image must be 10MB or smaller";
+        if (err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE") message = "Unexpected image field";
+    }
+    return res.status(400).json({ success: false, message });
+};
+
 export const uploadEditorImage = (req, res, next) => {
-    editorImageUpload.single("image")(req, res, (err) => {
-        if (!err) return next();
+    editorImageUpload.single("image")(req, res, (err) => (err ? imageUploadError(res, err) : next()));
+};
 
-        let message = err.message || "Image upload failed";
-        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
-            message = "Image must be 10MB or smaller";
-        }
+/**
+ * Home page banner (Settings → Website): the laptop image under "image", plus optional
+ * "tabletImage" / "mobileImage" — images only, 10MB each.
+ */
+const bannerImageUpload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024, files: 3 },
+    fileFilter: imageOnlyFilter,
+});
 
-        return res.status(400).json({ success: false, message });
-    });
+export const uploadBannerImages = (req, res, next) => {
+    bannerImageUpload.fields([
+        { name: "image", maxCount: 1 },
+        { name: "tabletImage", maxCount: 1 },
+        { name: "mobileImage", maxCount: 1 },
+    ])(req, res, (err) => (err ? imageUploadError(res, err) : next()));
 };
 
 export default upload;

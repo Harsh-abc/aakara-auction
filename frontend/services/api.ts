@@ -148,6 +148,18 @@ export const uploadEndPoints = {
     EDITOR_IMAGE_API: `${BASE_URL}/api/image/editor-image`,
 }
 
+// Settings → Website — the home page hero's default images
+export const websiteEndPoints = {
+    // storefront (no login): active banners in display order
+    HOME_BANNERS_API: `${BASE_URL}/api/website/home-banners`,
+    // dashboard (super admin): every banner; POST to the plain URL uploads one (multipart, field "image")
+    ALL_HOME_BANNERS_API: `${BASE_URL}/api/website/home-banners/all`,
+    REORDER_HOME_BANNERS_API: `${BASE_URL}/api/website/home-banners/reorder`,
+    HOME_BANNER_API: (uuid: string) => `${BASE_URL}/api/website/home-banners/${uuid}`,
+    // PUT (multipart, field "image") adds / replaces one device's image; DELETE removes tablet / mobile
+    HOME_BANNER_IMAGE_API: (uuid: string, device: string) => `${BASE_URL}/api/website/home-banners/${uuid}/images/${device}`,
+}
+
 export const adminEndPoints = {
     CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
     CHANGE_USER_ROLE_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/role`,

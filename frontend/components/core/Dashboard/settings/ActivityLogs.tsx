@@ -55,6 +55,7 @@ const MODULES: Record<string, { label: string; tone: PillTone }> = {
     BROWSE: { label: "Storefront", tone: "slate" },
     GALLERY: { label: "Gallery", tone: "slate" },
     UPLOAD: { label: "Uploads", tone: "slate" },
+    WEBSITE: { label: "Website", tone: "green" },
     AUDIT: { label: "Activity logs", tone: "red" },
     SYSTEM: { label: "System", tone: "slate" },
     API: { label: "Other", tone: "slate" },
