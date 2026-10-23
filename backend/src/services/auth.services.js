@@ -6,6 +6,7 @@ import redis from '../libs/redis.js';
 import { generateOtp } from '../utils/otp.utils.js';
 import sendEmail from '../mail/sendMail.js';
 import { otpVerificationTemplate } from '../mail/templates/otpVerifications.js';
+import { sendOtpSms } from './sms.services.js';
 import { getRolePermissions } from '../libs/rolePermission.js'
 import { SESSION_TTL_SECONDS } from '../libs/session.js'
 
@@ -14,9 +15,20 @@ const RESEND_WINDOW = 10 * 60;
 const MAX_RESENDS = 3;
 const MAX_VERIFY_ATTEMPTS = 5;
 
+// phone step (SMS via MSG91) — each code gets the full PHONE_OTP_TTL
+const PHONE_OTP_TTL = 10 * 60;
+const PHONE_RESEND_COOLDOWN = 30;
+const MAX_PHONE_SENDS = 4;            // first SMS + 3 resends per signup…
+const PHONE_SENDS_WINDOW = 30 * 60;
+const MAX_SMS_PER_PHONE = 10;         // …and per number, whichever email asks (stops SMS bombing)
+const SMS_PER_PHONE_WINDOW = 60 * 60;
+
 const pendingKey = (email) => `register:pending:${email}`;
 const resendKey = (email) => `register:otp:resend:${email}`;
 const attemptsKey = (email) => `register:otp:verify-attempts:${email}`;
+const phoneSendsKey = (email) => `register:phone-otp:sends:${email}`;
+const phoneCooldownKey = (email) => `register:phone-otp:cooldown:${email}`;
+const smsPerPhoneKey = (phone) => `sms:otp:count:${phone}`;
 
 
 // LOGIN
@@ -131,21 +143,84 @@ export const verifyOtpService = async ({ email, otp }) => {
         return { ...user, nextStep: null };
     }
 
-    // keep the remaining lifetime rather than resetting it, so both steps share one expiry
-    const ttl = await redis.ttl(pendingKey(email));
-    if (ttl <= 0) {
-        const error = new Error('OTP expired or registration not found. Please register again.');
-        error.statusCode = 410;
+    // the email step is done — saved before the SMS goes out, so a failed send only needs a resend
+    const verified = { ...pending, emailVerified: true };
+    await redis.set(pendingKey(email), JSON.stringify(verified), 'EX', PHONE_OTP_TTL);
+    await redis.del(attemptsKey(email));
+
+    try {
+        const sms = await sendSignupPhoneOtp(email, verified);
+        return { email, nextStep: 'VERIFY_PHONE', phoneOtpSent: true, ...sms };
+    } catch (error) {
+        console.error('Signup phone OTP send error:', error.message);
+        return {
+            email,
+            phone: pending.phone,
+            nextStep: 'VERIFY_PHONE',
+            phoneOtpSent: false,
+            smsError: error.statusCode ? error.message : "We couldn't send the SMS code. Please try again.",
+        };
+    }
+};
+
+// a fresh SMS code for the phone step; the pending signup lives PHONE_OTP_TTL from now
+const sendSignupPhoneOtp = async (email, pending) => {
+    const sends = await redis.incr(phoneSendsKey(email));
+    if (sends === 1) await redis.expire(phoneSendsKey(email), PHONE_SENDS_WINDOW);
+    if (sends > MAX_PHONE_SENDS) {
+        const error = new Error('Too many SMS codes requested. Try again later.');
+        error.statusCode = 429;
         throw error;
     }
 
-    await redis.set(pendingKey(email), JSON.stringify({ ...pending, emailVerified: true }), 'EX', ttl);
+    const perPhone = await redis.incr(smsPerPhoneKey(pending.phone));
+    if (perPhone === 1) await redis.expire(smsPerPhoneKey(pending.phone), SMS_PER_PHONE_WINDOW);
+    if (perPhone > MAX_SMS_PER_PHONE) {
+        const error = new Error('Too many codes have been sent to this number. Try again in an hour.');
+        error.statusCode = 429;
+        throw error;
+    }
+
+    // saved before sending, so any code that reaches the phone is one we accept
+    const phoneOtp = generateOtp();
+    await redis.set(pendingKey(email), JSON.stringify({ ...pending, phoneOtp }), 'EX', PHONE_OTP_TTL);
     await redis.del(attemptsKey(email));
 
-    return { email, phone: pending.phone, nextStep: 'VERIFY_PHONE' };
+    await sendOtpSms({ phone: pending.phone, otp: phoneOtp, validForMinutes: PHONE_OTP_TTL / 60 });
+
+    // only after a successful send — a failed one can be retried straight away
+    await redis.set(phoneCooldownKey(email), '1', 'EX', PHONE_RESEND_COOLDOWN);
+
+    return { phone: pending.phone, expiresInSeconds: PHONE_OTP_TTL, resendInSeconds: PHONE_RESEND_COOLDOWN };
 };
 
-// step 2: phone code. No SMS provider yet, so the phone step accepts the same code that was emailed
+// "Resend code" on the phone step — the email step stays verified
+export const resendPhoneOtpService = async ({ email }) => {
+    const pending = await getPendingSignup(email);
+
+    if (!pending.emailVerified) {
+        const error = new Error('Verify your email address first.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (!pending.phone) {
+        const error = new Error('No phone number on this registration.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const cooldown = await redis.ttl(phoneCooldownKey(email));
+    if (cooldown > 0) {
+        const error = new Error(`Please wait ${cooldown}s before requesting another code.`);
+        error.statusCode = 429;
+        throw error;
+    }
+
+    return { email, ...(await sendSignupPhoneOtp(email, pending)) };
+};
+
+// step 2: the SMS code sent by sendSignupPhoneOtp — this creates the account
 export const verifyPhoneOtpService = async ({ email, otp }) => {
     const pending = await getPendingSignup(email);
 
@@ -161,8 +236,13 @@ export const verifyPhoneOtpService = async ({ email, otp }) => {
         throw error;
     }
 
-    // TODO: compare against a separate SMS code once phone OTPs are sent
-    await assertOtpMatches(email, pending.otp, otp);
+    if (!pending.phoneOtp) {
+        const error = new Error('No SMS code has been sent yet. Request a new code.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    await assertOtpMatches(email, pending.phoneOtp, otp);
 
     const user = await createUserFromPending(email, pending, { phoneVerified: true });
     return { ...user, nextStep: null };

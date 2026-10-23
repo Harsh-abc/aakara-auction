@@ -78,3 +78,19 @@ export interface GenericApiResponse {
     success: boolean
     message?: string
 }
+
+// verify-otp (email step) / resend-phone-otp: whether the SMS code went out for the phone step
+export interface SignupOtpStepResponse extends GenericApiResponse {
+    data?: {
+        nextStep?: "VERIFY_PHONE" | null
+        phoneOtpSent?: boolean
+        // why the SMS didn't go out (phoneOtpSent false)
+        smsError?: string
+        expiresInSeconds?: number
+        resendInSeconds?: number
+    }
+}
+
+export interface ResendPhoneOtpPayload {
+    email: string
+}

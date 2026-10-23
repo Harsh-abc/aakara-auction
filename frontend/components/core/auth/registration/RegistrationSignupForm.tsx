@@ -9,7 +9,7 @@ import type { CountryCode } from "libphonenumber-js"
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { sendSignupOtp } from "@/services/operations/auth.api"
 import { getCities, getCountries } from "@/services/operations/location.api"
-import type { SignupPayload } from "@/lib/types/auth.types"
+import type { SignupOtpStepResponse, SignupPayload } from "@/lib/types/auth.types"
 import type { Country } from "@/lib/types/location.types"
 import { cn } from "@/lib/utils"
 import {
@@ -236,7 +236,9 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
     // set once the OTP has been sent; its presence moves the tab to the verify steps (email, then phone)
     const [pendingSignup, setPendingSignup] = useState<{
         payload: SignupPayload
-        sentAt: number
+        // null: the phone step's SMS couldn't be sent (sendError says why)
+        sentAt: number | null
+        sendError?: string | null
         step: OtpChannel
     } | null>(null)
 
@@ -289,12 +291,18 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
         }
     }
 
-    const handleVerified = () => {
+    const handleVerified = (result?: SignupOtpStepResponse["data"]) => {
         if (!pendingSignup) return
 
-        if (pendingSignup.step === "email") {
-            toast.success("Email verified. Now verify your mobile number.")
-            setPendingSignup({ ...pendingSignup, step: "phone" })
+        // the email step sends the SMS code for the phone step (nextStep null: no phone, account created)
+        if (pendingSignup.step === "email" && result?.nextStep === "VERIFY_PHONE") {
+            if (result.phoneOtpSent) {
+                toast.success(`Email verified. We've sent a code by SMS to ${pendingSignup.payload.phone}`)
+                setPendingSignup({ ...pendingSignup, step: "phone", sentAt: Date.now(), sendError: null })
+            } else {
+                toast.error("Email verified, but we couldn't send the SMS code.")
+                setPendingSignup({ ...pendingSignup, step: "phone", sentAt: null, sendError: result.smsError ?? null })
+            }
             return
         }
 
@@ -322,9 +330,10 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 channel={pendingSignup.step}
                 payload={pendingSignup.payload}
                 sentAt={pendingSignup.sentAt}
+                sendError={pendingSignup.sendError}
                 onEditDetails={() => setPendingSignup(null)}
-                // a fresh code resets the backend's email verification, so always restart at the email step
-                onResent={(sentAt) => setPendingSignup((prev) => prev && { ...prev, sentAt, step: "email" })}
+                // resending stays on the same step (a phone resend keeps the email verified)
+                onResent={(sentAt) => setPendingSignup((prev) => prev && { ...prev, sentAt, sendError: null })}
                 onVerified={handleVerified}
             />
         )

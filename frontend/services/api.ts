@@ -8,6 +8,7 @@ export const authEndPoints = {
     REGISTER_API: `${BASE_URL}/api/auth/register`,
     VERIFY_OTP_API: `${BASE_URL}/api/auth/verify-otp`,
     VERIFY_PHONE_OTP_API: `${BASE_URL}/api/auth/verify-phone-otp`,
+    RESEND_PHONE_OTP_API: `${BASE_URL}/api/auth/resend-phone-otp`,
     LOGOUT_API: `${BASE_URL}/api/auth/logout`,
     REFRESH_API: `${BASE_URL}/api/auth/refresh`,
 

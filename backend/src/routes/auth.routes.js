@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { login, logout, refresh, register, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
+import { login, logout, refresh, register, resendPhoneOtp, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
 
 const authRouter = Router();
 
@@ -11,6 +11,9 @@ authRouter.post('/verify-otp', verifyOtp);
 
 // Verify phone OTP route (runs after the email step, creates the account)
 authRouter.post('/verify-phone-otp', verifyPhoneOtp);
+
+// Resend the phone OTP by SMS (MSG91) — the email step stays verified
+authRouter.post('/resend-phone-otp', resendPhoneOtp);
 
 // LOGIN ROUTE
 authRouter.post('/login', login)

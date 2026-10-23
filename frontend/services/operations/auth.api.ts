@@ -4,14 +4,22 @@ import { setSignupEmail } from "@/redux/slices/authSlice";
 import { apiConnector } from "../apiConnector";
 
 import { createAsyncThunk } from "@reduxjs/toolkit";
-const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, VERIFY_PHONE_OTP_API, LOGOUT_API } = authEndPoints;
+const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, VERIFY_PHONE_OTP_API, RESEND_PHONE_OTP_API, LOGOUT_API } = authEndPoints;
 
 
 // import { jwtDecode } from "jwt-decode"
 // import { NavigateFunction } from "react-router-dom"
 
 
-import { GenericApiResponse, SignupPayload, VerifyOtpPayload, LoginApiResponse, LoginPayload } from "@/lib/types/auth.types";
+import {
+    GenericApiResponse,
+    SignupPayload,
+    VerifyOtpPayload,
+    LoginApiResponse,
+    LoginPayload,
+    ResendPhoneOtpPayload,
+    SignupOtpStepResponse,
+} from "@/lib/types/auth.types";
 import { AppDispatch } from "@/redux/store";
 import { getErrorMessage } from "@/lib/apiError";
 
@@ -87,15 +95,16 @@ export const sendSignupOtp = createAsyncThunk<
 );
 
 
+// email step; for signups with a phone it also sends the SMS code (data.phoneOtpSent)
 export const verifySignupOtp = createAsyncThunk<
-    GenericApiResponse,
+    SignupOtpStepResponse,
     VerifyOtpPayload,
     { rejectValue: string }
 >(
     "auth/verifySignupOtp",
     async (payload, { rejectWithValue }) => {
         try {
-            const response = await apiConnector<GenericApiResponse>({
+            const response = await apiConnector<SignupOtpStepResponse>({
                 method: "POST",
                 url: VERIFY_OTP_API,
                 body: payload,
@@ -140,6 +149,33 @@ export const verifySignupPhoneOtp = createAsyncThunk<
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not verify OTP. Try again.", VERIFY_CODE_ERRORS));
+        }
+    }
+);
+
+
+// a new SMS code for the phone step (the email step stays verified)
+export const resendSignupPhoneOtp = createAsyncThunk<
+    SignupOtpStepResponse,
+    ResendPhoneOtpPayload,
+    { rejectValue: string }
+>(
+    "auth/resendSignupPhoneOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await apiConnector<SignupOtpStepResponse>({
+                method: "POST",
+                url: RESEND_PHONE_OTP_API,
+                body: payload,
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not send the code");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not send the code. Try again.", VERIFY_CODE_ERRORS));
         }
     }
 );

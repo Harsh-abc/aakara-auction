@@ -1,5 +1,5 @@
-import { registerSchema, verifyOtpSchema, loginSchema } from '../validations/auth.validation.js';
-import { registerService, verifyOtpService, verifyPhoneOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
+import { registerSchema, verifyOtpSchema, resendPhoneOtpSchema, loginSchema } from '../validations/auth.validation.js';
+import { registerService, verifyOtpService, verifyPhoneOtpService, resendPhoneOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
 import { ZodError } from 'zod';
 import { getClientIp } from '../utils/clientIp.js';
 import { setActivityActor } from '../libs/activityLog.js';
@@ -31,7 +31,11 @@ export const verifyOtp = async (req, res, next) => {
 
         res.status(accountCreated ? 201 : 200).json({
             success: true,
-            message: accountCreated ? 'Registration successful' : 'Email verified. Verify your phone number to finish.',
+            message: accountCreated
+                ? 'Registration successful'
+                : result.phoneOtpSent
+                    ? 'Email verified. We sent a code to your phone.'
+                    : 'Email verified. Request a code to verify your phone number.',
             data: result,
         });
     } catch (err) {
@@ -53,6 +57,27 @@ export const verifyPhoneOtp = async (req, res, next) => {
     } catch (err) {
         if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
         next(err);
+    }
+};
+
+// answers errors itself (like login): the cooldown / limit messages are worth showing as-is
+export const resendPhoneOtp = async (req, res) => {
+    try {
+        const data = resendPhoneOtpSchema.parse(req.body);
+        const result = await resendPhoneOtpService(data);
+
+        res.status(200).json({
+            success: true,
+            message: 'A new code has been sent to your phone',
+            data: result,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        if (!err.statusCode) console.error('resendPhoneOtp error:', err);
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.statusCode ? err.message : 'Could not send the code. Please try again.',
+        });
     }
 };
 

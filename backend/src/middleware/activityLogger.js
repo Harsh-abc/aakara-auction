@@ -74,6 +74,9 @@ const ROUTES = [
     route("POST", "/api/auth/verify-phone-otp", "AUTH", "SIGNUP_VERIFY_PHONE", "Verified phone OTP — account created", {
         failAction: "SIGNUP_VERIFY_PHONE_FAILED",
     }),
+    route("POST", "/api/auth/resend-phone-otp", "AUTH", "SIGNUP_RESEND_PHONE_OTP", "Requested a new phone OTP (SMS)", {
+        failAction: "SIGNUP_RESEND_PHONE_OTP_FAILED",
+    }),
     route("POST", "/api/auth/login", "AUTH", "LOGIN", "Logged in", {
         failAction: "LOGIN_FAILED",
         describe: ({ ok, body }) => (ok ? "Logged in" : `Failed login attempt for ${body.email ?? "unknown email"}`),

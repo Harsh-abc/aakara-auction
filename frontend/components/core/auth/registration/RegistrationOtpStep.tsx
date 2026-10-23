@@ -5,14 +5,14 @@ import OtpInput from "react-otp-input"
 import toast from "react-hot-toast"
 
 import { useAppDispatch } from "@/hooks/redux"
-import { sendSignupOtp, verifySignupOtp, verifySignupPhoneOtp } from "@/services/operations/auth.api"
-import type { SignupPayload } from "@/lib/types/auth.types"
+import { resendSignupPhoneOtp, sendSignupOtp, verifySignupOtp, verifySignupPhoneOtp } from "@/services/operations/auth.api"
+import type { SignupOtpStepResponse, SignupPayload } from "@/lib/types/auth.types"
 import { cn } from "@/lib/utils"
 import { AuthFieldError, AuthSubmitButton, authInputErrorClass, authLabelClass } from "./AuthField"
 
 const OTP_LENGTH = 6
 
-// mirrors PENDING_TTL in the backend auth service — the pending signup (and its code) lives this long
+// mirrors PENDING_TTL / PHONE_OTP_TTL in the backend auth service — each code lives this long
 const OTP_TTL_SECONDS = 10 * 60
 
 const RESEND_COOLDOWN_SECONDS = 30
@@ -31,16 +31,20 @@ function formatCountdown(totalSeconds: number) {
 type RegistrationOtpStepProps = {
     channel: OtpChannel
     payload: SignupPayload
-    sentAt: number
+    // null: no code has gone out yet (the SMS failed) — only "Resend" is offered
+    sentAt: number | null
+    // why the SMS for the phone step couldn't be sent
+    sendError?: string | null
     onEditDetails: () => void
     onResent: (sentAt: number) => void
-    onVerified: () => void
+    onVerified: (result?: SignupOtpStepResponse["data"]) => void
 }
 
 export function RegistrationOtpStep({
     channel,
     payload,
     sentAt,
+    sendError,
     onEditDetails,
     onResent,
     onVerified,
@@ -48,8 +52,8 @@ export function RegistrationOtpStep({
     const dispatch = useAppDispatch()
 
     const [otp, setOtp] = useState("")
-    const [error, setError] = useState<string | null>(null)
-    const [codeIsDead, setCodeIsDead] = useState(false)
+    const [error, setError] = useState<string | null>(sendError ? `${sendError} Use "Resend code" below.` : null)
+    const [codeIsDead, setCodeIsDead] = useState(sentAt === null)
     const [verifying, setVerifying] = useState(false)
     const [resending, setResending] = useState(false)
 
@@ -65,8 +69,8 @@ export function RegistrationOtpStep({
 
     const isPhone = channel === "phone"
 
-    const secondsLeft = Math.max(0, Math.ceil((sentAt + OTP_TTL_SECONDS * 1000 - now) / 1000))
-    const resendIn = Math.max(0, Math.ceil((sentAt + RESEND_COOLDOWN_SECONDS * 1000 - now) / 1000))
+    const secondsLeft = sentAt === null ? 0 : Math.max(0, Math.ceil((sentAt + OTP_TTL_SECONDS * 1000 - now) / 1000))
+    const resendIn = sentAt === null ? 0 : Math.max(0, Math.ceil((sentAt + RESEND_COOLDOWN_SECONDS * 1000 - now) / 1000))
     const expired = secondsLeft === 0
     const canVerify = otp.length === OTP_LENGTH && !expired && !codeIsDead
 
@@ -91,10 +95,12 @@ export function RegistrationOtpStep({
         setVerifying(true)
         setError(null)
 
-        const verifyCode = isPhone ? verifySignupPhoneOtp : verifySignupOtp
+        let result: SignupOtpStepResponse | undefined
 
         try {
-            await dispatch(verifyCode({ email: payload.email, otp: code })).unwrap()
+            result = isPhone
+                ? await dispatch(verifySignupPhoneOtp({ email: payload.email, otp: code })).unwrap()
+                : await dispatch(verifySignupOtp({ email: payload.email, otp: code })).unwrap()
         } catch (err) {
             const message = typeof err === "string" ? err : "Verification failed. Please try again."
 
@@ -111,7 +117,7 @@ export function RegistrationOtpStep({
         }
 
         // verifying stays true: the parent unmounts this step and moves on
-        onVerified()
+        onVerified(result?.data)
     }
 
     const handleOtpChange = (value: string) => {
@@ -135,18 +141,18 @@ export function RegistrationOtpStep({
         setResending(true)
 
         try {
-            // the backend has no separate resend endpoint: registering again issues a fresh code,
-            // which also clears the email verification, so the parent sends the user back to that step
-            await dispatch(sendSignupOtp(payload)).unwrap()
+            if (isPhone) {
+                // a new SMS; the email step stays verified
+                await dispatch(resendSignupPhoneOtp({ email: payload.email })).unwrap()
+            } else {
+                // no separate email resend endpoint: registering again issues a fresh email code
+                await dispatch(sendSignupOtp(payload)).unwrap()
+            }
 
             setCodeIsDead(false)
             setError(null)
             resetInput()
-            toast.success(
-                isPhone
-                    ? `A new code has been sent to ${payload.email}. Verify your email again to continue.`
-                    : `A new code has been sent to ${payload.email}`
-            )
+            toast.success(`A new code has been sent to ${isPhone ? payload.phone : payload.email}`)
             onResent(Date.now())
         } catch (err) {
             setError(typeof err === "string" ? err : "Could not resend the code. Please try again.")
@@ -167,11 +173,8 @@ export function RegistrationOtpStep({
                 <p className="mt-2 text-[12px] leading-[19.5px] text-[#717171]">
                     {isPhone ? (
                         <>
-                            Enter the {OTP_LENGTH}-digit code to verify{" "}
-                            <span className="text-[#0d0d0d]">{payload.phone}</span>.{" "}
-                            {/* temporary: no SMS provider yet, so the phone step reuses the emailed code */}
-                            For now, use the same code we sent to{" "}
-                            <span className="break-all text-[#0d0d0d]">{payload.email}</span>
+                            Enter the {OTP_LENGTH}-digit code we sent by SMS to{" "}
+                            <span className="whitespace-nowrap text-[#0d0d0d]">{payload.phone}</span>
                         </>
                     ) : (
                         <>
