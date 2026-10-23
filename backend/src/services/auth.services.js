@@ -186,7 +186,14 @@ const sendSignupPhoneOtp = async (email, pending) => {
     await redis.set(pendingKey(email), JSON.stringify({ ...pending, phoneOtp }), 'EX', PHONE_OTP_TTL);
     await redis.del(attemptsKey(email));
 
-    await sendOtpSms({ phone: pending.phone, otp: phoneOtp, validForMinutes: PHONE_OTP_TTL / 60 });
+    try {
+        await sendOtpSms({ phone: pending.phone, otp: phoneOtp, validForMinutes: PHONE_OTP_TTL / 60 });
+    } catch (error) {
+        // nothing went out, so don't count it against the limits
+        await redis.decr(phoneSendsKey(email));
+        await redis.decr(smsPerPhoneKey(pending.phone));
+        throw error;
+    }
 
     // only after a successful send — a failed one can be retried straight away
     await redis.set(phoneCooldownKey(email), '1', 'EX', PHONE_RESEND_COOLDOWN);
