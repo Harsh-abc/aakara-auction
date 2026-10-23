@@ -560,31 +560,42 @@ model AuctionRule {
 /// the user gets a PENDING LotBidder row on every open lot of the auction.
 /// Permission to bid is approved per lot on LotBidder, not here.
 /// Each registration gets a paddle number unique within its auction (never reused).
+/// The terms* columns are the bidder's recorded acceptance of the Conditions of
+/// Sale (Clause 2.2): null for admin-added users who never ticked them.
 model AuctionParticipant {
-  id              BigInt            @id @default(autoincrement())
-  auctionId       BigInt
-  userId          BigInt
-  source          LotBidderSource   @default(SELF_REGISTERED)
-  paddleNumber    String
-  status          ParticipantStatus @default(PENDING)
-  registeredAt    DateTime          @default(now())
-  approvedAt      DateTime?
-  approvedBy      BigInt?
-  depositRequired Boolean           @default(false)
-  depositAmount   Decimal?          @db.Decimal(12, 2)
-  depositPaid     Boolean           @default(false)
-  rejectionReason String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  approver        User?             @relation("ParticipantApprover", fields: [approvedBy], references: [id])
-  auction         Auction           @relation(fields: [auctionId], references: [id])
-  user            User              @relation(fields: [userId], references: [id])
+  id                     BigInt            @id @default(autoincrement())
+  auctionId              BigInt
+  userId                 BigInt
+  source                 LotBidderSource   @default(SELF_REGISTERED)
+  paddleNumber           String
+  status                 ParticipantStatus @default(PENDING)
+  registeredAt           DateTime          @default(now())
+  approvedAt             DateTime?
+  approvedBy             BigInt?
+  depositRequired        Boolean           @default(false)
+  depositAmount          Decimal?          @db.Decimal(12, 2)
+  depositPaid            Boolean           @default(false)
+  rejectionReason        String?
+  /// when the bidder ticked "I have read and agree" after scrolling the full terms
+  termsAcceptedAt        DateTime?
+  /// version of the Conditions of Sale shown, e.g. "2026-10"
+  termsVersion           String?           @db.VarChar(32)
+  termsAcceptedIp        String?           @db.VarChar(64)
+  termsAcceptedUserAgent String?           @db.VarChar(500)
+  /// the auction's own terms as they read at acceptance (they can be edited later)
+  auctionTermsAccepted   String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  approver               User?             @relation("ParticipantApprover", fields: [approvedBy], references: [id])
+  auction                Auction           @relation(fields: [auctionId], references: [id])
+  user                   User              @relation(fields: [userId], references: [id])
 
   @@unique([auctionId, userId])
   @@unique([auctionId, paddleNumber])
   @@index([auctionId])
   @@index([userId])
   @@index([status])
+  @@index([termsVersion])
   @@map("auction_participants")
 }
 

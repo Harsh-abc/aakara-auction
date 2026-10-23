@@ -1,3 +1,5 @@
+import { TERMS_OF_SALE } from "@/lib/constants/termsOfSale"
+
 import { apiConnector } from "../apiConnector"
 import { publicAuctionEndPoints } from "../api"
 import {
@@ -55,7 +57,8 @@ export async function getPublicLot(auctionUuid: string, lotUuid: string): Promis
 }
 
 // returns the backend message too — it carries the paddle number.
-// only call once the bidder has ticked the terms: the server rejects it otherwise
+// only call once the bidder has read and ticked the terms: the server rejects it otherwise,
+// and records the acceptance against the terms version sent here
 export async function registerForAuction(
     auctionUuid: string,
     token: string | null
@@ -63,7 +66,7 @@ export async function registerForAuction(
     const response = await apiConnector({
         method: "POST",
         url: REGISTER_FOR_AUCTION_API(auctionUuid),
-        body: { acceptTerms: true },
+        body: { acceptTerms: true, termsVersion: TERMS_OF_SALE.version },
         header: { Authorization: `Bearer ${token}` },
     })
     return { message: response.data.message, data: response.data.data }

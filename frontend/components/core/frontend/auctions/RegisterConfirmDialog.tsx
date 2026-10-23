@@ -1,14 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAppSelector } from "@/hooks/redux"
 import { KYC_DOCUMENTS } from "@/lib/constants/kyc"
-import type { KycStatus, MyAccount, MyKyc, MyKycDocument } from "@/lib/types/profile.types"
+import { TERMS_OF_SALE } from "@/lib/constants/termsOfSale"
+import type { KycStatus, MyAccount, MyKyc } from "@/lib/types/profile.types"
 import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { cn } from "@/lib/utils"
 import { getMyKyc, getMyProfile } from "@/services/operations/profile.api"
@@ -17,6 +18,7 @@ import { getErrorMessage } from "@/lib/apiError"
 import { accountName } from "@/lib/accountName"
 
 import { auctionMeta } from "./auctionDisplay"
+import { TermsOfSaleDocument } from "./TermsOfSaleDocument"
 
 const KYC_STATUS_LABELS: Record<KycStatus, string> = {
     NOT_SUBMITTED: "Not submitted",
@@ -26,20 +28,18 @@ const KYC_STATUS_LABELS: Record<KycStatus, string> = {
     REJECTED: "Rejected",
 }
 
-const DOCUMENT_STATUS_LABELS: Record<MyKycDocument["status"], string> = {
-    PENDING: "Under review",
-    APPROVED: "Verified",
-    REJECTED: "Rejected",
-}
-
 const statusTone = (status: string) =>
-    status === "VERIFIED" || status === "APPROVED"
+    status === "VERIFIED"
         ? "bg-emerald-50 text-emerald-700"
         : status === "REJECTED"
           ? "bg-red-50 text-red-700"
           : "bg-neutral-100 text-neutral-600"
 
 const SECTION_LABEL = "text-[10px] uppercase tracking-[0.18em] text-neutral-500"
+const FIELD_LABEL = "text-[10px] uppercase tracking-[0.12em] text-neutral-500"
+
+/** px from the bottom that still counts as having scrolled to the end (sub-pixel rounding, zoom) */
+const SCROLL_END_TOLERANCE = 16
 
 type Details = {
     account: MyAccount
@@ -62,6 +62,8 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
     const [details, setDetails] = useState<(Details & { key: string }) | null>(null)
     const [error, setError] = useState<{ key: string; message: string } | null>(null)
     const [accepted, setAccepted] = useState(false)
+    const [readToEnd, setReadToEnd] = useState(false)
+    const termsRef = useRef<HTMLDivElement>(null)
 
     const loaded = details?.key === auction.uuid ? details : null
     const loadError = error?.key === auction.uuid ? error.message : null
@@ -85,16 +87,32 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
         }
     }, [open, token, auction.uuid])
 
+    // the checkbox unlocks once the bidder has scrolled to the bottom of the terms
+    const markReadIfAtEnd = (el: HTMLElement) => {
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_END_TOLERANCE) setReadToEnd(true)
+    }
+
+    // terms short enough to fit without scrolling count as read
+    useEffect(() => {
+        if (open && loaded && termsRef.current) markReadIfAtEnd(termsRef.current)
+    }, [open, loaded])
+
     const handleOpenChange = (next: boolean) => {
         if (submitting) return
-        // the box is ticked fresh every time
-        if (!next) setAccepted(false)
+        // the terms are read and ticked fresh every time
+        if (!next) {
+            setAccepted(false)
+            setReadToEnd(false)
+        }
         onOpenChange(next)
     }
 
     const name = loaded ? accountName(loaded.account) : null
     const kycStatus: KycStatus = loaded?.kyc?.status ?? loaded?.account.kyc?.status ?? "NOT_SUBMITTED"
-    const documents = loaded?.kyc?.documents ?? []
+    const fullName = [name?.firstName, name?.lastName].filter(Boolean).join(" ")
+    const documentNames = (loaded?.kyc?.documents ?? [])
+        .map((doc) => KYC_DOCUMENTS[doc.documentType]?.title ?? doc.documentType)
+        .join(", ")
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -112,72 +130,58 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                 ) : !loaded ? (
                     <div className="space-y-4 p-6">
                         <Skeleton className="h-4 w-32 rounded-none" />
-                        <Skeleton className="h-10 w-full rounded-none" />
+                        <Skeleton className="h-14 w-full rounded-none" />
                         <Skeleton className="h-4 w-32 rounded-none" />
-                        <Skeleton className="h-16 w-full rounded-none" />
+                        <Skeleton className="h-40 w-full rounded-none" />
                     </div>
                 ) : (
                     <div className="space-y-6 p-6">
-                        {/* BIDDER */}
+                        {/* BIDDER + KYC, one compact strip */}
                         <section>
                             <p className={SECTION_LABEL}>Bidder details</p>
-                            <dl className="mt-3 grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <dt className="text-xs text-neutral-500">First name</dt>
-                                    <dd className="mt-1 text-neutral-950">{name?.firstName || "—"}</dd>
+                            <dl className="mt-3 grid grid-cols-1 divide-y divide-neutral-200 border border-neutral-200 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] sm:divide-x sm:divide-y-0">
+                                <div className="min-w-0 px-3 py-2.5">
+                                    <dt className={FIELD_LABEL}>Name</dt>
+                                    <dd className="mt-1 truncate text-neutral-950" title={fullName || undefined}>
+                                        {fullName || "—"}
+                                    </dd>
                                 </div>
-                                <div>
-                                    <dt className="text-xs text-neutral-500">Last name</dt>
-                                    <dd className="mt-1 text-neutral-950">{name?.lastName || "—"}</dd>
+                                <div className="min-w-0 px-3 py-2.5">
+                                    <dt className={FIELD_LABEL}>Email</dt>
+                                    <dd className="mt-1 truncate text-neutral-950" title={loaded.account.email}>
+                                        {loaded.account.email}
+                                    </dd>
                                 </div>
-                                <div className="col-span-2">
-                                    <dt className="text-xs text-neutral-500">Email</dt>
-                                    <dd className="mt-1 break-all text-neutral-950">{loaded.account.email}</dd>
+                                <div className="min-w-0 px-3 py-2.5">
+                                    <dt className={FIELD_LABEL}>KYC</dt>
+                                    <dd className="mt-1 flex items-center gap-2">
+                                        <span
+                                            className={cn(
+                                                "shrink-0 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                                                statusTone(kycStatus)
+                                            )}
+                                        >
+                                            {KYC_STATUS_LABELS[kycStatus]}
+                                        </span>
+                                        {documentNames && (
+                                            <span className="truncate text-xs text-neutral-500" title={documentNames}>
+                                                {documentNames}
+                                            </span>
+                                        )}
+                                    </dd>
                                 </div>
                             </dl>
+
                             {(!name?.firstName || !name?.lastName) && (
-                                <p className="mt-3 text-xs text-neutral-500">
+                                <p className="mt-2 text-xs text-neutral-500">
                                     Your name is missing.{" "}
                                     <Link href="/my-profile" className="text-neutral-950 underline underline-offset-2">
                                         Add it in My profile
                                     </Link>
                                 </p>
                             )}
-                        </section>
-
-                        {/* KYC */}
-                        <section>
-                            <div className="flex items-center justify-between gap-3">
-                                <p className={SECTION_LABEL}>KYC documents</p>
-                                <span className={cn("px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide", statusTone(kycStatus))}>
-                                    {KYC_STATUS_LABELS[kycStatus]}
-                                </span>
-                            </div>
-
-                            {documents.length > 0 ? (
-                                <ul className="mt-3 divide-y divide-neutral-200 border border-neutral-200">
-                                    {documents.map((doc) => (
-                                        <li key={doc.id} className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
-                                            <span className="min-w-0 truncate text-neutral-950">
-                                                {KYC_DOCUMENTS[doc.documentType]?.title ?? doc.documentType}
-                                            </span>
-                                            <span
-                                                className={cn(
-                                                    "shrink-0 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-                                                    statusTone(doc.status)
-                                                )}
-                                            >
-                                                {DOCUMENT_STATUS_LABELS[doc.status]}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="mt-3 text-sm text-neutral-500">No documents uploaded yet.</p>
-                            )}
-
                             {kycStatus !== "VERIFIED" && (
-                                <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+                                <p className="mt-2 text-xs leading-relaxed text-neutral-500">
                                     Your KYC must be verified before you can register for this auction.{" "}
                                     <Link href="/my-profile" className="text-neutral-950 underline underline-offset-2">
                                         Manage KYC
@@ -188,17 +192,37 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
 
                         {/* TERMS */}
                         <section>
-                            <p className={SECTION_LABEL}>Terms &amp; conditions</p>
-                            <div className="mt-3 max-h-40 overflow-y-auto border border-neutral-200 bg-neutral-50 p-3 text-xs leading-relaxed whitespace-pre-line text-neutral-700">
-                                {loaded.terms ??
-                                    "By registering you agree to bid in good faith and to the auction house's standard conditions of sale, including the buyer's premium and payment terms published for this sale."}
+                            <div className="flex items-center justify-between gap-3">
+                                <p className={SECTION_LABEL}>Terms &amp; conditions</p>
+                                <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+                                    Version {TERMS_OF_SALE.version}
+                                </span>
                             </div>
+                            <div
+                                ref={termsRef}
+                                onScroll={(e) => markReadIfAtEnd(e.currentTarget)}
+                                tabIndex={0}
+                                aria-label="Terms and conditions of sale"
+                                className="mt-3 max-h-72 overflow-y-auto border border-neutral-200 bg-neutral-50 p-4 focus-visible:outline-1 focus-visible:outline-neutral-950"
+                            >
+                                <TermsOfSaleDocument auctionTerms={loaded.terms} />
+                            </div>
+                            <p className="mt-2 text-xs text-neutral-500" aria-live="polite">
+                                {readToEnd
+                                    ? "You've reached the end of the terms."
+                                    : "Scroll to the end of the terms to enable the checkbox."}
+                            </p>
 
-                            <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-neutral-800">
+                            <label
+                                className={cn(
+                                    "mt-4 flex items-start gap-3 text-sm text-neutral-800",
+                                    readToEnd ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                                )}
+                            >
                                 <Checkbox
                                     checked={accepted}
                                     onCheckedChange={(checked) => setAccepted(checked)}
-                                    disabled={submitting}
+                                    disabled={submitting || !readToEnd}
                                     className="mt-0.5 rounded-none"
                                 />
                                 <span>I have read and agree to the terms and conditions of this auction.</span>

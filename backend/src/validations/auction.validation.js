@@ -37,9 +37,11 @@ export const auctionUuidParamSchema = z.object({
 
 export const publicLotParamsSchema = auctionUuidParamSchema.extend(lotUuidParamSchema.shape);
 
-// bidders tick the auction's terms in the register dialog
+// bidders scroll through the Conditions of Sale and tick them in the register
+// dialog; termsVersion identifies which version they were shown
 export const registerForAuctionBodySchema = z.object({
     acceptTerms: z.literal(true, { message: "Please accept the terms and conditions to register" }),
+    termsVersion: z.string({ message: "Terms version is required" }).trim().min(1).max(32),
 });
 
 export const getAuctionParticipantsQuerySchema = z.object({

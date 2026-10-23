@@ -1,5 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
+import { TERMS_OF_SALE_VERSION } from "../utils/termsOfSale.js";
 import { createUserByAdminService } from "./admin.services.js";
 import { invalidateBidderAccess } from "./bidding.services.js";
 import {
@@ -190,8 +191,13 @@ export const syncParticipantsToLots = async (tx, auctionId) => {
 // REGISTER FOR AN AUCTION (bidder self-registration)
 // =====================================================================
 
-export const registerForAuctionService = async ({ auctionUuid, userId }) => {
+export const registerForAuctionService = async ({ auctionUuid, userId, termsAcceptance }) => {
     if (!userId) throw httpError("Authenticated user is required", 401);
+
+    // the bidder must have been shown the current Conditions, so the record identifies what they agreed to
+    if (termsAcceptance?.termsVersion !== TERMS_OF_SALE_VERSION) {
+        throw httpError("The terms and conditions have been updated. Please reload the page and review them again.", 409);
+    }
 
     // Read from the DB, not the token: KYC can be approved after the token
     // was issued (the BIDDER role itself is assigned by a super admin)
@@ -222,14 +228,30 @@ export const registerForAuctionService = async ({ auctionUuid, userId }) => {
 
     const user = BigInt(userId);
 
+    const { termsAndConditions } = await prisma.auction.findUnique({
+        where: { id: auction.id },
+        select: { termsAndConditions: true },
+    });
+
     // Idempotent: registering again keeps the first registration and only
     // picks up lots added since
     const participant = await prisma.$transaction(
         async (tx) => {
             await registerParticipants(tx, auction.id, [user], "SELF_REGISTERED");
+            // record the acceptance once; an earlier one (first registration) is kept as is
+            await tx.auctionParticipant.updateMany({
+                where: { auctionId: auction.id, userId: user, termsAcceptedAt: null },
+                data: {
+                    termsAcceptedAt: new Date(),
+                    termsVersion: termsAcceptance.termsVersion,
+                    termsAcceptedIp: termsAcceptance.ip?.slice(0, 64) ?? null,
+                    termsAcceptedUserAgent: termsAcceptance.userAgent?.slice(0, 500) ?? null,
+                    auctionTermsAccepted: termsAndConditions?.trim() || null,
+                },
+            });
             return tx.auctionParticipant.findUnique({
                 where: { auctionId_userId: { auctionId: auction.id, userId: user } },
-                select: { paddleNumber: true, source: true, registeredAt: true },
+                select: { paddleNumber: true, source: true, registeredAt: true, termsAcceptedAt: true, termsVersion: true },
             });
         },
         { maxWait: 10_000, timeout: 30_000 }
@@ -311,6 +333,9 @@ export const getAuctionParticipantsService = async ({ auctionUuid, page, limit, 
                 status: true,
                 registeredAt: true,
                 approvedAt: true,
+                termsAcceptedAt: true,
+                termsVersion: true,
+                termsAcceptedIp: true,
                 approver: { select: { username: true } },
                 user: {
                     select: {

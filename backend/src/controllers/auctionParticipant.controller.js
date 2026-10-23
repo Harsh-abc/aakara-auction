@@ -9,6 +9,7 @@ import {
     removeAuctionParticipantsService,
     setParticipantsVerifiedService,
 } from "../services/auctionParticipant.services.js";
+import { getClientIp } from "../utils/clientIp.js";
 import { createUserSchema } from "../validations/user.validation.js";
 import {
     auctionUuidParamSchema,
@@ -179,11 +180,16 @@ export const removeAuctionParticipants = async (req, res) => {
 export const registerForAuction = async (req, res) => {
     try {
         const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
-        registerForAuctionBodySchema.parse(req.body ?? {});
+        const { termsVersion } = registerForAuctionBodySchema.parse(req.body ?? {});
 
         const registration = await registerForAuctionService({
             auctionUuid,
             userId: req.user.userId,
+            termsAcceptance: {
+                termsVersion,
+                ip: getClientIp(req),
+                userAgent: req.get("user-agent") ?? null,
+            },
         });
 
         return res.status(200).json({

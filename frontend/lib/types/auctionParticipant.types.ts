@@ -25,6 +25,11 @@ export interface AuctionParticipant extends ParticipantUser {
     status: "PENDING" | "APPROVED" | "REJECTED" | "BANNED";
     approvedAt: string | null;
     approvedBy: string | null;
+    /** When they ticked the Conditions of Sale while registering — null if never (e.g. added by an admin) */
+    termsAcceptedAt: string | null;
+    /** Conditions of Sale version they accepted, e.g. "2026-10" */
+    termsVersion: string | null;
+    termsAcceptedIp: string | null;
     /** Only lots the user has a row on — a missing lot means not registered for it */
     lots: { lotUuid: string; status: LotBidderStatus }[];
 }

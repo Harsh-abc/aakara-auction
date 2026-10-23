@@ -384,7 +384,7 @@ export default function AuctionRegistrationsPage() {
                                     />
                                 </TableHead>
                             )}
-                            {["Paddle", "User", "KYC", "Registered", "Lots", ...(canManage ? [""] : [])].map((h, i) => (
+                            {["Paddle", "User", "KYC", "Registered", "Terms", "Lots", ...(canManage ? [""] : [])].map((h, i) => (
                                 <TableHead key={i} className="h-9 px-3 text-[11px] font-medium whitespace-nowrap text-slate-700">
                                     {h}
                                 </TableHead>
@@ -395,14 +395,14 @@ export default function AuctionRegistrationsPage() {
                     <TableBody>
                         {loading && participants.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-40 text-center text-sm text-slate-500">
+                                <TableCell colSpan={8} className="h-40 text-center text-sm text-slate-500">
                                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                                     Loading registrations...
                                 </TableCell>
                             </TableRow>
                         ) : participants.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-40 text-center text-sm text-slate-500">
+                                <TableCell colSpan={8} className="h-40 text-center text-sm text-slate-500">
                                     {search || filter !== "all"
                                         ? "No registrations match your search."
                                         : "No one has registered for this auction yet."}
@@ -722,6 +722,27 @@ const ParticipantRow = ({
                     </p>
                 ) : (
                     <p className="mt-0.5 text-amber-600">Approval pending</p>
+                )}
+            </TableCell>
+
+            {/* Conditions of Sale acceptance */}
+            <TableCell className="px-3 text-[11px] whitespace-nowrap">
+                {participant.termsAcceptedAt ? (
+                    <>
+                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">Agreed</span>
+                        <p className="mt-1 text-slate-500">{formatDateTime(participant.termsAcceptedAt)}</p>
+                        <p className="mt-0.5 text-slate-400">
+                            v{participant.termsVersion}
+                            {participant.termsAcceptedIp ? ` · IP ${participant.termsAcceptedIp}` : ""}
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-500">Not recorded</span>
+                        <p className="mt-1 text-slate-400">
+                            {participant.source === "ADDED_BY_ADMIN" ? "Added by admin" : "Registered before terms tracking"}
+                        </p>
+                    </>
                 )}
             </TableCell>
 
