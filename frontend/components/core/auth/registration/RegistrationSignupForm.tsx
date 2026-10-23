@@ -30,6 +30,10 @@ import {
     authLabelClass,
 } from "./AuthField"
 import { RegistrationOtpStep, type OtpChannel } from "./RegistrationOtpStep"
+import { ReCaptcha, type ReCaptchaHandle } from "./ReCaptcha"
+
+// public reCAPTCHA v2 site key; left unset in local dev, the widget is skipped (the backend skips it too)
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -51,7 +55,7 @@ const initialFormData = {
 }
 
 type FormData = typeof initialFormData
-type FieldKey = keyof FormData
+type FieldKey = keyof FormData | "recaptcha"
 type FieldErrors = Partial<Record<FieldKey, string>>
 
 // visual order of the fields, so focus lands on the first invalid one the user sees
@@ -65,6 +69,7 @@ const fieldOrder: FieldKey[] = [
     "country",
     "city",
     "terms",
+    "recaptcha",
 ]
 
 // limits mirror the backend registerSchema
@@ -118,6 +123,9 @@ function fieldForConflict(message: string): FieldKey | null {
     return null
 }
 
+// the backend's captcha middleware answers with a message mentioning the captcha
+const isCaptchaError = (message: string) => /captcha/i.test(message)
+
 type RegistrationSignupFormProps = {
     onAccountCreated: (email: string) => void
 }
@@ -128,6 +136,14 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
 
     const [formData, setFormData] = useState(initialFormData)
     const [errors, setErrors] = useState<FieldErrors>({})
+
+    const recaptchaRef = useRef<ReCaptchaHandle>(null)
+    const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+
+    const handleRecaptchaChange = (token: string | null) => {
+        setRecaptchaToken(token)
+        if (token) setErrors((prev) => ({ ...prev, recaptcha: undefined }))
+    }
 
     // null while loading; if the list can't be fetched, country and city fall back to plain text inputs
     const [countries, setCountries] = useState<Country[] | null>(null)
@@ -255,6 +271,9 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
         event.preventDefault()
 
         const validationErrors = validate(formData)
+        if (RECAPTCHA_SITE_KEY && !recaptchaToken) {
+            validationErrors.recaptcha = "Please confirm you're not a robot"
+        }
         const firstInvalid = fieldOrder.find((key) => validationErrors[key])
 
         if (firstInvalid) {
@@ -275,12 +294,17 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
         }
 
         try {
-            await dispatch(sendSignupOtp(payload)).unwrap()
+            await dispatch(sendSignupOtp({ ...payload, recaptchaToken: recaptchaToken ?? undefined })).unwrap()
+            // the token is spent; "Edit details" shows a fresh widget
+            setRecaptchaToken(null)
             toast.success(`Verification code sent to ${payload.email}`)
             setPendingSignup({ payload, sentAt: Date.now(), step: "email" })
         } catch (error) {
+            // a token works once, so every failed attempt needs a new tick
+            recaptchaRef.current?.reset()
+
             const message = typeof error === "string" ? error : "Could not send the code. Please try again."
-            const conflictField = fieldForConflict(message)
+            const conflictField = isCaptchaError(message) ? "recaptcha" : fieldForConflict(message)
 
             if (conflictField) {
                 setErrors({ [conflictField]: message })
@@ -525,6 +549,25 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 </label>
                 <AuthFieldError id="terms-error" message={errors.terms} />
             </div>
+
+            {RECAPTCHA_SITE_KEY && (
+                // tabIndex lets a failed submit move focus (and scroll) here
+                <div id="recaptcha" tabIndex={-1} className="outline-none">
+                    <ReCaptcha
+                        ref={recaptchaRef}
+                        siteKey={RECAPTCHA_SITE_KEY}
+                        onChange={handleRecaptchaChange}
+                        onLoadError={() =>
+                            setErrors((prev) => ({
+                                ...prev,
+                                recaptcha:
+                                    "The captcha couldn't load. Check your connection or turn off content blockers, then reload the page.",
+                            }))
+                        }
+                    />
+                    <AuthFieldError id="recaptcha-error" message={errors.recaptcha} />
+                </div>
+            )}
 
             <div className="mt-2 flex flex-col gap-3">
                 <AuthSubmitButton loading={loading} loadingText="Sending code...">

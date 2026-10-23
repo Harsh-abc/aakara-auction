@@ -74,6 +74,9 @@ const ROUTES = [
     route("POST", "/api/auth/verify-phone-otp", "AUTH", "SIGNUP_VERIFY_PHONE", "Verified phone OTP — account created", {
         failAction: "SIGNUP_VERIFY_PHONE_FAILED",
     }),
+    route("POST", "/api/auth/resend-otp", "AUTH", "SIGNUP_RESEND_OTP", "Requested a new sign-up email OTP", {
+        failAction: "SIGNUP_RESEND_OTP_FAILED",
+    }),
     route("POST", "/api/auth/resend-phone-otp", "AUTH", "SIGNUP_RESEND_PHONE_OTP", "Requested a new phone OTP (SMS)", {
         failAction: "SIGNUP_RESEND_PHONE_OTP_FAILED",
     }),

@@ -47,6 +47,15 @@ export interface SignupPayload {
     country?: string
 }
 
+// sent only with the first signup request; resends reuse the pending signup and need no token
+export interface SignupRequest extends SignupPayload {
+    recaptchaToken?: string
+}
+
+export interface ResendOtpPayload {
+    email: string
+}
+
 export interface VerifyOtpPayload {
     email: string;
     otp: string;

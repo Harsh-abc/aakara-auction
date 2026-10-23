@@ -4,7 +4,7 @@ import { setSignupEmail } from "@/redux/slices/authSlice";
 import { apiConnector } from "../apiConnector";
 
 import { createAsyncThunk } from "@reduxjs/toolkit";
-const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, VERIFY_PHONE_OTP_API, RESEND_PHONE_OTP_API, LOGOUT_API } = authEndPoints;
+const { LOGIN_API, REGISTER_API, RESEND_OTP_API, VERIFY_OTP_API, VERIFY_PHONE_OTP_API, RESEND_PHONE_OTP_API, LOGOUT_API } = authEndPoints;
 
 
 // import { jwtDecode } from "jwt-decode"
@@ -13,7 +13,8 @@ const { LOGIN_API, REGISTER_API, VERIFY_OTP_API, VERIFY_PHONE_OTP_API, RESEND_PH
 
 import {
     GenericApiResponse,
-    SignupPayload,
+    SignupRequest,
+    ResendOtpPayload,
     VerifyOtpPayload,
     LoginApiResponse,
     LoginPayload,
@@ -27,6 +28,11 @@ import { getErrorMessage } from "@/lib/apiError";
 // keep "too many" / "expired" in the OTP ones: RegistrationOtpStep matches them to offer a new code
 const SIGNUP_ERRORS = {
     409: "An account with this email or phone number already exists. Log in instead, or sign up with different details.",
+    429: "Too many code requests. Please wait a few minutes before trying again.",
+};
+
+const RESEND_ERRORS = {
+    410: "This signup has expired. Go back and sign up again.",
     429: "Too many code requests. Please wait a few minutes before trying again.",
 };
 
@@ -69,7 +75,7 @@ const VERIFY_CODE_ERRORS = {
 
 export const sendSignupOtp = createAsyncThunk<
     GenericApiResponse,
-    SignupPayload,
+    SignupRequest,
     { rejectValue: string }
 >(
     "auth/sendSignupOtp",
@@ -149,6 +155,33 @@ export const verifySignupPhoneOtp = createAsyncThunk<
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not verify OTP. Try again.", VERIFY_CODE_ERRORS));
+        }
+    }
+);
+
+
+// a new email code for the signup in progress; the first request already passed the captcha
+export const resendSignupOtp = createAsyncThunk<
+    GenericApiResponse,
+    ResendOtpPayload,
+    { rejectValue: string }
+>(
+    "auth/resendSignupOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await apiConnector<GenericApiResponse>({
+                method: "POST",
+                url: RESEND_OTP_API,
+                body: payload,
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not send the code");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not send the code. Try again.", RESEND_ERRORS));
         }
     }
 );

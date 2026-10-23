@@ -1,5 +1,5 @@
-import { registerSchema, verifyOtpSchema, resendPhoneOtpSchema, loginSchema } from '../validations/auth.validation.js';
-import { registerService, verifyOtpService, verifyPhoneOtpService, resendPhoneOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
+import { registerSchema, verifyOtpSchema, resendOtpSchema, resendPhoneOtpSchema, loginSchema } from '../validations/auth.validation.js';
+import { registerService, resendOtpService, verifyOtpService, verifyPhoneOtpService, resendPhoneOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
 import { ZodError } from 'zod';
 import { getClientIp } from '../utils/clientIp.js';
 import { setActivityActor } from '../libs/activityLog.js';
@@ -57,6 +57,27 @@ export const verifyPhoneOtp = async (req, res, next) => {
     } catch (err) {
         if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
         next(err);
+    }
+};
+
+// a fresh email code without re-registering (/register needs a new captcha token every time)
+export const resendOtp = async (req, res) => {
+    try {
+        const data = resendOtpSchema.parse(req.body);
+        const result = await resendOtpService(data);
+
+        res.status(200).json({
+            success: true,
+            message: 'A new code has been sent to your email',
+            data: result,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        if (!err.statusCode) console.error('resendOtp error:', err);
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.statusCode ? err.message : 'Could not send the code. Please try again.',
+        });
     }
 };
 

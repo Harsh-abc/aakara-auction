@@ -103,6 +103,35 @@ export const registerService = async ({ username, email, password, phone, city, 
     return { email, expiresInSeconds: PENDING_TTL };
 };
 
+// "Resend code" on the email step: a fresh code for the pending signup, without the details (or a new
+// captcha) again. Shares MAX_RESENDS with registerService and restarts the steps like registering again would
+export const resendOtpService = async ({ email }) => {
+    const raw = await redis.get(pendingKey(email));
+    if (!raw) {
+        const error = new Error('OTP expired or registration not found. Please register again.');
+        error.statusCode = 410;
+        throw error;
+    }
+
+    const resendCount = await redis.incr(resendKey(email));
+    if (resendCount === 1) await redis.expire(resendKey(email), RESEND_WINDOW);
+    if (resendCount > MAX_RESENDS) {
+        const error = new Error('Too many OTP requests. Try again later.');
+        error.statusCode = 429;
+        throw error;
+    }
+
+    const { emailVerified: _emailVerified, phoneOtp: _phoneOtp, ...pending } = JSON.parse(raw);
+    const otp = generateOtp();
+
+    await redis.set(pendingKey(email), JSON.stringify({ ...pending, otp }), 'EX', PENDING_TTL);
+    await redis.del(attemptsKey(email));
+
+    await sendEmail(email, 'Verify your email', otpVerificationTemplate(otp, pending.username));
+
+    return { email, expiresInSeconds: PENDING_TTL };
+};
+
 const getPendingSignup = async (email) => {
     const attempts = Number((await redis.get(attemptsKey(email))) ?? 0);
     if (attempts >= MAX_VERIFY_ATTEMPTS) {

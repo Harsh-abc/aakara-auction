@@ -5,7 +5,7 @@ import OtpInput from "react-otp-input"
 import toast from "react-hot-toast"
 
 import { useAppDispatch } from "@/hooks/redux"
-import { resendSignupPhoneOtp, sendSignupOtp, verifySignupOtp, verifySignupPhoneOtp } from "@/services/operations/auth.api"
+import { resendSignupOtp, resendSignupPhoneOtp, verifySignupOtp, verifySignupPhoneOtp } from "@/services/operations/auth.api"
 import type { SignupOtpStepResponse, SignupPayload } from "@/lib/types/auth.types"
 import { cn } from "@/lib/utils"
 import { AuthFieldError, AuthSubmitButton, authInputErrorClass, authLabelClass } from "./AuthField"
@@ -145,8 +145,8 @@ export function RegistrationOtpStep({
                 // a new SMS; the email step stays verified
                 await dispatch(resendSignupPhoneOtp({ email: payload.email })).unwrap()
             } else {
-                // no separate email resend endpoint: registering again issues a fresh email code
-                await dispatch(sendSignupOtp(payload)).unwrap()
+                // reuses the pending signup, so it needs no new captcha (unlike registering again)
+                await dispatch(resendSignupOtp({ email: payload.email })).unwrap()
             }
 
             setCodeIsDead(false)

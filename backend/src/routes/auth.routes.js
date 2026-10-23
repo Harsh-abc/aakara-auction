@@ -1,10 +1,14 @@
 import { Router } from 'express';
-import { login, logout, refresh, register, resendPhoneOtp, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
+import { login, logout, refresh, register, resendOtp, resendPhoneOtp, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
+import { verifyRecaptcha } from '../middleware/recaptcha.middleware.js';
 
 const authRouter = Router();
 
-// Register route
-authRouter.post('/register', register);
+// Register route (captcha-protected)
+authRouter.post('/register', verifyRecaptcha, register);
+
+// Resend the email OTP for a signup already in progress — that signup passed the captcha at /register
+authRouter.post('/resend-otp', resendOtp);
 
 // Verify OTP route (email step)
 authRouter.post('/verify-otp', verifyOtp);
