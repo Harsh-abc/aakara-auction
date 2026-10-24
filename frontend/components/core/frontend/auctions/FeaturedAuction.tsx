@@ -53,7 +53,7 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                                 <h1 className={TITLE}>The Fine Art Sale</h1>
                                 <p className='my-2'>08 December 2026, Mumbai</p>
                                 <p className={cn(BODY, "mt-4")}>
-                                    A new season of modern and contemporary South Asian art is preparing to open. Register early to preview the catalogue and receive alerts when bidding begins.
+                                    AKARA presents its inaugural Fine Art Sale, bringing together a carefully curated selection of works of Modern Indian Art. Rooted in our longstanding engagement with Indian modernism, the sale reflects our commitment to presenting works of artistic significance and enduring value.
                                 </p>
                             </div>
                             <Link href="/registration" className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "shrink-0")}>
