@@ -14,7 +14,7 @@ import { StatusBadge } from "./StatusBadge";
 
 // Figma: "Auction Landing page" hero card — 8:3 banner over a 24px body
 const CARD = "border border-[#cecece] bg-white";
-const BANNER ="relative aspect-4/3 w-full overflow-hidden bg-[#ebebeb] sm:aspect-8/3";
+const BANNER = "relative aspect-4/3 w-full overflow-hidden bg-[#ebebeb] sm:aspect-8/3";
 const BODY_ROW = "flex flex-col gap-6 p-6 md:flex-row md:items-end md:justify-between md:gap-10";
 const TITLE = "mt-4 text-[36px] leading-none font-medium tracking-tight text-[#0d0d0d] sm:text-[48px]";
 
@@ -50,7 +50,8 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                         <div className={BODY_ROW}>
                             <div className="min-w-0 max-w-lg">
                                 <StatusBadge label="Coming soon" tone="upcoming" />
-                                <h1 className={TITLE}>New sales coming soon</h1>
+                                <h1 className={TITLE}>The Fine Art Sale</h1>
+                                <p className='my-2'>08 December 2026, Mumbai</p>
                                 <p className={cn(BODY, "mt-4")}>
                                     A new season of modern and contemporary South Asian art is preparing to open. Register early to preview the catalogue and receive alerts when bidding begins.
                                 </p>
