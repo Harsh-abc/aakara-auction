@@ -56,8 +56,8 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                                     A new season of modern and contemporary South Asian art is preparing to open. Register early to preview the catalogue and receive alerts when bidding begins.
                                 </p>
                             </div>
-                            <Link href="#auctions" className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "shrink-0")}>
-                                Browse all auctions
+                            <Link href="/registration" className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "shrink-0")}>
+                                Register to bid
                             </Link>
                         </div>
                     </div>
