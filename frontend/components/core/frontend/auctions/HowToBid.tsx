@@ -22,9 +22,9 @@ export function HowToBid() {
         <section aria-labelledby="how-to-bid-heading">
             <div className="page-container">
                 <SectionHeading id="how-to-bid-heading" title="How to bid" />
-                <ol className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+                <ol className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-3">
                     {steps.map((step, index) => (
-                        <li key={step.title} className="bg-white p-6">
+                        <li key={step.title} className="bg-white p-4 md:p-6">
                             <span className="text-[11px] leading-[13.2px] font-semibold tracking-[0.16em] text-[#d0a55d] uppercase">Step {String(index + 1).padStart(2, "0")}</span>
                             <h3 className="mt-3 text-[14px] leading-5 font-medium text-[#0d0d0d]">{step.title}</h3>
                             <p className={cn(BODY, "mt-3")}>{step.body}</p>

@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 // page rhythm: 48px (52px on md+) above, between and below sections
-export const PAGE_MAIN = "flex flex-1 flex-col gap-12 py-12 md:gap-13 md:py-13";
+export const PAGE_MAIN = "flex flex-1 flex-col gap-8 py-8 md:gap-13 md:py-13";
 
 // 11px uppercase metadata (eyebrows, breadcrumbs, counts, meta lines)
 export const EYEBROW = "text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase";

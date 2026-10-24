@@ -35,7 +35,7 @@ function ContactLine({ text }: { text: string }) {
 export function Footer() {
     return (
         <footer className="mt-auto border-t border-[#cecece] bg-[#f4f2ef]">
-            <div className="page-container mx-auto w-full grid gap-10 py-13 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+            <div className="page-container mx-auto w-full grid gap-6 py-13 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
                 <div className="flex flex-col gap-4">
                     <AkaraLogo />
                     <p className="max-w-66 text-sm leading-relaxed text-[#717171]">{FOOTER_CONTENT.aboutText}</p>
@@ -43,7 +43,7 @@ export function Footer() {
 
                 {FOOTER_CONTENT.linkColumns.map((column) => (
                     <div key={column.heading}>
-                        <h2 className="text-[11px] uppercase tracking-[0.16em] text-[#717171] mb-4">{column.heading}</h2>
+                        <h2 className="text-[11px] uppercase tracking-[0.16em] text-[#717171] mb-3 md:mb-4">{column.heading}</h2>
                         <ul className="flex flex-col gap-2">
                             {column.links.map((link) => (
                                 <li key={link.label}>
@@ -57,7 +57,7 @@ export function Footer() {
                 ))}
 
                 <div>
-                    <h2 className="text-[11px] uppercase tracking-[0.16em] text-[#717171] mb-4">Contact</h2>
+                    <h2 className="text-[11px] uppercase tracking-[0.16em] text-[#717171] mb-3 md:mb-4">Contact</h2>
                     <ul className="flex flex-col gap-2">
                         {FOOTER_CONTENT.contactLines.map((line) => (
                             <li key={line}>
