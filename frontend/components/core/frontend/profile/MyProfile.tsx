@@ -176,12 +176,14 @@ export function MyProfile() {
                             className="gap-0 md:mt-4"
                         >
                             {/* overrides restyle shadcn's default pill tabs into the flat underline design */}
-                            <TabsList className="scrollbar-none w-full justify-start overflow-x-auto rounded-none border-b border-[#cecece] bg-transparent p-0 group-data-horizontal/tabs:h-auto">
+                            {/* phones & tablets: a 2-up grid of boxed buttons (active one solid black; an odd last one spans the row).
+                                laptop+: the underline tabs on a hairline */}
+                            <TabsList className="mb-0 grid w-full grid-cols-2 gap-2 rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto lg:-mb-px lg:flex lg:justify-start lg:gap-0 lg:overflow-x-auto lg:border-b lg:border-[#cecece] lg:scrollbar-none">
                                 {(Object.keys(tabLabels) as ProfileTab[]).map((tab) => (
                                     <TabsTrigger
                                         key={tab}
                                         value={tab}
-                                        className="-mb-px h-10.25 flex-none cursor-pointer rounded-none border-0 border-b-2 border-transparent px-5 text-[12px] leading-4.5 font-normal tracking-[0.14em] text-[#717171] uppercase hover:bg-[#fdf1e3]/60 hover:text-[#0d0d0d] data-active:border-[#cea25a] data-active:bg-[#fdf1e3] data-active:font-medium data-active:text-[#0d0d0d] group-data-[variant=default]/tabs-list:data-active:shadow-none"
+                                        className="h-auto min-h-11 min-w-0 cursor-pointer justify-center rounded-none border border-[#cecece] bg-white px-3 py-2 text-center text-[11px] leading-4 font-normal tracking-[0.14em] whitespace-normal text-[#717171] uppercase transition-colors duration-200 last:odd:col-span-2 after:hidden hover:border-[#0d0d0d] hover:text-[#0d0d0d] data-active:border-[#0d0d0d] data-active:bg-[#0d0d0d] data-active:font-medium data-active:text-white group-data-[variant=default]/tabs-list:data-active:shadow-none lg:-mb-px lg:h-10.25 lg:min-h-0 lg:flex-none lg:border-0 lg:border-b-2 lg:border-transparent lg:bg-transparent lg:px-5 lg:py-0 lg:text-[12px] lg:leading-4.5 lg:whitespace-nowrap lg:after:block lg:hover:bg-[#fdf1e3]/60 lg:data-active:border-[#cea25a] lg:data-active:bg-[#fdf1e3] lg:data-active:text-[#0d0d0d]"
                                     >
                                         {tabLabels[tab]}
                                     </TabsTrigger>
