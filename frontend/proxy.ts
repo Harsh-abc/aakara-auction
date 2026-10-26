@@ -6,10 +6,10 @@ const REFRESH_COOKIE = 'aakara_refresh';
 
 // the one login page, for staff and bidders alike (it sends staff on to the dashboard)
 const LOGIN_PATH = '/registration';
-const HOME_PATH = '/';
 
 const PROTECTED_PREFIXES = ['/dashboard', '/my-profile'];
-const AUTH_ONLY_PREFIXES = ['/registration'];
+// /registration is not bounced here: the cookie alone can't say the visitor is still signed in (and a
+// redirect cached while signed in outlives logout), so the page itself sends signed-in visitors on
 
 function matchesPrefix(pathname: string, prefixes: string[]) {
     return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -23,10 +23,6 @@ export function proxy(request: NextRequest) {
         const loginUrl = new URL(LOGIN_PATH, request.url);
         loginUrl.searchParams.set('redirect', pathname + search);
         return NextResponse.redirect(loginUrl);
-    }
-
-    if (matchesPrefix(pathname, AUTH_ONLY_PREFIXES) && isSignedIn) {
-        return NextResponse.redirect(new URL(HOME_PATH, request.url));
     }
 
     return NextResponse.next();

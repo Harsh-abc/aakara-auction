@@ -25,6 +25,8 @@ export const BUTTON =
 export const BUTTON_SOLID = "border-black bg-black text-white not-disabled:hover:border-[#673364] not-disabled:hover:bg-[#673364]";
 export const BUTTON_OUTLINE = "border-[#0d0d0d] bg-white text-[#0d0d0d] not-disabled:hover:border-[#d0a55d] not-disabled:hover:bg-[#fdedd6]";
 export const BUTTON_INLINE = "w-auto px-4.25";
+// an action that isn't available yet (registration closed / not open) — a grey slab with the blocked cursor
+export const BUTTON_UNAVAILABLE = "cursor-not-allowed border-[#cecece] bg-[#f4f2ef] text-[#717171]";
 
 // a section's title row: 18px title on a hairline, optional right-hand note, optional description under it
 export function SectionHeading({ id, title, aside, description, className }: { id?: string; title: ReactNode; aside?: ReactNode; description?: ReactNode; className?: string }) {

@@ -11,7 +11,7 @@ import type { PublicAuction } from "@/lib/types/publicAuction.types"
 import { registerForAuction } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "@/lib/apiError"
 
-import { BUTTON, BUTTON_OUTLINE, BUTTON_SOLID } from "../storefront"
+import { BUTTON, BUTTON_OUTLINE, BUTTON_SOLID, BUTTON_UNAVAILABLE } from "../storefront"
 import { registrationWindow, type BidderEligibility } from "./auctionDisplay"
 import { RegisterConfirmDialog } from "./RegisterConfirmDialog"
 
@@ -48,7 +48,7 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
     const registration = registrationWindow(auction)
     if (!registration.open || eligibility === "not-bidder" || eligibility === "awaiting-bidder-role") {
         return (
-            <span className={cn(base, "cursor-not-allowed border-[#cecece] bg-[#f4f2ef] text-[#717171]", className)}>
+            <span aria-disabled="true" className={cn(base, BUTTON_UNAVAILABLE, className)}>
                 {!registration.open
                     ? registration.reason
                     : eligibility === "awaiting-bidder-role"

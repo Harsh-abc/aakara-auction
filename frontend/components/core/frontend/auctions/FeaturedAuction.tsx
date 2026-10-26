@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 import { BODY, BUTTON, BUTTON_INLINE, BUTTON_SOLID } from "../storefront";
 import { AuctionCountdown } from "./AuctionCountdown";
+import { ComingSoonRegister } from "./ComingSoonRegister";
 import { auctionHref, countdownFor, isLive } from "./auctionDisplay";
 import { HomeBannerHero } from "./HomeBannerSlides";
 import { StatusBadge } from "./StatusBadge";
@@ -56,9 +57,7 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                                     AKARA presents its inaugural Fine Art Sale, bringing together a carefully curated selection of Modern Indian Art. Rooted in our longstanding engagement with Indian modernism, the sale reflects our commitment to presenting works of artistic significance and enduring value.
                                 </p>
                             </div>
-                            <Link href="/registration" className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "shrink-0")}>
-                                Register to bid
-                            </Link>
+                            <ComingSoonRegister className="shrink-0" />
                         </div>
                     </div>
                 </div>

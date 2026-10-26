@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAppSelector } from "@/hooks/redux"
+import { canAccessDashboard } from "@/lib/constants/roles"
 import { BODY, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "@/components/core/frontend/storefront"
 import { cn } from "@/lib/utils"
 
@@ -26,12 +28,24 @@ function getSafeRedirect(value: string | null) {
 
 export function Registration() {
     const searchParams = useSearchParams()
+    const router = useRouter()
+    const user = useAppSelector((state) => state.auth.user)
+    const role = useAppSelector((state) => state.auth.role)
 
     const [activeTab, setActiveTab] = useState<AuthTab>(
         searchParams.get("tab") === "signup" ? "signup" : "login"
     )
 
     const redirectTo = getSafeRedirect(searchParams.get("redirect"))
+
+    // already signed in when the page opened (the session is restored before render) → straight on to
+    // where they were going. Read once, so logging in here keeps the login form's own redirect.
+    const [signedInOnArrival] = useState(() => Boolean(user))
+    useEffect(() => {
+        if (signedInOnArrival) router.replace(redirectTo ?? (canAccessDashboard(role) ? "/dashboard" : "/"))
+        // only on arrival
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [signedInOnArrival])
 
     // email of an account just created in the Sign up tab; `version` remounts the login form so it picks the email up
     const [newAccount, setNewAccount] = useState<{ email: string; version: number } | null>(null)
@@ -52,6 +66,9 @@ export function Registration() {
         const query = params.toString()
         window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname)
     }
+
+    // on the way out — don't flash the login form
+    if (signedInOnArrival) return <main className={PAGE_MAIN} aria-busy="true" />
 
     return (
         <main className={PAGE_MAIN}>
