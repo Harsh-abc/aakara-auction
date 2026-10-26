@@ -43,6 +43,8 @@ export function DashboardAuthenticator() {
     const dispatch = useAppDispatch()
     const searchParams = useSearchParams()
     const redirectTo = safeRedirect(searchParams.get("redirect"))
+    // sent here because the last code's 6 hours ran out (DashboardGuard)
+    const codeExpired = searchParams.get("expired") === "1"
 
     const token = useAppSelector((state) => state.auth.accessToken)
     const user = useAppSelector((state) => state.auth.user)
@@ -51,6 +53,8 @@ export function DashboardAuthenticator() {
     const alreadyVerified = hasDashboardMfa(token)
 
     const [phase, setPhase] = useState<Phase>({ kind: "loading" })
+    // how long a code keeps the dashboard open (from the API — 6 hours)
+    const [validForSeconds, setValidForSeconds] = useState<number | null>(null)
     const [attempt, setAttempt] = useState(0)
     const [code, setCode] = useState("")
     const [error, setError] = useState<string | null>(null)
@@ -80,7 +84,9 @@ export function DashboardAuthenticator() {
                 const next: Phase = status.enabled
                     ? { kind: "code", account: status.account }
                     : { kind: "setup", setup: await startMfaSetup(token) }
-                if (!cancelled) setPhase(next)
+                if (cancelled) return
+                setValidForSeconds(status.validForSeconds)
+                setPhase(next)
             })
             .catch((err) => {
                 if (!cancelled) setPhase({ kind: "error", message: getErrorMessage(err) })
@@ -135,6 +141,11 @@ export function DashboardAuthenticator() {
     }
 
     const isSetup = phase.kind === "setup"
+    const validFor = validForSeconds
+        ? validForSeconds % 3600 === 0
+            ? `${validForSeconds / 3600} hour${validForSeconds === 3600 ? "" : "s"}`
+            : `${Math.round(validForSeconds / 60)} minutes`
+        : null
     const account = phase.kind === "setup" ? phase.setup.account : phase.kind === "code" ? phase.account : user?.email
 
     const codeForm = (
@@ -195,7 +206,10 @@ export function DashboardAuthenticator() {
                     <p className={cn(BODY, "mt-3 max-w-2xl")}>
                         {isSetup
                             ? "The dashboard is protected by a second step. Link Google Authenticator to your account once — after that, every time you log in you'll enter the code it shows."
-                            : "Open Google Authenticator on your phone and enter the code shown for your Aakara account."}
+                            : codeExpired
+                              ? `Your last code was entered ${validFor ?? "a while"} ago. For security, enter a new one from Google Authenticator to keep using the dashboard.`
+                              : "Open Google Authenticator on your phone and enter the code shown for your Aakara account."}
+                        {validFor && !codeExpired && ` A code keeps the dashboard open for ${validFor}.`}
                     </p>
                 </div>
             </section>

@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 
 import { useAppSelector } from "@/hooks/redux"
-import { hasDashboardMfa } from "@/lib/accessToken"
+import { dashboardMfaUntil } from "@/lib/accessToken"
 import { canAccessPage } from "@/lib/constants/dashboardAccess"
 import { canAccessDashboard } from "@/lib/constants/roles"
 import { SESSION_EXPIRED_EVENT } from "@/services/authSession"
@@ -19,8 +19,19 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
     const pathname = usePathname()
 
     const hasAccess = canAccessDashboard(role)
-    // this login entered its Google Authenticator code (the API refuses the dashboard without it)
-    const mfaDone = hasDashboardMfa(token)
+    // this login entered its Google Authenticator code in the last 6 hours (the API refuses the
+    // dashboard without one). `now` moves on when the code runs out, so the page closes on time
+    const mfaUntil = dashboardMfaUntil(token)
+    const [now, setNow] = useState(() => Date.now())
+    useEffect(() => {
+        if (!mfaUntil) return
+        // setTimeout can't wait longer than ~24.8 days — far beyond a 6-hour code
+        const timer = setTimeout(() => setNow(Date.now()), Math.min(Math.max(mfaUntil - Date.now(), 0) + 500, 2 ** 31 - 1))
+        return () => clearTimeout(timer)
+    }, [mfaUntil])
+    const mfaDone = (mfaUntil ?? 0) > now
+    // had a code, and its 6 hours are up (rather than never entered one on this login)
+    const mfaExpired = mfaUntil !== null && !mfaDone
     // which pages each role can open: lib/constants/dashboardAccess.ts
     const pageAllowed = canAccessPage(pathname, role)
 
@@ -43,14 +54,15 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
         }
     }, [token, role, hasAccess, router])
 
-    // 3. a dashboard role that hasn't entered its authenticator code on this login → the code
-    //    page (also after a super admin resets their authenticator), coming back here afterwards
+    // 3. a dashboard role without an authenticator code from the last 6 hours → the code page
+    //    (also after a super admin resets their authenticator), coming back here afterwards
     useEffect(() => {
         if (token && hasAccess && !mfaDone) {
+            if (mfaExpired) toast("For security, enter a new authenticator code to keep using the dashboard.")
             const { pathname, search } = window.location
-            router.replace(`/authenticator?redirect=${encodeURIComponent(pathname + search)}`)
+            router.replace(`/authenticator?redirect=${encodeURIComponent(pathname + search)}${mfaExpired ? "&expired=1" : ""}`)
         }
-    }, [token, hasAccess, mfaDone, router])
+    }, [token, hasAccess, mfaDone, mfaExpired, router])
 
     // 4. a dashboard role on a page it can't open (typed URL, old link) → its dashboard home
     useEffect(() => {
