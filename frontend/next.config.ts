@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // no indexing of anything — pages, images and files alike (see also app/robots.ts)
+        source: "/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet, noimageindex" }],
+      },
+      {
         // the live player can be iframed on other sites (set to your domains in production,
         // e.g. "frame-ancestors https://akaraart.com")
         source: "/embed/:path*",
