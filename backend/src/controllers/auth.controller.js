@@ -1,4 +1,5 @@
-import { registerSchema, verifyOtpSchema, resendOtpSchema, resendPhoneOtpSchema, loginSchema } from '../validations/auth.validation.js';
+import { registerSchema, verifyOtpSchema, resendOtpSchema, resendPhoneOtpSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../validations/auth.validation.js';
+import { requestPasswordResetService, resetPasswordService } from '../services/passwordReset.services.js';
 import { registerService, resendOtpService, verifyOtpService, verifyPhoneOtpService, resendPhoneOtpService, loginService, refreshService, logoutService, getDashboardMfaStatusService, startDashboardMfaSetupService, verifyDashboardMfaService } from '../services/auth.services.js';
 import { isDashboardRole } from '../libs/dashboardMfa.js';
 import { ZodError } from 'zod';
@@ -274,5 +275,34 @@ export const logout = async (req, res) => {
     } finally {
         clearRefreshCookie(res);
         return res.status(200).json({ success: true, message: 'Logged out' });
+    }
+};
+
+// FORGOT PASSWORD — emails a reset link if the address has an account; the reply is the same either way
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = forgotPasswordSchema.parse(req.body ?? {});
+        await requestPasswordResetService({ email, ip: getClientIp(req) });
+        return res.status(200).json({
+            success: true,
+            message: 'If an account exists for that email, we have sent a link to reset the password.',
+        });
+    } catch (err) {
+        if (err instanceof ZodError) return res.status(400).json({ success: false, message: err.issues[0]?.message || 'Invalid input' });
+        return res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Something went wrong. Please try again.' });
+    }
+};
+
+// RESET PASSWORD — sets the new password from the emailed link and signs the account out everywhere
+export const resetPassword = async (req, res) => {
+    try {
+        const { token, password } = resetPasswordSchema.parse(req.body ?? {});
+        await resetPasswordService({ token, password });
+        // this browser may hold a session for the account too — it was just ended
+        clearRefreshCookie(res);
+        return res.status(200).json({ success: true, message: 'Your password has been reset. Log in with your new password.' });
+    } catch (err) {
+        if (err instanceof ZodError) return res.status(400).json({ success: false, message: err.issues[0]?.message || 'Invalid input' });
+        return res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Something went wrong. Please try again.' });
     }
 };

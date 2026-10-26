@@ -87,6 +87,12 @@ const ROUTES = [
     // every open tab renews its session every few minutes — not worth a row
     route("POST", "/api/auth/refresh", "AUTH", "SESSION_REFRESH", "Renewed session", { skip: true }),
     route("POST", "/api/auth/logout", "AUTH", "LOGOUT", "Logged out"),
+    route("POST", "/api/auth/forgot-password", "AUTH", "PASSWORD_RESET_REQUEST", "Requested a password reset link", {
+        describe: ({ body }) => `Requested a password reset link for ${body.email ?? "an email"}`,
+    }),
+    route("POST", "/api/auth/reset-password", "AUTH", "PASSWORD_RESET", "Reset password from the emailed link", {
+        failAction: "PASSWORD_RESET_FAILED",
+    }),
     // Google Authenticator before the dashboard opens
     route("POST", "/api/auth/mfa/setup", "AUTH", "MFA_SETUP_START", "Opened the authenticator setup (QR code)"),
     route("POST", "/api/auth/mfa/verify", "AUTH", "MFA_VERIFY", "Entered the authenticator code — dashboard opened", {

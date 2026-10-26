@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMfaStatus, login, logout, refresh, register, resendOtp, resendPhoneOtp, startMfaSetup, verifyMfa, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
+import { forgotPassword, getMfaStatus, login, logout, resetPassword, refresh, register, resendOtp, resendPhoneOtp, startMfaSetup, verifyMfa, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { verifyRecaptcha } from '../middleware/recaptcha.middleware.js';
 
@@ -28,6 +28,10 @@ authRouter.post('/refresh', refresh);
 
 // LOGOUT
 authRouter.post('/logout', logout);
+
+// FORGOT / RESET PASSWORD — email a reset link, then set a new password from it (rate-limited in the service)
+authRouter.post('/forgot-password', forgotPassword);
+authRouter.post('/reset-password', resetPassword);
 
 // DASHBOARD AUTHENTICATOR — a dashboard login enters a Google Authenticator code before the
 // dashboard opens (libs/dashboardMfa.js). These work before that code, so no requireRole

@@ -11,8 +11,9 @@ import { refreshSession, SESSION_EXPIRED_EVENT } from "@/services/authSession"
 // the one login page, for bidders and staff alike
 const LOGIN_PATH = "/registration"
 
-// pages that handle an expired session themselves: the dashboard (DashboardGuard) and the login page
-const SKIP_REDIRECT_PREFIXES = ["/dashboard", LOGIN_PATH]
+// pages that handle an expired session themselves (the dashboard has DashboardGuard), or don't need one:
+// the login page and the forgot / reset password pages
+const SKIP_REDIRECT_PREFIXES = ["/dashboard", LOGIN_PATH, "/forgot-password", "/reset-password"]
 
 const matchesPrefix = (pathname: string, prefixes: string[]) =>
     prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`))
