@@ -608,14 +608,10 @@ export const startDashboardMfaSetupService = async (userId) => {
     if (!user) throw mfaError('Account not found', 404);
     if (user.totpEnabledAt) throw mfaError('Your authenticator is already set up. Enter the code it shows.', 409);
 
-    let secret = null;
-    if (user.totpSecret) {
-        try {
-            secret = decryptSecret(user.totpSecret);
-        } catch {
-            secret = null; // encryption key changed — start over
-        }
-    }
+    // a secret this server can't read (another MFA_ENCRYPTION_KEY) is never replaced here: servers
+    // with different keys would keep swapping it, so each QR code stops working on the other one.
+    // decryptSecret throws a "contact the administrator" error; a super admin's reset starts over
+    let secret = user.totpSecret ? decryptSecret(user.totpSecret) : null;
     if (!secret) {
         secret = generateTotpSecret();
         await prisma.user.update({ where: { id: user.id }, data: { totpSecret: encryptSecret(secret), totpLastStep: null } });
@@ -653,12 +649,8 @@ export const verifyDashboardMfaService = async ({ userId, code, refreshToken }) 
     });
     if (!user?.totpSecret) throw mfaError('Set up your authenticator first.', 400);
 
-    let secret;
-    try {
-        secret = decryptSecret(user.totpSecret);
-    } catch {
-        throw mfaError("Your authenticator can't be checked. Ask a super admin to reset it.", 409);
-    }
+    // saved by a server with another MFA_ENCRYPTION_KEY → a setup error for the administrator (logged)
+    const secret = decryptSecret(user.totpSecret);
 
     const lastStep = user.totpLastStep === null ? null : Number(user.totpLastStep);
     const step = verifyTotp(secret, String(code ?? '').trim(), { lastStep });

@@ -1,3 +1,4 @@
+import "dotenv/config"; // the key id below is logged as the module loads
 import crypto from "crypto";
 
 import redis from "./redis.js";
@@ -44,33 +45,70 @@ export const MFA_ISSUER = process.env.MFA_ISSUER || "Aakara Auctions";
 
 // ── the stored secret, encrypted (AES-256-GCM) ───────
 
-let warnedAboutKey = false;
-
-// MFA_ENCRYPTION_KEY can be any long random string. Changing it (or, without it,
+// MFA_ENCRYPTION_KEY can be any long random string. EVERY backend that uses the same
+// database (local, UAT, production) needs the SAME value — a secret saved by one server
+// can't be read by a server with another key. Changing it (or, without it,
 // JWT_ACCESS_SECRET) means everyone sets up their authenticator again.
+const keySource = () => process.env.MFA_ENCRYPTION_KEY || process.env.JWT_ACCESS_SECRET;
+
 const encryptionKey = () => {
-    const source = process.env.MFA_ENCRYPTION_KEY || process.env.JWT_ACCESS_SECRET;
+    const source = keySource();
     if (!source) throw new Error("MFA_ENCRYPTION_KEY is not set");
-    if (!process.env.MFA_ENCRYPTION_KEY && !warnedAboutKey) {
-        warnedAboutKey = true;
-        console.warn("[mfa] MFA_ENCRYPTION_KEY is not set — encrypting authenticator secrets with a key derived from JWT_ACCESS_SECRET");
-    }
     return crypto.createHash("sha256").update(source).digest();
 };
 
+/** Short fingerprint of the key (not the key) — saved with each secret, and logged at startup to compare servers. */
+export const encryptionKeyId = () => crypto.createHash("sha256").update(encryptionKey()).digest("hex").slice(0, 8);
+
+if (keySource()) {
+    console.log(
+        `[mfa] authenticator encryption key id: ${encryptionKeyId()}` +
+            (process.env.MFA_ENCRYPTION_KEY ? "" : " (MFA_ENCRYPTION_KEY not set — derived from JWT_ACCESS_SECRET)") +
+            " — every server sharing this database must show the same id"
+    );
+}
+
+/** The secret was saved by a server with a different MFA_ENCRYPTION_KEY (statusCode 500: a setup problem, not the user's). */
+export class MfaKeyMismatchError extends Error {
+    constructor(storedKeyId) {
+        super("Two-step sign-in isn't set up correctly on this server. Please contact the site administrator.");
+        this.statusCode = 500;
+        this.expose = true;
+        this.storedKeyId = storedKeyId;
+    }
+}
+
+// stored as v2:<key id>:<iv>:<tag>:<data>; v1 (no key id) is still read
 export const encryptSecret = (secret) => {
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey(), iv);
     const data = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
-    return ["v1", iv.toString("base64"), cipher.getAuthTag().toString("base64"), data.toString("base64")].join(":");
+    return ["v2", encryptionKeyId(), iv.toString("base64"), cipher.getAuthTag().toString("base64"), data.toString("base64")].join(":");
 };
 
 export const decryptSecret = (stored) => {
-    const [version, iv, tag, data] = String(stored).split(":");
-    if (version !== "v1") throw new Error("Unknown authenticator secret format");
-    const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(iv, "base64"));
-    decipher.setAuthTag(Buffer.from(tag, "base64"));
-    return Buffer.concat([decipher.update(Buffer.from(data, "base64")), decipher.final()]).toString("utf8");
+    const parts = String(stored).split(":");
+    const [version] = parts;
+    if (version !== "v1" && version !== "v2") throw new Error("Unknown authenticator secret format");
+    const [keyId, iv, tag, data] = version === "v2" ? parts.slice(1) : [null, ...parts.slice(1)];
+
+    const mismatch = () => {
+        console.error(
+            `[mfa] can't read an authenticator secret: it was saved with key id ${keyId ?? "(unknown, v1)"}, this server's key id is ` +
+                `${encryptionKeyId()}. Set the same MFA_ENCRYPTION_KEY on every backend that uses this database.`
+        );
+        return new MfaKeyMismatchError(keyId);
+    };
+
+    if (keyId && keyId !== encryptionKeyId()) throw mismatch();
+    try {
+        const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(iv, "base64"));
+        decipher.setAuthTag(Buffer.from(tag, "base64"));
+        return Buffer.concat([decipher.update(Buffer.from(data, "base64")), decipher.final()]).toString("utf8");
+    } catch {
+        // v1 secrets carry no key id — a failed check means another key too
+        throw mismatch();
+    }
 };
 
 // ── wrong codes ──────────────────────────────────────
