@@ -21,7 +21,7 @@ uploadRouter.post(
 uploadRouter.post(
     "/editor-image",
     authenticate,
-    requireRole("SUPER_ADMIN", "ADMIN", "STAFF"),
+    requireRole("SUPER_ADMIN", "ADMIN", "OPERATIONS"),
     uploadEditorImage,
     uploadEditorImageController
 );

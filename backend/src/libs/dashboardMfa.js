@@ -17,7 +17,7 @@ import redis from "./redis.js";
 // dashboard asks for a new one (the login itself stays signed in).
 // =====================================================================
 
-export const DASHBOARD_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"];
+export const DASHBOARD_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"];
 
 export const isDashboardRole = (role) => DASHBOARD_ROLES.includes(role);
 

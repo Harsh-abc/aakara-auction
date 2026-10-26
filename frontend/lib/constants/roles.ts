@@ -1,5 +1,5 @@
 // roles allowed into /dashboard — BIDDER and USER are intentionally excluded
-export const DASHBOARD_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"]
+export const DASHBOARD_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"]
 
 export const canAccessDashboard = (role: string | null | undefined) =>
     !!role && DASHBOARD_ROLES.includes(role)
@@ -12,7 +12,7 @@ export const canControlLots = (role: string | null | undefined) =>
     !!role && LOT_CONTROL_ROLES.includes(role)
 
 // must match changeRoleSchema in backend/src/validations/role.validation.js
-export const ALL_ROLES = ["SUPER_ADMIN", "ADMIN", "STAFF", "AUCTIONEER", "BIDDER", "USER"] as const
+export const ALL_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS", "AUCTIONEER", "BIDDER", "USER"] as const
 
 export type RoleName = (typeof ALL_ROLES)[number]
 
@@ -22,7 +22,7 @@ export const MAX_SUPER_ADMINS = 3
 export const ROLE_LABELS: Record<RoleName, string> = {
     SUPER_ADMIN: "Super Admin",
     ADMIN: "Admin",
-    STAFF: "Staff",
+    OPERATIONS: "Operations",
     AUCTIONEER: "Auctioneer",
     BIDDER: "Bidder",
     USER: "User",

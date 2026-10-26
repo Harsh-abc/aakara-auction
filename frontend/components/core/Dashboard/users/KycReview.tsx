@@ -15,7 +15,7 @@ import { KycRequestDialog, KycRequestNotice, useCanRequestKycDocuments } from ".
 import { KycAddDocumentsDialog, useCanAddKycDocuments } from "./KycAddDocumentsDialog"
 
 // must match the roles on PATCH /users/:uuid/kyc/review
-const KYC_REVIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "STAFF"]
+const KYC_REVIEW_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS"]
 
 const KYC_STATUS_BADGE: Record<string, { label: string; className: string }> = {
     NOT_SUBMITTED: { label: "Not submitted", className: "bg-[#eeeeee] text-[#555]" },

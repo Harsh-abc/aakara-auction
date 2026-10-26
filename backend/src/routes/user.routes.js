@@ -27,21 +27,21 @@ userRouter.delete('/me/gallery/:lotUuid', authenticate, removeFromGallery);
 userRouter.get('/get-all-users', authenticate, requireRole(...STAFF_ROLES), getAllUsers);
 
 // counts for the users page cards (before /:uuid so "stats" isn't read as a uuid)
-userRouter.get('/stats', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF', 'AUCTIONEER'), getUserStats);
+userRouter.get('/stats', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS', 'AUCTIONEER'), getUserStats);
 
 // includes the user's KYC document links, so dashboard roles only
-userRouter.get('/:uuid', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF', 'AUCTIONEER'), getUserById);
+userRouter.get('/:uuid', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS', 'AUCTIONEER'), getUserById);
 
 // name, date of birth and username
-userRouter.patch('/:uuid/details', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), updateUserDetails)
+userRouter.patch('/:uuid/details', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), updateUserDetails)
 
-userRouter.post('/:uuid/kyc', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), uploadAny, uploadUserKyc)
+userRouter.post('/:uuid/kyc', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), uploadAny, uploadUserKyc)
 
 // approve / reject documents the user submitted from My profile
-userRouter.patch('/:uuid/kyc/review', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), reviewUserKyc)
+userRouter.patch('/:uuid/kyc/review', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), reviewUserKyc)
 
 // mark KYC verified / not verified by hand, whatever the documents say
-userRouter.patch('/:uuid/kyc/status', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'STAFF'), setKycStatus)
+userRouter.patch('/:uuid/kyc/status', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), setKycStatus)
 
 // ask the user to upload specific documents (emails them; shown on their KYC tab)
 userRouter.post('/:uuid/kyc/request', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), requestKycDocuments)

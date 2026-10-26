@@ -38,7 +38,7 @@ auctionRouter.get('/public/:auctionUuid/lots/:lotUuid', getPublicLot)
 auctionRouter.post(
     "/create-auction",
     authenticate,
-    requireRole("SUPER_ADMIN", "ADMIN", "STAFF"),
+    requireRole("SUPER_ADMIN", "ADMIN", "OPERATIONS"),
     uploadAny, // upload.any() + JSON error responses for bad file type / size
     createAuction
 );
@@ -68,19 +68,19 @@ auctionRouter.get("/lots/:lotUuid/bidders", authenticate, requireRole("SUPER_ADM
 auctionRouter.patch("/lots/:lotUuid/bidders/verify", authenticate, requireRole("SUPER_ADMIN"), verifyLotBidders);
 
 // LIVE FLOOR — live/paused auctions, and start/stop a lot (one live lot per auction)
-auctionRouter.get("/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getLiveAuctions);
+auctionRouter.get("/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getLiveAuctions);
 
 // DASHBOARD CARDS — auction counts by status
-auctionRouter.get("/stats", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionStats);
+auctionRouter.get("/stats", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getAuctionStats);
 
 // DASHBOARD HOME — overview panels, and the auction calendar (?month=YYYY-MM)
-auctionRouter.get("/dashboard/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getDashboardOverview);
-auctionRouter.get("/dashboard/calendar", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getDashboardCalendar);
+auctionRouter.get("/dashboard/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getDashboardOverview);
+auctionRouter.get("/dashboard/calendar", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getDashboardCalendar);
 
 // DASHBOARD LOT BID HISTORY — sales, a sale's lots, and every bid / bidder on one lot
-auctionRouter.get("/dashboard/bid-history", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getBidHistoryAuctions);
-auctionRouter.get("/dashboard/bid-history/lots/:lotUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getLotBidHistory);
-auctionRouter.get("/dashboard/bid-history/:auctionUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionBidHistory);
+auctionRouter.get("/dashboard/bid-history", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getBidHistoryAuctions);
+auctionRouter.get("/dashboard/bid-history/lots/:lotUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getLotBidHistory);
+auctionRouter.get("/dashboard/bid-history/:auctionUuid", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getAuctionBidHistory);
 
 // ARTWORKS — every lot of every auction (catalogue, pricing incl. reserve, sale result)
 auctionRouter.get("/artworks", authenticate, requireRole(...STAFF_ROLES), getArtworks);
@@ -88,7 +88,7 @@ auctionRouter.get("/artworks/summary", authenticate, requireRole(...STAFF_ROLES)
 auctionRouter.get("/artworks/:lotUuid", authenticate, requireRole(...STAFF_ROLES), getArtwork);
 
 // PAST / UPCOMING auctions (?type=past|upcoming)
-auctionRouter.get("/timeline", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"), getAuctionTimeline);
+auctionRouter.get("/timeline", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"), getAuctionTimeline);
 auctionRouter.patch("/lots/:lotUuid/live", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), setLotLive);
 // CONSOLE — sell the live lot to its leading bidder
 auctionRouter.post("/lots/:lotUuid/hammer", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), hammerLot);
