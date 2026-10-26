@@ -19,7 +19,7 @@ const steps = [
 
 export function HowToBid() {
     return (
-        <section aria-labelledby="how-to-bid-heading">
+        <section id="how-to-bid" aria-labelledby="how-to-bid-heading" className="scroll-mt-24">
             <div className="page-container">
                 <SectionHeading id="how-to-bid-heading" title="How to bid" />
                 <ol className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-3">

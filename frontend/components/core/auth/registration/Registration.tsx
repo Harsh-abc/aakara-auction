@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppSelector } from "@/hooks/redux"
 import { canAccessDashboard } from "@/lib/constants/roles"
+import { refreshSession } from "@/services/authSession"
 import { BODY, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "@/components/core/frontend/storefront"
 import { cn } from "@/lib/utils"
 
@@ -38,14 +39,19 @@ export function Registration() {
 
     const redirectTo = getSafeRedirect(searchParams.get("redirect"))
 
-    // already signed in when the page opened (the session is restored before render) → straight on to
-    // where they were going. Read once, so logging in here keeps the login form's own redirect.
-    const [signedInOnArrival] = useState(() => Boolean(user))
+    // looked signed in when the page opened (the session is restored before render): confirm it with the
+    // server first — the saved session can outlive the 24h login cookie — then go straight on to where they
+    // were going. A dead session is logged out by refreshSession and the form shows. Checked once, on arrival,
+    // so logging in here keeps the login form's own redirect.
+    const [checkingSession, setCheckingSession] = useState(() => Boolean(user))
     useEffect(() => {
-        if (signedInOnArrival) router.replace(redirectTo ?? (canAccessDashboard(role) ? "/dashboard" : "/"))
+        if (!checkingSession) return
+        refreshSession()
+            .then(() => router.replace(redirectTo ?? (canAccessDashboard(role) ? "/dashboard" : "/")))
+            .catch(() => setCheckingSession(false))
         // only on arrival
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [signedInOnArrival])
+    }, [])
 
     // email of an account just created in the Sign up tab; `version` remounts the login form so it picks the email up
     const [newAccount, setNewAccount] = useState<{ email: string; version: number } | null>(null)
@@ -67,8 +73,8 @@ export function Registration() {
         window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname)
     }
 
-    // on the way out — don't flash the login form
-    if (signedInOnArrival) return <main className={PAGE_MAIN} aria-busy="true" />
+    // checking the session / on the way out — don't flash the login form
+    if (checkingSession) return <main className={PAGE_MAIN} aria-busy="true" />
 
     return (
         <main className={PAGE_MAIN}>

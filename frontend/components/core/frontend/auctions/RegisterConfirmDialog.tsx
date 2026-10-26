@@ -183,7 +183,7 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                             {kycStatus !== "VERIFIED" && (
                                 <p className="mt-2 text-xs leading-relaxed text-neutral-500">
                                     Your KYC must be verified before you can register for this auction.{" "}
-                                    <Link href="/my-profile" className="text-neutral-950 underline underline-offset-2">
+                                    <Link href="/my-profile?tab=kyc" className="text-neutral-950 underline underline-offset-2">
                                         Manage KYC
                                     </Link>
                                 </p>

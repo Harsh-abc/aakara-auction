@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 
 import { useAppSelector } from "@/hooks/redux"
@@ -15,8 +15,8 @@ import { BUTTON, BUTTON_OUTLINE, BUTTON_SOLID, BUTTON_UNAVAILABLE } from "../sto
 import { registrationWindow, type BidderEligibility } from "./auctionDisplay"
 import { RegisterConfirmDialog } from "./RegisterConfirmDialog"
 
-const LOGIN_HREF = `/registration?redirect=${encodeURIComponent("/")}`
-const KYC_HREF = "/my-profile"
+// straight to the KYC tab, where the documents are uploaded
+const KYC_HREF = "/my-profile?tab=kyc"
 
 type RegisterToBidButtonProps = {
     auction: PublicAuction
@@ -30,6 +30,8 @@ type RegisterToBidButtonProps = {
 
 export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegistered, className }: RegisterToBidButtonProps) {
     const router = useRouter()
+    // guests log in and come back to this page (the home list or the sale page)
+    const pathname = usePathname()
     const token = useAppSelector((state) => state.auth.accessToken)
     const [loading, setLoading] = useState(false)
     const [confirmOpen, setConfirmOpen] = useState(false)
@@ -61,14 +63,14 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
     if (eligibility === "kyc-pending") {
         return (
             <Link href={KYC_HREF} className={cn(base, BUTTON_SOLID, className)}>
-                Register to Bid
+                Register to bid
             </Link>
         )
     }
 
     const handleClick = () => {
         if (!token) {
-            router.push(LOGIN_HREF)
+            router.push(`/registration?redirect=${encodeURIComponent(pathname)}`)
             return
         }
         setConfirmOpen(true)

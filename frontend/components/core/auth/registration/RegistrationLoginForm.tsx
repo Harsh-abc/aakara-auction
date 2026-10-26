@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 
@@ -96,12 +95,13 @@ export function RegistrationLoginForm({ redirectTo, newAccountEmail }: Registrat
                     Log in
                 </AuthSubmitButton>
 
-                <Link
-                    href="/forgot-password"
+                {/* no self-service reset yet — the team resets it by email */}
+                <a
+                    href="mailto:bids@akaraart.com?subject=Password%20reset"
                     className="text-center text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase hover:text-[#0d0d0d]"
                 >
-                    Forgot your password? Reset here
-                </Link>
+                    Forgot your password? Contact us
+                </a>
             </div>
         </form>
     )

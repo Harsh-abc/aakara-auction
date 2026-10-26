@@ -14,6 +14,8 @@ import { htmlToPlainText } from "@/utils/sanitizeHtml";
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_SOLID, EYEBROW, PAGE_MAIN, PAGE_TITLE } from "../../storefront";
 import { AuctionCountdown } from "../AuctionCountdown";
 import { auctionMeta, isLive, STOREFRONT_STATUS_LABELS } from "../auctionDisplay";
+import { RegisterToBidButton } from "../RegisterToBidButton";
+import { useBidderStatus } from "../useBidderStatus";
 import { AuctionLots } from "./AuctionLots";
 
 type AuctionState = { status: "loading" } | { status: "ready"; auction: PublicAuction } | { status: "not-found" } | { status: "error"; message: string };
@@ -28,6 +30,8 @@ export function saleCountdown(auction: PublicAuction) {
 // Figma "Auctions Overview": breadcrumb, 48px title, the sale line — then search, then all lots
 export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
     const [state, setState] = useState<AuctionState>({ status: "loading" });
+    // so a bidder can register for this sale here too (the bid dialog sends unregistered bidders to this page)
+    const { paddles, eligibility, onRegistered } = useBidderStatus();
 
     useEffect(() => {
         let cancelled = false;
@@ -94,6 +98,16 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
                         {/* part of a sentence — the short description's formatting is dropped here */}
                         {status} · {auctionMeta(auction)}.{auction.short_description && ` ${htmlToPlainText(auction.short_description)}`}
                     </p>
+                    {/* until the sale closes, like the home list (the button itself explains a closed registration window) */}
+                    {countdown && (
+                        <RegisterToBidButton
+                            auction={auction}
+                            paddleNumber={paddles[auction.uuid]}
+                            eligibility={eligibility}
+                            onRegistered={onRegistered}
+                            className={cn(BUTTON_INLINE, "mt-6")}
+                        />
+                    )}
                 </div>
             </section>
 

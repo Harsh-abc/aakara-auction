@@ -1,4 +1,4 @@
-import type { MenuLink, QuestionAndAnswer } from "@/lib/types/frontendTypes";
+import type { MenuLink } from "@/lib/types/frontendTypes";
 
 /** The right-side menu. `children` makes a small expandable sub-menu. */
 export const MAIN_MENU_LINKS: MenuLink[] = [
@@ -7,10 +7,10 @@ export const MAIN_MENU_LINKS: MenuLink[] = [
         label: "Auction",
         href: "/",
         children: [
-            { label: "Upcoming / Live", href: "/?tab=upcoming" },
-            { label: "Past auctions", href: "/?tab=past" },
-            { label: "Live auction", href: "/auctions/autumn-auction-2026/live" },
-            { label: "How to bid", href: "/how-to-bid" },
+            { label: "Upcoming / Live", href: "/?tab=upcoming#auctions" },
+            { label: "Past auctions", href: "/?tab=past#auctions" },
+            { label: "Live auction", href: "/?tab=upcoming#auctions" },
+            { label: "How to bid", href: "/#how-to-bid" },
         ],
     },
     { label: "Artists", href: "/artists" },
@@ -28,15 +28,15 @@ export const FOOTER_CONTENT = {
         {
             heading: "Auctions",
             links: [
-                { label: "Upcoming / Live", href: "/?tab=upcoming" },
-                { label: "Past", href: "/?tab=past" },
-                { label: "Live Auction", href: "/auctions/autumn-auction-2026/live" },
+                { label: "Upcoming / Live", href: "/?tab=upcoming#auctions" },
+                { label: "Past", href: "/?tab=past#auctions" },
+                { label: "Live Auction", href: "/?tab=upcoming#auctions" },
             ],
         },
         {
             heading: "Buying",
             links: [
-                { label: "How to bid", href: "/how-to-bid" },
+                { label: "How to bid", href: "/#how-to-bid" },
                 { label: "Valuations", href: "/valuations" },
                 { label: "Shipping & collection", href: "/shipping" },
             ],

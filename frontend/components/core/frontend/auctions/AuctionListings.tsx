@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,8 +54,30 @@ type AuctionListingsProps = {
     onRegistered: (auctionUuid: string, paddleNumber: string) => void;
 };
 
+// "?tab=past" (menu / footer links) opens the past sales; anything else the upcoming / live ones
+const tabFromUrl = (value: string | null): PublicAuctionTab => (value === "past" ? "past" : "upcoming");
+
 export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionListingsProps) {
-    const [tab, setTab] = useState<PublicAuctionTab>("upcoming");
+    const searchParams = useSearchParams();
+    const urlTab = tabFromUrl(searchParams.get("tab"));
+    const [tab, setTab] = useState<PublicAuctionTab>(urlTab);
+
+    // follow the URL when a menu link changes ?tab= while this page is already open
+    const [seenUrlTab, setSeenUrlTab] = useState(urlTab);
+    if (urlTab !== seenUrlTab) {
+        setSeenUrlTab(urlTab);
+        setTab(urlTab);
+    }
+
+    // clicking a tab writes it to the URL (no server round-trip), so a later menu link to the other tab still switches
+    const changeTab = (value: PublicAuctionTab) => {
+        setTab(value);
+        const params = new URLSearchParams(searchParams.toString());
+        if (value === "upcoming") params.delete("tab");
+        else params.set("tab", value);
+        const query = params.toString();
+        window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+    };
     const [searchInput, setSearchInput] = useState("");
     const search = useDebouncedValue(searchInput.trim(), SEARCH_DEBOUNCE_MS);
 
@@ -103,7 +126,7 @@ export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionL
                 <SectionHeading id="auction-list-heading" title="Upcoming & Live Auctions" description={tabDescriptions[tab]} />
 
                 <div className="mt-6 flex flex-col-reverse gap-4 border-b border-[#cecece] md:flex-row md:items-end md:justify-between">
-                    <Tabs value={tab} onValueChange={(value) => setTab(value as PublicAuctionTab)}>
+                    <Tabs value={tab} onValueChange={(value) => changeTab(value as PublicAuctionTab)}>
                         <TabsList className="-mb-px h-auto w-full justify-start rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto">
                             {(Object.keys(tabLabels) as PublicAuctionTab[]).map((key) => (
                                 <TabsTrigger key={key} value={key} className={TAB_TRIGGER}>

@@ -1,48 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
-import { useAppSelector } from "@/hooks/redux";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
 import type { PublicHomeBanner } from "@/lib/types/website.types";
-import { getMyProfile, getMyRegistrations } from "@/services/operations/profile.api";
 import { getFeaturedAuction } from "@/services/operations/publicAuction.api";
 import { getHomeBanners } from "@/services/operations/website.api";
 
 import { PAGE_MAIN } from "../storefront";
-import { bidderEligibility, type BidderEligibility } from "./auctionDisplay";
 import { AuctionListings } from "./AuctionListings";
 import { FeaturedAuction, FeaturedAuctionSkeleton } from "./FeaturedAuction";
 import { HowToBid } from "./HowToBid";
-
-// customer accounts (not team members) — only BIDDER can actually register; a super admin assigns it
-const BIDDER_ROLES = ["BIDDER", "USER"];
-
-const NO_PADDLES: Record<string, string> = {};
+import { useBidderStatus } from "./useBidderStatus";
 
 export function AuctionsPage() {
-    const token = useAppSelector((state) => state.auth.accessToken);
-    const role = useAppSelector((state) => state.auth.role);
+    const { paddles, eligibility, onRegistered } = useBidderStatus();
 
     const [featured, setFeatured] = useState<PublicAuction | null>(null);
     const [featuredLoading, setFeaturedLoading] = useState(true);
-
-    // auctionUuid → paddle number, for sales the signed-in bidder already registered for
-    const [bidderPaddles, setBidderPaddles] = useState<Record<string, string>>({});
-    const isBidder = !!token && !!role && BIDDER_ROLES.includes(role);
-    const paddles = isBidder ? bidderPaddles : NO_PADDLES;
-
-    // read from the account, not the token's role — KYC status can change mid-session
-    const [eligibilityFor, setEligibilityFor] = useState<{ token: string; value: BidderEligibility } | null>(null);
-    const eligibility: BidderEligibility = !token ? "guest" : eligibilityFor?.token === token ? eligibilityFor.value : "loading";
-
-    useEffect(() => {
-        if (!token) return;
-        getMyProfile(token)
-            .then((account) => setEligibilityFor({ token, value: bidderEligibility(account) }))
-            // let them try — the server makes the final call
-            .catch(() => setEligibilityFor({ token, value: "eligible" }));
-    }, [token]);
 
     // the hero's default images (Settings → Website), for when there's no sale or it has no cover
     const [banners, setBanners] = useState<PublicHomeBanner[]>([]);
@@ -61,24 +36,13 @@ export function AuctionsPage() {
         ]).finally(() => setFeaturedLoading(false));
     }, []);
 
-    useEffect(() => {
-        if (!isBidder) return;
-        getMyRegistrations(token)
-            .then((registrations) =>
-                setBidderPaddles(Object.fromEntries(registrations.filter((r) => r.status === "APPROVED" || r.status === "PENDING").map((r) => [r.auction.uuid, String(r.paddleNumber)]))),
-            )
-            // not critical — the register button is idempotent on the server
-            .catch(() => setBidderPaddles({}));
-    }, [isBidder, token]);
-
-    const handleRegistered = useCallback((auctionUuid: string, paddleNumber: string) => {
-        setBidderPaddles((current) => ({ ...current, [auctionUuid]: paddleNumber }));
-    }, []);
-
     return (
         <main className={PAGE_MAIN}>
             {featuredLoading ? <FeaturedAuctionSkeleton /> : <FeaturedAuction auction={featured} banners={banners} />}
-            <AuctionListings paddles={paddles} eligibility={eligibility} onRegistered={handleRegistered} />
+            {/* AuctionListings reads ?tab= (useSearchParams), which needs a Suspense boundary */}
+            <Suspense>
+                <AuctionListings paddles={paddles} eligibility={eligibility} onRegistered={onRegistered} />
+            </Suspense>
             <HowToBid />
         </main>
     );

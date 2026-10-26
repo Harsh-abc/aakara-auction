@@ -60,10 +60,17 @@ export function MyProfile() {
     const searchParams = useSearchParams()
     const token = useAppSelector((state) => state.auth.accessToken)
 
-    const [activeTab, setActiveTab] = useState<ProfileTab>(() => {
-        const tab = searchParams.get("tab")
-        return isProfileTab(tab) ? tab : "personal"
-    })
+    const urlTabParam = searchParams.get("tab")
+    const urlTab: ProfileTab = isProfileTab(urlTabParam) ? urlTabParam : "personal"
+    const [activeTab, setActiveTab] = useState<ProfileTab>(urlTab)
+
+    // follow the URL when a link changes ?tab= while this page is already open
+    // (e.g. "My auction gallery" in the account menu while on Personal details)
+    const [seenUrlTab, setSeenUrlTab] = useState(urlTab)
+    if (urlTab !== seenUrlTab) {
+        setSeenUrlTab(urlTab)
+        setActiveTab(urlTab)
+    }
 
     const [account, setAccount] = useState<MyAccount | null>(null)
     const [registrations, setRegistrations] = useState<MyAuctionRegistration[]>([])
