@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AkaraLogo } from "@/components/core/frontend/akaraLogo";
 import { useAppSelector } from "@/hooks/redux";
+import { hasDashboardMfa } from "@/lib/accessToken";
 import { canAccessDashboard } from "@/lib/constants/roles";
 import { joinClassNames } from "@/lib/frontendHelpers";
 import { AccountDropdown } from "./nav-dropdown";
@@ -15,6 +16,8 @@ export function Header() {
     const isLoggedIn = useAppSelector((state) => !!state.auth.user);
     // staff roles get a shortcut back to /dashboard; BIDDER and USER don't
     const showDashboard = useAppSelector((state) => !!state.auth.user && canAccessDashboard(state.auth.role));
+    // the dashboard opens once this login has entered its Google Authenticator code
+    const dashboardHref = useAppSelector((state) => (hasDashboardMfa(state.auth.accessToken) ? "/dashboard" : "/authenticator"));
     const currentPath = usePathname();
     const [hasScrolled, setHasScrolled] = useState(false);
 
@@ -41,7 +44,7 @@ export function Header() {
                     <div className="flex items-center gap-3">
                         {showDashboard && (
                             <Link
-                                href="/dashboard"
+                                href={dashboardHref}
                                 className="inline-flex h-11 items-center border border-[#333] px-4 text-[12px] uppercase tracking-[0.12em] text-[#0d0d0d] transition-colors duration-200 hover:border-[#d0a55d] hover:bg-[#fdedd6] sm:px-5"
                             >
                                 Dashboard

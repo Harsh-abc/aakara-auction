@@ -1,6 +1,6 @@
 
 import { changeRoleSchema, changeUserStatusSchema } from '../validations/role.validation.js'
-import { changeUserRoleService, changeUserStatusService, createUserByAdminService } from '../services/admin.services.js'
+import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService } from '../services/admin.services.js'
 import { createUserWithRoleSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
 
@@ -65,6 +65,24 @@ export const changeUserStatus = async (req, res) => {
         return res.status(error.statusCode || 500).json({
             success: false,
             message: error.message || "Internal server error",
+        });
+    }
+};
+
+
+
+// DELETE /api/admin/:uuid/mfa — lost / new phone: they set up Google Authenticator again
+export const resetUserMfa = async (req, res) => {
+    try {
+        await resetUserMfaService({ targetUuid: req.params.uuid });
+        return res.status(200).json({
+            success: true,
+            message: 'Authenticator reset. They will scan a new QR code the next time they open the dashboard.',
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.statusCode ? error.message : "Internal server error",
         });
     }
 };

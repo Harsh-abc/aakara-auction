@@ -286,6 +286,8 @@ const data = {
         { title: "Team", url: "/dashboard/settings/team" },
         { title: "Website", url: "/dashboard/settings/website" },
         { title: "Activity Logs", url: "/dashboard/settings/activity-logs" },
+        { title: "Blocked IPs", url: "/dashboard/settings/blocked-ips" },
+        { title: "OTP Limits", url: "/dashboard/settings/otp-limits" },
         // { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
       ],
     },

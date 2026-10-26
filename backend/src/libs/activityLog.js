@@ -23,7 +23,7 @@ export const SYSTEM_ACTIONS = [
 ];
 
 // never stored — swapped for "[REDACTED]"
-const SECRET_KEY = /password|^otp$|token|secret|hash|authorization|cookie/i;
+const SECRET_KEY = /password|^otp$|^code$|token|secret|hash|authorization|cookie/i;
 // stored with only the last 4 characters (KYC document numbers)
 const MASKED_KEY = /documentNumber/i;
 

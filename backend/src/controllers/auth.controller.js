@@ -1,5 +1,6 @@
 import { registerSchema, verifyOtpSchema, resendOtpSchema, resendPhoneOtpSchema, loginSchema } from '../validations/auth.validation.js';
-import { registerService, resendOtpService, verifyOtpService, verifyPhoneOtpService, resendPhoneOtpService, loginService, refreshService, logoutService } from '../services/auth.services.js';
+import { registerService, resendOtpService, verifyOtpService, verifyPhoneOtpService, resendPhoneOtpService, loginService, refreshService, logoutService, getDashboardMfaStatusService, startDashboardMfaSetupService, verifyDashboardMfaService } from '../services/auth.services.js';
+import { isDashboardRole } from '../libs/dashboardMfa.js';
 import { ZodError } from 'zod';
 import { getClientIp } from '../utils/clientIp.js';
 import { setActivityActor } from '../libs/activityLog.js';
@@ -197,6 +198,69 @@ export const refresh = async (req, res) => {
             success: false,
             message: err.message || 'Could not refresh session',
         });
+    }
+};
+
+// ── Dashboard authenticator (Google Authenticator) — dashboard roles only ──
+
+const sendAuthError = (res, err, fallback) => {
+    if (!err.statusCode) console.error(`${fallback}:`, err);
+    return res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : fallback });
+};
+
+const notDashboardRole = (req, res) => {
+    if (isDashboardRole(req.user.role)) return false;
+    res.status(403).json({ success: false, message: "You don't have access to the dashboard" });
+    return true;
+};
+
+// GET /api/auth/mfa/status — set up yet, and has this login entered its code
+export const getMfaStatus = async (req, res) => {
+    if (notDashboardRole(req, res)) return;
+    try {
+        const status = await getDashboardMfaStatusService(req.user.userId);
+        return res.status(200).json({ success: true, data: { ...status, verified: req.user.mfa } });
+    } catch (err) {
+        return sendAuthError(res, err, 'Could not load your authenticator status');
+    }
+};
+
+// POST /api/auth/mfa/setup — first visit: the QR code (and key) to add to the app
+export const startMfaSetup = async (req, res) => {
+    if (notDashboardRole(req, res)) return;
+    try {
+        const data = await startDashboardMfaSetupService(req.user.userId);
+        res.set('Cache-Control', 'no-store');
+        return res.status(200).json({ success: true, message: 'Scan the QR code with Google Authenticator', data });
+    } catch (err) {
+        return sendAuthError(res, err, 'Could not start the authenticator setup');
+    }
+};
+
+// POST /api/auth/mfa/verify { code } — opens the dashboard for this login
+export const verifyMfa = async (req, res) => {
+    if (notDashboardRole(req, res)) return;
+    try {
+        const result = await verifyDashboardMfaService({
+            userId: req.user.userId,
+            code: req.body?.code,
+            refreshToken: req.cookies?.[REFRESH_COOKIE_NAME],
+        });
+
+        setRefreshCookie(res, result.refreshToken, Math.max(result.sessionExpiresAt.getTime() - Date.now(), 0));
+
+        return res.status(200).json({
+            success: true,
+            message: result.firstSetup ? 'Authenticator set up' : 'Code accepted',
+            data: {
+                user: result.user,
+                role: result.role,
+                permissions: result.permissions,
+                accessToken: result.accessToken,
+            },
+        });
+    } catch (err) {
+        return sendAuthError(res, err, 'Could not check the code');
     }
 };
 

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
-import { Ban, Eye, Loader2, MoreVertical, RotateCcw } from "lucide-react"
+import { Ban, Eye, KeyRound, Loader2, MoreVertical, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +26,9 @@ import {
 import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import type { User } from "@/lib/types/user.types"
 import { changeUserStatus } from "@/services/operations/user.api"
+import { resetUserMfa } from "@/services/operations/mfa.api"
+import { getErrorMessage } from "@/lib/apiError"
+import { canAccessDashboard } from "@/lib/constants/roles"
 
 const displayName = (user: User) =>
     `${user.profile?.firstName ?? ""} ${user.profile?.lastName ?? ""}`.trim() || user.username
@@ -33,14 +36,30 @@ const displayName = (user: User) =>
 export function UserActionsCell({ user }: { user: User }) {
     const router = useRouter()
     const dispatch = useAppDispatch()
-    const { role: myRole, user: me } = useAppSelector((state) => state.auth)
+    const { role: myRole, user: me, accessToken } = useAppSelector((state) => state.auth)
     const updating = useAppSelector((state) => state.user.changingStatusFor) === user.uuid
     const [confirmOpen, setConfirmOpen] = useState(false)
+    const [mfaConfirmOpen, setMfaConfirmOpen] = useState(false)
+    const [resettingMfa, setResettingMfa] = useState(false)
 
     const isSuspended = user.status === "SUSPENDED"
     // super admins only; never yourself or another super admin (the API enforces this too)
     const canChangeStatus = myRole === "SUPER_ADMIN" && me?.uuid !== user.uuid && user.role.name !== "SUPER_ADMIN"
+    // dashboard roles have a Google Authenticator; a super admin can reset it (lost / new phone)
+    const canResetMfa = myRole === "SUPER_ADMIN" && canAccessDashboard(user.role.name)
     const name = displayName(user)
+
+    const handleResetMfa = async () => {
+        setResettingMfa(true)
+        try {
+            toast.success(await resetUserMfa(accessToken, user.uuid))
+        } catch (error) {
+            toast.error(getErrorMessage(error, "Could not reset the authenticator. Try again."))
+        } finally {
+            setResettingMfa(false)
+            setMfaConfirmOpen(false)
+        }
+    }
 
     const handleConfirm = async () => {
         try {
@@ -80,6 +99,17 @@ export function UserActionsCell({ user }: { user: User }) {
                         <Eye />
                         View user
                     </DropdownMenuItem>
+
+                    {canResetMfa && (
+                        <DropdownMenuItem
+                            className="py-2 text-[13px]"
+                            disabled={resettingMfa}
+                            onClick={() => setMfaConfirmOpen(true)}
+                        >
+                            <KeyRound />
+                            Reset authenticator
+                        </DropdownMenuItem>
+                    )}
 
                     {canChangeStatus && (
                         <>
@@ -146,6 +176,34 @@ export function UserActionsCell({ user }: { user: User }) {
                             }
                         >
                             {updating ? "Updating..." : isSuspended ? "Reactivate" : "Suspend user"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog
+                open={mfaConfirmOpen}
+                onOpenChange={(open) => {
+                    if (!open && !resettingMfa) setMfaConfirmOpen(false)
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Reset this user&apos;s authenticator?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            The Google Authenticator entry on <b>{name}</b>&apos;s ({user.email}) phone stops working
+                            straight away. Their open dashboard closes, and the next time they open it they scan a new
+                            QR code. Use this when they lose or change their phone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={resettingMfa}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleResetMfa}
+                            disabled={resettingMfa}
+                            className="bg-red-600 text-white hover:bg-red-700"
+                        >
+                            {resettingMfa ? "Resetting..." : "Reset authenticator"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

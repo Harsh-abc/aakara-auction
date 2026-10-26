@@ -6,10 +6,12 @@ import toast from "react-hot-toast"
 import {
     ArrowRightIcon,
     BadgeCheckIcon,
+    BanIcon,
     CalendarIcon,
     CircleAlertIcon,
     GlobeIcon,
     MailIcon,
+    MessageSquareWarningIcon,
     PencilIcon,
     PhoneIcon,
     ShieldCheckIcon,
@@ -60,6 +62,18 @@ const SETTINGS_LINKS = [
         description: "Homepage hero images shown when no auction is live or scheduled.",
         href: "/dashboard/settings/website",
         icon: GlobeIcon,
+    },
+    {
+        title: "Blocked IPs",
+        description: "IP addresses blocked from signing in after failed attempts — unblock them here.",
+        href: "/dashboard/settings/blocked-ips",
+        icon: BanIcon,
+    },
+    {
+        title: "OTP Limits",
+        description: "Emails and phone numbers that hit the sign-up OTP limit — reset them here.",
+        href: "/dashboard/settings/otp-limits",
+        icon: MessageSquareWarningIcon,
     },
     {
         title: "Roles & Permissions",

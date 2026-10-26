@@ -9,26 +9,33 @@ import { otpVerificationTemplate } from '../mail/templates/otpVerifications.js';
 import { sendOtpSms } from './sms.services.js';
 import { getRolePermissions } from '../libs/rolePermission.js'
 import { SESSION_TTL_SECONDS } from '../libs/session.js'
+import QRCode from 'qrcode'
+import { clearIpFailures, isIpBlocked, registerIpFailure } from '../libs/loginIpBlock.js'
+import { clearMfaFailures, decryptSecret, encryptSecret, MFA_ISSUER, mfaRetryAfter, registerMfaFailure } from '../libs/dashboardMfa.js'
+import { generateTotpSecret, otpauthUrl, verifyTotp } from '../libs/totp.js'
+// OTP send limits (and their Redis keys) live in libs/otpLimits.js
+import {
+    attemptsKey,
+    MAX_PHONE_SENDS,
+    MAX_RESENDS,
+    MAX_SMS_PER_PHONE,
+    PHONE_SENDS_WINDOW,
+    phoneCooldownKey,
+    phoneSendsKey,
+    RESEND_WINDOW,
+    resendKey,
+    SMS_PER_PHONE_WINDOW,
+    smsPerPhoneKey,
+} from '../libs/otpLimits.js'
 
 const PENDING_TTL = 10 * 60;
-const RESEND_WINDOW = 10 * 60;
-const MAX_RESENDS = 3;
 const MAX_VERIFY_ATTEMPTS = 5;
 
 // phone step (SMS via MSG91) — each code gets the full PHONE_OTP_TTL
 const PHONE_OTP_TTL = 10 * 60;
 const PHONE_RESEND_COOLDOWN = 30;
-const MAX_PHONE_SENDS = 4;            // first SMS + 3 resends per signup…
-const PHONE_SENDS_WINDOW = 30 * 60;
-const MAX_SMS_PER_PHONE = 10;         // …and per number, whichever email asks (stops SMS bombing)
-const SMS_PER_PHONE_WINDOW = 60 * 60;
 
 const pendingKey = (email) => `register:pending:${email}`;
-const resendKey = (email) => `register:otp:resend:${email}`;
-const attemptsKey = (email) => `register:otp:verify-attempts:${email}`;
-const phoneSendsKey = (email) => `register:phone-otp:sends:${email}`;
-const phoneCooldownKey = (email) => `register:phone-otp:cooldown:${email}`;
-const smsPerPhoneKey = (phone) => `sms:otp:count:${phone}`;
 
 
 // LOGIN
@@ -39,20 +46,10 @@ const smsPerPhoneKey = (phone) => `sms:otp:count:${phone}`;
 const sessionEndOf = (session) =>
     new Date(Math.min(session.expiresAt.getTime(), session.createdAt.getTime() + SESSION_TTL_SECONDS * 1000));
 
-// const IP_BLOCK_WINDOW = 15 * 60;   // 15 minutes
-// const IP_BLOCK_THRESHOLD = 3;
-// const IP_BLOCK_DURATION = 30 * 60; // 30 minutes
-
-
-const IP_BLOCK_THRESHOLD = 20;
-const IP_BLOCK_WINDOW = 15 * 60;
-const IP_BLOCK_DURATION = 5 * 60;
+// IP blocking (thresholds and Redis keys) lives in libs/loginIpBlock.js
 
 const ACCOUNT_LOCK_THRESHOLD = 5;
 const ACCOUNT_LOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
-
-const ipFailKey = (ip) => `login:ip-fail:${ip}`;
-const ipBlockKey = (ip) => `login:ip-block:${ip}`;
 // LOGIN
 
 export const registerService = async ({ username, email, password, phone, city, country }) => {
@@ -345,40 +342,6 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
 
 
 
-// ── IP blocking helpers ──────────────────────────────
-
-const isIpBlocked = async (ip) => {
-    try {
-        const blocked = await redis.get(ipBlockKey(ip));
-        return Boolean(blocked);
-    } catch (err) {
-        // Fail open: never let a Redis outage lock out every login
-        console.error('Redis error in isIpBlocked, failing open:', err);
-        return false;
-    }
-};
-
-const registerIpFailure = async (ip) => {
-    try {
-        const count = await redis.incr(ipFailKey(ip));
-        if (count === 1) await redis.expire(ipFailKey(ip), IP_BLOCK_WINDOW);
-
-        if (count >= IP_BLOCK_THRESHOLD) {
-            await redis.set(ipBlockKey(ip), '1', 'EX', IP_BLOCK_DURATION);
-        }
-    } catch (err) {
-        console.error('Redis error in registerIpFailure, failing open:', err);
-    }
-};
-
-const clearIpFailures = async (ip) => {
-    try {
-        await redis.del(ipFailKey(ip), ipBlockKey(ip));
-    } catch (err) {
-        console.error('Redis error in clearIpFailures:', err);
-    }
-};
-
 // ── Audit logging ────────────────────────────────────
 
 const logAttempt = async ({ userId, email, ip, userAgent, success, failureReason }) => {
@@ -395,7 +358,7 @@ const logAttempt = async ({ userId, email, ip, userAgent, success, failureReason
 };
 
 // both tokens expire when the session does (`ttlSeconds` = time left in it)
-const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, ttlSeconds }) => {
+const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, ttlSeconds, mfa = false }) => {
     const accessToken = jwt.sign(
         {
             sub: uuid,
@@ -406,6 +369,8 @@ const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, t
             permissions,
             // exact issue time — a role / password change revokes tokens issued before it (libs/accountBlock.js)
             iatMs: Date.now(),
+            // this login entered its authenticator code — opens the dashboard (libs/dashboardMfa.js)
+            ...(mfa && { mfa: true }),
         },
         process.env.JWT_ACCESS_SECRET,
         { expiresIn: ttlSeconds }
@@ -591,6 +556,8 @@ export const refreshService = async (refreshToken) => {
         roleName,
         permissions,
         ttlSeconds,
+        // the authenticator code entered on this login carries over (reset by a super admin → asked again)
+        mfa: Boolean(session.mfaVerifiedAt && user.totpEnabledAt),
     });
 
     // rotate: same session row, new hash — the expiry stays where login set it
@@ -611,6 +578,106 @@ export const refreshService = async (refreshToken) => {
         role: roleName,
         permissions,
     };
+};
+
+// ── Dashboard authenticator (Google Authenticator) ───
+// libs/dashboardMfa.js explains how it gates the dashboard
+
+const mfaError = (message, statusCode) => Object.assign(new Error(message), { statusCode });
+
+export const getDashboardMfaStatusService = async (userId) => {
+    const user = await prisma.user.findUnique({ where: { id: BigInt(userId) }, select: { email: true, totpEnabledAt: true } });
+    if (!user) throw mfaError('Account not found', 404);
+    return { enabled: Boolean(user.totpEnabledAt), account: user.email, issuer: MFA_ISSUER };
+};
+
+// first visit: a secret for the app to scan. Asking again (page reloaded) shows the same
+// one until a code confirms it, so a QR code already scanned keeps working
+export const startDashboardMfaSetupService = async (userId) => {
+    const user = await prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: { id: true, email: true, totpSecret: true, totpEnabledAt: true },
+    });
+    if (!user) throw mfaError('Account not found', 404);
+    if (user.totpEnabledAt) throw mfaError('Your authenticator is already set up. Enter the code it shows.', 409);
+
+    let secret = null;
+    if (user.totpSecret) {
+        try {
+            secret = decryptSecret(user.totpSecret);
+        } catch {
+            secret = null; // encryption key changed — start over
+        }
+    }
+    if (!secret) {
+        secret = generateTotpSecret();
+        await prisma.user.update({ where: { id: user.id }, data: { totpSecret: encryptSecret(secret), totpLastStep: null } });
+    }
+
+    const url = otpauthUrl({ secret, account: user.email, issuer: MFA_ISSUER });
+    return {
+        account: user.email,
+        issuer: MFA_ISSUER,
+        secret,
+        otpauthUrl: url,
+        qrCode: await QRCode.toDataURL(url, { margin: 1, width: 240 }),
+    };
+};
+
+/**
+ * Checks a code from the authenticator app (confirming the setup the first time) and
+ * marks this login as verified. Returns a fresh token pair that opens the dashboard.
+ */
+export const verifyDashboardMfaService = async ({ userId, code, refreshToken }) => {
+    const retryAfter = await mfaRetryAfter(userId);
+    if (retryAfter) {
+        throw mfaError(`Too many wrong codes. Try again in ${Math.ceil(retryAfter / 60)} min.`, 429);
+    }
+
+    // the login being verified is the one this browser's refresh cookie belongs to
+    const session = refreshToken
+        ? await prisma.userSession.findFirst({ where: { refreshTokenHash: hashToken(refreshToken), expiresAt: { gt: new Date() } } })
+        : null;
+    if (!session || String(session.userId) !== String(userId)) throw mfaError('Session expired. Please log in again.', 401);
+
+    const user = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { id: true, totpSecret: true, totpEnabledAt: true, totpLastStep: true },
+    });
+    if (!user?.totpSecret) throw mfaError('Set up your authenticator first.', 400);
+
+    let secret;
+    try {
+        secret = decryptSecret(user.totpSecret);
+    } catch {
+        throw mfaError("Your authenticator can't be checked. Ask a super admin to reset it.", 409);
+    }
+
+    const lastStep = user.totpLastStep === null ? null : Number(user.totpLastStep);
+    const step = verifyTotp(secret, String(code ?? '').trim(), { lastStep });
+
+    // the step is saved only if no other request used it first, so each code works once
+    const accepted =
+        step !== null &&
+        (
+            await prisma.user.updateMany({
+                where: { id: user.id, OR: [{ totpLastStep: null }, { totpLastStep: { lt: step } }] },
+                data: { totpLastStep: step, ...(!user.totpEnabledAt && { totpEnabledAt: new Date() }) },
+            })
+        ).count === 1;
+
+    if (!accepted) {
+        const left = await registerMfaFailure(userId);
+        throw mfaError(
+            left > 0 ? `That code isn't right. ${left} ${left === 1 ? 'try' : 'tries'} left.` : 'Too many wrong codes. Try again in 15 min.',
+            left > 0 ? 400 : 429
+        );
+    }
+
+    await prisma.userSession.update({ where: { id: session.id }, data: { mfaVerifiedAt: new Date() } });
+    await clearMfaFailures(userId);
+
+    return { firstSetup: !user.totpEnabledAt, ...(await refreshService(refreshToken)) };
 };
 
 // returns the signed-out user's id (null when there was no session)

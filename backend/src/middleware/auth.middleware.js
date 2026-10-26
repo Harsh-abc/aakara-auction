@@ -27,6 +27,8 @@ export async function authenticate(req, res, next) {
             sessionId: decoded.sessionId,
             role: decoded.role,
             permissions: decoded.permissions ?? [],
+            // this login entered its authenticator code (libs/dashboardMfa.js)
+            mfa: decoded.mfa === true,
         };
     } catch {
         // expired / invalid token — the app refreshes on a 401
@@ -66,6 +68,7 @@ export async function optionalAuthenticate(req, res, next) {
                 sessionId: decoded.sessionId,
                 role: decoded.role,
                 permissions: decoded.permissions ?? [],
+                mfa: decoded.mfa === true,
             };
         }
     } catch {

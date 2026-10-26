@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import prisma from "./prisma.js";
 import redis from "./redis.js";
 import { tokenAccessProblem } from "./accountBlock.js";
+import { DASHBOARD_ROLES, lacksDashboardMfa } from "./dashboardMfa.js";
 
 // =====================================================================
 // Real-time channel (Socket.IO over the Redis adapter, so an event sent
@@ -16,7 +17,10 @@ import { tokenAccessProblem } from "./accountBlock.js";
 //   user:{userId}   joined automatically when the socket carries a valid token
 // =====================================================================
 
-export const STAFF_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"];
+export const STAFF_ROLES = DASHBOARD_ROLES;
+
+// staff privileges need the authenticator code too (libs/dashboardMfa.js) — until then a staff login is a regular visitor
+const isVerifiedStaff = (user) => STAFF_ROLES.includes(user?.role) && !lacksDashboardMfa(user);
 
 export const rooms = {
     auction: (auctionUuid) => `auction:${auctionUuid}`,
@@ -35,7 +39,7 @@ const canWatchAuction = async (auctionUuid, user) => {
         select: { id: true, visibility: true, status: true, deletedAt: true },
     });
     if (!auction || auction.deletedAt || auction.status === "DRAFT") return false;
-    if (auction.visibility !== "PRIVATE_INVITE_ONLY" || STAFF_ROLES.includes(user?.role)) return true;
+    if (auction.visibility !== "PRIVATE_INVITE_ONLY" || isVerifiedStaff(user)) return true;
     if (!user) return false;
     const registration = await prisma.auctionParticipant.findUnique({
         where: { auctionId_userId: { auctionId: auction.id, userId: BigInt(user.userId) } },
@@ -63,7 +67,7 @@ export const initSocket = (server) => {
                 const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
                 socket.data.user = (await tokenAccessProblem(decoded))
                     ? null
-                    : { userId: decoded.userId, role: decoded.role };
+                    : { userId: decoded.userId, role: decoded.role, mfa: decoded.mfa === true };
             } catch {
                 socket.data.user = null;
             }
@@ -92,7 +96,7 @@ export const initSocket = (server) => {
         });
 
         socket.on("staff:join", ({ auctionUuid } = {}, ack) => {
-            if (!STAFF_ROLES.includes(user?.role)) return reply(ack, { ok: false, message: "Not allowed" });
+            if (!isVerifiedStaff(user)) return reply(ack, { ok: false, message: "Not allowed" });
             if (!UUID_RE.test(auctionUuid ?? "")) return reply(ack, { ok: false, message: "Invalid auction id" });
             socket.join([rooms.staff(auctionUuid), rooms.auction(auctionUuid)]);
             reply(ack, { ok: true });

@@ -87,6 +87,17 @@ const ROUTES = [
     // every open tab renews its session every few minutes — not worth a row
     route("POST", "/api/auth/refresh", "AUTH", "SESSION_REFRESH", "Renewed session", { skip: true }),
     route("POST", "/api/auth/logout", "AUTH", "LOGOUT", "Logged out"),
+    // Google Authenticator before the dashboard opens
+    route("POST", "/api/auth/mfa/setup", "AUTH", "MFA_SETUP_START", "Opened the authenticator setup (QR code)"),
+    route("POST", "/api/auth/mfa/verify", "AUTH", "MFA_VERIFY", "Entered the authenticator code — dashboard opened", {
+        failAction: "MFA_VERIFY_FAILED",
+        describe: ({ ok, response }) =>
+            !ok
+                ? "Entered a wrong authenticator code"
+                : response?.message === "Authenticator set up"
+                  ? "Set up Google Authenticator — dashboard opened"
+                  : "Entered the authenticator code — dashboard opened",
+    }),
 
     // ── team / users (super admin) ────────────────────────────────────
     route("PATCH", "/api/admin/:uuid/role", "USER", "USER_ROLE_CHANGE", "Changed a user's role", {
@@ -97,11 +108,26 @@ const ROUTES = [
         target: USER,
         describe: ({ body }) => (body.action === "SUSPEND" ? "Suspended the user" : "Reactivated the user"),
     }),
+    route("DELETE", "/api/admin/:uuid/mfa", "USER", "USER_MFA_RESET", "Reset a user's authenticator", { target: USER }),
     route("POST", "/api/admin/create-user", "USER", "USER_CREATE", "Created a user", {
         describe: ({ body }) => `Created ${body.roleName ?? "BIDDER"} account for ${body.fullName ?? "?"} (${body.email ?? "?"})`,
     }),
     route("GET", "/api/admin/activity-logs", "AUDIT", "ACTIVITY_LOGS_VIEW", "Viewed the activity logs", { view: true }),
     route("GET", "/api/admin/activity-logs/export", "AUDIT", "ACTIVITY_LOGS_EXPORT", "Exported the activity logs (CSV)"),
+    route("GET", "/api/admin/ip-blocks", "AUTH", "IP_BLOCKS_VIEW", "Viewed the blocked IP addresses", { view: true }),
+    route("DELETE", "/api/admin/ip-blocks", "AUTH", "IP_UNBLOCK_ALL", "Unblocked every IP address", {
+        describe: ({ ok, response }) => (ok && response?.message ? response.message : "Tried to unblock every IP address"),
+    }),
+    route("DELETE", "/api/admin/ip-blocks/:ip", "AUTH", "IP_UNBLOCK", "Unblocked an IP address", {
+        describe: ({ params }) => `Unblocked IP ${decodeURIComponent(params.ip ?? "?")} for sign-in`,
+    }),
+    route("GET", "/api/admin/otp-limits", "AUTH", "OTP_LIMITS_VIEW", "Viewed the OTP limits", { view: true }),
+    route("DELETE", "/api/admin/otp-limits", "AUTH", "OTP_LIMIT_RESET_ALL", "Reset every OTP limit", {
+        describe: ({ ok, response }) => (ok && response?.message ? response.message : "Tried to reset every OTP limit"),
+    }),
+    route("DELETE", "/api/admin/otp-limits/:kind/:subject", "AUTH", "OTP_LIMIT_RESET", "Reset an OTP limit", {
+        describe: ({ params }) => `Reset the ${params.kind ?? "?"} OTP limit for ${decodeURIComponent(params.subject ?? "?")}`,
+    }),
 
     route("GET", "/api/users/:uuid", "USER", "USER_PROFILE_VIEW", "Viewed a user's profile and KYC documents", {
         target: USER,

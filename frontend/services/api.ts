@@ -12,6 +12,10 @@ export const authEndPoints = {
     RESEND_PHONE_OTP_API: `${BASE_URL}/api/auth/resend-phone-otp`,
     LOGOUT_API: `${BASE_URL}/api/auth/logout`,
     REFRESH_API: `${BASE_URL}/api/auth/refresh`,
+    // Google Authenticator before the dashboard opens (dashboard roles)
+    MFA_STATUS_API: `${BASE_URL}/api/auth/mfa/status`,
+    MFA_SETUP_API: `${BASE_URL}/api/auth/mfa/setup`,
+    MFA_VERIFY_API: `${BASE_URL}/api/auth/mfa/verify`,
 
 }
 
@@ -166,8 +170,17 @@ export const adminEndPoints = {
     CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
     CHANGE_USER_ROLE_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/role`,
     CHANGE_USER_STATUS_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/status`,
+    // DELETE: lost / new phone — they set up Google Authenticator again
+    RESET_USER_MFA_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/mfa`,
     // Settings → Activity Logs (super admin only)
     ACTIVITY_LOGS_API: `${BASE_URL}/api/admin/activity-logs`,
     ACTIVITY_LOG_SUMMARY_API: `${BASE_URL}/api/admin/activity-logs/summary`,
     ACTIVITY_LOGS_EXPORT_API: `${BASE_URL}/api/admin/activity-logs/export`,
+    // Settings → Blocked IPs (super admin only): GET lists, DELETE unblocks all
+    IP_BLOCKS_API: `${BASE_URL}/api/admin/ip-blocks`,
+    IP_BLOCK_API: (ip: string) => `${BASE_URL}/api/admin/ip-blocks/${encodeURIComponent(ip)}`,
+    // Settings → OTP Limits (super admin only): GET lists, DELETE resets all
+    OTP_LIMITS_API: `${BASE_URL}/api/admin/otp-limits`,
+    OTP_LIMIT_API: (kind: string, subject: string) =>
+        `${BASE_URL}/api/admin/otp-limits/${kind}/${encodeURIComponent(subject)}`,
 }

@@ -7,7 +7,8 @@ const REFRESH_COOKIE = 'aakara_refresh';
 // the one login page, for staff and bidders alike (it sends staff on to the dashboard)
 const LOGIN_PATH = '/registration';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/my-profile'];
+// /authenticator: the Google Authenticator code a dashboard login enters before the dashboard opens
+const PROTECTED_PREFIXES = ['/dashboard', '/my-profile', '/authenticator'];
 // /registration is not bounced here: the cookie alone can't say the visitor is still signed in (and a
 // redirect cached while signed in outlives logout), so the page itself sends signed-in visitors on
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { login, logout, refresh, register, resendOtp, resendPhoneOtp, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
+import { getMfaStatus, login, logout, refresh, register, resendOtp, resendPhoneOtp, startMfaSetup, verifyMfa, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
+import { authenticate } from '../middleware/auth.middleware.js';
 import { verifyRecaptcha } from '../middleware/recaptcha.middleware.js';
 
 const authRouter = Router();
@@ -27,5 +28,11 @@ authRouter.post('/refresh', refresh);
 
 // LOGOUT
 authRouter.post('/logout', logout);
+
+// DASHBOARD AUTHENTICATOR — a dashboard login enters a Google Authenticator code before the
+// dashboard opens (libs/dashboardMfa.js). These work before that code, so no requireRole
+authRouter.get('/mfa/status', authenticate, getMfaStatus);
+authRouter.post('/mfa/setup', authenticate, startMfaSetup);
+authRouter.post('/mfa/verify', authenticate, verifyMfa);
 
 export default authRouter;

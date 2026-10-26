@@ -52,6 +52,11 @@ model User {
   roleChangedById           BigInt?
   roleChangedBy             User?                  @relation("UserRoleChangedBy", fields: [roleChangedById], references: [id], onDelete: SetNull)
   rolesChanged              User[]                 @relation("UserRoleChangedBy")
+  // Google Authenticator for the dashboard (libs/dashboardMfa.js): the secret is AES-GCM encrypted;
+  // it is only in use once totpEnabledAt is set (the first code confirmed). totpLastStep stops a code being used twice
+  totpSecret                String?
+  totpEnabledAt             DateTime?
+  totpLastStep              BigInt?
   lotBidders               LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
@@ -134,6 +139,8 @@ model UserSession {
   expiresAt        DateTime
   lastUsedAt       DateTime?
   revokedAt        DateTime?
+  // when this login entered its authenticator code — its access tokens then open the dashboard
+  mfaVerifiedAt    DateTime?
   createdAt        DateTime  @default(now())
   user             User      @relation(fields: [userId], references: [id])
 

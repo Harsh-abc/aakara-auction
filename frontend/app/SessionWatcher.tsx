@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 
 import { useAppSelector } from "@/hooks/redux"
+import { readAccessToken } from "@/lib/accessToken"
 import { refreshSession, SESSION_EXPIRED_EVENT } from "@/services/authSession"
 
 // the one login page, for bidders and staff alike
@@ -19,15 +20,9 @@ const matchesPrefix = (pathname: string, prefixes: string[]) =>
 // refresh this long before the access token actually expires
 const REFRESH_LEEWAY_MS = 60 * 1000
 
-// read "exp" from the JWT payload (no library needed)
 const getTokenExpiry = (token: string): number | null => {
-    try {
-        const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
-        const payload = JSON.parse(atob(base64))
-        return payload.exp ? payload.exp * 1000 : null
-    } catch {
-        return null
-    }
+    const exp = readAccessToken(token)?.exp
+    return exp ? exp * 1000 : null
 }
 
 /**

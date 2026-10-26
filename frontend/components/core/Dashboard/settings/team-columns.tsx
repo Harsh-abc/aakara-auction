@@ -5,6 +5,7 @@ import type { AppTableFeatures } from "@/lib/table-features"
 
 import { User } from "@/lib/types/user.types"
 import ChangeRoleCell from "./ChangeRoleCell"
+import { UserActionsCell } from "../users/UserActionsCell"
 
 const getFullName = (user: User) => {
     const fullName = `${user.profile?.firstName ?? ""} ${user.profile?.lastName ?? ""}`.trim()
@@ -58,5 +59,12 @@ export const teamColumns: ColumnDef<AppTableFeatures, User>[] = [
                 currentRole={row.original.role.name}
             />
         ),
+    },
+    {
+        // view, suspend, reset their Google Authenticator
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        cell: ({ row }) => <UserActionsCell user={row.original} />,
     },
 ]

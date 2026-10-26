@@ -321,3 +321,41 @@ export const createUserByAdminService = async (
         throw error;
     }
 };
+
+
+/**
+ * Removes a user's Google Authenticator (lost or new phone). Their next visit to the
+ * dashboard shows a new QR code to scan; until then no login of theirs can open it.
+ */
+export const resetUserMfaService = async ({ targetUuid }) => {
+    const targetUser = await prisma.user.findFirst({
+        where: { uuid: targetUuid, deletedAt: null },
+        select: { id: true, totpSecret: true },
+    });
+
+    if (!targetUser) {
+        const error = new Error('User not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    if (!targetUser.totpSecret) {
+        const error = new Error("This user hasn't set up an authenticator");
+        error.statusCode = 409;
+        throw error;
+    }
+
+    await prisma.$transaction([
+        prisma.user.update({
+            where: { id: targetUser.id },
+            data: { totpSecret: null, totpEnabledAt: null, totpLastStep: null },
+        }),
+        // logins that entered a code from the old authenticator have to use the new one
+        prisma.userSession.updateMany({ where: { userId: targetUser.id }, data: { mfaVerifiedAt: null } }),
+    ]);
+
+    // their open dashboard tabs refresh into tokens without the code, which sends them to set it up again
+    await revokeUserTokens(targetUser.id).catch((error) =>
+        console.error(`[admin] could not revoke tokens of user ${targetUser.id} after resetting their authenticator:`, error)
+    );
+    disconnectUser(targetUser.id);
+};

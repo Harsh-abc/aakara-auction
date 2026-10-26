@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 
 import { useAppSelector } from "@/hooks/redux"
+import { hasDashboardMfa } from "@/lib/accessToken"
 import { canAccessPage } from "@/lib/constants/dashboardAccess"
 import { canAccessDashboard } from "@/lib/constants/roles"
 import { SESSION_EXPIRED_EVENT } from "@/services/authSession"
@@ -18,6 +19,8 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
     const pathname = usePathname()
 
     const hasAccess = canAccessDashboard(role)
+    // this login entered its Google Authenticator code (the API refuses the dashboard without it)
+    const mfaDone = hasDashboardMfa(token)
     // which pages each role can open: lib/constants/dashboardAccess.ts
     const pageAllowed = canAccessPage(pathname, role)
 
@@ -40,16 +43,25 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
         }
     }, [token, role, hasAccess, router])
 
-    // 3. a dashboard role on a page it can't open (typed URL, old link) → its dashboard home
+    // 3. a dashboard role that hasn't entered its authenticator code on this login → the code
+    //    page (also after a super admin resets their authenticator), coming back here afterwards
     useEffect(() => {
-        if (token && hasAccess && !pageAllowed) {
+        if (token && hasAccess && !mfaDone) {
+            const { pathname, search } = window.location
+            router.replace(`/authenticator?redirect=${encodeURIComponent(pathname + search)}`)
+        }
+    }, [token, hasAccess, mfaDone, router])
+
+    // 4. a dashboard role on a page it can't open (typed URL, old link) → its dashboard home
+    useEffect(() => {
+        if (token && hasAccess && mfaDone && !pageAllowed) {
             toast.error("You don't have access to that page")
             router.replace("/dashboard")
         }
-    }, [token, hasAccess, pageAllowed, router])
+    }, [token, hasAccess, mfaDone, pageAllowed, router])
 
-    // render nothing until we have a session with a dashboard role, so protected content never flashes
-    if (!token || !hasAccess || !pageAllowed) return null
+    // render nothing until we have a verified session with a dashboard role, so protected content never flashes
+    if (!token || !hasAccess || !mfaDone || !pageAllowed) return null
 
     return <>{children}</>
 }
