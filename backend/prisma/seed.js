@@ -6,7 +6,7 @@ const roles = [
     { name: 'AUCTIONEER', description: 'Runs live/floor auctions, manages bids on the floor', isSystemRole: true },
     { name: 'ADMIN', description: 'Full platform access', isSystemRole: true },
     { name: 'SUPER_ADMIN', description: 'Full system access', isSystemRole: true },
-    { name: 'STAFF', description: 'Platform staff', isSystemRole: true },
+    { name: 'OPERATIONS', description: 'Platform operations', isSystemRole: true },
 ];
 
 const permissions = [
@@ -41,7 +41,7 @@ const rolePermissionMap = {
         'kyc:approve', 'kyc:reject',
         'payment:refund', 'dispute:resolve',
     ],
-    STAFF: [
+    OPERATIONS: [
         'auction:create', 'auction:update', 'auction:publish',
         'kyc:approve', 'kyc:reject',
     ],

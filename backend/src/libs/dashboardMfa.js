@@ -9,15 +9,30 @@ import redis from "./redis.js";
 // but that login can't use the dashboard until it enters a code from their
 // authenticator app (POST /api/auth/mfa/verify). That marks the session
 // (user_sessions.mfaVerifiedAt), and every access token issued for it from
-// then on — including refreshes — carries `mfa: true`. requireRole and the
-// staff socket rooms refuse dashboard roles whose token lacks it.
+// then on — including refreshes — carries `mfa: true` and `mfaUntil`, the moment
+// the code stops counting (MFA_VALID_MS after it was entered). requireRole and the
+// staff socket rooms refuse dashboard roles whose token lacks it or is past it.
 //
-// A new login starts unverified, so the code is asked once per login.
+// A new login starts unverified, and a code lasts MFA_VALID_MS: after that the
+// dashboard asks for a new one (the login itself stays signed in).
 // =====================================================================
 
-export const DASHBOARD_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "STAFF"];
+export const DASHBOARD_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER", "OPERATIONS"];
 
 export const isDashboardRole = (role) => DASHBOARD_ROLES.includes(role);
+
+// how long an authenticator code keeps the dashboard open
+export const MFA_VALID_MS = 6 * 60 * 60 * 1000;
+
+/** When a code entered at `verifiedAt` stops counting (epoch ms), or null when it already has / never was. */
+export const mfaValidUntil = (verifiedAt, now = Date.now()) => {
+    const until = verifiedAt ? verifiedAt.getTime() + MFA_VALID_MS : 0;
+    return until > now ? until : null;
+};
+
+/** The token carries an authenticator code that still counts. Tokens without `mfaUntil` (older ones) don't. */
+export const tokenHasFreshMfa = (decoded, now = Date.now()) =>
+    decoded?.mfa === true && typeof decoded.mfaUntil === "number" && decoded.mfaUntil > now;
 
 /** A dashboard role whose login hasn't entered its authenticator code. */
 export const lacksDashboardMfa = (user) => isDashboardRole(user?.role) && user?.mfa !== true;

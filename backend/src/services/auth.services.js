@@ -11,7 +11,7 @@ import { getRolePermissions } from '../libs/rolePermission.js'
 import { SESSION_TTL_SECONDS } from '../libs/session.js'
 import QRCode from 'qrcode'
 import { clearIpFailures, isIpBlocked, registerIpFailure } from '../libs/loginIpBlock.js'
-import { clearMfaFailures, decryptSecret, encryptSecret, MFA_ISSUER, mfaRetryAfter, registerMfaFailure } from '../libs/dashboardMfa.js'
+import { clearMfaFailures, decryptSecret, encryptSecret, MFA_ISSUER, MFA_VALID_MS, mfaRetryAfter, mfaValidUntil, registerMfaFailure } from '../libs/dashboardMfa.js'
 import { generateTotpSecret, otpauthUrl, verifyTotp } from '../libs/totp.js'
 // OTP send limits (and their Redis keys) live in libs/otpLimits.js
 import {
@@ -358,7 +358,7 @@ const logAttempt = async ({ userId, email, ip, userAgent, success, failureReason
 };
 
 // both tokens expire when the session does (`ttlSeconds` = time left in it)
-const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, ttlSeconds, mfa = false }) => {
+const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, ttlSeconds, mfaUntil = null }) => {
     const accessToken = jwt.sign(
         {
             sub: uuid,
@@ -369,8 +369,8 @@ const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, t
             permissions,
             // exact issue time — a role / password change revokes tokens issued before it (libs/accountBlock.js)
             iatMs: Date.now(),
-            // this login entered its authenticator code — opens the dashboard (libs/dashboardMfa.js)
-            ...(mfa && { mfa: true }),
+            // this login entered its authenticator code — opens the dashboard until mfaUntil (libs/dashboardMfa.js)
+            ...(mfaUntil && { mfa: true, mfaUntil }),
         },
         process.env.JWT_ACCESS_SECRET,
         { expiresIn: ttlSeconds }
@@ -556,8 +556,9 @@ export const refreshService = async (refreshToken) => {
         roleName,
         permissions,
         ttlSeconds,
-        // the authenticator code entered on this login carries over (reset by a super admin → asked again)
-        mfa: Boolean(session.mfaVerifiedAt && user.totpEnabledAt),
+        // the authenticator code entered on this login carries over for MFA_VALID_MS
+        // (6h; reset by a super admin → asked again)
+        mfaUntil: user.totpEnabledAt ? mfaValidUntil(session.mfaVerifiedAt) : null,
     });
 
     // rotate: same session row, new hash — the expiry stays where login set it
@@ -588,7 +589,13 @@ const mfaError = (message, statusCode) => Object.assign(new Error(message), { st
 export const getDashboardMfaStatusService = async (userId) => {
     const user = await prisma.user.findUnique({ where: { id: BigInt(userId) }, select: { email: true, totpEnabledAt: true } });
     if (!user) throw mfaError('Account not found', 404);
-    return { enabled: Boolean(user.totpEnabledAt), account: user.email, issuer: MFA_ISSUER };
+    return {
+        enabled: Boolean(user.totpEnabledAt),
+        account: user.email,
+        issuer: MFA_ISSUER,
+        // how long a code keeps the dashboard open — the page says so
+        validForSeconds: MFA_VALID_MS / 1000,
+    };
 };
 
 // first visit: a secret for the app to scan. Asking again (page reloaded) shows the same

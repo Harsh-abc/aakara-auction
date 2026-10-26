@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const changeRoleSchema = z.object({
-    roleName: z.enum(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'AUCTIONEER', 'BIDDER', 'USER']),
+    roleName: z.enum(['SUPER_ADMIN', 'ADMIN', 'OPERATIONS', 'AUCTIONEER', 'BIDDER', 'USER']),
 })
 
 // suspend / reactivate an account (super admin)

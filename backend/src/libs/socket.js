@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import prisma from "./prisma.js";
 import redis from "./redis.js";
 import { tokenAccessProblem } from "./accountBlock.js";
-import { DASHBOARD_ROLES, lacksDashboardMfa } from "./dashboardMfa.js";
+import { DASHBOARD_ROLES, tokenHasFreshMfa } from "./dashboardMfa.js";
 
 // =====================================================================
 // Real-time channel (Socket.IO over the Redis adapter, so an event sent
@@ -19,8 +19,9 @@ import { DASHBOARD_ROLES, lacksDashboardMfa } from "./dashboardMfa.js";
 
 export const STAFF_ROLES = DASHBOARD_ROLES;
 
-// staff privileges need the authenticator code too (libs/dashboardMfa.js) — until then a staff login is a regular visitor
-const isVerifiedStaff = (user) => STAFF_ROLES.includes(user?.role) && !lacksDashboardMfa(user);
+// staff privileges need an authenticator code from the last 6 hours too (libs/dashboardMfa.js) —
+// without one a staff login is a regular visitor
+const isVerifiedStaff = (user) => STAFF_ROLES.includes(user?.role) && tokenHasFreshMfa(user);
 
 export const rooms = {
     auction: (auctionUuid) => `auction:${auctionUuid}`,
@@ -67,7 +68,7 @@ export const initSocket = (server) => {
                 const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
                 socket.data.user = (await tokenAccessProblem(decoded))
                     ? null
-                    : { userId: decoded.userId, role: decoded.role, mfa: decoded.mfa === true };
+                    : { userId: decoded.userId, role: decoded.role, mfa: decoded.mfa, mfaUntil: decoded.mfaUntil };
             } catch {
                 socket.data.user = null;
             }
@@ -78,6 +79,15 @@ export const initSocket = (server) => {
     io.on("connection", (socket) => {
         const user = socket.data.user ?? null;
         if (user) socket.join(rooms.user(user.userId));
+
+        // the authenticator code runs out while connected → out of the dashboard rooms
+        // (the dashboard asks for a new code and reconnects with the new token)
+        if (isVerifiedStaff(user)) {
+            const expiry = setTimeout(() => {
+                for (const room of socket.rooms) if (room.startsWith("staff:")) socket.leave(room);
+            }, user.mfaUntil - Date.now());
+            socket.on("disconnect", () => clearTimeout(expiry));
+        }
 
         socket.on("auction:join", async ({ auctionUuid } = {}, ack) => {
             try {

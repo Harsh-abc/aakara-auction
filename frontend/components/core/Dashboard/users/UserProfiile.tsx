@@ -24,7 +24,7 @@ import { setKycStatus, updateUserDetails } from "@/services/operations/user.api"
 import { UpdateUserDetailsPayload, User } from "@/lib/types/user.types";
 
 // must match the roles on PATCH /users/:uuid/details and /users/:uuid/kyc/status
-const USER_EDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "STAFF"]
+const USER_EDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS"]
 
 interface UserProfileProps {
     user: User

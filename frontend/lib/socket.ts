@@ -1,5 +1,6 @@
 import { io, type Socket } from "socket.io-client"
 
+import { readAccessToken } from "@/lib/accessToken"
 import { SOCKET_URL } from "@/services/api"
 
 // One Socket.IO connection per tab, shared by every live view.
@@ -11,15 +12,11 @@ let token: string | null = null
 // the user the open connection was made as ("" = guest)
 let connectedAs = ""
 
-// the token's subject (user uuid), so a refreshed token for the same user doesn't reconnect
+// who the token is for (user uuid) and the authenticator code it carries (staff rooms need one),
+// so a refreshed token for the same user doesn't reconnect but entering a new code does
 function subjectOf(value: string | null) {
-    if (!value) return ""
-    try {
-        const payload = value.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
-        return String(JSON.parse(atob(payload)).sub ?? "")
-    } catch {
-        return ""
-    }
+    const claims = readAccessToken(value) as { sub?: string; mfaUntil?: number } | null
+    return claims ? `${claims.sub ?? ""}|${claims.mfaUntil ?? ""}` : ""
 }
 
 export function getSocket(): Socket {

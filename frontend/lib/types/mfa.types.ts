@@ -8,6 +8,8 @@ export interface MfaStatus {
     /** the account name the app shows — the login email */
     account: string
     issuer: string
+    /** how long a code keeps the dashboard open (6 hours); then a new code is asked for */
+    validForSeconds: number
 }
 
 export interface MfaSetup {
