@@ -137,10 +137,10 @@ export function AbsenteeBid() {
     };
 
     return (
-        <section id="absentee-bid" aria-labelledby="absentee-bid-heading" className="scroll-mt-24">
+        <section id="absentee-bid-online" aria-labelledby="absentee-bid-online-heading" className="scroll-mt-24">
             <div className="page-container">
                 <SectionHeading
-                    id="absentee-bid-heading"
+                    id="absentee-bid-online-heading"
                     title="Absentee bid"
                     description="Can't follow the sale live? Leave your maximum bid for each lot and we will bid on your behalf, up to that amount."
                 />

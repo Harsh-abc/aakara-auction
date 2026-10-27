@@ -11,6 +11,7 @@ import { PAGE_MAIN } from "../storefront";
 import { AuctionListings } from "./AuctionListings";
 import { FeaturedAuction, FeaturedAuctionSkeleton } from "./FeaturedAuction";
 import { HowToBid } from "./HowToBid";
+import { BiddingIncrements } from "./BiddingIncrements";
 import { AbsenteeBid } from "./AbsenteeBid";
 import { SHOW_ABSENTEE_BID } from "@/lib/constants/site-text";
 import { useBidderStatus } from "./useBidderStatus";
@@ -46,6 +47,7 @@ export function AuctionsPage() {
                 <AuctionListings paddles={paddles} eligibility={eligibility} onRegistered={onRegistered} />
             </Suspense>
             <HowToBid />
+            <BiddingIncrements />
             {/* hidden until the client signs off the absentee bid form and its backend exists */}
             {SHOW_ABSENTEE_BID && <AbsenteeBid />}
         </main>
