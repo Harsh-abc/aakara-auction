@@ -45,7 +45,7 @@ async function shareLot(title: string) {
 // the individual lot page — every image, the full catalogue entry and the essay
 export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid);
-    const { onBid, target, setTarget } = useBidAction();
+    const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
     const { controls: gallery } = useGallery();
 
     if (state.status === "loading") {
@@ -128,7 +128,7 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                         </button>
                     </div>
 
-                    <LotPricePanel lot={lot} onBid={onBid} className="self-start lg:sticky lg:top-25 lg:mt-10.75" />
+                    <LotPricePanel lot={lot} onBid={onBid} bidRefreshKey={savedCount} className="self-start lg:sticky lg:top-25 lg:mt-10.75" />
                 </div>
             </section>
 
@@ -144,6 +144,7 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                 kind={target?.kind ?? "bid"}
                 onKindChange={(kind) => setTarget((prev) => (prev ? { ...prev, kind } : prev))}
                 onClose={() => setTarget(null)}
+                onSaved={onSaved}
             />
         </main>
     );

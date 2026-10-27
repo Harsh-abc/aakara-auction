@@ -28,7 +28,7 @@ const LOT_GRID = "grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_320px] md:g
 // the live auction room, focused on one lot
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid);
-    const { onBid, target, setTarget } = useBidAction();
+    const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
 
     if (state.status === "loading") {
         return (
@@ -95,7 +95,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                                         </div>
                                     )}
                                 </div>
-                                <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} />
+                                <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} />
                             </div>
 
                             <BidLadder lot={lot} className="mt-8" />
@@ -134,6 +134,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                 kind={target?.kind ?? "bid"}
                 onKindChange={(kind) => setTarget((prev) => (prev ? { ...prev, kind } : prev))}
                 onClose={() => setTarget(null)}
+                onSaved={onSaved}
             />
         </main>
     );
