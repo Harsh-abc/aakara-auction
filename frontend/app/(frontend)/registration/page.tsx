@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { Registration } from "@/components/core/auth/registration/Registration"
 
 export const metadata: Metadata = {
-    title: "Log in / Sign up | Aakara",
+    title: "Log in / Sign up | Akara",
 }
 
 export default function RegistrationPage() {

@@ -107,7 +107,7 @@ export function HeaderUserMenu() {
             <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Log out of Aakara?</AlertDialogTitle>
+                        <AlertDialogTitle>Log out of Akara?</AlertDialogTitle>
                         <AlertDialogDescription>
                             You'll need to sign in again to access the dashboard.
                         </AlertDialogDescription>

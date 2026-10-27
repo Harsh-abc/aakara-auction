@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-    title: "Page not found | Aakara",
+    title: "Page not found | Akara",
 }
 
 /** The site-wide 404: any address that doesn't exist (storefront or dashboard) lands here. */

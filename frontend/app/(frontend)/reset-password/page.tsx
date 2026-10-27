@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 import { ResetPassword } from "@/components/core/auth/password/ResetPassword"
 
 export const metadata: Metadata = {
-    title: "Reset password | Aakara",
+    title: "Reset password | Akara",
 }
 
 export default function ResetPasswordPage() {

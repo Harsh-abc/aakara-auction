@@ -17,12 +17,12 @@ export async function generateMetadata({ params }: AuctionPageProps): Promise<Me
         })
         if (response.ok) {
             const { data } = await response.json()
-            return { title: `${data.title} | Aakara`, description: htmlToPlainText(data.short_description) || undefined }
+            return { title: `${data.title} | Akara`, description: htmlToPlainText(data.short_description) || undefined }
         }
     } catch {
         // fall through
     }
-    return { title: "Auction | Aakara" }
+    return { title: "Auction | Akara" }
 }
 
 export default async function AuctionPage({ params }: AuctionPageProps) {

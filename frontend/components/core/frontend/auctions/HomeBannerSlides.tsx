@@ -122,7 +122,7 @@ export function HomeBannerSlides({ banners, priority, device }: { banners: Publi
         >
             {banners.map((banner, index) => {
                 const visible = index === current;
-                const alt = banner.altText || "Aakara — fine art auctions";
+                const alt = banner.altText || "Akara — fine art auctions";
                 const image = <BannerImage banner={banner} alt={alt} eager={index === 0 && !!priority} device={device} />;
                 return (
                     <div

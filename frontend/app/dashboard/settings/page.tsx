@@ -133,7 +133,7 @@ export default function Settings() {
                 <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#b08d57]">Settings</p>
                 <h1 className="mt-1 text-3xl font-semibold tracking-tight">Settings overview</h1>
                 <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                    Manage your profile, your team and how Aakara works for you.
+                    Manage your profile, your team and how Akara works for you.
                 </p>
             </header>
 

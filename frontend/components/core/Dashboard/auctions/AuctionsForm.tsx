@@ -13,6 +13,7 @@ import AddLots from "@/components/core/Dashboard/auctions/CreateAuctions/Lots";
 import FeeConfiguration from "@/components/core/Dashboard/auctions/CreateAuctions/FeeConfigurations";
 import ShippingInfo from "@/components/core/Dashboard/auctions/CreateAuctions/ShippingInfo";
 import AuctionVisibility from "@/components/core/Dashboard/auctions/CreateAuctions/AuctionVisbility";
+import AuctionReview from "@/components/core/Dashboard/auctions/CreateAuctions/AuctionReview";
 import { Button } from "@/components/ui/button";
 
 import { combineDateTime, validateAuctionForm } from "@/utils/buildAuctionFormData";
@@ -147,23 +148,33 @@ export default function AuctionsForm({
         if (currentStep < 7) setCurrentStep((prev) => prev + 1);
     };
 
+    // Editing an already-published auction (its saves are SCHEDULED): an
+    // unchanged start may have passed. Create / draft edits always check it.
+    const publishedStart =
+        saveStatus === "SCHEDULED"
+            ? combineDateTime(
+                  defaultValues.schedule.startDate,
+                  defaultValues.schedule.startTime,
+                  defaultValues.schedule.timezone
+              )
+            : "";
+
+    // Review step: the step has no inputs, so the values are fixed while it's open
+    const publishIssues =
+        currentStep === 7 ? validateAuctionForm(form.getValues(), "SCHEDULED", { publishedStart }) : [];
+
+    const editLot = (lotIndex: number) => {
+        setCurrentStep(3);
+        setSelectedLotIndex(lotIndex);
+        setCurrentLotStep(6); // the lot's own review, with per-step edit buttons
+    };
+
     /**
      * status = "DRAFT"     -> lenient validation
      * status = "SCHEDULED" -> requires lots + prices + images
      */
     const submit = async (status: AuctionSubmitStatus) => {
         const data = form.getValues();
-
-        // Editing an already-published auction (its saves are SCHEDULED): an
-        // unchanged start may have passed. Create / draft edits always check it.
-        const publishedStart =
-            saveStatus === "SCHEDULED"
-                ? combineDateTime(
-                      defaultValues.schedule.startDate,
-                      defaultValues.schedule.startTime,
-                      defaultValues.schedule.timezone
-                  )
-                : "";
 
         const problems = validateAuctionForm(data, status, { publishedStart });
         setValidationErrors(problems);
@@ -213,9 +224,12 @@ export default function AuctionsForm({
                     {currentStep === 5 && <ShippingInfo />}
                     {currentStep === 6 && <AuctionVisibility />}
                     {currentStep === 7 && (
-                        <div className="rounded-[8px] bg-dashboardFormBg p-6 text-sm text-slate-600">
-                            Review your auction, then click <b>{publishLabel}</b>.
-                        </div>
+                        <AuctionReview
+                            issues={publishIssues}
+                            publishLabel={publishLabel}
+                            onEditStep={setCurrentStep}
+                            onEditLot={editLot}
+                        />
                     )}
                 </div>
 

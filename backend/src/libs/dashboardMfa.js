@@ -41,7 +41,7 @@ export const lacksDashboardMfa = (user) => isDashboardRole(user?.role) && user?.
 export const MFA_REQUIRED = "MFA_REQUIRED";
 
 // the name the authenticator app shows above the code
-export const MFA_ISSUER = process.env.MFA_ISSUER || "Aakara Auctions";
+export const MFA_ISSUER = process.env.MFA_ISSUER || "Akara Auctions";
 
 // ── the stored secret, encrypted (AES-256-GCM) ───────
 

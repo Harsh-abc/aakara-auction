@@ -49,7 +49,7 @@ app.use(activityLogger);
 
 app.get("/", (req, res) => {
     res.json({
-        message: 'Welcome to Aakara Auction API',
+        message: 'Welcome to Akara Auction API',
         sucess: true
     })
 })

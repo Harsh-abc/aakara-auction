@@ -8,7 +8,7 @@ type LotDetailsPageProps = {
     params: Promise<{ auctionUuid: string; lotUuid: string }>
 }
 
-// "Artist · Title | Sale | Aakara"; falls back quietly if the API can't be reached
+// "Artist · Title | Sale | Akara"; falls back quietly if the API can't be reached
 export async function generateMetadata({ params }: LotDetailsPageProps): Promise<Metadata> {
     const { auctionUuid, lotUuid } = await params
     try {
@@ -18,12 +18,12 @@ export async function generateMetadata({ params }: LotDetailsPageProps): Promise
         if (response.ok) {
             const { data } = await response.json()
             const heading = [data.lot.artistName, data.lot.title].filter(Boolean).join(" · ")
-            return { title: `${heading} | ${data.auction.title} | Aakara`, description: htmlToPlainText(data.auction.short_description) || undefined }
+            return { title: `${heading} | ${data.auction.title} | Akara`, description: htmlToPlainText(data.auction.short_description) || undefined }
         }
     } catch {
         // fall through
     }
-    return { title: "Lot | Aakara" }
+    return { title: "Lot | Akara" }
 }
 
 export default async function LotDetailsPage({ params }: LotDetailsPageProps) {

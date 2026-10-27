@@ -73,7 +73,9 @@ return 1
 // Bid sources: M = online (manual), F = floor, P = proxy
 //
 // Proxy rules:
-//   - a bidder leaves one proxy per lot, before the lot opens; it can't be changed
+//   - a bidder leaves one proxy per lot, before the lot opens; it can be changed
+//     until the lot opens (a new maximum is ranked as set when it was changed),
+//     and is locked from then on
 //   - proxies don't bid while the lot is live — they're placed when the auctioneer
 //     calls the hammer (or the lot closes any other way), against the standing bid
 //   - the highest proxy always wins the proxy contest: it bids only as much as it
@@ -248,6 +250,9 @@ local function resolve()
     end
 end
 
+-- the bidder's proxy before a PROXY run changed it (to put it back if saving fails)
+local prevProxy = nil
+
 local function isOneOf(value, list)
     for _, item in ipairs(list) do
         if value == item then return true end
@@ -265,25 +270,30 @@ if mode == 'BID' or mode == 'FLOOR' then
     -- proxies don't answer live bids; they're placed when the lot is hammered (EXECUTE / CLOSE)
     record(userId, amount, mode == 'FLOOR' and 'F' or 'M')
 elseif mode == 'PROXY' then
-    -- proxies are left before the lot opens, once per bidder
+    -- proxies are left (or changed) before the lot opens, one per bidder
     if status == 'ACTIVE' or status == 'CLOSING' then return fail('LOT_STARTED') end
     if not isOneOf(status, { 'DRAFT', 'SCHEDULED' }) then return fail('LOT_CLOSED') end
     if not isOneOf(auctionStatus, { 'SCHEDULED', 'PREVIEW', 'LIVE', 'PAUSED' }) then
         return fail('AUCTION_CLOSED', { auctionStatus = auctionStatus })
     end
-    local existing = proxies[userId]
-    if existing then return fail('PROXY_ALREADY_SET', { proxyMax = existing.max }) end
     local need = nextMin(current)
     if amount < need then return fail('PROXY_TOO_LOW', { nextBid = need }) end
 
-    -- 'at' decides equal maximums, so no two proxies on a lot share one: a proxy
-    -- accepted later always gets a later 'at' (even within the same millisecond)
-    local at = now
-    for _, p in pairs(proxies) do
-        if p.at >= at then at = p.at + 1 end
+    -- an edit with the same maximum changes nothing (and keeps its place among equal maximums)
+    local existing = proxies[userId]
+    if existing then
+        prevProxy = { max = existing.max, at = existing.at }
     end
-    proxies[userId] = { max = amount, at = at }
-    redis.call('HSET', proxiesKey, userId, cjson.encode({ max = amount, at = at }))
+    if not (existing and existing.max == amount) then
+        -- 'at' decides equal maximums, so no two proxies on a lot share one: a proxy
+        -- accepted (or changed) later always gets a later 'at' (even within the same millisecond)
+        local at = now
+        for _, p in pairs(proxies) do
+            if p.at >= at then at = p.at + 1 end
+        end
+        proxies[userId] = { max = amount, at = at }
+        redis.call('HSET', proxiesKey, userId, cjson.encode({ max = amount, at = at }))
+    end
 elseif mode == 'RESOLVE' then
     -- the lot opened / the sale resumed: proxies wait for the hammer, only the next ask is refreshed
 elseif mode == 'EXECUTE' or mode == 'CLOSE' then
@@ -326,6 +336,7 @@ return cjson.encode({
     prevLeader = prevLeader,
     proxyMax = mine and mine.max or nil,
     proxyAt = mine and mine.at or nil,
+    prevProxy = prevProxy,
     state = {
         status = status,
         currentBid = current,
@@ -348,7 +359,7 @@ export const hydrateLotState = async ({ lotUuid, auctionUuid, fields }) => {
 
 /**
  * Runs the bid engine for a lot. Resolves to the script's result:
- *   { ok: true, bids, prevLeader, proxyMax, proxyAt, state }  or  { err: CODE, ... }
+ *   { ok: true, bids, prevLeader, proxyMax, proxyAt, prevProxy, state }  or  { err: CODE, ... }
  * Amounts come back as numbers.
  */
 export const runBidEngine = async ({ mode, lotUuid, auctionUuid, userId = "", amount = 0, ip = "", userAgent = "" }) => {

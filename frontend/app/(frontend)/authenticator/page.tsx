@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { DashboardAuthenticator } from "@/components/core/auth/authenticator/DashboardAuthenticator"
 
 export const metadata: Metadata = {
-    title: "Dashboard sign-in | Aakara",
+    title: "Dashboard sign-in | Akara",
 }
 
 export default function AuthenticatorPage() {

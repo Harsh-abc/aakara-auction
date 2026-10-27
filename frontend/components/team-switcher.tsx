@@ -43,12 +43,12 @@ export function TeamSwitcher({
             className="flex items-center justify-center mt-6 gap-2"
           >
             <div className="flex aspect-square size-8 items-center justify-center">
-              <Image src='/logo/aakara_mini.png' alt="Aakara Art Mini Logo" width={180} height={100} className="w-32 h-10 object-cover" />
+              <Image src='/logo/aakara_mini.png' alt="Akara Art Mini Logo" width={180} height={100} className="w-32 h-10 object-cover" />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight text-text-secondary">
               {/* <span className="truncate font-medium">{activeTeam.name}</span>
               <span className="truncate text-xs">{activeTeam.plan}</span> */}
-              <Image src='/logo/aakara_white.png' alt="Aakara Art" width={1200} height={550} className="w-37 h-10 object-cover" />
+              <Image src='/logo/aakara_white.png' alt="Akara Art" width={1200} height={550} className="w-37 h-10 object-cover" />
             </div>
           </DropdownMenuTrigger>
           <Separator className="mt-2 h-1 border-[rgba(255, 255, 255, 0.50)]" />

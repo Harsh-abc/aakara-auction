@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 import { ForgotPassword } from "@/components/core/auth/password/ForgotPassword"
 
 export const metadata: Metadata = {
-    title: "Forgot password | Aakara",
+    title: "Forgot password | Akara",
 }
 
 export default function ForgotPasswordPage() {

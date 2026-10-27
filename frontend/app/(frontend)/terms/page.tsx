@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { TermsPage } from "@/components/core/frontend/legal/TermsPage"
 
 export const metadata: Metadata = {
-    title: "Terms and conditions | Aakara",
+    title: "Terms and conditions | Akara",
     description: "Terms and Conditions of Sale governing every auction and private sale conducted by Akara Auctions Private Limited.",
 }
 

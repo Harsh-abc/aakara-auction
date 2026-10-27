@@ -455,11 +455,7 @@ const ENGINE_ERRORS = {
     AUCTION_NOT_LIVE: (lot, r) => [r.auctionStatus === "PAUSED" ? "Bidding is paused for this auction" : "This auction isn't live", 409],
     ALREADY_LEADING: () => ["You're already the highest bidder", 409],
     BID_TOO_LOW: (lot, r) => [`The next bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
-    PROXY_ALREADY_SET: (lot, r) => [
-        `You've already left a maximum bid of ${formatMoney(r.proxyMax, lot.currencyCode)} on Lot #${lot.itemNumber}. A proxy bid can only be set once.`,
-        409,
-    ],
-    LOT_STARTED: (lot) => [`Lot #${lot.itemNumber} has opened — proxy bids can only be left before a lot opens`, 409],
+    LOT_STARTED: (lot) => [`Lot #${lot.itemNumber} has opened — proxy bids can only be left or changed before a lot opens`, 409],
     PROXY_TOO_LOW: (lot, r) => [`Your maximum bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
     LOT_CLOSED: (lot) => [`Lot #${lot.itemNumber} has closed`, 409],
     AUCTION_CLOSED: () => ["Bidding is closed for this auction", 409],
@@ -523,6 +519,8 @@ const settleBid = async ({ mode, lot, lotUuid, userId, amount, ip, userAgent, er
             proxySetAt: result.proxyAt !== undefined ? new Date(result.proxyAt).toISOString() : null,
             bidsPlaced: result.bids.length,
         },
+        // the bidder's proxy before this run (PROXY mode), for putting back
+        prevProxy: result.prevProxy ?? null,
     };
 };
 
@@ -538,31 +536,22 @@ export const placeBidService = async ({ lotUuid, userId, amount, ip, userAgent }
 };
 
 /**
- * A proxy (maximum) bid: once per bidder per lot, before the lot opens. The
- * engine settles it in Redis, then it's saved to auto_bids with the bidder's
- * IP and device; if that save fails the proxy is taken back out of Redis.
+ * A proxy (maximum) bid: one per bidder per lot, left or changed any time
+ * before the lot opens — locked once it does. The engine settles it in Redis,
+ * then it's saved to auto_bids with the bidder's IP and device; if that save
+ * fails Redis goes back to the bidder's previous proxy (or none).
  */
 export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userAgent }) => {
     if (!userId) throw httpError("Authenticated user is required", 401);
 
     const item = await prisma.auctionItem.findUnique({
         where: { uuid: lotUuid },
-        select: { id: true, itemNumber: true, status: true, currency: { select: { code: true } }, auction: { select: { currency: { select: { code: true } } } } },
+        select: { id: true, itemNumber: true, status: true },
     });
     if (!item) throw httpError("Lot not found", 404);
     if (item.status === "ACTIVE") throw httpError(...ENGINE_ERRORS.LOT_STARTED({ itemNumber: item.itemNumber }));
 
-    // a proxy taken away with the bidder's access may be left again once access is back
-    const saved = await prisma.autoBid.findUnique({
-        where: { itemId_bidderId: { itemId: item.id, bidderId: BigInt(userId) } },
-        select: { maxAmount: true, withdrawnAt: true },
-    });
-    if (saved && !saved.withdrawnAt) {
-        const currencyCode = (item.currency ?? item.auction.currency).code;
-        throw httpError(...ENGINE_ERRORS.PROXY_ALREADY_SET({ itemNumber: item.itemNumber, currencyCode }, { proxyMax: Number(saved.maxAmount) }));
-    }
-
-    const { lot, result } = await runForUser({ mode: "PROXY", lotUuid, userId, amount: maxAmount, ip, userAgent });
+    const { lot, result, prevProxy } = await runForUser({ mode: "PROXY", lotUuid, userId, amount: maxAmount, ip, userAgent });
 
     const record = {
         maxAmount: String(maxAmount),
@@ -581,14 +570,18 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
             update: record,
         });
     } catch (error) {
-        // the lot hasn't opened, so the proxy hasn't bid — safe to take back
-        await redis.hdel(bidKeys.proxies(lotUuid), String(userId)).catch(() => {});
+        // the lot hasn't opened, so the proxy hasn't bid — safe to put back as it was
+        const key = bidKeys.proxies(lotUuid);
+        const restore = prevProxy
+            ? redis.hset(key, String(userId), JSON.stringify({ max: prevProxy.max, at: prevProxy.at }))
+            : redis.hdel(key, String(userId));
+        await restore.catch(() => {});
         throw error;
     }
 
     const max = formatMoney(maxAmount, lot.currencyCode);
     return {
-        message: `Your maximum bid of ${max} is set. It's placed for you when the auctioneer calls the hammer on Lot #${result.itemNumber}, and can't be changed.`,
+        message: `Your maximum bid of ${max} is ${prevProxy ? "updated" : "set"}. It's placed for you when the auctioneer calls the hammer on Lot #${result.itemNumber}. You can change it until the lot opens.`,
         data: result,
     };
 };
@@ -784,8 +777,8 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
         paddleNumber: participant?.paddleNumber ?? null,
         ...position,
         canBid: verified && lot.status === "ACTIVE" && auctionStatus === "LIVE",
-        // once, before the lot opens
-        canProxy: verified && biddingOpen && PROXY_LOT_STATUSES.includes(lot.status) && !position.proxyMax,
+        // left or changed until the lot opens
+        canProxy: verified && biddingOpen && PROXY_LOT_STATUSES.includes(lot.status),
     });
 };
 

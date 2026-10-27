@@ -29,7 +29,7 @@ const str = (value: unknown): string | null => {
  * Accepts "14:30", "14:30:00", "2:30 PM", "02:30 pm".
  * Returns "HH:mm" (24h) or null.
  */
-const normalizeTime = (time: string): string | null => {
+export const normalizeTime = (time: string): string | null => {
     const t = time?.trim();
     if (!t) return null;
 

@@ -3,8 +3,8 @@ import type { Metadata } from "next"
 import { AuctionsPage } from "@/components/core/frontend/auctions/AuctionsPage"
 
 export const metadata: Metadata = {
-    title: "Auctions | Aakara",
-    description: "Upcoming, live and past fine art auctions at Aakara.",
+    title: "Auctions | Akara",
+    description: "Upcoming, live and past fine art auctions at Akara.",
 }
 
 export default function Auctions() {

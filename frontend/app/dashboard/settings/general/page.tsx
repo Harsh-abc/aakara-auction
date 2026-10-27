@@ -468,7 +468,7 @@ export default function General() {
                                 value={form.displayName}
                                 onChange={handleChange}
                                 maxLength={60}
-                                placeholder={[form.firstName, form.lastName].filter(Boolean).join(" ") || "e.g. Aakara Collector"}
+                                placeholder={[form.firstName, form.lastName].filter(Boolean).join(" ") || "e.g. Akara Collector"}
                                 className={inputClass}
                             />
                             {/* live preview of how the name shows up */}

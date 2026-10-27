@@ -39,7 +39,7 @@ const data = {
   },
   teams: [
     {
-      name: "Aakara Art",
+      name: "Akara Art",
       plan: "Auction",
     },
   ],

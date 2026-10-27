@@ -344,7 +344,7 @@ export function WebsiteSettings() {
                         <p className="mt-3 text-center text-xs text-muted-foreground">
                             {previewInfo.label} · screens {previewInfo.screens}.{" "}
                             {visible.length === 0
-                                ? "No banners showing — the built-in Aakara banner is used."
+                                ? "No banners showing — the built-in Akara banner is used."
                                 : visible.length === 1
                                     ? "1 banner is showing."
                                     : `${visible.length} banners rotate every 6 seconds, in the order below.`}
@@ -384,7 +384,7 @@ export function WebsiteSettings() {
                                 <ImagesIcon className="size-8 text-muted-foreground/60" />
                                 <p className="mt-3 text-sm font-medium">No banners yet</p>
                                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                                    Until you add one, the homepage shows the built-in Aakara banner.
+                                    Until you add one, the homepage shows the built-in Akara banner.
                                 </p>
                             </div>
                         ) : (

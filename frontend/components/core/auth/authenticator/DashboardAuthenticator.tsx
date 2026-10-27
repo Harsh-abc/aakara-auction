@@ -208,7 +208,7 @@ export function DashboardAuthenticator() {
                             ? "The dashboard is protected by a second step. Link Google Authenticator to your account once — after that, every time you log in you'll enter the code it shows."
                             : codeExpired
                               ? `Your last code was entered ${validFor ?? "a while"} ago. For security, enter a new one from Google Authenticator to keep using the dashboard.`
-                              : "Open Google Authenticator on your phone and enter the code shown for your Aakara account."}
+                              : "Open Google Authenticator on your phone and enter the code shown for your Akara account."}
                         {validFor && !codeExpired && ` A code keeps the dashboard open for ${validFor}.`}
                     </p>
                 </div>
@@ -277,7 +277,7 @@ export function DashboardAuthenticator() {
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                             src={phase.setup.qrCode}
-                                            alt="QR code to add your Aakara account to Google Authenticator"
+                                            alt="QR code to add your Akara account to Google Authenticator"
                                             width={200}
                                             height={200}
                                             className="size-50 bg-white"

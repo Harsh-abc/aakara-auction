@@ -43,29 +43,29 @@ import { isEmptyHtml, sanitizeHtml } from "@/utils/sanitizeHtml";
 import RichTextContent from "@/components/common/RichTextContent";
 
 // =====================================================================
-// LABELS
+// LABELS (also used by the wizard's Publish step preview)
 // =====================================================================
 
-const TYPE_LABEL: Record<Auction["auctionType"], string> = {
+export const TYPE_LABEL: Record<Auction["auctionType"], string> = {
     LIVE: "Live",
     FLOOR: "Floor",
     HYBRID: "Hybrid",
 };
 
-const SHIPPING_LABEL: Record<ShippingStrategy, string> = {
+export const SHIPPING_LABEL: Record<ShippingStrategy, string> = {
     SHIPPING_INCLUDED: "Shipping Included",
     SHIPPING_CALCULATED_SEPARATELY: "Shipping Calculated Separately",
     BUYER_ARRANGES_PICKUP: "Buyer Arranges Pickup",
     ADMIN_ARRANGES_DELIVERY: "Admin Arranges Delivery",
 };
 
-const VISIBILITY_LABEL: Record<AuctionVisibility, string> = {
+export const VISIBILITY_LABEL: Record<AuctionVisibility, string> = {
     PUBLIC: "Public",
     REGISTERED_USERS_ONLY: "Registered Users Only",
     PRIVATE_INVITE_ONLY: "Private (Invite Only)",
 };
 
-const FEE_LABEL: Record<FeeType, string> = {
+export const FEE_LABEL: Record<FeeType, string> = {
     BUYER_PREMIUM: "Buyer Premium",
     PLATFORM_FEE: "Platform Fee",
     TAX_GST: "Tax / GST",
@@ -94,7 +94,7 @@ const STATUS_STYLES: Record<AuctionStatus, string> = {
     CANCELLED: "bg-red-50 text-red-600",
 };
 
-const LOT_STATUS_STYLES: Record<LotStatus, string> = {
+export const LOT_STATUS_STYLES: Record<LotStatus, string> = {
     DRAFT: "bg-slate-100 text-slate-600",
     SCHEDULED: "bg-blue-50 text-blue-700",
     ACTIVE: "bg-emerald-50 text-emerald-700",
@@ -104,7 +104,7 @@ const LOT_STATUS_STYLES: Record<LotStatus, string> = {
     WITHDRAWN: "bg-red-50 text-red-600",
 };
 
-const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+export const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
 // =====================================================================
 // FORMATTERS (viewer's local time zone, like the auctions table)
@@ -145,13 +145,13 @@ const formatDate = (iso?: string | null) => {
     return Number.isNaN(d.getTime()) ? iso : dateFmt.format(d);
 };
 
-const toNumber = (value: unknown): number | null => {
+export const toNumber = (value: unknown): number | null => {
     if (value === null || value === undefined || value === "") return null;
     const n = typeof value === "number" ? value : Number(value);
     return Number.isFinite(n) ? n : null;
 };
 
-const formatMoney = (value: unknown, currency: string) => {
+export const formatMoney = (value: unknown, currency: string) => {
     const n = toNumber(value);
     if (n === null) return null;
     try {
@@ -177,7 +177,7 @@ const formatFileSize = (value: unknown) => {
 // BUILDING BLOCKS
 // =====================================================================
 
-const Section = ({
+export const Section = ({
     title,
     action,
     children,
@@ -196,7 +196,7 @@ const Section = ({
 );
 
 /** Label/value pair — renders "—" for empty values */
-const Field = ({ label, value, className }: { label: string; value: ReactNode; className?: string }) => (
+export const Field = ({ label, value, className }: { label: string; value: ReactNode; className?: string }) => (
     <div className={cn("min-w-0", className)}>
         <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</dt>
         <dd className="mt-1 break-words text-[13px] text-slate-800">
@@ -209,13 +209,13 @@ const Field = ({ label, value, className }: { label: string; value: ReactNode; c
     </div>
 );
 
-const FieldGrid = ({ children, className }: { children: ReactNode; className?: string }) => (
+export const FieldGrid = ({ children, className }: { children: ReactNode; className?: string }) => (
     <dl className={cn("grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3", className)}>
         {children}
     </dl>
 );
 
-const Pill = ({ children, className }: { children: ReactNode; className?: string }) => (
+export const Pill = ({ children, className }: { children: ReactNode; className?: string }) => (
     <span
         className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium",
@@ -226,7 +226,7 @@ const Pill = ({ children, className }: { children: ReactNode; className?: string
     </span>
 );
 
-const RichText = ({ html }: { html?: string | null }) =>
+export const RichText = ({ html }: { html?: string | null }) =>
     isEmptyHtml(html) ? (
         <p className="text-[13px] text-slate-400">—</p>
     ) : (
@@ -236,7 +236,7 @@ const RichText = ({ html }: { html?: string | null }) =>
         />
     );
 
-const PlainText = ({ text }: { text?: string | null }) =>
+export const PlainText = ({ text }: { text?: string | null }) =>
     text?.trim() ? (
         <p className="whitespace-pre-line text-[13px] leading-relaxed text-slate-700">{text}</p>
     ) : (

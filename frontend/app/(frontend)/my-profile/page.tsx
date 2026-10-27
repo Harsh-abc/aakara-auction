@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { MyProfile } from "@/components/core/frontend/profile/MyProfile"
 
 export const metadata: Metadata = {
-    title: "My profile | Aakara",
+    title: "My profile | Akara",
 }
 
 export default function MyProfilePage() {
