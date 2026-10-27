@@ -139,20 +139,20 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                         {/* BIDDER + KYC, one compact strip */}
                         <section>
                             <p className={SECTION_LABEL}>Bidder details</p>
-                            <dl className="mt-3 grid grid-cols-1 divide-y divide-neutral-200 border border-neutral-200 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] sm:divide-x sm:divide-y-0">
+                            <dl className="mt-3 grid grid-cols-1 border border-neutral-200 text-sm sm:grid-cols-2">
                                 <div className="min-w-0 px-3 py-2.5">
                                     <dt className={FIELD_LABEL}>Name</dt>
                                     <dd className="mt-1 truncate text-neutral-950" title={fullName || undefined}>
                                         {fullName || "—"}
                                     </dd>
                                 </div>
-                                <div className="min-w-0 px-3 py-2.5">
+                                <div className="min-w-0 border-t border-neutral-200 px-3 py-2.5 sm:border-t-0 sm:border-l">
                                     <dt className={FIELD_LABEL}>Email</dt>
                                     <dd className="mt-1 truncate text-neutral-950" title={loaded.account.email}>
                                         {loaded.account.email}
                                     </dd>
                                 </div>
-                                <div className="min-w-0 px-3 py-2.5">
+                                <div className="min-w-0 border-t border-neutral-200 px-3 py-2.5 sm:col-span-2">
                                     <dt className={FIELD_LABEL}>KYC</dt>
                                     <dd className="mt-1 flex items-center gap-2">
                                         <span
@@ -164,7 +164,7 @@ export function RegisterConfirmDialog({ auction, open, onOpenChange, submitting,
                                             {KYC_STATUS_LABELS[kycStatus]}
                                         </span>
                                         {documentNames && (
-                                            <span className="truncate text-xs text-neutral-500" title={documentNames}>
+                                            <span className="min-w-0 truncate text-xs text-neutral-500" title={documentNames}>
                                                 {documentNames}
                                             </span>
                                         )}
