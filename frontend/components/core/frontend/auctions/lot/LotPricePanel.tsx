@@ -10,7 +10,18 @@ import { bidCountLabel } from "./lotPageDisplay"
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
 
 // the right-hand column of the lot page: who, what, how much, and the bid buttons
-export function LotPricePanel({ lot, onBid, className }: { lot: PublicLotDetail; onBid: OnBid; className?: string }) {
+export function LotPricePanel({
+    lot,
+    onBid,
+    bidRefreshKey,
+    className,
+}: {
+    lot: PublicLotDetail
+    onBid: OnBid
+    /** changes after a bid is saved — see BidButtons */
+    bidRefreshKey?: number
+    className?: string
+}) {
     const count = Number(lot.bidCount) || 0
     const countdown = lotCountdown(lot)
 
@@ -51,7 +62,7 @@ export function LotPricePanel({ lot, onBid, className }: { lot: PublicLotDetail;
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} className="mt-6" />
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} className="mt-6" />
         </aside>
     )
 }

@@ -20,11 +20,13 @@ type LotSummaryProps = {
     auctionUuid: string
     lot: PublicLotDetail
     onBid: OnBid
+    /** changes after a bid is saved — see BidButtons */
+    bidRefreshKey?: number
     className?: string
 }
 
 // artist, title, catalogue facts and the bid buttons, beside the lot image
-export function LotSummary({ auctionUuid, lot, onBid, className }: LotSummaryProps) {
+export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, className }: LotSummaryProps) {
     const count = Number(lot.bidCount) || 0
     const amount = formatMoney(count > 0 ? lot.currentBid : lot.startingPrice, lot.currency) ?? "—"
     const leader = count > 0 ? (lot.leadingPaddle ? `Paddle ${lot.leadingPaddle}` : "Another bidder") : null
@@ -72,7 +74,7 @@ export function LotSummary({ auctionUuid, lot, onBid, className }: LotSummaryPro
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} className="mt-5" />
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} className="mt-5" />
             <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(BUTTON, BUTTON_OUTLINE, "mt-2")}>
                 View full lot
             </Link>

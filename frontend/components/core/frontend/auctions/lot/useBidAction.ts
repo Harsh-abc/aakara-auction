@@ -16,6 +16,9 @@ export function useBidAction() {
     const pathname = usePathname()
     const token = useAppSelector((state) => state.auth.accessToken)
     const [target, setTarget] = useState<BidTarget | null>(null)
+    // bumped after a bid or proxy is saved, so the bid buttons refetch the bidder's proxy
+    const [savedCount, setSavedCount] = useState(0)
+    const onSaved = () => setSavedCount((n) => n + 1)
 
     const onBid = (kind: BidKind, lot: Pick<PublicLot, "uuid">) => {
         if (!token) {
@@ -25,5 +28,5 @@ export function useBidAction() {
         setTarget({ kind, lotUuid: lot.uuid })
     }
 
-    return { onBid, target, setTarget }
+    return { onBid, target, setTarget, savedCount, onSaved }
 }

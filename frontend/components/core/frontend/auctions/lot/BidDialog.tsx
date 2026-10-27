@@ -32,10 +32,12 @@ type BidDialogProps = {
     kind: BidKind
     onKindChange: (kind: BidKind) => void
     onClose: () => void
+    /** a bid or proxy went through */
+    onSaved?: () => void
 }
 
 // place a bid on a live lot, or leave a proxy (maximum) bid on an upcoming one — changeable until it opens
-export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: BidDialogProps) {
+export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSaved }: BidDialogProps) {
     const token = useAppSelector((state) => state.auth.accessToken)
 
     const [standing, setStanding] = useState<MyLotStanding | null>(null)
@@ -180,6 +182,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose }: Bid
             setTyped({ key: "", value: "" })
             setPicked({ key: "", amount: "" })
             setConfirming(null)
+            onSaved?.()
             onClose()
         } catch (err) {
             toast.error(getErrorMessage(err, "Your bid didn't go through. Please try again."))
