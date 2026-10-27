@@ -9,9 +9,9 @@
  *    • app/not-found.tsx
  * ════════════════════════════════════════════════════════════════════
  */
-import Link from "next/link";
 import { FOOTER_CONTENT } from "@/lib/constants/site-text";
 import { AkaraLogo } from "@/components/core/frontend/akaraLogo";
+import { FooterLinks } from "./footer-links";
 
 const FOOTER_LINK = "text-sm text-[#717171] transition-colors duration-200 hover:text-[#0d0d0d]";
 
@@ -36,23 +36,14 @@ export function Footer() {
     return (
         <footer className="mt-auto border-t border-[#cecece] bg-[#f4f2ef]">
             <div className="page-container mx-auto w-full grid gap-6 py-13 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                <div className="flex flex-col gap-4">
+                <div>
                     <AkaraLogo />
-                    <p className="max-w-66 text-sm leading-relaxed text-[#717171]">{FOOTER_CONTENT.aboutText}</p>
                 </div>
 
                 {FOOTER_CONTENT.linkColumns.map((column) => (
                     <div key={column.heading}>
                         <h2 className="text-[11px] uppercase tracking-[0.16em] text-[#717171] mb-3 md:mb-4">{column.heading}</h2>
-                        <ul className="flex flex-col gap-2">
-                            {column.links.map((link) => (
-                                <li key={link.label}>
-                                    <Link href={link.href} className={FOOTER_LINK}>
-                                        {link.label}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                        <FooterLinks links={column.links} linkClassName={FOOTER_LINK} />
                     </div>
                 ))}
 
@@ -70,18 +61,8 @@ export function Footer() {
 
             {/* Purple bar at the very bottom */}
             <div className="bg-[#673364] text-white">
-                <div className="mx-auto w-full max-w-[1200px] px-6 flex flex-col gap-2 py-3.5 text-[11px] uppercase tracking-[0.16em] sm:flex-row sm:items-center sm:justify-between">
-                    <p>
-                        {FOOTER_CONTENT.legalLinks.map((link, index) => (
-                            <span key={link.href}>
-                                {index > 0 && <span className="px-1.5">·</span>}
-                                <Link href={link.href} className="hover:underline">
-                                    {link.label}
-                                </Link>
-                            </span>
-                        ))}
-                    </p>
-                    <p>© {new Date().getFullYear()} Akara Art</p>
+                <div className="mx-auto w-full max-w-[1200px] px-6 py-3.5 text-[11px] uppercase tracking-[0.16em]">
+                    <p>© Akara {new Date().getFullYear()}</p>
                 </div>
             </div>
         </footer>

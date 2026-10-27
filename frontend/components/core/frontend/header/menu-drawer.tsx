@@ -22,6 +22,7 @@ import { Dialog } from "radix-ui";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
 import { MAIN_MENU_LINKS } from "@/lib/constants/site-text";
+import { useHasPastAuctions } from "@/hooks/useHasPastAuctions";
 import { AkaraLogo } from "@/components/core/frontend/akaraLogo";
 import { joinClassNames } from "@/lib/frontendHelpers";
 import { MenuLink } from "@/lib/types/frontendTypes";
@@ -135,6 +136,9 @@ export function MenuDrawer() {
 
 /** A menu item with a small list that folds open (e.g. "Auction") */
 function SubMenu({ link, isActive, isOpen, onToggle, onLinkClick }: { link: MenuLink; isActive: boolean; isOpen: boolean; onToggle: () => void; onLinkClick: () => void }) {
+    const hasPast = useHasPastAuctions();
+    const children = link.children!.filter((child) => !child.needsPastAuctions || hasPast);
+
     return (
         <>
             <button
@@ -158,7 +162,7 @@ function SubMenu({ link, isActive, isOpen, onToggle, onLinkClick }: { link: Menu
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.3, ease: SMOOTH }}
                     >
-                        {link.children!.map((child) => (
+                        {children.map((child) => (
                             <li key={child.label}>
                                 <Link href={child.href} onClick={onLinkClick} className="block py-2.5 text-sm text-[#717171] transition-[color,transform] duration-200 hover:text-[#0d0d0d]">
                                     {child.label}

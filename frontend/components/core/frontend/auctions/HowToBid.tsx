@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
 
 import { BODY, SectionHeading } from "../storefront";
@@ -5,15 +7,28 @@ import { BODY, SectionHeading } from "../storefront";
 const steps = [
     {
         title: "Register & verify",
-        body: "Create an account with your details and upload a valid ID. Verification is usually completed within one business day, ahead of the sale opening.",
+        body: <>Create an account and upload a valid form of identification. Your verification must be approved before you can bid.</>,
     },
     {
         title: "Browse the lots",
-        body: "Explore the full catalogue with images, provenance, condition notes and estimates in INR, USD and GBP. Add works to your watchlist for alerts.",
+        body: (
+            <>
+                Browse the catalogue for images, provenance, condition notes and estimates in INR. Add lots to{" "}
+                <Link href="/my-profile?tab=gallery" className="text-[#0d0d0d] underline underline-offset-2 hover:text-[#673364]">
+                    My Gallery
+                </Link>{" "}
+                to keep track of your selections and receive updates.
+            </>
+        ),
     },
     {
         title: "Place your bid",
-        body: "Enter your maximum bid before the lot opens. When the auctioneer calls the hammer, the highest maximum wins at one increment above the next-highest bid. You will be notified instantly if you are outbid or if the lot is yours.",
+        body: (
+            <>
+                Enter your maximum bid before the lot closes. The highest bidder at the close of the lot wins. The final price is set at one bidding increment above the next-highest bid, up to your
+                maximum bid. You will be notified if you are outbid or win the lot.
+            </>
+        ),
     },
 ];
 
