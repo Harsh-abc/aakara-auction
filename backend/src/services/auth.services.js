@@ -13,6 +13,7 @@ import QRCode from 'qrcode'
 import { clearIpFailures, isIpBlocked, registerIpFailure } from '../libs/loginIpBlock.js'
 import { clearMfaFailures, decryptSecret, encryptSecret, MFA_ISSUER, MFA_VALID_MS, mfaRetryAfter, mfaValidUntil, registerMfaFailure } from '../libs/dashboardMfa.js'
 import { generateTotpSecret, otpauthUrl, verifyTotp } from '../libs/totp.js'
+import { TERMS_OF_SALE_VERSION } from '../utils/termsOfSale.js'
 // OTP send limits (and their Redis keys) live in libs/otpLimits.js
 import {
     attemptsKey,
@@ -52,7 +53,14 @@ const ACCOUNT_LOCK_THRESHOLD = 5;
 const ACCOUNT_LOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 // LOGIN
 
-export const registerService = async ({ username, email, password, phone, city, country }) => {
+export const registerService = async ({ username, email, password, phone, city, country, termsAcceptance }) => {
+
+    // the form was built with older terms than the ones in force now — have them read the current ones
+    if (termsAcceptance?.termsVersion !== TERMS_OF_SALE_VERSION) {
+        const error = new Error('The terms and conditions have been updated. Please reload the page and review them again.');
+        error.statusCode = 409;
+        throw error;
+    }
 
     const existing = await prisma.user.findFirst({
         where: {
@@ -90,6 +98,13 @@ export const registerService = async ({ username, email, password, phone, city, 
         phone: phone ?? null,
         city: city ?? null,
         country: country ?? null,
+        // recorded on the account when it's created (createUserFromPending)
+        terms: {
+            version: termsAcceptance.termsVersion,
+            acceptedAt: new Date().toISOString(),
+            ip: termsAcceptance.ip?.slice(0, 64) ?? null,
+            userAgent: termsAcceptance.userAgent?.slice(0, 500) ?? null,
+        },
     };
     await redis.set(pendingKey(email), JSON.stringify(pendingData), 'EX', PENDING_TTL);
 
@@ -282,6 +297,14 @@ export const verifyPhoneOtpService = async ({ email, otp }) => {
 };
 
 const createUserFromPending = async (email, pending, { phoneVerified }) => {
+    // no account without a recorded acceptance of the terms (pending signups started before this was recorded)
+    if (!pending.terms?.version) {
+        await redis.del(pendingKey(email), attemptsKey(email), resendKey(email));
+        const error = new Error('Please accept the terms and conditions and register again.');
+        error.statusCode = 400;
+        throw error;
+    }
+
     const existing = await prisma.user.findFirst({
         where: {
             OR: [
@@ -320,6 +343,10 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
                 emailVerifiedAt: new Date(),
                 phoneVerified,
                 phoneVerifiedAt: phoneVerified ? new Date() : null,
+                termsAcceptedAt: new Date(pending.terms.acceptedAt),
+                termsVersion: pending.terms.version,
+                termsAcceptedIp: pending.terms.ip,
+                termsAcceptedUserAgent: pending.terms.userAgent,
             },
         });
 

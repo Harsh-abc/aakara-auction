@@ -1,7 +1,8 @@
-// Akara Auctions' Terms and Conditions of Sale, shown in full in the register-to-bid
-// dialog. Bidders must scroll to the end before they can tick acceptance.
+// Akara Auctions' Terms and Conditions of Sale, shown in full in the sign-up and
+// register-to-bid dialogs. Users must scroll to the end before they can accept.
 //
-// `version` is sent with every registration and stored on the participant row.
+// `version` is sent with every sign-up and auction registration and stored on the
+// user / participant row.
 // When the text changes, bump it here AND TERMS_OF_SALE_VERSION in
 // backend/src/utils/termsOfSale.js — the server rejects any other version.
 
@@ -25,7 +26,7 @@ export type TermsSection = {
 };
 
 export const TERMS_OF_SALE: { version: string; title: string; notice: string; sections: TermsSection[] } = {
-    version: "2026-10",
+    version: "2026-10-24",
     title: "Terms and Conditions of Sale",
     notice: "Important notice to Bidders. These Terms and Conditions of Sale govern every auction and private sale conducted by Akara Auctions Private Limited. By registering to bid, bidding or buying, you agree to be bound by them. Please read them carefully before bidding, in particular Clause 7 (Description, Condition and Inspection), Clause 8 (Authenticity), Clause 12 (Payment), Clause 14 (Buyer Default), Clause 17 (Limitation of Liability) and Clause 19 (Governing Law and Dispute Resolution).",
     sections: [

@@ -57,7 +57,13 @@ model User {
   totpSecret                String?
   totpEnabledAt             DateTime?
   totpLastStep              BigInt?
-  lotBidders               LotBidder[]            @relation("LotBidderUser")
+  // the Terms and Conditions accepted at sign-up (scrolled to the end, then "Accept"); termsVersion is
+  // TERMS_OF_SALE_VERSION at the time. Null for accounts created by an admin or before this was recorded
+  termsAcceptedAt           DateTime?
+  termsVersion              String?                @db.VarChar(32)
+  termsAcceptedIp           String?                @db.VarChar(64)
+  termsAcceptedUserAgent    String?                @db.VarChar(500)
+  lotBidders             LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
   galleryItems              UserGalleryItem[]

@@ -50,6 +50,9 @@ export interface SignupPayload {
 // sent only with the first signup request; resends reuse the pending signup and need no token
 export interface SignupRequest extends SignupPayload {
     recaptchaToken?: string
+    // accepted in the terms dialog; the backend records the version on the new account
+    acceptTerms: true
+    termsVersion: string
 }
 
 export interface ResendOtpPayload {

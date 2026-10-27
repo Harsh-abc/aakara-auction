@@ -8,6 +8,9 @@ export const registerSchema = z.object({
     phone: z.string().regex(/^\+[0-9]{7,15}$/, "Invalid phone number").optional(),
     city: z.string().trim().min(1).max(100).optional(),
     country: z.string().trim().min(1).max(100).optional(),
+    // the user scrolled the full Terms and Conditions and pressed "Accept"; termsVersion is the one they were shown
+    acceptTerms: z.literal(true, { message: "Please accept the terms and conditions to sign up" }),
+    termsVersion: z.string({ message: "Terms version is required" }).trim().min(1).max(32),
 });
 
 export const verifyOtpSchema = z.object({

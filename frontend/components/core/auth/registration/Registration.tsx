@@ -4,15 +4,17 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useAppSelector } from "@/hooks/redux"
+import { useAppDispatch, useAppSelector } from "@/hooks/redux"
 import { canAccessDashboard } from "@/lib/constants/roles"
 import { refreshSession } from "@/services/authSession"
+import { loginUser } from "@/services/operations/auth.api"
 import { BODY, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "@/components/core/frontend/storefront"
 import { cn } from "@/lib/utils"
 
 import { RegistrationBenefits } from "./RegistrationBenefits"
 import { RegistrationLoginForm } from "./RegistrationLoginForm"
 import { RegistrationSignupForm } from "./RegistrationSignupForm"
+import { SignupSuccessDialog } from "./SignupSuccessDialog"
 
 type AuthTab = "login" | "signup"
 
@@ -30,7 +32,8 @@ function getSafeRedirect(value: string | null) {
 export function Registration() {
     const searchParams = useSearchParams()
     const router = useRouter()
-    const user = useAppSelector((state) => state.auth.user)
+    const dispatch = useAppDispatch()
+    const user =useAppSelector((state) => state.auth.user)
     const role = useAppSelector((state) => state.auth.role)
 
     const [activeTab, setActiveTab] = useState<AuthTab>(
@@ -56,8 +59,33 @@ export function Registration() {
     // email of an account just created in the Sign up tab; `version` remounts the login form so it picks the email up
     const [newAccount, setNewAccount] = useState<{ email: string; version: number } | null>(null)
 
-    const handleAccountCreated = (email: string) => {
-        setNewAccount((prev) => ({ email, version: (prev?.version ?? 0) + 1 }))
+    // the "thank you" popup; signedIn: the automatic login after signing up worked
+    const [signupSuccess, setSignupSuccess] = useState<{ email: string; firstName: string; signedIn: boolean } | null>(null)
+
+    // a new account is logged straight in with the password just chosen, then the popup shows
+    const handleAccountCreated = async ({ email, password, firstName }: { email: string; password: string; firstName: string }) => {
+        let signedIn = false
+        try {
+            await dispatch(loginUser({ email, password })).unwrap()
+            signedIn = true
+        } catch {
+            // the popup then leads to the login form, with the email filled in
+        }
+        setSignupSuccess({ email, firstName, signedIn })
+    }
+
+    // back to the page they came to sign up from; if the automatic login failed, the login form instead
+    const handleSuccessClosed = () => {
+        if (!signupSuccess) return
+        setSignupSuccess(null)
+
+        if (signupSuccess.signedIn) {
+            // every link to this page passes ?redirect= (the header, Register to bid, Save to gallery, Bid)
+            router.replace(redirectTo ?? "/")
+            return
+        }
+
+        setNewAccount((prev) => ({ email: signupSuccess.email, version: (prev?.version ?? 0) + 1 }))
         handleTabChange("login")
     }
 
@@ -128,6 +156,15 @@ export function Registration() {
                     </div>
                 </div>
             </section>
+
+            {signupSuccess && (
+                <SignupSuccessDialog
+                    name={signupSuccess.firstName}
+                    email={signupSuccess.email}
+                    signedIn={signupSuccess.signedIn}
+                    onClose={handleSuccessClosed}
+                />
+            )}
         </main>
     )
 }

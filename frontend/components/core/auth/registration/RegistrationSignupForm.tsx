@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import Link from "next/link"
 import toast from "react-hot-toast"
 import { ChevronDown } from "lucide-react"
 import type { CountryCode } from "libphonenumber-js"
@@ -11,6 +10,7 @@ import { sendSignupOtp } from "@/services/operations/auth.api"
 import { getCities, getCountries } from "@/services/operations/location.api"
 import type { SignupOtpStepResponse, SignupPayload } from "@/lib/types/auth.types"
 import type { Country } from "@/lib/types/location.types"
+import { TERMS_OF_SALE } from "@/lib/constants/termsOfSale"
 import { cn } from "@/lib/utils"
 import {
     COUNTRY_CODES,
@@ -31,6 +31,7 @@ import {
 } from "./AuthField"
 import { RegistrationOtpStep, type OtpChannel } from "./RegistrationOtpStep"
 import { ReCaptcha, type ReCaptchaHandle } from "./ReCaptcha"
+import { SignupTermsDialog } from "./SignupTermsDialog"
 
 // public reCAPTCHA v2 site key; left unset in local dev, the widget is skipped (the backend skips it too)
 const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
@@ -127,7 +128,8 @@ function fieldForConflict(message: string): FieldKey | null {
 const isCaptchaError = (message: string) => /captcha/i.test(message)
 
 type RegistrationSignupFormProps = {
-    onAccountCreated: (email: string) => void
+    // with the password, so the page can log them straight in
+    onAccountCreated: (account: { email: string; password: string; firstName: string }) => void
 }
 
 export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupFormProps) {
@@ -136,6 +138,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
 
     const [formData, setFormData] = useState(initialFormData)
     const [errors, setErrors] = useState<FieldErrors>({})
+    const [termsOpen, setTermsOpen] = useState(false)
 
     const recaptchaRef = useRef<ReCaptchaHandle>(null)
     const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
@@ -294,7 +297,15 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
         }
 
         try {
-            await dispatch(sendSignupOtp({ ...payload, recaptchaToken: recaptchaToken ?? undefined })).unwrap()
+            await dispatch(
+                sendSignupOtp({
+                    ...payload,
+                    recaptchaToken: recaptchaToken ?? undefined,
+                    // validate() has confirmed they accepted the terms in the dialog
+                    acceptTerms: true,
+                    termsVersion: TERMS_OF_SALE.version,
+                })
+            ).unwrap()
             // the token is spent; "Edit details" shows a fresh widget
             setRecaptchaToken(null)
             toast.success(`Verification code sent to ${payload.email}`)
@@ -330,9 +341,8 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
             return
         }
 
-        const { email } = pendingSignup.payload
-
-        toast.success("Account created. Please log in to continue.")
+        const { email, password } = pendingSignup.payload
+        const firstName = formData.firstName.trim()
 
         // start the tab fresh, so coming back to Sign up doesn't show the old details or code step
         setPendingSignup(null)
@@ -343,7 +353,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
         const defaultCountry = countries?.find((item) => item.isoCode === initialFormData.phoneCountry)
         if (defaultCountry) selectCountry(defaultCountry)
 
-        onAccountCreated(email)
+        onAccountCreated({ email, password, firstName })
     }
 
     if (pendingSignup) {
@@ -531,9 +541,12 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                         type="checkbox"
                         checked={formData.terms}
                         onChange={(event) => {
-                            const checked = event.target.checked
-                            setFormData((prev) => ({ ...prev, terms: checked }))
-                            setErrors((prev) => ({ ...prev, terms: undefined }))
+                            // ticking opens the terms; it's only checked once they're accepted there
+                            if (event.target.checked) {
+                                setTermsOpen(true)
+                                return
+                            }
+                            setFormData((prev) => ({ ...prev, terms: false }))
                         }}
                         aria-invalid={errors.terms ? true : undefined}
                         aria-describedby={errors.terms ? "terms-error" : undefined}
@@ -541,13 +554,34 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                     />
                     <span>
                         I accept the{" "}
-                        <Link href="/terms" className="text-[#0d0d0d] underline underline-offset-2">
+                        <button
+                            type="button"
+                            onClick={(event) => {
+                                // don't let the label toggle the checkbox too
+                                event.preventDefault()
+                                setTermsOpen(true)
+                            }}
+                            className="cursor-pointer text-[#0d0d0d] underline underline-offset-2"
+                        >
                             terms and conditions
-                        </Link>{" "}
+                        </button>{" "}
                         and privacy policy.
                     </span>
                 </label>
                 <AuthFieldError id="terms-error" message={errors.terms} />
+                <SignupTermsDialog
+                    open={termsOpen}
+                    onAccept={() => {
+                        setTermsOpen(false)
+                        setFormData((prev) => ({ ...prev, terms: true }))
+                        setErrors((prev) => ({ ...prev, terms: undefined }))
+                    }}
+                    onDecline={() => {
+                        setTermsOpen(false)
+                        setFormData((prev) => ({ ...prev, terms: false }))
+                        setErrors((prev) => ({ ...prev, terms: "You must accept the terms and conditions to create an account" }))
+                    }}
+                />
             </div>
 
             {RECAPTCHA_SITE_KEY && (

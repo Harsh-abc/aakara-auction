@@ -4,7 +4,7 @@
 
 import { TERMS_OF_SALE, type TermsClause } from "@/lib/constants/termsOfSale";
 
-export const TERMS_UPDATED = "01 October 2026";
+export const TERMS_UPDATED = "24 October 2026";
 
 export const TERMS_TITLE = "Terms and conditions of sale";
 

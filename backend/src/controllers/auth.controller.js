@@ -9,8 +9,15 @@ import { SESSION_TTL_MS } from '../libs/session.js';
 
 export const register = async (req, res, next) => {
     try {
-        const data = registerSchema.parse(req.body);
-        const result = await registerService(data);
+        const { acceptTerms: _acceptTerms, termsVersion, ...data } = registerSchema.parse(req.body);
+        const result = await registerService({
+            ...data,
+            termsAcceptance: {
+                termsVersion,
+                ip: getClientIp(req),
+                userAgent: req.get('user-agent') ?? null,
+            },
+        });
 
         res.status(200).json({
             success: true,
