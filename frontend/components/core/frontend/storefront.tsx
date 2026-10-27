@@ -28,6 +28,12 @@ export const BUTTON_INLINE = "w-auto px-4.25";
 // an action that isn't available yet (registration closed / not open) — a grey slab with the blocked cursor
 export const BUTTON_UNAVAILABLE = "cursor-not-allowed border-[#cecece] bg-[#f4f2ef] text-[#717171]";
 
+// Figma tabs: tinted fill + gold underline on the active tab
+export const TAB_TRIGGER =
+    "relative inline-flex h-10.25 flex-none shrink-0 cursor-pointer items-center whitespace-nowrap rounded-none border-0 bg-transparent px-5 text-[12px] leading-4 font-normal tracking-[0.14em] text-[#717171] uppercase transition-colors duration-200 hover:text-[#0d0d0d] " +
+    "after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:bg-[#cea25a] after:transition-transform after:duration-300 " +
+    "data-active:bg-[#fbe4c8]/50 data-active:font-medium data-active:text-[#0d0d0d] data-active:after:scale-x-100 group-data-[variant=default]/tabs-list:data-active:shadow-none";
+
 // a section's title row: 18px title on a hairline, optional right-hand note, optional description under it
 export function SectionHeading({ id, title, aside, description, className }: { id?: string; title: ReactNode; aside?: ReactNode; description?: ReactNode; className?: string }) {
     return (

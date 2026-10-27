@@ -8,4 +8,6 @@ export interface MenuLink {
     href: string;
     /** Sub-links (e.g. the "Auction" menu item opens a small list) */
     children?: MenuLink[];
+    /** Only shown once at least one sale has closed (the "Past" links) */
+    needsPastAuctions?: boolean;
 }

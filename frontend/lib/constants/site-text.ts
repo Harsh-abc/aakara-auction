@@ -8,7 +8,7 @@ export const MAIN_MENU_LINKS: MenuLink[] = [
         href: "/",
         children: [
             { label: "Upcoming / Live", href: "/?tab=upcoming#auctions" },
-            { label: "Past auctions", href: "/?tab=past#auctions" },
+            { label: "Past auctions", href: "/?tab=past#auctions", needsPastAuctions: true },
             { label: "Live auction", href: "/?tab=upcoming#auctions" },
             { label: "How to bid", href: "/#how-to-bid" },
         ],
@@ -22,31 +22,29 @@ export const MAIN_MENU_LINKS: MenuLink[] = [
     { label: "Blogs", href: "/blogs" },
 ];
 
+/** The "Absentee bid" section under How to bid (the footer link points to it once on). Off until the client signs it off and the backend saves submissions. */
+export const SHOW_ABSENTEE_BID = false;
+
 export const FOOTER_CONTENT = {
-    aboutText: "An auction house for modern and contemporary South Asian art, pairing carefully researched catalogues with transparent online bidding.",
     linkColumns: [
         {
             heading: "Auctions",
             links: [
                 { label: "Upcoming / Live", href: "/?tab=upcoming#auctions" },
-                { label: "Past", href: "/?tab=past#auctions" },
-                { label: "Live Auction", href: "/?tab=upcoming#auctions" },
-            ],
+                { label: "Past", href: "/?tab=past#auctions", needsPastAuctions: true },
+                // goes nowhere until the absentee bid section is switched on, then points at it
+                { label: "Absentee bid / Bidding increments", href: SHOW_ABSENTEE_BID ? "/#absentee-bid" : "#" },
+            ] as MenuLink[],
         },
         {
             heading: "Buying",
             links: [
-                { label: "How to bid", href: "/#how-to-bid" },
-                { label: "Valuations", href: "/valuations" },
-                { label: "Shipping & collection", href: "/shipping" },
-            ],
+                { label: "FAQs", href: "/faq" },
+                { label: "Terms & conditions of sale", href: "/terms" },
+            ] as MenuLink[],
         },
     ],
-    contactLines: ["Mumbai · Kala Ghoda", "+91 22 0000 0000", "bids@akaraart.com", "Mon–Sat, 10am–6pm IST"],
-    /** Links in the purple bar at the very bottom */
-    legalLinks: [
-        { label: "Conditions of auction", href: "/terms" },
-        { label: "FAQs", href: "/faqs" },
-        { label: "Privacy", href: "/privacy" },
-    ],
+    contactLines: ["3C Amarchand Mansion, 2nd Floor, 16 Madam Cama Road, Mumbai 400001, India", "auction@akaraart.com", "+91 98209 41300"],
 };
+
+export const AUCTION_EMAIL = "auction@akaraart.com";

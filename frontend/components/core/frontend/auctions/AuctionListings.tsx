@@ -7,12 +7,13 @@ import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useHasPastAuctions } from "@/hooks/useHasPastAuctions";
 import type { PublicAuctionsPage, PublicAuctionTab } from "@/lib/types/publicAuction.types";
 import { getPublicAuctions } from "@/services/operations/publicAuction.api";
 import { getErrorMessage } from "@/lib/apiError";
 import { cn } from "@/lib/utils";
 
-import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, SectionHeading } from "../storefront";
+import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, SectionHeading, TAB_TRIGGER } from "../storefront";
 import type { BidderEligibility } from "./auctionDisplay";
 import { AuctionListItem, ROW_GRID } from "./AuctionListItem";
 import { SearchInput } from "./SearchInput";
@@ -23,11 +24,6 @@ const SEARCH_DEBOUNCE_MS = 350;
 const tabLabels: Record<PublicAuctionTab, string> = {
     upcoming: "Upcoming / Live",
     past: "Past",
-};
-
-const tabDescriptions: Record<PublicAuctionTab, string> = {
-    upcoming: "Sales open for bidding right now, followed by those opening soon.",
-    past: "Recently closed sales, newest first.",
 };
 
 const emptyCopy: Record<PublicAuctionTab, string> = {
@@ -42,12 +38,6 @@ const EMPTY_PAGE: PublicAuctionsPage = {
     pagination: { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 0 },
 };
 
-// Figma tabs: tinted fill + gold underline on the active tab
-const TAB_TRIGGER =
-    "relative inline-flex h-10.25 flex-none shrink-0 cursor-pointer items-center whitespace-nowrap rounded-none border-0 bg-transparent px-5 text-[12px] leading-4 font-normal tracking-[0.14em] text-[#717171] uppercase transition-colors duration-200 hover:text-[#0d0d0d] " +
-    "after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:bg-[#cea25a] after:transition-transform after:duration-300 " +
-    "data-active:bg-[#fbe4c8]/50 data-active:font-medium data-active:text-[#0d0d0d] data-active:after:scale-x-100 group-data-[variant=default]/tabs-list:data-active:shadow-none";
-
 type AuctionListingsProps = {
     paddles: Record<string, string>;
     eligibility: BidderEligibility;
@@ -60,7 +50,12 @@ const tabFromUrl = (value: string | null): PublicAuctionTab => (value === "past"
 export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionListingsProps) {
     const searchParams = useSearchParams();
     const urlTab = tabFromUrl(searchParams.get("tab"));
-    const [tab, setTab] = useState<PublicAuctionTab>(urlTab);
+    const [chosenTab, setTab] = useState<PublicAuctionTab>(urlTab);
+
+    // the Past tab only exists once a sale has closed; until then ?tab=past falls back to upcoming
+    const hasPast = useHasPastAuctions();
+    const tab: PublicAuctionTab = chosenTab === "past" && hasPast === false ? "upcoming" : chosenTab;
+    const visibleTabs = (Object.keys(tabLabels) as PublicAuctionTab[]).filter((key) => key !== "past" || hasPast || tab === "past");
 
     // follow the URL when a menu link changes ?tab= while this page is already open
     const [seenUrlTab, setSeenUrlTab] = useState(urlTab);
@@ -123,12 +118,12 @@ export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionL
     return (
         <section id="auctions" aria-labelledby="auction-list-heading" className="scroll-mt-24">
             <div className="page-container">
-                <SectionHeading id="auction-list-heading" title="Upcoming & Live Auctions" description={tabDescriptions[tab]} />
+                <SectionHeading id="auction-list-heading" title="Upcoming & Live Auctions" />
 
                 <div className="mt-6 flex flex-col-reverse gap-4 border-b border-[#cecece] md:flex-row md:items-end md:justify-between">
                     <Tabs value={tab} onValueChange={(value) => changeTab(value as PublicAuctionTab)}>
                         <TabsList className="-mb-px h-auto w-full justify-start rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto">
-                            {(Object.keys(tabLabels) as PublicAuctionTab[]).map((key) => (
+                            {visibleTabs.map((key) => (
                                 <TabsTrigger key={key} value={key} className={TAB_TRIGGER}>
                                     {tabLabels[key]}
                                 </TabsTrigger>
