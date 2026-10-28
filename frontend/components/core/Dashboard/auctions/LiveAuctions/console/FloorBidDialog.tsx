@@ -10,8 +10,6 @@ import type { AuctionConsole } from "@/lib/types/bidding.types";
 
 import { money } from "./consoleDisplay";
 
-const SUGGESTIONS = 6;
-
 interface FloorBidDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -55,12 +53,10 @@ export default function FloorBidDialog({
 
     const query = paddle.trim().replace(/^#/, "").toLowerCase();
     const exact = floorBidders.find((bidder) => bidder.paddle.toLowerCase() === query) ?? null;
-    const suggestions =
-        query && !exact
-            ? floorBidders
-                  .filter((bidder) => bidder.paddle.toLowerCase().startsWith(query) || bidder.name?.toLowerCase().includes(query))
-                  .slice(0, SUGGESTIONS)
-            : [];
+    // every verified bidder on the lot until one is picked, narrowed by what's typed
+    const suggestions = exact
+        ? []
+        : floorBidders.filter((bidder) => !query || bidder.paddle.toLowerCase().startsWith(query) || bidder.name?.toLowerCase().includes(query));
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
@@ -106,7 +102,7 @@ export default function FloorBidDialog({
                             <p className="text-[12px] text-amber-700">No verified bidder on this lot holds that paddle</p>
                         ) : null}
                         {suggestions.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
                                 {suggestions.map((bidder) => (
                                     <button
                                         key={bidder.uuid ?? bidder.paddle}
