@@ -14,6 +14,7 @@ import { clearIpFailures, isIpBlocked, registerIpFailure } from '../libs/loginIp
 import { clearMfaFailures, decryptSecret, encryptSecret, MFA_ISSUER, MFA_VALID_MS, mfaRetryAfter, mfaValidUntil, registerMfaFailure } from '../libs/dashboardMfa.js'
 import { generateTotpSecret, otpauthUrl, verifyTotp } from '../libs/totp.js'
 import { TERMS_OF_SALE_VERSION } from '../utils/termsOfSale.js'
+import { canSignIn } from '../libs/userStatus.js'
 // OTP send limits (and their Redis keys) live in libs/otpLimits.js
 import {
     attemptsKey,
@@ -338,7 +339,8 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
                 phone: pending.phone,
                 passwordHash: pending.passwordHash,
                 roleId: defaultRole?.id,
-                status: 'ACTIVE',
+                // can log in and upload KYC; staff make them ACTIVE before they can register or bid
+                status: 'INACTIVE',
                 emailVerified: true,
                 emailVerifiedAt: new Date(),
                 phoneVerified,
@@ -448,7 +450,7 @@ export const loginService = async ({ email, password, ip, userAgent }) => {
         throw error;
     }
 
-    if (user.status !== 'ACTIVE') {
+    if (!canSignIn(user.status)) {
         await logAttempt({ userId: user.id, email, ip, userAgent, success: false, failureReason: `STATUS_${user.status}` });
         const error = new Error(user.status === 'SUSPENDED'
             ? 'Your account has been suspended. Please contact the auction house.'
@@ -566,7 +568,7 @@ export const refreshService = async (refreshToken) => {
 
     const user = await prisma.user.findUnique({ where: { id: session.userId } });
 
-    if (!user || user.status !== 'ACTIVE') {
+    if (!user || !canSignIn(user.status)) {
         const error = new Error('Account is not active');
         error.statusCode = 403;
         throw error;

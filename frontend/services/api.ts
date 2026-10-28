@@ -135,6 +135,7 @@ export const userEndPoints = {
     REVIEW_USER_KYC_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc/review`,
     REQUEST_KYC_DOCUMENTS_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc/request`,
     SET_KYC_STATUS_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/kyc/status`,
+    SET_USER_ACTIVE_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/active`,
     UPDATE_USER_DETAILS_API: (uuid: string) => `${BASE_URL}/api/users/${uuid}/details`,
 
 };

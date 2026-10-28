@@ -1,5 +1,5 @@
-import { getAllUsersService, getUserStatsService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService, getMyRegistrationsService, changeMyPasswordService, getMyKycService, submitMyKycService, reviewUserKycService, requestKycDocumentsService, updateUserDetailsService, setKycStatusService } from '../services/user.services.js';
-import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema, changePasswordSchema, submitMyKycSchema, reviewKycSchema, requestKycDocumentsSchema, updateUserDetailsSchema, setKycStatusSchema } from '../validations/user.validation.js';
+import { getAllUsersService, getUserStatsService, getUserByIdService, uploadUserKycService, getMyProfileService, updateMyProfileService, getMyRegistrationsService, changeMyPasswordService, getMyKycService, submitMyKycService, reviewUserKycService, requestKycDocumentsService, updateUserDetailsService, setKycStatusService, setUserActiveService } from '../services/user.services.js';
+import { getAllUsersSchema, getUserByIdSchema, uploadUserKycSchema, updateMyProfileSchema, changePasswordSchema, submitMyKycSchema, reviewKycSchema, requestKycDocumentsSchema, updateUserDetailsSchema, setKycStatusSchema, setUserActiveSchema } from '../validations/user.validation.js';
 import { REFRESH_COOKIE_NAME } from './auth.controller.js';
 
 
@@ -82,8 +82,10 @@ export const uploadUserKyc = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: result.status === 'VERIFIED'
-                ? 'KYC documents added. KYC is verified.'
-                : 'KYC documents added and approved. KYC is not verified yet: a required document is still missing or awaiting review.',
+                ? 'KYC documents added. KYC is still verified.'
+                : result.status === 'PENDING' && result.documentsComplete
+                    ? 'KYC documents added and approved. All required documents are in: turn on the KYC status toggle to verify.'
+                    : 'KYC documents added and approved. KYC is not verified yet: a required document is still missing or awaiting review.',
             data: result,
         });
     } catch (err) {
@@ -242,7 +244,7 @@ export const reviewUserKyc = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: result.kycStatus === 'VERIFIED' ? 'KYC verified' : 'Review saved',
+            message: 'Review saved',
             data: result,
         });
     } catch (err) {
@@ -291,6 +293,30 @@ export const setKycStatus = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: verified ? 'KYC marked as verified' : 'KYC marked as not verified',
+            data: result,
+        });
+    } catch (err) {
+        if (err instanceof ZodError) { return res.status(400).json({ success: false, message: err.issues[0]?.message || "Validation failed", errors: err.issues, }); }
+        return res.status(err.statusCode || 500).json({
+            success: false,
+            message: err.message || "Something went wrong",
+        });
+    }
+};
+
+
+export const setUserActive = async (req, res) => {
+    try {
+        const { uuid } = getUserByIdSchema.parse(req.params);
+        const { active } = setUserActiveSchema.parse(req.body ?? {});
+
+        const result = await setUserActiveService({ uuid, active, actorUuid: req.user.uuid });
+
+        return res.status(200).json({
+            success: true,
+            message: active
+                ? 'User activated. They can now register for auctions and bid.'
+                : "User made inactive. They can still log in but can't register for auctions or bid.",
             data: result,
         });
     } catch (err) {

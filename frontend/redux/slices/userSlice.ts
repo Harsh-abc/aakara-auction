@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -27,7 +27,7 @@ interface UserState {
     // uuid of the user whose role is being changed
     changingRoleFor: string | null;
 
-    // uuid of the user being suspended / reactivated
+    // uuid of the user being suspended / reactivated / made active or inactive
     changingStatusFor: string | null;
 }
 
@@ -212,6 +212,20 @@ const userSlice = createSlice({
                 if (state.selectedUser?.uuid === uuid) state.selectedUser.status = status;
             })
             .addCase(changeUserStatus.rejected, (state) => {
+                state.changingStatusFor = null;
+            })
+
+            .addCase(setUserActive.pending, (state, action) => {
+                state.changingStatusFor = action.meta.arg.uuid;
+            })
+            .addCase(setUserActive.fulfilled, (state, action) => {
+                state.changingStatusFor = null;
+                const { uuid, status } = action.payload.data;
+                const row = state.users.find((u) => u.uuid === uuid);
+                if (row) row.status = status;
+                if (state.selectedUser?.uuid === uuid) state.selectedUser.status = status;
+            })
+            .addCase(setUserActive.rejected, (state) => {
                 state.changingStatusFor = null;
             });
     },

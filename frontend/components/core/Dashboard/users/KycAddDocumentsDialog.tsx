@@ -100,7 +100,7 @@ export function KycAddDocumentsDialog({ user }: { user: User }) {
                 })
             ).unwrap()
 
-            if (response.data.status === "VERIFIED") toast.success(response.message)
+            if (response.data.status === "VERIFIED" || response.data.documentsComplete) toast.success(response.message)
             else toast(response.message, { icon: "⚠️" })
             setOpen(false)
         } catch (err) {

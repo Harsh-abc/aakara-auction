@@ -26,6 +26,7 @@ const getInitials = (user: User) => {
 
 const statusLabel: Record<string, string> = {
     ACTIVE: "Active",
+    INACTIVE: "Inactive",
     SUSPENDED: "Suspended",
     PENDING_VERIFICATION: "Pending Verification",
 }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { changeMyPassword, getAllUsers, getUserStats, getMyKyc, getMyProfile, getMyRegistrations, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, submitMyKyc, updateMyProfile, updateUserDetails, uploadUserKyc } from '../controllers/user.controller.js';
+import { changeMyPassword, getAllUsers, getUserStats, getMyKyc, getMyProfile, getMyRegistrations, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, setUserActive, submitMyKyc, updateMyProfile, updateUserDetails, uploadUserKyc } from '../controllers/user.controller.js';
 import { addToGallery, getMyGallery, removeFromGallery } from '../controllers/gallery.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
@@ -34,6 +34,9 @@ userRouter.get('/:uuid', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPER
 
 // name, date of birth and username
 userRouter.patch('/:uuid/details', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), updateUserDetails)
+
+// active / inactive (new signups start inactive and can't register for auctions or bid)
+userRouter.patch('/:uuid/active', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), setUserActive)
 
 userRouter.post('/:uuid/kyc', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), uploadAny, uploadUserKyc)
 

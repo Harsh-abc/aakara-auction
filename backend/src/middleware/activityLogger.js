@@ -143,6 +143,10 @@ const ROUTES = [
         target: USER,
         describe: ({ body }) => `Edited user details (${fields(body)})`,
     }),
+    route("PATCH", "/api/users/:uuid/active", "USER", "USER_ACTIVE_SET", "Set a user active / inactive", {
+        target: USER,
+        describe: ({ body }) => (body.active ? "Made the user active" : "Made the user inactive"),
+    }),
 
     // ── KYC ───────────────────────────────────────────────────────────
     route("POST", "/api/users/:uuid/kyc", "KYC", "KYC_UPLOAD_FOR_USER", "Uploaded KYC documents for a user", {

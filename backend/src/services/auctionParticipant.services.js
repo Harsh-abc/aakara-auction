@@ -29,9 +29,10 @@ const httpError = (message, statusCode = 400) => {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** Users who can be added to an auction: KYC-verified bidder accounts (not team members). */
+/** Users who can be added to an auction: active, KYC-verified bidder accounts (not team members). */
 const addableUsersWhere = {
     deletedAt: null,
+    status: "ACTIVE",
     role: { name: { in: BIDDER_ROLES } },
     kyc: { is: { status: "VERIFIED" } },
 };
@@ -92,7 +93,7 @@ const findUsersOrThrow = async (userUuids, where, notFoundMessage) => {
     const uniqueUuids = [...new Set(userUuids)];
     const users = await prisma.user.findMany({
         where: { uuid: { in: uniqueUuids }, ...where },
-        select: { id: true, kyc: { select: { status: true } } },
+        select: { id: true, status: true, kyc: { select: { status: true } } },
     });
     if (users.length !== uniqueUuids.length) {
         const count = uniqueUuids.length - users.length;
@@ -203,8 +204,11 @@ export const registerForAuctionService = async ({ auctionUuid, userId, termsAcce
     // was issued (the BIDDER role itself is assigned by a super admin)
     const account = await prisma.user.findUnique({
         where: { id: BigInt(userId) },
-        select: { role: { select: { name: true } }, kyc: { select: { status: true } } },
+        select: { status: true, role: { select: { name: true } }, kyc: { select: { status: true } } },
     });
+    if (account?.status !== "ACTIVE") {
+        throw httpError("Your account is awaiting activation by the auction house. You can register once it's active.", 403);
+    }
     if (account?.role.name !== "BIDDER") throw httpError("Only bidder accounts can register for auctions", 403);
     if (account.kyc?.status !== "VERIFIED") {
         throw httpError("Your KYC must be verified before you can register for auctions", 403);
@@ -489,6 +493,10 @@ export const setParticipantsVerifiedService = async ({ auctionUuid, userUuids, v
     );
 
     if (verified) {
+        const inactive = users.filter((u) => u.status !== "ACTIVE").length;
+        if (inactive > 0) {
+            throw httpError(`${plural(inactive, "selected user")} can't be verified until their account is active`);
+        }
         const noKyc = users.filter((u) => u.kyc?.status !== "VERIFIED").length;
         if (noKyc > 0) {
             throw httpError(`${plural(noKyc, "selected user")} can't be verified until their KYC is verified`);

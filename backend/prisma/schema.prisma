@@ -771,6 +771,8 @@ enum UserStatus {
   BANNED
   PENDING_VERIFICATION
   DEACTIVATED
+  /// can log in and upload KYC, but can't register for auctions or bid until staff make them ACTIVE (new signups start here)
+  INACTIVE
 }
 
 enum Gender {

@@ -47,7 +47,7 @@ export function SignupTermsDialog({ open, onAccept, onDecline }: SignupTermsDial
                 <DialogHeader className="border-b border-neutral-200 p-6 pr-12">
                     <p className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">Version {TERMS_OF_SALE.version}</p>
                     <DialogTitle className="text-xl font-light leading-snug text-neutral-950">Terms and conditions</DialogTitle>
-                    <DialogDescription className="text-xs leading-relaxed text-neutral-500">
+                    <DialogDescription className="text-xs leading-relaxed  text-red-700">
                         Please read the terms to the end. You need to accept them to create an account.
                     </DialogDescription>
                 </DialogHeader>
@@ -63,7 +63,7 @@ export function SignupTermsDialog({ open, onAccept, onDecline }: SignupTermsDial
                 </div>
 
                 <div className="flex flex-col gap-3 border-t border-neutral-200 p-6 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-neutral-500" aria-live="polite">
+                    <p className="text-xs text-red-700" aria-live="polite">
                         {readToEnd ? "You've reached the end of the terms." : "Scroll to the end of the terms to accept them."}
                     </p>
                     <div className="flex flex-col-reverse gap-3 sm:flex-row">

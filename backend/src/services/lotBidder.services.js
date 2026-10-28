@@ -210,7 +210,7 @@ export const setLotBiddersVerifiedService = async ({ lotUuid, userUuids, verifie
     // Only users registered for this lot (through the auction) can be verified on it
     const users = await prisma.user.findMany({
         where: { uuid: { in: uniqueUuids }, deletedAt: null, lotBidders: { some: { itemId } } },
-        select: { id: true, kyc: { select: { status: true } } },
+        select: { id: true, status: true, kyc: { select: { status: true } } },
     });
     if (users.length !== uniqueUuids.length) {
         const count = uniqueUuids.length - users.length;
@@ -220,6 +220,12 @@ export const setLotBiddersVerifiedService = async ({ lotUuid, userUuids, verifie
     }
 
     if (verified) {
+        const inactive = users.filter((u) => u.status !== "ACTIVE").length;
+        if (inactive > 0) {
+            throw httpError(
+                `${inactive} selected user${inactive === 1 ? "" : "s"} can't be verified until their account is active`
+            );
+        }
         const noKyc = users.filter((u) => u.kyc?.status !== "VERIFIED").length;
         if (noKyc > 0) {
             throw httpError(

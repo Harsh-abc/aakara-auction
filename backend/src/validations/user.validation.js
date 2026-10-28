@@ -174,6 +174,12 @@ export const setKycStatusSchema = z
     });
 
 
+// staff switching an account between active and inactive
+export const setUserActiveSchema = z.object({
+    active: z.boolean(),
+}).strict();
+
+
 // staff asking a user to upload specific KYC documents
 export const requestKycDocumentsSchema = z.object({
     documentTypes: z.array(z.enum(KYC_DOCUMENT_TYPES))

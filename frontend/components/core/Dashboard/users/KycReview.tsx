@@ -86,14 +86,16 @@ export function KycReview({ user }: { user: User }) {
             setRejectingId(null)
             setReason("")
 
-            const { kycStatus } = response.data
+            const { kycStatus, documentsComplete } = response.data
             const wasVerified = kyc?.status === "VERIFIED"
             if (kycStatus === "VERIFIED") {
-                toast.success(wasVerified ? "Review saved. KYC is still verified." : "KYC verified. The user can now be approved to bid.")
+                toast.success("Review saved. KYC is still verified.")
             } else if (wasVerified) {
                 toast.success("Document rejected. KYC is no longer verified, so this user can't bid until it's approved again.")
             } else if (kycStatus === "REJECTED") {
                 toast.success("Review saved. The user has been asked to resubmit.")
+            } else if (documentsComplete) {
+                toast.success("All required documents approved. Turn on the KYC status toggle to verify this user.")
             } else {
                 toast.success("Review saved")
             }
@@ -171,10 +173,15 @@ export function KycReview({ user }: { user: User }) {
                 </p>
             )}
 
-            {kyc.status === "VERIFIED" && (
+            {kyc.status === "VERIFIED" ? (
                 <p className="mb-4 flex items-center gap-2 rounded-[8px] bg-[#effbf3] px-4 py-3 text-[12px] text-[#15803D]">
                     <ShieldCheck className="h-4 w-4" />
-                    All required documents are approved. This user&apos;s KYC is verified.
+                    This user&apos;s KYC is verified.
+                </p>
+            ) : requirements.length > 0 && requirements.every((req) => req.state === "approved") && (
+                <p className="mb-4 flex items-center gap-2 rounded-[8px] bg-[#fff4e8] px-4 py-3 text-[12px] text-[#b45309]">
+                    <ShieldCheck className="h-4 w-4" />
+                    All required documents are approved. Turn on the KYC status toggle above to verify this user.
                 </p>
             )}
 

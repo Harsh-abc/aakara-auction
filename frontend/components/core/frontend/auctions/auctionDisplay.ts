@@ -56,13 +56,22 @@ export function registrationWindow(auction: PublicAuction, now = serverNow()): R
 // customer accounts (not team members); only BIDDER can register, and a super admin assigns it
 export const BIDDER_ROLES = ["BIDDER", "USER"]
 
-export type BidderEligibility = "guest" | "loading" | "eligible" | "kyc-pending" | "awaiting-bidder-role" | "not-bidder"
+export type BidderEligibility =
+    | "guest"
+    | "loading"
+    | "eligible"
+    | "kyc-pending"
+    | "awaiting-activation"
+    | "awaiting-bidder-role"
+    | "not-bidder"
 
-// mirrors the account check in registerForAuctionService: BIDDER role with verified KYC
-export function bidderEligibility(account: Pick<MyAccount, "role" | "kyc">): BidderEligibility {
+// mirrors the account check in registerForAuctionService: active account, BIDDER role, verified KYC
+export function bidderEligibility(account: Pick<MyAccount, "status" | "role" | "kyc">): BidderEligibility {
     const kycVerified = account.kyc?.status === "VERIFIED"
-    if (account.role.name === "BIDDER" && kycVerified) return "eligible"
     if (BIDDER_ROLES.includes(account.role.name) && !kycVerified) return "kyc-pending"
+    // new signups start inactive until the auction house activates them
+    if (BIDDER_ROLES.includes(account.role.name) && account.status !== "ACTIVE") return "awaiting-activation"
+    if (account.role.name === "BIDDER") return "eligible"
     // KYC approved, but a super admin hasn't made them a bidder yet
     if (account.role.name === "USER") return "awaiting-bidder-role"
     return "not-bidder"

@@ -50,14 +50,12 @@ export const PROXY_LOT_STATUSES = ["DRAFT", "SCHEDULED"];
 
 const MAX_USER_AGENT = 500;
 
-const BLOCKED_USER_STATUSES = ["SUSPENDED", "BANNED", "DEACTIVATED"];
-
-/** Verified lot bidders who may actually bid: a bidder moved back to USER, or whose KYC approval was taken back, keeps their lot rows but can't bid */
+/** Verified lot bidders who may actually bid: a bidder moved back to USER, made inactive, or whose KYC approval was taken back, keeps their lot rows but can't bid */
 const ELIGIBLE_LOT_BIDDER_WHERE = {
     status: "VERIFIED",
     user: {
         deletedAt: null,
-        status: { notIn: BLOCKED_USER_STATUSES },
+        status: "ACTIVE",
         role: { name: "BIDDER" },
         kyc: { is: { status: "VERIFIED" } },
     },
@@ -252,9 +250,12 @@ const notVerifiedError = async (lotId, userId) => {
         }),
         prisma.user.findUnique({
             where: { id: BigInt(userId) },
-            select: { role: { select: { name: true } }, kyc: { select: { status: true } } },
+            select: { status: true, role: { select: { name: true } }, kyc: { select: { status: true } } },
         }),
     ]);
+    if (account?.status === "INACTIVE") {
+        return httpError("Your account is awaiting activation by the auction house. You can bid once it's active.", 403);
+    }
     if (account?.role.name !== "BIDDER") {
         return httpError("Only bidder accounts can bid. The auction house will make you a bidder once approved.", 403);
     }
@@ -715,7 +716,7 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
                 where: { userId: user },
                 select: {
                     status: true,
-                    user: { select: { role: { select: { name: true } }, kyc: { select: { status: true } } } },
+                    user: { select: { status: true, role: { select: { name: true } }, kyc: { select: { status: true } } } },
                 },
             },
             auction: {
@@ -765,7 +766,10 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
 
     const bidder = lot.bidders[0]?.user;
     const verified =
-        registration === "VERIFIED" && bidder?.role.name === "BIDDER" && bidder?.kyc?.status === "VERIFIED";
+        registration === "VERIFIED" &&
+        bidder?.status === "ACTIVE" &&
+        bidder?.role.name === "BIDDER" &&
+        bidder?.kyc?.status === "VERIFIED";
     return serializeBigInt({
         lotUuid,
         itemNumber: lot.itemNumber,

@@ -2,10 +2,10 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { getErrorMessage } from "@/lib/apiError";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, SetKycStatusPayload, SetKycStatusResponse, UpdateUserDetailsPayload, UpdateUserDetailsResponse, UploadUserKycPayload, UploadUserKycResponse, UserStats } from "@/lib/types/user.types";
+import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, SetKycStatusPayload, SetKycStatusResponse, SetUserActivePayload, SetUserActiveResponse, UpdateUserDetailsPayload, UpdateUserDetailsResponse, UploadUserKycPayload, UploadUserKycResponse, UserStats } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
-const { GET_ALL_USERS_API, GET_USER_STATS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API, SET_KYC_STATUS_API, UPDATE_USER_DETAILS_API } = userEndPoints;
+const { GET_ALL_USERS_API, GET_USER_STATS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API, SET_KYC_STATUS_API, SET_USER_ACTIVE_API, UPDATE_USER_DETAILS_API } = userEndPoints;
 
 const { CREATE_USER_API, CHANGE_USER_ROLE_API, CHANGE_USER_STATUS_API } = adminEndPoints;
 
@@ -293,6 +293,35 @@ export const changeUserRole = createAsyncThunk<
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not change role. Try again."));
+        }
+    }
+);
+
+// active / inactive (inactive users can log in but can't register for auctions or bid)
+export const setUserActive = createAsyncThunk<
+    SetUserActiveResponse,
+    SetUserActivePayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/setUserActive",
+    async ({ uuid, active }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<SetUserActiveResponse>({
+                method: "PATCH",
+                url: SET_USER_ACTIVE_API(uuid),
+                body: { active },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not update the account");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not update the account. Try again."));
         }
     }
 );

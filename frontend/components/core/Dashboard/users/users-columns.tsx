@@ -7,16 +7,16 @@ import { BadgeCheck, BadgeX } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { UserActionsCell } from "./UserActionsCell"
+import { UserStatusCell } from "./UserStatusCell"
 
 import { User } from "@/lib/types/user.types"
 import { KYC_DOCUMENTS } from "@/lib/constants/kyc"
 
-// Works out the badge text from user status + kyc
+// Status column text, used for sorting / filtering (the cell shows the active switch)
 const getAccountStatus = (user: User) => {
     if (user.status === "ACTIVE") return "Active"
-    if (user.status === "SUSPENDED") return "Suspended"
-    if (user.status === "PENDING_VERIFICATION") return "Pending Verification"
-    return user.status
+    if (["SUSPENDED", "BANNED", "DEACTIVATED"].includes(user.status)) return "Suspended"
+    return "Inactive"
 }
 
 const KYC_STATUS_LABEL: Record<string, string> = {
@@ -159,24 +159,8 @@ export const columns: ColumnDef<AppTableFeatures, User>[] = [
 
         header: "Status",
 
-        cell: ({ row }) => {
-            const status = getAccountStatus(row.original)
-
-            const statusClass: Record<string, string> = {
-                Active: "bg-green-50 text-green-600 border-green-100",
-                Suspended: "bg-red-50 text-red-500 border-red-100",
-                "Pending Verification": "bg-orange-50 text-orange-500 border-orange-100",
-            }
-
-            return (
-                <Badge
-                    variant="outline"
-                    className={`rounded-full px-3 py-1 text-xs font-normal ${statusClass[status] ?? ""}`}
-                >
-                    {status}
-                </Badge>
-            )
-        },
+        // active / inactive switch for staff who may change it; a badge otherwise
+        cell: ({ row }) => <UserStatusCell user={row.original} />,
     },
 
     {

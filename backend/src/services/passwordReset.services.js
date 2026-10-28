@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../libs/prisma.js';
 import redis from '../libs/redis.js';
 import { revokeUserTokens } from '../libs/accountBlock.js';
+import { canSignIn } from '../libs/userStatus.js';
 import sendEmail from '../mail/sendMail.js';
 import { passwordResetTemplate } from '../mail/templates/passwordReset.js';
 
@@ -68,8 +69,8 @@ export const requestPasswordResetService = async ({ email, ip }) => {
             profile: { select: { firstName: true } },
         },
     });
-    // unknown, suspended or inactive accounts get no email — and the caller can't tell
-    if (!user || user.status !== 'ACTIVE') return;
+    // unknown or suspended accounts get no email — and the caller can't tell
+    if (!user || !canSignIn(user.status)) return;
 
     const token = jwt.sign(
         { sub: user.uuid, purpose: PURPOSE, pwf: passwordFingerprint(user.passwordHash) },
@@ -113,7 +114,7 @@ export const resetPasswordService = async ({ token, password }) => {
     });
     // a password changed since the email (including by this same link) retires the link
     if (!user || payload.pwf !== passwordFingerprint(user.passwordHash)) throw httpError(LINK_DEAD, 400);
-    if (user.status !== 'ACTIVE') {
+    if (!canSignIn(user.status)) {
         throw httpError(
             user.status === 'SUSPENDED'
                 ? 'Your account has been suspended. Please contact the auction house.'

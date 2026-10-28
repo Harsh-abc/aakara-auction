@@ -28,7 +28,7 @@ export const getUserStatsService = async () => {
         prisma.user.count({ where: notDeleted }),
         prisma.user.count({ where: { ...notDeleted, createdAt: { gte: monthStart } } }),
         prisma.user.count({ where: { ...notDeleted, role: { name: 'BIDDER' } } }),
-        prisma.user.count({ where: { ...notDeleted, role: { name: 'BIDDER' }, kyc: { is: { status: 'VERIFIED' } } } }),
+        prisma.user.count({ where: { ...notDeleted, status: 'ACTIVE', role: { name: 'BIDDER' }, kyc: { is: { status: 'VERIFIED' } } } }),
         prisma.user.count({ where: { ...notDeleted, createdAt: { gte: newSince } } }),
         prisma.user.count({ where: { ...notDeleted, status: 'SUSPENDED' } }),
     ]);
@@ -270,6 +270,7 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
 
         const now = new Date();
 
+        let documentsComplete = false;
         const kyc = await prisma.$transaction(async (tx) => {
             // status is worked out below, once the new documents are in
             const userKyc = await tx.userKyc.upsert({
@@ -308,24 +309,28 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
                 });
             }
 
-            // staff-uploaded documents count as approved; the KYC is verified only once the
-            // required ones are (same rule as reviewing) — adding a PAN card alone doesn't verify it
+            // staff-uploaded documents count as approved, but never verify the KYC — staff
+            // verify it with the toggle once the required ones are in (same rule as reviewing)
             const allDocuments = await tx.userKycDocument.findMany({
                 where: { kycId: userKyc.id },
                 select: { documentType: true, status: true, rejectionReason: true, createdAt: true },
                 orderBy: { createdAt: 'desc' },
             });
-            const result = resolveKycStatus(effectiveKycType, currentDocuments(allDocuments));
+            const result = resolveKycStatus(effectiveKycType, currentDocuments(allDocuments), wasVerified);
+            documentsComplete = !!result.documentsComplete;
 
             const statusUpdate = result.status === 'VERIFIED'
                 // an already-verified KYC keeps its original verification
-                ? (wasVerified ? {} : { status: 'VERIFIED', verifiedAt: now, verifiedBy: adminId, rejectedAt: null, rejectionReason: null })
-                : result.status === 'UNDER_REVIEW'
-                    ? { status: 'UNDER_REVIEW' }
-                    // still missing a required document: a rejected KYC says what's missing now; otherwise it waits
-                    : userKyc.status === 'REJECTED'
-                        ? { rejectionReason: result.reason }
-                        : { status: 'PENDING' };
+                ? {}
+                // every required document approved: waits for staff to verify it by hand
+                : result.status === 'PENDING'
+                    ? { status: 'PENDING', rejectedAt: null, rejectionReason: null }
+                    : result.status === 'UNDER_REVIEW'
+                        ? { status: 'UNDER_REVIEW' }
+                        // still missing a required document: a rejected KYC says what's missing now; otherwise it waits
+                        : userKyc.status === 'REJECTED'
+                            ? { rejectionReason: result.reason }
+                            : { status: 'PENDING' };
 
             // KYC approval never changes the role — a super admin assigns BIDDER separately
             return tx.userKyc.update({ where: { id: userKyc.id }, data: statusUpdate });
@@ -336,6 +341,7 @@ export const uploadUserKycService = async ({ uuid, kycType, documents, files, ad
         return {
             kycType: kyc.kycType,
             status: kyc.status,
+            documentsComplete,
             documentsUploaded: uploaded.length,
             role: user.role.name,
             user: await getUserByIdService({ uuid }),
@@ -804,8 +810,8 @@ const DOCUMENT_TYPE_LABEL = (type) => type.replace(/_/g, ' ').toLowerCase();
  * documents later is never knocked back to "under review".
  */
 /**
- * Bidding needs verified KYC, so when a KYC gains or loses verification the user's
- * lots re-read who may bid straight away. Losing it also drops their maximum bids.
+ * Bidding needs verified KYC (and an active account), so when either is gained or lost
+ * the user's lots re-read who may bid straight away. Losing it also drops their maximum bids.
  */
 const refreshBidderAccessOnKycChange = async (userId, wasVerified, isVerified) => {
     if (wasVerified === isVerified) return;
@@ -825,10 +831,15 @@ const refreshBidderAccessOnKycChange = async (userId, wasVerified, isVerified) =
     }
 };
 
-const resolveKycStatus = (kycType, documents) => {
+/**
+ * Approved documents never verify the KYC by themselves: once every required one is
+ * approved the KYC waits as PENDING until staff verify it with the toggle
+ * (setKycStatusService). An already-verified KYC stays verified.
+ */
+const resolveKycStatus = (kycType, documents, wasVerified) => {
     const approved = new Set(documents.filter((doc) => doc.status === 'APPROVED').map((doc) => doc.documentType));
     const unmet = KYC_REQUIRED_DOCUMENTS[kycType].filter((req) => !req.types.some((t) => approved.has(t)));
-    if (unmet.length === 0) return { status: 'VERIFIED' };
+    if (unmet.length === 0) return { status: wasVerified ? 'VERIFIED' : 'PENDING', documentsComplete: true };
 
     if (documents.some((doc) => doc.status === 'PENDING')) return { status: 'UNDER_REVIEW' };
 
@@ -853,7 +864,7 @@ export const reviewUserKycService = async ({ uuid, reviews, adminId }) => {
     const kycId = user.kyc.id;
     const now = new Date();
 
-    const { status } = await prisma.$transaction(async (tx) => {
+    const { status, documentsComplete = false } = await prisma.$transaction(async (tx) => {
         for (const review of reviews) {
             const approve = review.action === 'APPROVE';
             const documentId = BigInt(review.documentId);
@@ -896,14 +907,15 @@ export const reviewUserKycService = async ({ uuid, reviews, adminId }) => {
             select: { documentType: true, status: true, rejectionReason: true, createdAt: true },
             orderBy: { createdAt: 'desc' },
         });
-        const result = resolveKycStatus(user.kyc.kycType, currentDocuments(documents));
+        const result = resolveKycStatus(user.kyc.kycType, currentDocuments(documents), wasVerified);
 
         // reviewing extra documents of an already-verified KYC keeps its original verification
-        if (!(wasVerified && result.status === 'VERIFIED')) {
+        if (result.status !== 'VERIFIED') {
             await tx.userKyc.update({
                 where: { id: kycId },
-                data: result.status === 'VERIFIED'
-                    ? { status: 'VERIFIED', verifiedAt: now, verifiedBy: adminId, rejectedAt: null, rejectionReason: null }
+                data: result.status === 'PENDING'
+                    // every required document approved: waits for staff to verify it by hand
+                    ? { status: 'PENDING', rejectedAt: null, rejectionReason: null }
                     : result.status === 'REJECTED'
                         ? { status: 'REJECTED', rejectedAt: now, rejectionReason: result.reason, verifiedAt: null, verifiedBy: null }
                         : { status: 'UNDER_REVIEW' },
@@ -916,7 +928,7 @@ export const reviewUserKycService = async ({ uuid, reviews, adminId }) => {
 
     await refreshBidderAccessOnKycChange(user.id, wasVerified, status === 'VERIFIED');
 
-    return { kycStatus: status, user: await getUserByIdService({ uuid }) };
+    return { kycStatus: status, documentsComplete, user: await getUserByIdService({ uuid }) };
 };
 
 
@@ -951,6 +963,38 @@ export const setKycStatusService = async ({ uuid, verified, reason, adminId }) =
     await refreshBidderAccessOnKycChange(user.id, wasVerified, verified);
 
     return { kycStatus: data.status, user: await getUserByIdService({ uuid }) };
+};
+
+
+/**
+ * Staff switching an account between ACTIVE and INACTIVE. New signups start INACTIVE:
+ * they can log in and upload KYC but can't register for auctions or bid until made
+ * ACTIVE. Suspended accounts are left to the super admin's suspend / reactivate.
+ */
+export const setUserActiveService = async ({ uuid, active, actorUuid }) => {
+    const user = await prisma.user.findFirst({
+        where: { uuid, deletedAt: null },
+        select: { id: true, uuid: true, status: true, role: { select: { name: true } } },
+    });
+
+    if (!user) throw httpError('User not found', 404);
+    if (user.uuid === actorUuid) throw httpError("You can't change your own account status", 400);
+    if (user.role.name === 'SUPER_ADMIN') throw httpError("A super admin's account status can't be changed", 400);
+    if (['SUSPENDED', 'BANNED', 'DEACTIVATED'].includes(user.status)) {
+        throw httpError('This account is suspended. A super admin has to reactivate it first.', 409);
+    }
+
+    const wasActive = user.status === 'ACTIVE';
+    if (active && wasActive) throw httpError('This account is already active', 409);
+    if (!active && !wasActive) throw httpError('This account is already inactive', 409);
+
+    const status = active ? 'ACTIVE' : 'INACTIVE';
+    await prisma.user.update({ where: { id: user.id }, data: { status } });
+
+    // only active accounts may bid: their lots re-read who may bid, and going inactive drops their maximum bids
+    await refreshBidderAccessOnKycChange(user.id, wasActive, active);
+
+    return { uuid: user.uuid, status };
 };
 
 

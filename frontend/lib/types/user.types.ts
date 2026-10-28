@@ -158,6 +158,8 @@ export interface UploadUserKycResponse {
     data: {
         kycType: KycType;
         status: string;
+        // every required document approved; the KYC still waits for staff to verify it
+        documentsComplete: boolean;
         documentsUploaded: number;
         user: User;
     };
@@ -179,6 +181,7 @@ export interface ReviewUserKycResponse {
     message: string;
     data: {
         kycStatus: string;
+        documentsComplete: boolean;
         user: User;
     };
 }
@@ -269,6 +272,21 @@ export interface ChangeUserStatusResponse {
     data: {
         uuid: string;
         status: "SUSPENDED" | "ACTIVE";
+    };
+}
+
+// new signups start INACTIVE: they can log in but can't register for auctions or bid
+export interface SetUserActivePayload {
+    uuid: string;
+    active: boolean;
+}
+
+export interface SetUserActiveResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        status: "ACTIVE" | "INACTIVE";
     };
 }
 
