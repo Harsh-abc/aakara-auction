@@ -638,8 +638,8 @@ export const placeFloorBidService = async ({ lotUuid, paddleNumber, amount, ip, 
 // =====================================================================
 // HAMMER: PLACE THE PROXIES (auctioneer console)
 // Proxies don't bid while the lot is live. When the auctioneer clicks Sell,
-// they're placed against the standing bid — the highest takes the lead at one
-// increment over the next-highest (equal maximums: the one set first) — and
+// they're placed against the standing bid — only the highest bids, taking the lead
+// at the next valid bid up to its max (equal maximums: the one set first) — and
 // broadcast like any bid. The console then counts down and the auctioneer
 // confirms the sale (POST /api/auction/lots/:lotUuid/hammer).
 // =====================================================================

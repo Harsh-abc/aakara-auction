@@ -3,7 +3,7 @@ import { EYEBROW, SectionHeading } from "../../storefront"
 const FAQS = [
     {
         question: "How do I place a bid on this lot?",
-        answer: "Register and verify your account, then enter your maximum bid on the lot page. When the auctioneer calls the hammer, the highest maximum wins at one increment above the next-highest bid, never above your maximum.",
+        answer: "Register and verify your account, then enter your maximum bid on the lot page. When the auctioneer calls the hammer, the highest maximum wins at one increment above the standing bid, never above your maximum.",
     },
     {
         question: "What happens if I am outbid?",

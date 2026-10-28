@@ -326,7 +326,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                 {sameAsProxy && <p className="mt-2 text-xs text-red-600">That&apos;s already your maximum bid.</p>}
                                 <p className="mt-2 text-xs leading-relaxed text-neutral-500">
                                     When the auctioneer calls the hammer, your maximum is placed for you: if it&apos;s the highest, you win at one
-                                    increment above the next-highest bid — never above your maximum. The highest maximum always wins; if two bidders leave the same maximum, the one
+                                    increment above the standing bid — never above your maximum. The highest maximum always wins; if two bidders leave the same maximum, the one
                                     who set it first wins (a changed maximum counts from when it was changed). Other bidders don&apos;t see it. You
                                     can change it until the lot opens; after that it&apos;s locked.
                                 </p>

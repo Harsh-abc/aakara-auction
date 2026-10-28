@@ -12,11 +12,9 @@ import { LotStatusTag } from "./LotTag";
 import { isClosedLot, isUpcomingLot, lotTag } from "./lotPageDisplay";
 import type { OnBid } from "./BidButtons";
 
-// Figma "Top lots by value": LOT | artist · title | current bid | status | actions
+// Figma "Top lots by value" layout, listing the sale's lots in lot order: LOT | artist · title | current bid | status | actions
 const ROW_GRID = "md:grid md:grid-cols-[96px_minmax(0,1fr)_156px_136px_240px] md:items-center md:px-5";
 const ROW_BUTTON = "inline-flex h-9 cursor-pointer items-center justify-center border text-[12px] leading-4.5 tracking-[0.12em] uppercase transition-colors duration-200";
-
-const SHOWN = 10;
 
 type TopLotsProps = {
     auctionUuid: string;
@@ -28,12 +26,13 @@ type TopLotsProps = {
 
 export function TopLots({ auctionUuid, lots, saleStatus, onBid }: TopLotsProps) {
     const { controls: gallery } = useGallery();
-    const top = [...lots].sort((a, b) => lotValue(b) - lotValue(a)).slice(0, SHOWN);
+    // lot 1, 2, 3…
+    const ordered = [...lots].sort((a, b) => Number(a.itemNumber) - Number(b.itemNumber));
 
     return (
         <section aria-labelledby="top-lots-heading">
             <div className="page-container">
-                <SectionHeading id="top-lots-heading" title="Top lots by value" aside={`${lots.length} ${lots.length === 1 ? "lot" : "lots"} · ${top.length} shown · ${saleStatus}`} />
+                <SectionHeading id="top-lots-heading" title="Lots in this sale" aside={`${lots.length} ${lots.length === 1 ? "lot" : "lots"} · ${saleStatus}`} />
 
                 <div className="mt-6 border border-[#cecece]">
                     <div className={cn(ROW_GRID, EYEBROW, "hidden h-9.5 border-b border-[#cecece]")}>
@@ -45,7 +44,7 @@ export function TopLots({ auctionUuid, lots, saleStatus, onBid }: TopLotsProps) 
                     </div>
 
                     <ul className="divide-y divide-[#cecece]">
-                        {top.map((lot) => {
+                        {ordered.map((lot) => {
                             const estimate = lotEstimate(lot);
                             const bid = Number(lot.bidCount) > 0 ? formatMoney(lot.currentBid, lot.currency) : null;
                             const action = lot.status === "ACTIVE" ? "bid" : isUpcomingLot(lot) ? "proxy" : null;
@@ -94,10 +93,4 @@ export function TopLots({ auctionUuid, lots, saleStatus, onBid }: TopLotsProps) 
             </div>
         </section>
     );
-}
-
-// what a lot is worth for ranking: its current bid, else its estimate
-function lotValue(lot: PublicLot) {
-    const bid = Number(lot.bidCount) > 0 ? lot.currentBid : null;
-    return Number(bid ?? lot.estimateHigh ?? lot.estimateLow ?? lot.startingPrice) || 0;
 }

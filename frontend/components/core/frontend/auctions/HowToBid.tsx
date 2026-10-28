@@ -25,7 +25,7 @@ const steps = [
         title: "Place your bid",
         body: (
             <>
-                Enter your maximum bid before the lot closes. The highest bidder at the close of the lot wins. The final price is set at one bidding increment above the next-highest bid, up to your
+                Enter your maximum bid before the lot closes. The highest bidder at the close of the lot wins. The final price is set at one bidding increment above the standing bid, up to your
                 maximum bid. You will be notified if you are outbid or win the lot.
             </>
         ),

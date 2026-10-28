@@ -78,12 +78,12 @@ return 1
 //     and is locked from then on
 //   - proxies don't bid while the lot is live — they're placed when the auctioneer
 //     calls the hammer (or the lot closes any other way), against the standing bid
-//   - the highest proxy always wins the proxy contest: it bids only as much as it
-//     takes to lead (one increment over the next-highest), up to its max
+//   - only the highest proxy bids: it takes the lot at the next valid bid over the
+//     standing bid, up to its max. The other proxies don't bid against it, so the
+//     price never climbs to the next-highest maximum
 //   - a proxy may top a bid by less than a full increment when its max is that close
-//   - equal maximums: the proxy set first wins. Both bid the max (the ladder shows
-//     the tie) and the earlier one holds it. "First" is the order the engine accepted
-//     them — 'at' is unique per lot and saved with the proxy, so a reload keeps it
+//   - equal maximums: the proxy set first is the highest. "First" is the order the engine
+//     accepted them — 'at' is unique per lot and saved with the proxy, so a reload keeps it
 //   - a standing manual / floor bid equal to a proxy's max loses to the proxy (set
 //     earlier); only a bid above every proxy's max beats them
 //   - a lot with no live bids goes to the strongest proxy (highest max, then
@@ -206,48 +206,22 @@ local function strongest(test, exclude)
     return best
 end
 
--- let the proxies bid until no one can top the leader (only at the hammer / close)
+-- place the strongest proxy against the standing bid (only at the hammer / close): it takes the
+-- lot at the next valid bid (capped at its max); the other proxies don't bid
 local function resolve()
     if status ~= 'ACTIVE' then return end
-    for _ = 1, 1000 do
-        if current == nil then
-            local opener = strongest(function(max) return max >= start end, nil)
-            if not opener then return end
-            record(opener.uid, start, 'P')
-        else
-            local floor = current
-            local challenger = strongest(function(max) return max > floor end, leader)
-            if not challenger then return end
-
-            local holder = leader
-            local own = proxies[holder]
-            local cap = current
-            if own and own.max > current then cap = own.max end
-            local holderWinsTie = own ~= nil and (own.at < challenger.at or (own.at == challenger.at and holder < challenger.uid))
-
-            if challenger.max > cap then
-                -- the leader's proxy defends to its max, then the challenger tops it
-                if cap > current then record(holder, cap, 'P') end
-                local amt = nextMin(current)
-                if amt > challenger.max then amt = challenger.max end
-                record(challenger.uid, amt, 'P')
-            elseif challenger.max < cap then
-                -- the challenger runs out; the leader's proxy answers
-                record(challenger.uid, challenger.max, 'P')
-                local amt = nextMin(current)
-                if amt > cap then amt = cap end
-                record(holder, amt, 'P')
-            elseif holderWinsTie then
-                -- equal maximums, the leader's proxy came first: both bid the max, the leader keeps it
-                record(challenger.uid, cap, 'P')
-                record(holder, cap, 'P')
-            else
-                -- equal maximums, the challenger's proxy came first: both bid the max, the challenger takes it
-                record(holder, cap, 'P')
-                record(challenger.uid, cap, 'P')
-            end
-        end
+    if current == nil then
+        local opener = strongest(function(max) return max >= start end, nil)
+        if opener then record(opener.uid, start, 'P') end
+        return
     end
+    local floor = current
+    local top = strongest(function(max) return max > floor end, nil)
+    -- the leader's own proxy is the strongest: they already hold the lot
+    if not top or top.uid == leader then return end
+    local amt = nextMin(current)
+    if amt > top.max then amt = top.max end
+    record(top.uid, amt, 'P')
 end
 
 -- the bidder's proxy before a PROXY run changed it (to put it back if saving fails)
