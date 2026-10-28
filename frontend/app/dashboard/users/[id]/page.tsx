@@ -123,6 +123,10 @@ export default function UserPage() {
                     </div>
                 </div>
 
+                <div>
+                    <UserProfile user={user} />
+                </div>
+
             </div>
 
             {/* Nothing on file yet → staff can upload or request it; otherwise review what's on file, then the profile.
@@ -134,9 +138,7 @@ export default function UserPage() {
                 <KycReview user={user} />
             )}
 
-            <>
-                <UserProfile user={user} />
-            </>
+
 
         </div>
     )
