@@ -123,11 +123,10 @@ export default function UserPage() {
                     </div>
                 </div>
 
-                <div>
-                    <UserProfile user={user} />
-                </div>
 
             </div>
+
+            <UserProfile user={user} />
 
             {/* Nothing on file yet → staff can upload or request it; otherwise review what's on file, then the profile.
                 (A KYC record can exist without documents when staff have only requested them.) */}
