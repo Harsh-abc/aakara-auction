@@ -130,11 +130,13 @@ export default function UserPage() {
             {!user.kyc?.documents?.length ? (
                 <KycUpload user={user} />
             ) : (
-                <>
-                    <KycReview user={user} />
-                    <UserProfile user={user} />
-                </>
+
+                <KycReview user={user} />
             )}
+
+            <>
+                <UserProfile user={user} />
+            </>
 
         </div>
     )
