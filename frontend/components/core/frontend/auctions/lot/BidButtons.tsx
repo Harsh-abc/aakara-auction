@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 
 import { useAppSelector } from "@/hooks/redux"
 import { cn } from "@/lib/utils"
@@ -9,7 +10,7 @@ import { getMyLotStanding } from "@/services/operations/bidding.api"
 
 import { BUTTON, BUTTON_OUTLINE, BUTTON_SOLID } from "../../storefront"
 import { formatMoney } from "../detail/lotDisplay"
-import { isUpcomingLot } from "./lotPageDisplay"
+import { isClosedLot, isUpcomingLot } from "./lotPageDisplay"
 import type { BidKind } from "./useBidAction"
 
 export type OnBid = (kind: BidKind, lot: PublicLot) => void
@@ -42,17 +43,36 @@ function useMyProxyMax(lot: PublicLot, refreshKey: number) {
     return token && proxy?.lotUuid === lotUuid ? proxy.max : null
 }
 
-// "Place a bid" only while the lot is on the block; proxy bids only before it opens
-export function BidButtons({ lot, onBid, refreshKey = 0, className }: { lot: PublicLot; onBid: OnBid; refreshKey?: number; className?: string }) {
+// "Place a bid" only while the lot is on the block; proxy bids only before it opens.
+// bidHref: "Place a bid" links there (the live room) instead of opening the bid dialog — open until the lot closes
+export function BidButtons({
+    lot,
+    onBid,
+    refreshKey = 0,
+    bidHref,
+    className,
+}: {
+    lot: PublicLot
+    onBid: OnBid
+    refreshKey?: number
+    bidHref?: string
+    className?: string
+}) {
     const proxyOpen = isUpcomingLot(lot)
     const proxyMax = useMyProxyMax(lot, refreshKey)
     const proxyAmount = proxyMax ? formatMoney(proxyMax, lot.currency) : null
 
     return (
         <div className={cn("flex flex-col gap-2", className)}>
-            <button type="button" onClick={() => onBid("bid", lot)} disabled={lot.status !== "ACTIVE"} className={cn(BUTTON, BUTTON_SOLID)}>
-                Place a bid
-            </button>
+            {bidHref && !isClosedLot(lot) ? (
+                <Link href={bidHref} className={cn(BUTTON, BUTTON_SOLID)}>
+                    Place a bid
+                </Link>
+            ) : (
+                <button type="button" onClick={() => onBid("bid", lot)} disabled={lot.status !== "ACTIVE"} className={cn(BUTTON, BUTTON_SOLID)}>
+                    Place a bid
+                </button>
+            )}
             <button
                 type="button"
                 onClick={() => onBid("proxy", lot)}

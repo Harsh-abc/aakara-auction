@@ -14,12 +14,15 @@ export function LotPricePanel({
     lot,
     onBid,
     bidRefreshKey,
+    bidHref,
     className,
 }: {
     lot: PublicLotDetail
     onBid: OnBid
     /** changes after a bid is saved — see BidButtons */
     bidRefreshKey?: number
+    /** where "Place a bid" goes instead of the bid dialog — see BidButtons */
+    bidHref?: string
     className?: string
 }) {
     const count = Number(lot.bidCount) || 0
@@ -62,7 +65,7 @@ export function LotPricePanel({
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} className="mt-6" />
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} className="mt-6" />
         </aside>
     )
 }

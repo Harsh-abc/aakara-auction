@@ -6,7 +6,9 @@ import type { PublicLot } from "@/lib/types/publicAuction.types";
 
 import { BUTTON, BUTTON_SOLID, EYEBROW } from "../../storefront";
 import { LotBadge } from "./LotBadge";
-import { lotBidLine, lotDetails, lotEstimate, lotHeading, lotHref, lotNumber } from "./lotDisplay";
+// View used to open the live room (lotHref) — now it opens the lot details page; switch back if needed
+// import { lotBidLine, lotDetails, lotEstimate, lotHeading, lotHref, lotNumber } from "./lotDisplay";
+import { lotBidLine, lotDetails, lotDetailsHref, lotEstimate, lotHeading, lotNumber } from "./lotDisplay";
 import type { GalleryControls } from "./useGallery";
 
 // Figma "All lots" card: 16px inset, 251px image well, 44px actions
@@ -90,7 +92,8 @@ export function LotCard({ lot, auctionUuid, gallery }: LotProps) {
             </div>
             <div className="mt-4 flex gap-2">
                 {gallery && <GalleryButton lot={lot} gallery={gallery} className="flex-1" />}
-                <Link href={lotHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, !gallery && "w-full")}>
+                {/* <Link href={lotHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, !gallery && "w-full")}> */}
+                <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, !gallery && "w-full")}>
                     View
                 </Link>
             </div>
@@ -108,9 +111,11 @@ export function LotRow({ lot, auctionUuid, gallery }: LotProps) {
                 </div>
                 <LotText lot={lot} />
             </div>
-            <div className="col-span-2 flex gap-2 sm:col-span-1">
-                {gallery && <GalleryButton lot={lot} gallery={gallery} className="flex-1" />}
-                <Link href={lotHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, !gallery && "flex-1")}>
+            {/* stacked: gallery button on top, View pinned to the bottom of the row */}
+            <div className="col-span-2 flex flex-col gap-2 sm:col-span-1 sm:self-stretch">
+                {gallery && <GalleryButton lot={lot} gallery={gallery} className="w-full" />}
+                {/* <Link href={lotHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, !gallery && "flex-1")}> */}
+                <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, "mt-auto w-full")}>
                     View
                 </Link>
             </div>

@@ -9,7 +9,8 @@ export const MAIN_MENU_LINKS: MenuLink[] = [
         children: [
             { label: "Upcoming / Live", href: "/?tab=upcoming#auctions" },
             { label: "Past auctions", href: "/?tab=past#auctions", needsPastAuctions: true },
-            { label: "Live auction", href: "/?tab=upcoming#auctions" },
+            // { label: "Live auction", href: "/?tab=upcoming#auctions" }, // used to open the Upcoming / Live tab
+            { label: "Live auction", href: "/live-auction" },
             { label: "How to bid", href: "/#how-to-bid" },
             { label: "Absentee bid / Bidding increments", href: "/#absentee-bid" },
         ],

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 import { BODY, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "../storefront";
 import { auctionHref, auctionMeta } from "./auctionDisplay";
-import { lotHeading } from "./detail/lotDisplay";
+import { lotHeading, lotHref } from "./detail/lotDisplay";
 import { useGallery } from "./detail/useGallery";
 import { BidDialog } from "./lot/BidDialog";
 import { LotCatalogueDetails } from "./lot/LotCatalogueDetails";
@@ -128,7 +128,15 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                         </button>
                     </div>
 
-                    <LotPricePanel lot={lot} onBid={onBid} bidRefreshKey={savedCount} className="self-start lg:sticky lg:top-25 lg:mt-10.75" />
+                    {/* "Place a bid" used to open the bid dialog right here — switch back if needed:
+                    <LotPricePanel lot={lot} onBid={onBid} bidRefreshKey={savedCount} className="self-start lg:sticky lg:top-25 lg:mt-10.75" /> */}
+                    <LotPricePanel
+                        lot={lot}
+                        onBid={onBid}
+                        bidRefreshKey={savedCount}
+                        bidHref={lotHref(auction.uuid, lot)}
+                        className="self-start lg:sticky lg:top-25 lg:mt-10.75"
+                    />
                 </div>
             </section>
 
