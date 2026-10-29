@@ -50,6 +50,16 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     // the amount waiting on the bidder's confirmation
     const [confirming, setConfirming] = useState<number | null>(null)
     const [submitting, setSubmitting] = useState(false)
+    // the bid dialog's height, so the confirmation covers it exactly
+    const [bidPanel, setBidPanel] = useState<HTMLDivElement | null>(null)
+    const [bidPanelHeight, setBidPanelHeight] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (!bidPanel) return
+        const observer = new ResizeObserver(() => setBidPanelHeight(bidPanel.offsetHeight))
+        observer.observe(bidPanel)
+        return () => observer.disconnect()
+    }, [bidPanel])
 
     const lotUuid = lot?.uuid
     const bidCount = lot?.bidCount
@@ -214,7 +224,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
 
     return (
         <Dialog open onOpenChange={handleOpenChange}>
-            <DialogContent className="max-h-[90dvh] gap-0 overflow-y-auto rounded-none p-0 sm:max-w-md">
+            <DialogContent ref={setBidPanel} className="max-h-[90dvh] gap-0 overflow-y-auto rounded-none p-0 sm:max-w-md">
                 <DialogHeader className="border-b border-neutral-200 p-6 pr-12">
                     <p className={cn(SMALL_CAPS, "text-neutral-500")}>{lotTag(lot)}</p>
                     <DialogTitle className="text-xl leading-snug font-light text-neutral-950">{lotHeading(lot)}</DialogTitle>
@@ -359,7 +369,12 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
 
                 {/* last look before the bid is sent */}
                 <Dialog open={confirming !== null} onOpenChange={handleConfirmOpenChange}>
-                    <DialogContent showCloseButton={false} className="gap-0 rounded-none p-0 sm:max-w-sm">
+                    {/* same size as the bid dialog behind it, so it sits squarely on top; the buttons stay at the bottom */}
+                    <DialogContent
+                        showCloseButton={false}
+                        style={bidPanelHeight ? { height: bidPanelHeight } : undefined}
+                        className="flex max-h-[90dvh] flex-col gap-0 overflow-y-auto rounded-none p-0 sm:max-w-md"
+                    >
                         <DialogHeader className="border-b border-neutral-200 p-6">
                             <p className={cn(SMALL_CAPS, "text-neutral-500")}>{lotTag(lot)}</p>
                             <DialogTitle className="text-xl leading-snug font-light text-neutral-950">
@@ -368,7 +383,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                             <DialogDescription className="text-sm text-neutral-600">{lotHeading(lot)}</DialogDescription>
                         </DialogHeader>
 
-                        <div className="p-6">
+                        <div className="flex-1 p-6">
                             <p className={cn(SMALL_CAPS, "text-neutral-500")}>{kind === "bid" ? "Your bid" : "Your maximum bid"}</p>
                             <p className="mt-2 text-3xl font-light tabular-nums text-neutral-950">{money(confirming)}</p>
                             <p className={cn("mt-4 text-xs leading-relaxed", outpaced ? "text-red-600" : "text-neutral-500")}>
