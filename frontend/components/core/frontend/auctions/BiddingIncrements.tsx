@@ -11,7 +11,7 @@ import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, Sec
  */
 
 // the registration / absentee bids form (public/downloads)
-export const ABSENTEE_FORM_URL = "/downloads/akara-absentee-bids-form.pdf";
+export const ABSENTEE_FORM_URL = "/downloads/akara-registration-form.pdf";
 
 // the chart on the form — the same ladder the backend bids on (utils/bidIncrement.js), keep in step with it
 const increments: { range: string; step: string; example?: string }[] = [

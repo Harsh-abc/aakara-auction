@@ -3,9 +3,13 @@ import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
 
 import { SectionHeading } from "../../storefront"
 import { formatMoney, lotBidLine } from "../detail/lotDisplay"
-import { bidCountLabel, isClosedLot, isUpcomingLot, lotTag } from "./lotPageDisplay"
+// import { bidCountLabel, isClosedLot, isUpcomingLot, lotTag } from "./lotPageDisplay" // isUpcomingLot: the "Opened at" row
+import { bidCountLabel, isClosedLot, lotTag } from "./lotPageDisplay"
 
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
+
+// the current (leading) bid and the last one it beat
+const VISIBLE_BIDS = 2
 
 // the top bid's label: still leading while the lot is open, the result once it closes
 const topBidLabel = (lot: PublicLotDetail) => (lot.status === "SOLD" ? "Sold" : isClosedLot(lot) ? "Highest" : "Leading")
@@ -44,7 +48,8 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                     {lot.bids.length === 0 ? (
                         <li className="flex h-11 items-center px-4 text-[14px] leading-5 text-[#717171]">No bids yet</li>
                     ) : (
-                        lot.bids.map((bid, index) => {
+                        // just the leading bid and the one before it — the full ladder was lot.bids.map(...)
+                        lot.bids.slice(0, VISIBLE_BIDS).map((bid, index) => {
                             const top = index === 0
                             return (
                                 <li
@@ -70,10 +75,11 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                     )}
                 </ol>
 
+                {/* "Opened at" row, hidden with the shorter ladder — switch back if needed:
                 <div className={cn(SMALL_CAPS, "flex h-8.5 items-center justify-between border-t border-[#cecece] px-4 text-[#717171]")}>
                     <span>{count > 0 || !isUpcomingLot(lot) ? "Opened at" : "Opens at"}</span>
                     <span>{money(lot.startingPrice)}</span>
-                </div>
+                </div> */}
             </div>
         </section>
     )
