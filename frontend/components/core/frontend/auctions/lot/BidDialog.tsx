@@ -250,7 +250,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                         kind === option ? "bg-neutral-950 text-white" : "bg-white text-neutral-950 not-disabled:hover:bg-neutral-50"
                                     )}
                                 >
-                                    {option === "bid" ? "Place a bid" : "Proxy bid"}
+                                    {option === "bid" ? "Place bid" : "Proxy bid"}
                                 </button>
                             )
                         })}

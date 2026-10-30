@@ -78,7 +78,7 @@ export function TopLots({ auctionUuid, lots, saleStatus, onBid }: TopLotsProps) 
                                                 onClick={() => onBid(action, lot)}
                                                 className={cn(ROW_BUTTON, "w-27.5 border-[#0d0d0d] bg-[#0d0d0d] text-white hover:border-[#673364] hover:bg-[#673364]")}
                                             >
-                                                {action === "bid" ? "Place a bid" : "Proxy bid"}
+                                                {action === "bid" ? "Place bid" : "Proxy bid"}
                                             </button>
                                         )}
                                         <Link href={lotHref(auctionUuid, lot)} className={cn(ROW_BUTTON, "w-17.5 border-[#333] bg-white text-[#0d0d0d] hover:border-[#d0a55d] hover:bg-[#fdedd6]")}>

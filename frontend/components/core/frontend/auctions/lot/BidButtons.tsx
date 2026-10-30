@@ -66,11 +66,11 @@ export function BidButtons({
         <div className={cn("flex flex-col gap-2", className)}>
             {bidHref && !isClosedLot(lot) ? (
                 <Link href={bidHref} className={cn(BUTTON, BUTTON_SOLID)}>
-                    Place a bid
+                    Place bid
                 </Link>
             ) : (
                 <button type="button" onClick={() => onBid("bid", lot)} disabled={lot.status !== "ACTIVE"} className={cn(BUTTON, BUTTON_SOLID)}>
-                    Place a bid
+                    Place bid
                 </button>
             )}
             <button

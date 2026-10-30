@@ -117,7 +117,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <p className={BODY}>Ready to bid on one of these lots? Register once, then bid live or leave a proxy bid.</p>
                         <div className="flex shrink-0 gap-2">
                             <button type="button" onClick={() => onBid(lot.status === "ACTIVE" ? "bid" : "proxy", lot)} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
-                                Place a bid
+                                Place bid
                             </button>
                             <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
                                 Browse all lots
