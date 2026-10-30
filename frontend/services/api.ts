@@ -86,6 +86,9 @@ export const biddingEndPoints = {
     PROXY_BIDS_API: `${BASE_URL}/api/bidding/proxy-bids`,
     PROXY_BIDS_SUMMARY_API: `${BASE_URL}/api/bidding/proxy-bids/summary`,
     PROXY_BIDS_EXPORT_API: `${BASE_URL}/api/bidding/proxy-bids/export`,
+    // per-auction proxy on / off switch (super admin / admin / operations)
+    PROXY_SETTINGS_API: `${BASE_URL}/api/bidding/proxy-bids/settings`,
+    PROXY_BIDDING_API: (auctionUuid: string) => `${BASE_URL}/api/bidding/auctions/${auctionUuid}/proxy-bidding`,
     // one lot's proxy bids (bid history, console)
     LOT_PROXIES_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/proxies`,
 };

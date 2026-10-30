@@ -27,6 +27,8 @@ export interface MyLotStanding {
     /** the bidder's proxy (maximum) bid on this lot */
     proxyMax: string | null
     canBid: boolean
+    /** staff switched proxy bids on for this auction (Proxy Bids page) */
+    proxyEnabled: boolean
     canProxy: boolean
 }
 

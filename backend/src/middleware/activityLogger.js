@@ -263,6 +263,10 @@ const ROUTES = [
     }),
     route("GET", "/api/bidding/proxy-bids", "BIDDING", "PROXY_BIDS_VIEW", "Viewed the proxy bids", { view: true }),
     route("GET", "/api/bidding/proxy-bids/export", "BIDDING", "PROXY_BIDS_EXPORT", "Exported the proxy bids (CSV)"),
+    route("PATCH", "/api/bidding/auctions/:auctionUuid/proxy-bidding", "BIDDING", "PROXY_BIDDING_TOGGLE", "Switched proxy bids on / off", {
+        target: AUCTION,
+        describe: ({ body }) => `Turned proxy bids ${body.enabled ? "on" : "off"} for the auction`,
+    }),
     route("POST", "/api/bidding/lots/:lotUuid/floor-bids", "BIDDING", "FLOOR_BID", "Entered a floor bid", {
         target: LOT,
         failAction: "FLOOR_BID_REJECTED",

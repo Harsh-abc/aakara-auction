@@ -9,7 +9,14 @@ import {
     placeFloorBid,
     setProxyBid,
 } from "../controllers/bidding.controller.js";
-import { exportProxyBids, getLotProxies, getProxyBids, getProxyBidSummary } from "../controllers/proxyBid.controller.js";
+import {
+    exportProxyBids,
+    getLotProxies,
+    getProxyBids,
+    getProxyBidSummary,
+    getProxySettings,
+    setProxyBidding,
+} from "../controllers/proxyBid.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { requireRole } from "../middleware/rbac.middleware.js";
 import { STAFF_ROLES } from "../libs/socket.js";
@@ -30,6 +37,10 @@ const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"];
 biddingRouter.get("/proxy-bids", authenticate, requireRole(...PROXY_AUDIT_ROLES), getProxyBids);
 biddingRouter.get("/proxy-bids/summary", authenticate, requireRole(...PROXY_AUDIT_ROLES), getProxyBidSummary);
 biddingRouter.get("/proxy-bids/export", authenticate, requireRole(...PROXY_AUDIT_ROLES), exportProxyBids);
+// per-auction on / off switch for proxy bids — auctioneers see it, these roles change it
+const PROXY_SWITCH_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS"];
+biddingRouter.get("/proxy-bids/settings", authenticate, requireRole(...PROXY_SWITCH_ROLES, "AUCTIONEER"), getProxySettings);
+biddingRouter.patch("/auctions/:auctionUuid/proxy-bidding", authenticate, requireRole(...PROXY_SWITCH_ROLES), setProxyBidding);
 // one lot's proxies for bid history and the console (IP / device only for the roles above)
 biddingRouter.get("/lots/:lotUuid/proxies", authenticate, requireRole(...STAFF_ROLES), getLotProxies);
 

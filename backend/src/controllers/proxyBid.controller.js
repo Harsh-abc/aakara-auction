@@ -5,9 +5,16 @@ import {
     getLotProxiesService,
     getProxyBidsService,
     getProxyBidSummaryService,
+    getProxySettingsService,
+    setProxyBiddingService,
 } from "../services/proxyBid.services.js";
-import { lotUuidParamSchema } from "../validations/auction.validation.js";
-import { getProxyBidsQuerySchema, proxyBidFiltersSchema, proxyBidSummaryQuerySchema } from "../validations/bidding.validation.js";
+import { auctionUuidParamSchema, lotUuidParamSchema } from "../validations/auction.validation.js";
+import {
+    getProxyBidsQuerySchema,
+    proxyBidFiltersSchema,
+    proxyBidSummaryQuerySchema,
+    setProxyBiddingSchema,
+} from "../validations/bidding.validation.js";
 
 const handleError = (res, error, label, fallback) => {
     if (error instanceof ZodError) {
@@ -65,6 +72,38 @@ export const getLotProxies = async (req, res) => {
         return res.status(200).json({ success: true, message: "Lot proxy bids fetched successfully", data });
     } catch (error) {
         return handleError(res, error, "Get lot proxy bids", "Failed to fetch the lot's proxy bids");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/bidding/proxy-bids/settings — upcoming and running auctions with their proxy switch
+// -----------------------------------------------------------------
+
+export const getProxySettings = async (req, res) => {
+    try {
+        const data = await getProxySettingsService();
+        return res.status(200).json({ success: true, message: "Proxy bid settings fetched successfully", data });
+    } catch (error) {
+        return handleError(res, error, "Get proxy bid settings", "Failed to fetch the proxy bid settings");
+    }
+};
+
+// -----------------------------------------------------------------
+// PATCH /api/bidding/auctions/:auctionUuid/proxy-bidding { enabled }
+// -----------------------------------------------------------------
+
+export const setProxyBidding = async (req, res) => {
+    try {
+        const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
+        const { enabled } = setProxyBiddingSchema.parse(req.body);
+        const data = await setProxyBiddingService({ auctionUuid, enabled });
+        return res.status(200).json({
+            success: true,
+            message: `Proxy bids turned ${enabled ? "on" : "off"} for ${data.title}`,
+            data,
+        });
+    } catch (error) {
+        return handleError(res, error, "Set proxy bidding", "Failed to change proxy bidding");
     }
 };
 

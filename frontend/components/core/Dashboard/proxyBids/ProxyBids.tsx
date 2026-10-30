@@ -35,11 +35,13 @@ import { downloadProxyBids, getProxyBids, getProxyBidSummary } from "@/services/
 
 import { DASHBOARD_TIME_ZONE, describeDevice, money, PanelMessage, type PillTone, Segmented, StatTile, StatusPill } from "../home/dashboardUi"
 import { PROXY_OUTCOMES } from "./proxyDisplay"
+import { ProxySwitches } from "./ProxySwitches"
 
 const PAGE_SIZES = [25, 50, 100]
 const ALL = "ALL"
-// mirrors PROXY_AUDIT_ROLES in backend/src/routes/bidding.routes.js
+// mirror PROXY_AUDIT_ROLES / PROXY_SWITCH_ROLES in backend/src/routes/bidding.routes.js
 const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"]
+const PROXY_SWITCH_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS"]
 
 const STAGE_OPTIONS: { value: ProxyStage; label: string }[] = [
     { value: "all", label: "All" },
@@ -243,6 +245,7 @@ export function ProxyBids() {
     const token = useAppSelector((state) => state.auth.accessToken)
     const role = useAppSelector((state) => state.auth.role)
     const canView = !!role && PROXY_AUDIT_ROLES.includes(role)
+    const canSwitch = !!role && PROXY_SWITCH_ROLES.includes(role)
 
     const [searchInput, setSearchInput] = useState("")
     const search = useDebouncedValue(searchInput.trim())
@@ -297,11 +300,14 @@ export function ProxyBids() {
         }
     }, [token, canView, auctionUuid, refresh])
 
+    // operations switch proxy bidding on / off but don't see bidders' IPs and contacts
     if (!canView) {
-        return (
+        return canSwitch ? (
+            <ProxySwitches token={token} canEdit />
+        ) : (
             <PanelMessage>
                 <ShieldAlert className="mr-2 h-4 w-4" />
-                Only super admins and auctioneers can view proxy bids.
+                Only super admins, admins and auctioneers can view proxy bids.
             </PanelMessage>
         )
     }
@@ -360,6 +366,8 @@ export function ProxyBids() {
                 <StatTile icon={<ShieldAlert className="h-4 w-4" />} label="IPs shared by bidders" value={totals?.sharedIps ?? null} tone="red" />
                 <StatTile icon={<UserX className="h-4 w-4" />} label="Withdrawn" value={totals?.withdrawn ?? null} tone="red" />
             </div>
+
+            <ProxySwitches token={token} canEdit={canSwitch} />
 
             <section className="rounded-xl bg-[#F6F6F7] p-4 md:p-5">
                 {/* filters */}

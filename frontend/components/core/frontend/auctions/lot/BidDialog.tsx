@@ -126,6 +126,10 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                 {lotTag(lot)} has opened, so it can no longer be changed.
             </>
         )
+    } else if (current && kind === "proxy" && proxyOpen && !current.proxyEnabled) {
+        blocker = current.proxyMax
+            ? `Proxy bids are turned off for this sale. Your maximum bid of ${money(current.proxyMax)} still stands, but it can't be changed.`
+            : `Proxy bids are turned off for this sale. You can bid when ${lotTag(lot)} opens.`
     } else if (current && kind === "proxy" && !proxyOpen && current.status === "ACTIVE") {
         blocker = (
             <>

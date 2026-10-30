@@ -38,6 +38,11 @@ export const getProxyBidsQuerySchema = proxyBidFiltersSchema.extend({
 
 export const proxyBidSummaryQuerySchema = z.object({ auctionUuid: optionalUuid("auction") });
 
+// dashboard: switch proxy bids on / off for an auction
+export const setProxyBiddingSchema = z.object({
+    enabled: z.boolean({ message: "enabled must be true or false" }),
+});
+
 // console: a bid the auctioneer enters for a paddle in the room ("#1042" or "1042")
 export const placeFloorBidSchema = z.object({
     paddleNumber: z.coerce

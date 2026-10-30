@@ -433,6 +433,52 @@ export const getProxyBidSummaryService = async ({ auctionUuid }) => {
     return { totals: { ...totals, sharedIps: shared.sharedIps }, auctions };
 };
 
+// ---------------------------------------------------------------------
+// per-auction on / off switch
+// ---------------------------------------------------------------------
+
+/** Auctions whose proxy switch can still matter: not finished, not deleted */
+const SWITCHABLE_AUCTION_STATUSES = ["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
+
+/** Upcoming and running auctions with their proxy switch, soonest first. */
+export const getProxySettingsService = async () => {
+    const auctions = await prisma.auction.findMany({
+        where: { deletedAt: null, status: { in: SWITCHABLE_AUCTION_STATUSES } },
+        orderBy: [{ startTime: "asc" }, { id: "asc" }],
+        select: {
+            uuid: true,
+            title: true,
+            status: true,
+            startTime: true,
+            proxyBiddingEnabled: true,
+            _count: { select: { items: { where: { status: { in: PROXY_LOT_STATUSES } } } } },
+        },
+    });
+    return {
+        auctions: auctions.map(({ _count, ...auction }) => ({ ...auction, upcomingLots: _count.items })),
+    };
+};
+
+/**
+ * Turns proxy bids on or off for an auction. Off stops new proxies and
+ * changes to existing ones; proxies already left still bid when their lot
+ * opens. Lots already open never take proxies, whatever the switch says.
+ */
+export const setProxyBiddingService = async ({ auctionUuid, enabled }) => {
+    const auction = await prisma.auction.findUnique({ where: { uuid: auctionUuid }, select: { id: true, status: true, deletedAt: true } });
+    if (!auction || auction.deletedAt) throw httpError("Auction not found", 404);
+    if (!SWITCHABLE_AUCTION_STATUSES.includes(auction.status)) {
+        throw httpError(`Proxy bidding can't be changed once the auction is ${auction.status}`, 409);
+    }
+
+    const updated = await prisma.auction.update({
+        where: { id: auction.id },
+        data: { proxyBiddingEnabled: enabled },
+        select: { uuid: true, title: true, proxyBiddingEnabled: true },
+    });
+    return updated;
+};
+
 const OUTCOME_LABELS = {
     WITHDRAWN: "Withdrawn",
     WAITING: "Waiting for lot",

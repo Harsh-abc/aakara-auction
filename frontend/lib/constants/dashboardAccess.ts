@@ -3,9 +3,9 @@
 // DashboardGuard (blocks the page) and in-page links all read.
 //
 //   SUPER_ADMIN  every page
-//   ADMIN        Auctions & Lots (create, live, past, upcoming) + Manage Bidders
+//   ADMIN        Auctions & Lots (create, live, past, upcoming) + Manage Bidders + Proxy Bids
 //   AUCTIONEER   Live Auctions, Bidding Console, Manage Bidders, Bid History, Proxy Bids
-//   OPERATIONS   Create Auctions
+//   OPERATIONS   Create Auctions, Proxy Bids (the on / off switches only)
 //   (every role) the Dashboard home, and Settings → General (their own profile)
 //
 // Rules are checked top to bottom and the first match wins, so the more
@@ -39,7 +39,8 @@ const PAGE_RULES: { path: RegExp; roles: Role[] }[] = [
     // running the sale
     { path: /^\/dashboard\/bidding-console(\/|$)/, roles: [SA, "AUCTIONEER"] },
     { path: /^\/dashboard\/bid-history(\/|$)/, roles: [SA, "AUCTIONEER"] },
-    { path: /^\/dashboard\/proxy-bids(\/|$)/, roles: [SA, "AUCTIONEER"] },
+    // admin / operations switch proxy bidding on and off per auction (operations see only the switches)
+    { path: /^\/dashboard\/proxy-bids(\/|$)/, roles: [SA, "ADMIN", "AUCTIONEER", "OPERATIONS"] },
     // live video studio (header "Go live" button) — the roles that can host in the API
     { path: /^\/dashboard\/go-live(\/|$)/, roles: [SA, "ADMIN", "AUCTIONEER"] },
 

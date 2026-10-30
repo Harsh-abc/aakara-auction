@@ -94,6 +94,17 @@ export interface ProxyBidSummary {
     auctions: { uuid: string; title: string; status: AuctionStatus; startTime: string }[]
 }
 
+/** GET /api/bidding/proxy-bids/settings — upcoming and running auctions, soonest first */
+export interface ProxySettingsAuction {
+    uuid: string
+    title: string
+    status: AuctionStatus
+    startTime: string
+    proxyBiddingEnabled: boolean
+    /** lots that haven't opened yet — the only ones that can take a proxy */
+    upcomingLots: number
+}
+
 export interface ProxyBidFilters {
     search?: string
     auctionUuid?: string

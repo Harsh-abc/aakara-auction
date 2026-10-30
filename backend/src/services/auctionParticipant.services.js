@@ -118,22 +118,36 @@ const addUsersToAllLots = async (tx, auctionId, users) => {
     return count;
 };
 
-/** First paddle number of every auction. Must match the backfill in the paddle-numbers migration. */
-const PADDLE_START = 101;
+/** Paddle numbers are random 4-digit numbers in this range (inclusive). */
+const PADDLE_MIN = 1000;
+const PADDLE_MAX = 9999;
 
 /**
- * Reserves `count` paddle numbers for the auction. The counter update locks
- * the auction row until the transaction ends, so concurrent registrations
- * can't be handed the same number. Numbers are never reused.
+ * Reserves `count` random, unused paddle numbers for the auction. The counter
+ * update locks the auction row until the transaction ends, so concurrent
+ * registrations can't be handed the same number.
  */
 const reservePaddleNumbers = async (tx, auctionId, count) => {
-    const { paddleCounter } = await tx.auction.update({
+    await tx.auction.update({
         where: { id: auctionId },
         data: { paddleCounter: { increment: count } },
-        select: { paddleCounter: true },
+        select: { id: true },
     });
-    const first = PADDLE_START + paddleCounter - count;
-    return Array.from({ length: count }, (_, i) => String(first + i));
+
+    const taken = await tx.auctionParticipant.findMany({ where: { auctionId }, select: { paddleNumber: true } });
+    const used = new Set(taken.map((p) => p.paddleNumber));
+    const free = [];
+    for (let n = PADDLE_MIN; n <= PADDLE_MAX; n++) {
+        if (!used.has(String(n))) free.push(n);
+    }
+    if (free.length < count) throw httpError("No paddle numbers left for this auction", 409);
+
+    // partial Fisher–Yates: pick `count` distinct numbers at random
+    for (let i = 0; i < count; i++) {
+        const j = i + Math.floor(Math.random() * (free.length - i));
+        [free[i], free[j]] = [free[j], free[i]];
+    }
+    return free.slice(0, count).map(String);
 };
 
 /**

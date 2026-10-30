@@ -457,6 +457,7 @@ const ENGINE_ERRORS = {
     ALREADY_LEADING: () => ["You're already the highest bidder", 409],
     BID_TOO_LOW: (lot, r) => [`The next bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
     LOT_STARTED: (lot) => [`Lot #${lot.itemNumber} has opened — proxy bids can only be left or changed before a lot opens`, 409],
+    PROXY_DISABLED: () => ["Proxy bids are turned off for this auction", 409],
     PROXY_TOO_LOW: (lot, r) => [`Your maximum bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
     LOT_CLOSED: (lot) => [`Lot #${lot.itemNumber} has closed`, 409],
     AUCTION_CLOSED: () => ["Bidding is closed for this auction", 409],
@@ -547,10 +548,11 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
 
     const item = await prisma.auctionItem.findUnique({
         where: { uuid: lotUuid },
-        select: { id: true, itemNumber: true, status: true },
+        select: { id: true, itemNumber: true, status: true, auction: { select: { proxyBiddingEnabled: true } } },
     });
     if (!item) throw httpError("Lot not found", 404);
     if (item.status === "ACTIVE") throw httpError(...ENGINE_ERRORS.LOT_STARTED({ itemNumber: item.itemNumber }));
+    if (!item.auction.proxyBiddingEnabled) throw httpError(...ENGINE_ERRORS.PROXY_DISABLED());
 
     const { lot, result, prevProxy } = await runForUser({ mode: "PROXY", lotUuid, userId, amount: maxAmount, ip, userAgent });
 
@@ -725,6 +727,7 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
                     uuid: true,
                     status: true,
                     deletedAt: true,
+                    proxyBiddingEnabled: true,
                     currency: { select: { code: true, symbol: true } },
                     participants: { where: { userId: user }, select: { paddleNumber: true } },
                 },
@@ -781,8 +784,10 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
         paddleNumber: participant?.paddleNumber ?? null,
         ...position,
         canBid: verified && lot.status === "ACTIVE" && auctionStatus === "LIVE",
+        // staff can switch proxy bids off per auction
+        proxyEnabled: lot.auction.proxyBiddingEnabled,
         // left or changed until the lot opens
-        canProxy: verified && biddingOpen && PROXY_LOT_STATUSES.includes(lot.status),
+        canProxy: verified && biddingOpen && lot.auction.proxyBiddingEnabled && PROXY_LOT_STATUSES.includes(lot.status),
     });
 };
 

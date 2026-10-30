@@ -306,6 +306,8 @@ model Auction {
   registrationDeadline DateTime?
   /// Paddle numbers issued so far — bumped (row-locked) for each new registration
   paddleCounter        Int                    @default(0)
+  /// Bidders may leave proxy (maximum) bids on lots that haven't opened — switched by staff on the Proxy Bids page
+  proxyBiddingEnabled  Boolean                @default(true)
   timezone             String                 @default("Asia/Kolkata")
   currencyId           BigInt
   currency             Currency               @relation(fields: [currencyId], references: [id])
