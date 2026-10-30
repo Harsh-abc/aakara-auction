@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { JWT_AUDIENCE, jwtSignOptions, jwtVerifyOptions } from '../libs/jwt.js';
 import prisma from '../libs/prisma.js';
 import redis from '../libs/redis.js';
 import { generateOtp } from '../utils/otp.utils.js';
@@ -402,13 +403,13 @@ const issueTokens = ({ userId, uuid, roleId, sessionId, roleName, permissions, t
             ...(mfaUntil && { mfa: true, mfaUntil }),
         },
         process.env.JWT_ACCESS_SECRET,
-        { expiresIn: ttlSeconds }
+        jwtSignOptions(JWT_AUDIENCE.ACCESS, ttlSeconds)
     );
 
     const refreshToken = jwt.sign(
         { sub: uuid, sessionId },
         process.env.JWT_REFRESH_SECRET,
-        { expiresIn: ttlSeconds }
+        jwtSignOptions(JWT_AUDIENCE.REFRESH, ttlSeconds)
     );
 
     return { accessToken, refreshToken };
@@ -542,7 +543,7 @@ export const refreshService = async (refreshToken) => {
     }
 
     try {
-        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, jwtVerifyOptions(JWT_AUDIENCE.REFRESH));
     } catch {
         const error = new Error('Invalid or expired refresh token');
         error.statusCode = 401;

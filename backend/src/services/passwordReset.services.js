@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { JWT_AUDIENCE, jwtSignOptions, jwtVerifyOptions } from '../libs/jwt.js';
 
 import prisma from '../libs/prisma.js';
 import redis from '../libs/redis.js';
@@ -75,7 +76,7 @@ export const requestPasswordResetService = async ({ email, ip }) => {
     const token = jwt.sign(
         { sub: user.uuid, purpose: PURPOSE, pwf: passwordFingerprint(user.passwordHash) },
         resetSecret(),
-        { expiresIn: `${RESET_TTL_MINUTES}m` }
+        jwtSignOptions(JWT_AUDIENCE.PASSWORD_RESET, `${RESET_TTL_MINUTES}m`)
     );
     const siteUrl = (process.env.FRONTEND_URL ?? '').replace(/\/+$/, '');
     const resetUrl = `${siteUrl}/reset-password?token=${encodeURIComponent(token)}`;
@@ -102,7 +103,7 @@ export const requestPasswordResetService = async ({ email, ip }) => {
 export const resetPasswordService = async ({ token, password }) => {
     let payload;
     try {
-        payload = jwt.verify(token, resetSecret());
+        payload = jwt.verify(token, resetSecret(), jwtVerifyOptions(JWT_AUDIENCE.PASSWORD_RESET));
     } catch {
         throw httpError(LINK_DEAD, 400);
     }

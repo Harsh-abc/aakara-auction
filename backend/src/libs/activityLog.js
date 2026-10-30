@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { JWT_AUDIENCE, jwtVerifyOptions } from "./jwt.js";
 
 import prisma from "./prisma.js";
 
@@ -183,7 +184,7 @@ export const identifyFromToken = (req) => {
     const header = req.headers.authorization;
     if (!header || !header.startsWith("Bearer ")) return null;
     try {
-        const decoded = jwt.verify(header.substring(7).trim(), process.env.JWT_ACCESS_SECRET);
+        const decoded = jwt.verify(header.substring(7).trim(), process.env.JWT_ACCESS_SECRET, jwtVerifyOptions(JWT_AUDIENCE.ACCESS));
         return decoded.userId ? { userId: decoded.userId } : null;
     } catch {
         return null;

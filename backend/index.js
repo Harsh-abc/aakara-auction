@@ -1,11 +1,11 @@
 import { createServer } from "node:http";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 dotenv.config();
 import cookieParser from "cookie-parser";
 import prisma from "./src/libs/prisma.js";
-import redis from './src/libs/redis.js';
 import authRouter from "./src/routes/auth.routes.js";
 import adminRouter from "./src/routes/admin.routes.js";
 import uploadRouter from "./src/routes/upload.routes.js";
@@ -33,6 +33,10 @@ const parseTrustProxy = (value) => {
     return /^\d+$/.test(value) ? Number(value) : value;
 };
 app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
+
+// security headers (HSTS, nosniff, frame / referrer policies…); resources stay loadable
+// cross-origin because the frontend is served from a different origin
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
 app.use(
     cors({
@@ -62,26 +66,6 @@ app.get("/api/time", (req, res) => {
     res.json({ success: true, now: Date.now() });
 });
 
-app.get("/test-redis", async (req, res) => {
-    try {
-        await redis.set("test:key", "Hello Redis");
-
-        const value = await redis.get("test:key");
-
-        res.json({
-            success: true,
-            message: value,
-        });
-    } catch (error) {
-        console.error("Redis error:", error);
-
-        res.status(500).json({
-            success: false,
-            message: "Redis connection failed",
-        });
-    }
-});
-
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter)
 app.use('/api/image', uploadRouter)
@@ -93,6 +77,18 @@ app.use('/api/location', locationRouter)
 app.use('/api/bidding', biddingRouter)
 app.use('/api/live', liveStreamRouter)
 app.use('/api/website', websiteRouter)
+
+// anything a route throws or passes to next(err) — JSON instead of Express' HTML page,
+// and no internal error messages / stack traces for 5xx
+app.use((err, req, res, next) => {
+    const status = err.statusCode ?? err.status ?? 500;
+    if (status >= 500) console.error(err);
+    if (res.headersSent) return next(err);
+    res.status(status).json({
+        success: false,
+        message: status < 500 ? err.message : "Something went wrong",
+    });
+});
 
 const PORT = process.env.PORT || 8080;
 

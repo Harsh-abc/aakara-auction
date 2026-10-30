@@ -64,6 +64,58 @@ export const uploadAny = (req, res, next) => {
 };
 
 /**
+ * Routes any signed-in user can reach get tight limits, so nobody can make the
+ * server buffer gigabytes in memory (uploadAny's 100MB × 200 is staff-only).
+ * Both keep upload.any() so req.files stays an array for the controllers.
+ */
+const typeFilter = (types, message) => (req, file, cb) => {
+    if (types.includes(file.mimetype)) return cb(null, true);
+    const error = new Error(message);
+    error.statusCode = 400;
+    cb(error, false);
+};
+
+const limitedUpload = ({ types, typeMessage, fileSize, files, sizeMessage }) => {
+    const uploader = multer({
+        storage,
+        limits: { fileSize, files, fields: 50, fieldSize: 64 * 1024 },
+        fileFilter: typeFilter(types, typeMessage),
+    }).any();
+
+    return (req, res, next) => {
+        uploader(req, res, (err) => {
+            if (!err) return next();
+
+            let message = err.message || "File upload failed";
+            if (err instanceof multer.MulterError) {
+                if (err.code === "LIMIT_FILE_SIZE") message = sizeMessage;
+                if (err.code === "LIMIT_FILE_COUNT") message = "Too many files in one request";
+                if (err.code === "LIMIT_FIELD_VALUE" || err.code === "LIMIT_FIELD_COUNT") message = "Form data is too large";
+            }
+            return res.status(400).json({ success: false, message });
+        });
+    };
+};
+
+// bidder submitting their own KYC — matches submitMyKycSchema (≤ 10 documents) and KYC_SELF_MAX_SIZE
+export const uploadMyKyc = limitedUpload({
+    types: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+    typeMessage: "KYC documents must be JPG, PNG, WEBP or PDF.",
+    fileSize: 5 * 1024 * 1024,
+    files: 10,
+    sizeMessage: "Each document must be 5 MB or smaller",
+});
+
+// My profile — the optional "avatar" image only
+export const uploadAvatar = limitedUpload({
+    types: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+    typeMessage: "Avatar must be JPG, PNG or WEBP",
+    fileSize: 2 * 1024 * 1024,
+    files: 1,
+    sizeMessage: "Avatar must be 2 MB or smaller",
+});
+
+/**
  * Single image under the "image" field (rich-text editor inserts) —
  * images only, 10MB max, multer errors returned as JSON 400s.
  */

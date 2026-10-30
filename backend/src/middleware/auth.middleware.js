@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import { JWT_AUDIENCE, jwtVerifyOptions } from '../libs/jwt.js'
 import { tokenAccessProblem } from '../libs/accountBlock.js'
 import { tokenHasFreshMfa } from '../libs/dashboardMfa.js'
 
@@ -18,7 +19,8 @@ export async function authenticate(req, res, next) {
     try {
         decoded = jwt.verify(
             token,
-            process.env.JWT_ACCESS_SECRET
+            process.env.JWT_ACCESS_SECRET,
+            jwtVerifyOptions(JWT_AUDIENCE.ACCESS)
         );
 
         req.user = {
@@ -59,7 +61,7 @@ export async function optionalAuthenticate(req, res, next) {
     if (!authHeader || !authHeader.startsWith("Bearer ")) return next();
 
     try {
-        const decoded = jwt.verify(authHeader.substring(7).trim(), process.env.JWT_ACCESS_SECRET);
+        const decoded = jwt.verify(authHeader.substring(7).trim(), process.env.JWT_ACCESS_SECRET, jwtVerifyOptions(JWT_AUDIENCE.ACCESS));
         // a suspended account, or a token from before a role / password change, is treated as a guest
         if (!(await tokenAccessProblem(decoded))) {
             req.user = {

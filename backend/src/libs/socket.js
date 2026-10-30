@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import jwt from "jsonwebtoken";
+import { JWT_AUDIENCE, jwtVerifyOptions } from "./jwt.js";
 
 import prisma from "./prisma.js";
 import redis from "./redis.js";
@@ -65,7 +66,7 @@ export const initSocket = (server) => {
         const token = socket.handshake.auth?.token;
         if (token) {
             try {
-                const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+                const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, jwtVerifyOptions(JWT_AUDIENCE.ACCESS));
                 socket.data.user = (await tokenAccessProblem(decoded))
                     ? null
                     : { userId: decoded.userId, role: decoded.role, mfa: decoded.mfa, mfaUntil: decoded.mfaUntil };

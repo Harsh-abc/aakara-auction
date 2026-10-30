@@ -3,7 +3,7 @@ import { changeMyPassword, getAllUsers, getUserStats, getMyKyc, getMyProfile, ge
 import { addToGallery, getMyGallery, removeFromGallery } from '../controllers/gallery.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
-import { uploadAny } from '../middleware/upload.middleware.js';
+import { uploadAny, uploadAvatar, uploadMyKyc } from '../middleware/upload.middleware.js';
 import { STAFF_ROLES } from '../libs/socket.js';
 
 const userRouter = Router();
@@ -11,11 +11,11 @@ const userRouter = Router();
 
 // USER PROFILE
 userRouter.get('/me/profile', authenticate, getMyProfile);
-userRouter.patch('/me/update-profile', authenticate, uploadAny, updateMyProfile);
+userRouter.patch('/me/update-profile', authenticate, uploadAvatar, updateMyProfile);
 userRouter.patch('/me/change-password', authenticate, changeMyPassword);
 userRouter.get('/me/registrations', authenticate, getMyRegistrations);
 userRouter.get('/me/kyc', authenticate, getMyKyc);
-userRouter.post('/me/kyc', authenticate, uploadAny, submitMyKyc);
+userRouter.post('/me/kyc', authenticate, uploadMyKyc, submitMyKyc);
 
 // MY AUCTION GALLERY (lots saved from the storefront; signed-in users only)
 userRouter.get('/me/gallery', authenticate, getMyGallery);
