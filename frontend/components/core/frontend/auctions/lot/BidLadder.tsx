@@ -54,14 +54,17 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                             return (
                                 <li
                                     key={bid.uuid}
-                                    className={cn(
-                                        "flex items-center pr-4",
-                                        top ? "h-13.25 bg-[#0d0d0d] text-white" : "h-11 text-[#717171]"
-                                    )}
+                                    className={cn("flex items-center py-3 pr-4", top ? "bg-[#0d0d0d] text-white" : "text-[#717171]")}
                                 >
-                                    <span className={cn(SMALL_CAPS, "w-15 shrink-0 pl-4")}>{count - index}</span>
-                                    <span className={cn("flex-1", top ? "text-[18px] leading-7 font-medium" : "text-[14px] leading-5")}>
-                                        {money(bid.amount)}
+                                    {/* the bid number used to go here: {count - index} */}
+                                    <span className="w-15 shrink-0" aria-hidden />
+                                    <span className="flex-1">
+                                        <span className={cn(SMALL_CAPS, "block", top ? "text-white/60" : "text-[#717171]")}>
+                                            {top ? "Current bid" : "Last bid"}
+                                        </span>
+                                        <span className={cn("mt-0.75 block", top ? "text-[18px] leading-7 font-medium" : "text-[14px] leading-5")}>
+                                            {money(bid.amount)}
+                                        </span>
                                         {/* {bid.source === "PROXY" && (
                                             <span className={cn(SMALL_CAPS, "ml-3 text-[10px]", top ? "text-white/60" : "text-[#717171]")}>
                                                 Proxy
