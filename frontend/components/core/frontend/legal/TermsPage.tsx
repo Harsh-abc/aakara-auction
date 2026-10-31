@@ -1,13 +1,10 @@
 import { cn } from "@/lib/utils";
 
 import { Breadcrumb, EYEBROW, PAGE_MAIN, PAGE_TITLE } from "../storefront";
-import { TermsIndex } from "./TermsIndex";
 import { TERMS_INTRO, TERMS_SECTIONS, TERMS_TITLE, TERMS_UPDATED, type TermsSection } from "./termsContent";
 
-// Figma "Terms and Conditions | Akara": intro on a hairline, then an "On this page" index | 760px of terms
+// intro, then every section of the terms in one full-width column
 const pad = (n: number) => String(n).padStart(2, "0");
-
-const INDEX = TERMS_SECTIONS.map(({ id, title }) => ({ id, title }));
 
 // clause text, a little softer than headings
 const CLAUSE = "text-[14px] leading-7 text-[#0d0d0d]/80";
@@ -33,7 +30,7 @@ function SubItems({ items }: { items: string[] }) {
 
 function SectionBlock({ section, index }: { section: TermsSection; index: number }) {
     return (
-        // scroll-mt clears the sticky header when jumping here from the index
+        // scroll-mt clears the sticky header when jumping here from a #link
         <section id={section.id} aria-labelledby={`${section.id}-heading`} className="scroll-mt-28">
             <div className="flex items-baseline gap-3.25 border-b border-[#0d0d0d] pb-3">
                 <span className="text-[10px] leading-3.75 tracking-[0.16em] text-[#717171]">{pad(index + 1)}</span>
@@ -96,7 +93,7 @@ export function TermsPage() {
                 <div className="page-container">
                     <Breadcrumb auctions={false} crumbs={[{ label: "Help & policies" }, { label: "Terms & conditions" }]} />
 
-                    <div className="border-b border-[#cecece] pt-12 pb-14 md:pt-16 md:pb-16">
+                    <div className="pt-12 md:pt-16">
                         <p className={EYEBROW}>Legal · Updated {TERMS_UPDATED}</p>
                         <h1 className={cn(PAGE_TITLE, "mt-5 sm:leading-[62.6px]")}>{TERMS_TITLE}</h1>
                         <p className="mt-6 max-w-191.5 text-[15px] leading-7 text-[#717171]">{TERMS_INTRO}</p>
@@ -105,10 +102,7 @@ export function TermsPage() {
             </section>
 
             <section>
-                {/* "On this page" | the terms (the index stays in view while reading on wide screens) */}
-                <div className="page-container grid grid-cols-1 gap-10 lg:grid-cols-[230px_minmax(0,760px)] lg:gap-15.5">
-                    <TermsIndex sections={INDEX} />
-
+                <div className="page-container">
                     <div className="flex min-w-0 flex-col gap-15">
                         {TERMS_SECTIONS.map((section, index) => (
                             <SectionBlock key={section.id} section={section} index={index} />
