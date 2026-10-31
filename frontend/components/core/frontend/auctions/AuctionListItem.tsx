@@ -24,13 +24,15 @@ type AuctionListItemProps = {
 export function AuctionListItem({ auction, paddleNumber, eligibility, onRegistered }: AuctionListItemProps) {
     const countdown = countdownFor(auction);
     const isPast = !countdown;
+    // the sale's own thumbnail; sales without one keep showing their cover
+    const image = auction.thumbnailImageUrl ?? auction.coverImageUrl;
 
     return (
         <article className={ROW_GRID}>
             <div className="flex h-52.5 w-full items-center justify-center overflow-hidden bg-white">
-                {auction.coverImageUrl ? (
+                {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={auction.coverImageUrl} alt={auction.title} className="h-full w-full object-contain" />
+                    <img src={image} alt={auction.title} className="h-full w-full object-contain" />
                 ) : (
                     <ImageOff className="size-6 text-[#cecece]" />
                 )}

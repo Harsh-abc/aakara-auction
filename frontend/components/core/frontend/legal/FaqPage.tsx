@@ -4,12 +4,9 @@ import { cn } from "@/lib/utils";
 import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, Breadcrumb, EYEBROW, PAGE_MAIN, PAGE_TITLE } from "../storefront";
 import { FaqAccordion } from "./FaqAccordion";
 import { FAQ_INTRO, FAQ_SECTIONS, FAQ_TITLE } from "./faqContent";
-import { TermsIndex } from "./TermsIndex";
 
-// same frame as /terms: intro on a hairline, then an "On this page" index | 760px of questions
-const pad = (n: number) => String(n).padStart(2, "0");
-
-const INDEX = FAQ_SECTIONS.map(({ id, title }) => ({ id, title }));
+// intro on a hairline, then every question in one full-width list, answers open
+const QUESTIONS = FAQ_SECTIONS.flatMap((section) => section.items);
 
 export function FaqPage() {
     return (
@@ -27,23 +24,9 @@ export function FaqPage() {
             </section>
 
             <section>
-                <div className="page-container grid grid-cols-1 gap-10 lg:grid-cols-[230px_minmax(0,760px)] lg:gap-15.5">
-                    <TermsIndex sections={INDEX} />
-
+                <div className="page-container">
                     <div className="flex min-w-0 flex-col gap-15">
-                        {FAQ_SECTIONS.map((section, index) => (
-                            // scroll-mt clears the sticky header when jumping here from the index
-                            <section key={section.id} id={section.id} aria-labelledby={`${section.id}-heading`} className="scroll-mt-28">
-                                <div className="flex items-baseline gap-3.25 pb-3">
-                                    <span className="text-[10px] leading-3.75 tracking-[0.16em] text-[#717171]">{pad(index + 1)}</span>
-                                    <h2 id={`${section.id}-heading`} className="text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">
-                                        {section.title}
-                                    </h2>
-                                </div>
-
-                                <FaqAccordion items={section.items} />
-                            </section>
-                        ))}
+                        <FaqAccordion items={QUESTIONS} />
 
                         {/* anything the answers don't cover */}
                         <div className="flex flex-col gap-5 border border-[#cecece] bg-[#f4f2ef] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">

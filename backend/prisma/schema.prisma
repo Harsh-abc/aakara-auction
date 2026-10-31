@@ -294,7 +294,9 @@ model Auction {
   description          String?
   short_description    String?
   coverImageUrl        String?
-  auctionType          AuctionType            @default(FLOOR)
+  /// Small image for the storefront's auction list rows; falls back to the cover when unset
+  thumbnailImageUrl    String?
+  auctionType         AuctionType            @default(FLOOR)
   status               AuctionStatus          @default(DRAFT)
   startTime            DateTime
   endTime              DateTime

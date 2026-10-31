@@ -7,6 +7,8 @@ export interface PublicAuction {
     slug: string;
     short_description: string | null;
     coverImageUrl: string | null;
+    /** the list-row image; falls back to the cover when null */
+    thumbnailImageUrl: string | null;
     status: AuctionStatus;
     auctionType: AuctionType;
     startTime: string;

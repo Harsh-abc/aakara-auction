@@ -27,11 +27,126 @@ const slugify = (text: string) =>
         .replace(/^-+|-+$/g, "")
         .slice(0, 180);
 
-export default function BasicInfo() {
-    const inputRef = useRef<HTMLInputElement>(null);
+type ImageField = "coverImage" | "thumbnailImage";
 
-    const [isDragging, setIsDragging] = useState(false);
+/** Preview of the image picked in this session, else the saved one. */
+function useImagePreview(file: File | null | undefined, savedUrl: string | undefined) {
     const [preview, setPreview] = useState<string | null>(null);
+
+    // ✅ Rebuild the preview when coming back to this step (file is still in the form)
+    useEffect(() => {
+        if (file instanceof File && file.type.startsWith("image/")) {
+            const url = URL.createObjectURL(file);
+            setPreview(url);
+            return () => URL.revokeObjectURL(url);
+        }
+        setPreview(savedUrl || null);
+    }, [file, savedUrl]);
+
+    return preview;
+}
+
+/** Drag & drop / click-to-pick for one image of the auction (cover or thumbnail). */
+function ImageDropzone({
+    field,
+    label,
+    hint,
+    preview,
+    previewClassName,
+}: {
+    field: ImageField;
+    label: string;
+    hint: string;
+    preview: string | null;
+    /** how the picked image sits in the box */
+    previewClassName: string;
+}) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const { setValue } = useFormContext<AuctionFormData>();
+
+    const handleFile = (file: File) => {
+        if (file.size > 50 * 1024 * 1024) {
+            alert("File size must be less than 50MB.");
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            alert(`${label} must be an image (JPG, PNG or WEBP).`);
+            return;
+        }
+
+        // Preview is created by useImagePreview
+        setValue(`basicInfo.${field}`, file, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+    };
+
+    const removeFile = () => {
+        setValue(`basicInfo.${field}`, null, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+        // Edit: removing the saved image sends removeCoverImage / removeThumbnailImage
+        setValue(`basicInfo.${field}Url`, "", { shouldDirty: true });
+        if (inputRef.current) inputRef.current.value = "";
+    };
+
+    return (
+        <div className="input-wrapper">
+            <label className="block mb-2">{label}</label>
+
+            <div
+                className={`relative flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-white transition ${isDragging ? "border-[#7A3D5E] bg-[#fdf5f9]" : "border-slate-300"
+                    }`}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleFile(file);
+                }}
+                onClick={() => inputRef.current?.click()}
+            >
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFile(file);
+                    }}
+                />
+
+                {preview ? (
+                    <div className="relative h-[220px] w-full overflow-hidden rounded-lg">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={preview} alt={`${label} preview`} className={previewClassName} />
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                removeFile();
+                            }}
+                            className="absolute right-3 top-3 rounded-full bg-white p-2 shadow"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <Upload className="mb-3 h-8 w-8 text-slate-400" />
+                        <p className="text-sm font-medium text-slate-700">Upload {label}</p>
+                        <p className="mt-1 text-xs text-slate-400">Drag & drop or click to upload</p>
+                        <p className="mt-1 text-xs text-slate-400">{hint}</p>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+export default function BasicInfo() {
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
@@ -86,62 +201,14 @@ export default function BasicInfo() {
     const categoryName = categories.find((c) => c.uuid === categoryUuid)?.name;
 
     /* =====================================================
-       COVER IMAGE
+       COVER + THUMBNAIL IMAGES
     ===================================================== */
 
-    // ✅ Rebuild the preview when coming back to this step (file is still in the form)
-    useEffect(() => {
-        if (coverImage instanceof File && coverImage.type.startsWith("image/")) {
-            const url = URL.createObjectURL(coverImage);
-            setPreview(url);
-            return () => URL.revokeObjectURL(url);
-        }
-        setPreview(savedCoverUrl || null);
-    }, [coverImage, savedCoverUrl]);
-
-    const handleFile = (file: File) => {
-        if (!file) return;
-
-        if (file.size > 50 * 1024 * 1024) {
-            alert("File size must be less than 50MB.");
-            return;
-        }
-
-        if (!file.type.startsWith("image/")) {
-            alert("Cover must be an image (JPG, PNG or WEBP).");
-            return;
-        }
-
-        // Preview is created by the effect above
-        setValue("basicInfo.coverImage", file, {
-            shouldDirty: true,
-            shouldTouch: true,
-            shouldValidate: true,
-        });
-    };
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) handleFile(file);
-    };
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file) handleFile(file);
-    };
-
-    const removeFile = () => {
-        setValue("basicInfo.coverImage", null, {
-            shouldDirty: true,
-            shouldTouch: true,
-            shouldValidate: true,
-        });
-        // Edit: removing the saved cover sends removeCoverImage
-        setValue("basicInfo.coverImageUrl", "", { shouldDirty: true });
-        if (inputRef.current) inputRef.current.value = "";
-    };
+    const preview = useImagePreview(coverImage, savedCoverUrl);
+    const thumbnailPreview = useImagePreview(
+        watch("basicInfo.thumbnailImage"),
+        watch("basicInfo.thumbnailImageUrl") // edit: thumbnail already on the auction
+    );
 
     /* =====================================================
        CATEGORIES
@@ -290,53 +357,23 @@ export default function BasicInfo() {
                     </div>
 
                     {/* COVER IMAGE */}
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Auction Cover Image</label>
+                    <ImageDropzone
+                        field="coverImage"
+                        label="Auction Cover Image"
+                        hint="JPG, PNG or WEBP · max 50MB"
+                        preview={preview}
+                        previewClassName="h-full w-full object-cover"
+                    />
 
-                        <div
-                            className={`relative flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-white transition ${isDragging ? "border-[#7A3D5E] bg-[#fdf5f9]" : "border-slate-300"
-                                }`}
-                            onDragOver={(e) => {
-                                e.preventDefault();
-                                setIsDragging(true);
-                            }}
-                            onDragLeave={() => setIsDragging(false)}
-                            onDrop={handleDrop}
-                            onClick={() => inputRef.current?.click()}
-                        >
-                            <input
-                                ref={inputRef}
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                className="hidden"
-                                onChange={handleInputChange}
-                            />
-
-                            {preview ? (
-                                <div className="relative h-[220px] w-full overflow-hidden rounded-lg">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={preview} alt="Auction cover preview" className="h-full w-full object-cover" />
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            removeFile();
-                                        }}
-                                        className="absolute right-3 top-3 rounded-full bg-white p-2 shadow"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <>
-                                    <Upload className="mb-3 h-8 w-8 text-slate-400" />
-                                    <p className="text-sm font-medium text-slate-700">Upload Auction Cover Image</p>
-                                    <p className="mt-1 text-xs text-slate-400">Drag & drop or click to upload</p>
-                                    <p className="mt-1 text-xs text-slate-400">JPG, PNG or WEBP · max 50MB</p>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                    {/* THUMBNAIL — the image in the storefront's Upcoming / Live list (the cover is used when there's none) */}
+                    <ImageDropzone
+                        field="thumbnailImage"
+                        label="Auction Thumbnail"
+                        hint="Shown in the auctions list (about 4:3) · JPG, PNG or WEBP · max 50MB"
+                        preview={thumbnailPreview}
+                        // shown whole, the way the list row shows it
+                        previewClassName="h-full w-full object-contain"
+                    />
 
                     {/* CATEGORY + SUBCATEGORY */}
                     <div className="grid grid-cols-2 gap-4">

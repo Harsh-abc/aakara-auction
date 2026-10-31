@@ -35,6 +35,8 @@ export const EMPTY_AUCTION_FORM: AuctionFormData = {
         primaryCurrency: "INR",
         coverImage: null,
         coverImageUrl: "",
+        thumbnailImage: null,
+        thumbnailImageUrl: "",
     },
     schedule: {
         startDate: "",

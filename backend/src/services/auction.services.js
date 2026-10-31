@@ -384,6 +384,7 @@ export const createAuctionService = async (data) => {
         description,
         short_description,
         coverImageUrl,
+        thumbnailImageUrl,
         auctionType,
         status,
         startTime,
@@ -515,6 +516,7 @@ export const createAuctionService = async (data) => {
                     description: toStr(description),
                     short_description: toStr(short_description),
                     coverImageUrl: toStr(coverImageUrl),
+                    thumbnailImageUrl: toStr(thumbnailImageUrl),
                     auctionType: type,
                     status: auctionStatus,
                     startTime: start,
@@ -1003,6 +1005,8 @@ export const updateAuctionService = async (data) => {
         short_description,
         coverImageUrl,
         removeCoverImage,
+        thumbnailImageUrl,
+        removeThumbnailImage,
         auctionType,
         status,
         startTime,
@@ -1108,6 +1112,7 @@ export const updateAuctionService = async (data) => {
                     publishedAt: true,
                     deletedAt: true,
                     coverImageUrl: true,
+                    thumbnailImageUrl: true,
                     items: {
                         select: {
                             id: true,
@@ -1189,6 +1194,11 @@ export const updateAuctionService = async (data) => {
             if (toStr(coverImageUrl)) cover = toStr(coverImageUrl);
             else if (toBool(removeCoverImage, false)) cover = null;
 
+            // ---- thumbnail: same rule ----
+            let thumbnail = existing.thumbnailImageUrl;
+            if (toStr(thumbnailImageUrl)) thumbnail = toStr(thumbnailImageUrl);
+            else if (toBool(removeThumbnailImage, false)) thumbnail = null;
+
             // ---------------- auction ----------------
             await tx.auction.update({
                 where: { id: existing.id },
@@ -1198,6 +1208,7 @@ export const updateAuctionService = async (data) => {
                     description: toStr(description),
                     short_description: toStr(short_description),
                     coverImageUrl: cover,
+                    thumbnailImageUrl: thumbnail,
                     auctionType: type,
                     status: auctionStatus,
                     startTime: start,

@@ -419,6 +419,7 @@ export interface Auction {
     description?: string | null;
     short_description?: string | null;
     coverImageUrl?: string | null;
+    thumbnailImageUrl?: string | null;
     status: AuctionStatus;
     auctionType: AuctionType;
     visibility?: AuctionVisibility;

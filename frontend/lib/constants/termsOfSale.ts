@@ -26,7 +26,7 @@ export type TermsSection = {
 };
 
 export const TERMS_OF_SALE: { version: string; title: string; notice: string; sections: TermsSection[] } = {
-    version: "2026-10-24",
+    version: "2026-10-31",
     title: "Terms and Conditions of Sale",
     notice: "Important notice to Bidders. These Terms and Conditions of Sale govern every auction and private sale conducted by Akara Auctions Private Limited. By registering to bid, bidding or buying, you agree to be bound by them. Please read them carefully before bidding, in particular Clause 7 (Description, Condition and Inspection), Clause 8 (Authenticity), Clause 12 (Payment), Clause 14 (Buyer Default), Clause 17 (Limitation of Liability) and Clause 19 (Governing Law and Dispute Resolution).",
     sections: [
@@ -47,7 +47,7 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                         ],
                         [
                             "Auction House",
-                            "means Akara Auctions Private Limited, a company incorporated under the Companies Act, 2013, with its registered office at 3C, Amarchand Mansion, Madam Cama Road, Colaba, Mumbai 400001, India, and includes its successors and permitted assigns.",
+                            "means Akara Auctions Private Limited, a company incorporated under the Companies Act, 2013, with its office at 3C, Amarchand Mansion, Madam Cama Road, Colaba, Mumbai 400001, India, and includes its successors and permitted assigns.",
                         ],
                         ["Auctioneer", "means the person authorised by the Auction House to conduct an Auction."],
                         [
@@ -60,7 +60,7 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                             "Buyer",
                             "means the Bidder whose Bid is accepted as the Successful Bid for an Artwork, or the person who buys an Artwork by Private Sale. Where the Buyer is an individual, the term includes the Buyer’s heirs, executors and administrators.",
                         ],
-                        ["Buyer’s Premium", "means the fee payable by the Buyer under Clause 11.1, exclusive of applicable taxes."],
+                        ["Buyer’s Premium", "means the fee payable by the Buyer under Clause 11.1, exclusive of applicable taxes for the services rendered by the Auction House."],
                         ["Catalogue", "means this catalogue and any other printed or electronic catalogue or online listing issued by the Auction House that describes the Artworks offered for sale."],
                         [
                             "Collection Period",
@@ -137,7 +137,7 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
             clauses: [
                 {
                     no: "3.1",
-                    text: "Before bidding, each Bidder shall complete the Auction House’s registration process and provide all information, documents and declarations the Auction House requires. The Auction House may accept or refuse any registration at its discretion. New Bidders should submit their registration and KYC documents at least 48 hours before the Auction. Bidding access is subject to approval by the Auction House and completion of its required checks. The Auction House does not guarantee that late applications will be processed before the Auction.",
+                    text: "Before bidding, each Bidder shall complete the Auction House’s registration process and provide all information, documents and declarations the Auction House requires. The Auction House may accept or refuse any registration at its discretion. New Bidders should submit their registration and KYC documents at least 72 hours before the Auction. Bidding access is subject to approval by the Auction House and completion of its required checks. The Auction House does not guarantee that late applications will be processed before the Auction.",
                 },
                 {
                     no: "3.2",
@@ -208,8 +208,9 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                 },
                 {
                     no: "6.4",
-                    text: "If the Seller cannot transfer good title to the Artwork, the Auction House may rescind the sale. Any refund is subject to Clause 8.7. The time limit in Clause 8.4 does not apply to a claim about title. For a refund under this Clause, the return requirements in Clause 8.5 apply subject to Applicable Law and the rights of any person with superior title to the Artwork.",
+                    text: "If the Seller cannot transfer good title to the Artwork, the Auction House may rescind the sale. Any refund is subject to Clause 8.6 and Clause 8.7. The time limit in Clause 8.4 does not apply to a claim about title. For a refund under this Clause, the return requirements in Clause 8.5 apply subject to Applicable Law and the rights of any person with superior title to the Artwork.",
                 },
+                { no: "6.5", text: "The Auction House shall raise the invoices on the winning bidder for the hammer price along with the applicable taxes." },
             ],
         },
         {
@@ -342,7 +343,7 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                 {
                     no: "11.1",
                     title: "Buyer’s Premium.",
-                    text: "The Buyer shall pay the Buyer’s Premium of 20% of the Hammer Price, plus GST, on every purchase, whether at an Auction or by Private Sale. The Buyer’s Premium belongs to the Auction House, subject to the express refund provisions of these Conditions.",
+                    text: "The Buyer shall pay the Buyer’s Premium of 20% of the Hammer Price, plus applicable GST, on every purchase, whether at an Auction or by Private Sale. The Buyer’s Premium belongs to the Auction House, subject to the express refund provisions of these Conditions.",
                 },
                 {
                     no: "11.2",
@@ -352,7 +353,7 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                 {
                     no: "11.3",
                     title: "Other charges.",
-                    text: "The Buyer shall also pay all reasonable storage, packing, handling, insurance and delivery costs incurred for its Artworks, and all bank and payment charges on its payments.",
+                    text: "The Buyer shall also pay all reasonable storage, packing, handling, insurance and delivery costs incurred for its Artworks, and all bank and payment charges on its payments along with applicable taxes.",
                 },
                 {
                     no: "11.4",
@@ -377,12 +378,15 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                 {
                     no: "12.2",
                     text: "Payment shall be made in Indian Rupees unless the Auction House approves another currency in writing before the purchase. The invoice shall specify the agreed currency. Payment shall be made from an account in the Buyer’s name by NEFT, RTGS or bank wire transfer to the Auction House’s designated account. Payment by cheque or demand draft requires prior written approval. The Auction House does not accept payment by credit card, debit card, UPI, digital wallet or online payment gateway. Payment is received only when cleared funds are credited to the designated account.",
+                    after: [
+                        "Buyers outside India may pay in US Dollars (USD). The equivalent USD amount will be provided for payment by wire transfer and will be calculated at the exchange rate prevailing on the date of the invoice. The currency and amount payable will be stated on the invoice, and bidders are responsible for complying with all applicable foreign exchange regulations.",
+                    ],
                 },
                 {
                     no: "12.3",
                     text: "The Buyer shall make all payments without any deduction, withholding, counterclaim or set-off, except as required by Applicable Law. If the Buyer is required by law to withhold tax, it shall promptly give the Auction House the relevant withholding tax certificate.",
                 },
-                { no: "12.4", text: "Subject to Applicable Law, the Auction House may charge simple interest at 1% per month on overdue amounts from the due date until payment in full." },
+                { no: "12.4", text: "Subject to Applicable Law, the Auction House may charge simple interest at 1% per month on overdue amounts from the due date until payment in full, along with the applicable taxes." },
             ],
         },
         {
@@ -409,9 +413,8 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                     no: "13.5",
                     text: "If the Auction House knows, or has reason to believe, that an Artwork is an antiquity or art treasure under the Antiquities Act, it shall say so in the Catalogue entry or in a Saleroom Notice before the Sale Date. Each Bidder acknowledges that:",
                     items: ["such an Artwork may not be exported from India; and", "any transfer of its ownership must be notified to the registering officer as required by the Antiquities Act."],
-                    // TODO: the source PDF shows an unrendered symbol after "marked as" — replace [symbol] with the correct mark
                     after: [
-                        "The Buyer shall co-operate with the Auction House and the Seller in completing that registration. No restriction on export, and no refusal or delay of any approval, entitles the Buyer to rescind the sale, withhold payment or claim a refund. It is clarified that Artworks qualifying as antiquities under the Antiquities Act, including paintings and other works of art at least 100 years old, and works notified by the Central Government as “national art treasures” marked as □ are non-exportable from India, whether or not registered with the Archaeological Survey of India, except as expressly permitted under the Antiquities Act.",
+                        "The Buyer shall co-operate with the Auction House and the Seller in completing that registration. No restriction on export, and no refusal or delay of any approval, entitles the Buyer to rescind the sale, withhold payment or claim a refund. It is clarified that Artworks qualifying as antiquities under the Antiquities Act, including paintings and other works of art at least 100 years old, and works notified by the Central Government as “national art treasures” marked as ⌘ are non-exportable from India, whether or not registered with the Archaeological Survey of India, except as expressly permitted under the Antiquities Act.",
                     ],
                 },
                 {
@@ -541,7 +544,7 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                 },
                 {
                     no: "18.2",
-                    text: "The Auction House may collect, use and disclose each Bidder’s personal data for registration, KYC, auction administration, completing sales, processing payments, delivery, legal and tax compliance, fraud prevention and managing disputes, in accordance with its privacy notice and Applicable Law (including the Digital Personal Data Protection Act, 2023, to the extent in force).",
+                    text: "The Auction House may collect, use and disclose each Bidder’s personal data for registration, KYC, auction administration, completing sales, processing payments, delivery, legal and tax compliance, fraud prevention and managing disputes, in accordance with its privacy notice and Applicable Law (including the Digital Personal Data Protection Act, 2023 and its rules, and the EU or UK GDPR, in each case to the extent applicable and in force). The Auction House may retain such data for as long as reasonably necessary for the purpose stated in this Clause or required by Applicable Law. Subject to Applicable Law, the exclusions and the limitations of liability in Clause 17 apply to the collection, use, storage and disclosure of personal data under this clause.",
                 },
                 {
                     no: "18.3",
@@ -595,7 +598,7 @@ export const TERMS_OF_SALE: { version: string; title: string; notice: string; se
                 {
                     no: "20.5",
                     title: "Notices.",
-                    text: "Any notice under these Conditions must be in writing and delivered by hand, registered post or email: to the Auction House, at its registered office set out in Clause 1.1 or an email address designated by it in writing; and to a Bidder, at the postal or email address in its registration details (or, in either case, any other address notified in writing). A notice is treated as received on delivery or, if sent by email, on the next Business Day after sending, unless the sender receives a delivery failure message.",
+                    text: "Any notice under these Conditions must be in writing and delivered by hand, registered post or email: to the Auction House, at its office set out in Clause 1.1 or an email address designated by it in writing; and to a Bidder, at the postal or email address in its registration details (or, in either case, any other address notified in writing). A notice is treated as received on delivery or, if sent by email, on the next Business Day after sending, unless the sender receives a delivery failure message.",
                 },
                 {
                     no: "20.6",

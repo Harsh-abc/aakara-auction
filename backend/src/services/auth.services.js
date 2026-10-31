@@ -297,6 +297,10 @@ export const verifyPhoneOtpService = async ({ email, otp }) => {
     return { ...user, nextStep: null };
 };
 
+// For now every new sign-up starts with KYC already VERIFIED (no documents needed).
+// Set to false to go back to users submitting KYC documents for staff to review.
+const AUTO_VERIFY_KYC_ON_SIGNUP = true;
+
 const createUserFromPending = async (email, pending, { phoneVerified }) => {
     // no account without a recorded acceptance of the terms (pending signups started before this was recorded)
     if (!pending.terms?.version) {
@@ -360,6 +364,12 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
                 country: pending.country ?? null,
             },
         });
+
+        if (AUTO_VERIFY_KYC_ON_SIGNUP) {
+            await tx.userKyc.create({
+                data: { userId: newUser.id, kycType: 'INDIVIDUAL', status: 'VERIFIED', verifiedAt: new Date() },
+            });
+        }
 
         return newUser;
     });

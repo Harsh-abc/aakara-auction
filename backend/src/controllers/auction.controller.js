@@ -53,6 +53,7 @@ const messageFromError = (error, status) => {
 //
 // Expected multipart fields:
 //   coverImage                 (single file, optional)
+//   thumbnailImage             (single file, optional) — the storefront list-row image
 //   lotMedia_{i}               images + videos for lot i, in display order
 //   lotImages_{i} / lotVideos_{i}  (legacy, still accepted)
 //   lotDocuments_{i}           documents for lot i, in order
@@ -123,6 +124,17 @@ export const createAuction = async (req, res) => {
             body.coverImageUrl = uploaded.url;
         } else {
             delete body.coverImageUrl; // never trust a client-supplied URL
+        }
+
+        // ------------------ thumbnail image ------------------
+        delete body.thumbnailImageUrl; // never trust a client-supplied URL
+        const thumbnailImage = files.find((f) => f.fieldname === "thumbnailImage");
+        if (thumbnailImage) {
+            if (!thumbnailImage.mimetype.startsWith("image/")) {
+                return res.status(400).json({ success: false, message: "Thumbnail must be an image file" });
+            }
+            const uploaded = await upload(thumbnailImage, "auctions/thumbnails");
+            body.thumbnailImageUrl = uploaded.url;
         }
 
         // ------------------ lots ------------------
@@ -363,6 +375,7 @@ export const changeAuctionStatus = async (req, res) => {
 //
 // Same multipart fields as create, plus:
 //   removeCoverImage       "true" to clear the cover (when no new coverImage)
+//   removeThumbnailImage   "true" to clear the thumbnail (when no new thumbnailImage)
 //   lots[i].uuid           existing lot -> update; no uuid -> new lot
 //   lots[i].keepMedia      [{ url, isPrimary, caption }] existing media to keep
 //   lots[i].keepDocuments  [{ fileUrl, documentType, description }]
@@ -420,6 +433,17 @@ export const updateAuction = async (req, res) => {
             }
             const uploaded = await upload(coverImage, "auctions/covers");
             body.coverImageUrl = uploaded.url;
+        }
+
+        // ------------------ thumbnail image ------------------
+        delete body.thumbnailImageUrl; // never trust a client-supplied URL
+        const thumbnailImage = files.find((f) => f.fieldname === "thumbnailImage");
+        if (thumbnailImage) {
+            if (!thumbnailImage.mimetype.startsWith("image/")) {
+                return res.status(400).json({ success: false, message: "Thumbnail must be an image file" });
+            }
+            const uploaded = await upload(thumbnailImage, "auctions/thumbnails");
+            body.thumbnailImageUrl = uploaded.url;
         }
 
         // ------------------ lots (new files only) ------------------

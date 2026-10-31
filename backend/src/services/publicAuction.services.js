@@ -63,6 +63,7 @@ const PUBLIC_AUCTION_SELECT = {
     slug: true,
     short_description: true,
     coverImageUrl: true,
+    thumbnailImageUrl: true,
     status: true,
     auctionType: true,
     startTime: true,

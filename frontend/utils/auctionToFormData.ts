@@ -158,6 +158,8 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
             primaryCurrency,
             coverImage: null,
             coverImageUrl: text(auction.coverImageUrl),
+            thumbnailImage: null,
+            thumbnailImageUrl: text(auction.thumbnailImageUrl),
         },
 
         schedule: {

@@ -46,10 +46,10 @@ function Block({ block }: { block: FaqBlock }) {
     )
 }
 
-/** One section's questions; a single answer is open at a time. Closed answers stay findable with the browser's find-in-page. */
+/** The questions, every answer open to start; each can still be closed. Closed answers stay findable with the browser's find-in-page. */
 export function FaqAccordion({ items }: { items: FaqItem[] }) {
     return (
-        <Accordion.Root className="border-t border-[#cecece]">
+        <Accordion.Root multiple defaultValue={items.map((item) => item.question)} className="border-t border-[#cecece]">
             {items.map((item) => (
                 <Accordion.Item key={item.question} value={item.question} className="border-b border-[#cecece]">
                     <Accordion.Header>
@@ -66,7 +66,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
                         hiddenUntilFound
                         className="h-(--accordion-panel-height) overflow-hidden transition-[height] duration-300 ease-out data-ending-style:h-0 data-starting-style:h-0"
                     >
-                        <div className={`${ANSWER} flex max-w-170 flex-col gap-3 pr-11 pb-6`}>
+                        <div className={`${ANSWER} flex flex-col gap-3 pr-11 pb-6`}>
                             {item.answer.map((block, i) => (
                                 <Block key={i} block={block} />
                             ))}

@@ -43,6 +43,12 @@ export interface BasicInfoForm {
 
     /** Edit only: the saved cover. "" = none / removed (sends removeCoverImage). */
     coverImageUrl: string;
+
+    /** New list-row thumbnail picked in this session. */
+    thumbnailImage: File | null;
+
+    /** Edit only: the saved thumbnail. "" = none / removed (sends removeThumbnailImage). */
+    thumbnailImageUrl: string;
 }
 
 // ============================================================

@@ -176,6 +176,12 @@ export const buildAuctionFormData = (
         formData.append("removeCoverImage", "true");
     }
 
+    if (basicInfo.thumbnailImage instanceof File) {
+        formData.append("thumbnailImage", basicInfo.thumbnailImage);
+    } else if (isEdit && !basicInfo.thumbnailImageUrl) {
+        formData.append("removeThumbnailImage", "true");
+    }
+
     formData.append("tags", JSON.stringify(basicInfo.auctionTags ?? []));
 
     // ========================================================

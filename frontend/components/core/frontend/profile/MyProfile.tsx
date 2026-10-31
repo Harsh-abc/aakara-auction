@@ -31,7 +31,13 @@ const tabLabels: Record<ProfileTab, string> = {
     gallery: "My auction gallery",
 }
 
-const isProfileTab = (value: string | null): value is ProfileTab => !!value && value in tabLabels
+// left out of the tab bar; ?tab=kyc still opens KYC, since "Register to bid" / "Manage KYC" link there
+const HIDDEN_TABS: ProfileTab[] = ["kyc", "orders"]
+const visibleTabs = (Object.keys(tabLabels) as ProfileTab[]).filter((tab) => !HIDDEN_TABS.includes(tab))
+
+// tabs a ?tab= link may open: the visible ones, plus KYC
+const isProfileTab = (value: string | null): value is ProfileTab =>
+    !!value && (visibleTabs.includes(value as ProfileTab) || value === "kyc")
 
 // sales worth showing a paddle card for: not finished, and the registration still stands
 const UPCOMING_STATUSES: AuctionStatus[] = ["LIVE", "PAUSED", "PREVIEW", "SCHEDULED"]
@@ -186,7 +192,7 @@ export function MyProfile() {
                             {/* phones & tablets: a 2-up grid of boxed buttons (active one solid black; an odd last one spans the row).
                                 laptop+: the underline tabs on a hairline */}
                             <TabsList className="mb-0 grid w-full grid-cols-2 gap-2 rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto lg:-mb-px lg:flex lg:justify-start lg:gap-0 lg:overflow-x-auto lg:border-b lg:border-[#cecece] lg:scrollbar-none">
-                                {(Object.keys(tabLabels) as ProfileTab[]).map((tab) => (
+                                {visibleTabs.map((tab) => (
                                     <TabsTrigger
                                         key={tab}
                                         value={tab}
