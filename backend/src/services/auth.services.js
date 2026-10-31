@@ -6,6 +6,7 @@ import redis from '../libs/redis.js';
 import { generateOtp } from '../utils/otp.utils.js';
 import sendEmail from '../mail/sendMail.js';
 import { otpVerificationTemplate } from '../mail/templates/otpVerifications.js';
+import { REGISTRATION_RECEIVED_SUBJECT, registrationReceivedTemplate, registrationReceivedText } from '../mail/templates/registrationReceived.js';
 import { sendOtpSms } from './sms.services.js';
 import { getRolePermissions } from '../libs/rolePermission.js'
 import { SESSION_TTL_SECONDS } from '../libs/session.js'
@@ -301,6 +302,21 @@ export const verifyPhoneOtpService = async ({ email, otp }) => {
 // Set to false to go back to users submitting KYC documents for staff to review.
 const AUTO_VERIFY_KYC_ON_SIGNUP = true;
 
+// "Registration Received" email to the new account. The account already exists by now,
+// so a failed send is logged and the signup still succeeds
+const sendRegistrationReceivedEmail = async (user) => {
+    const mail = { userName: user.username, siteUrl: process.env.FRONTEND_URL };
+    try {
+        await sendEmail(user.email, REGISTRATION_RECEIVED_SUBJECT, registrationReceivedTemplate(mail), undefined, {
+            fromName: 'AKARA AUCTIONS',
+            replyTo: 'auction@akaraart.com',
+            text: registrationReceivedText(mail),
+        });
+    } catch (error) {
+        console.error(`Registration email to ${user.email} failed:`, error.message);
+    }
+};
+
 const createUserFromPending = async (email, pending, { phoneVerified }) => {
     // no account without a recorded acceptance of the terms (pending signups started before this was recorded)
     if (!pending.terms?.version) {
@@ -375,6 +391,8 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
     });
 
     await redis.del(pendingKey(email), attemptsKey(email), resendKey(email));
+
+    await sendRegistrationReceivedEmail(user);
 
     return { uuid: user.uuid, username: user.username, email: user.email, status: user.status };
 };
