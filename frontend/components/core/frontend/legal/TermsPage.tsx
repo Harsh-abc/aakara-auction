@@ -3,11 +3,13 @@ import { cn } from "@/lib/utils";
 import { Breadcrumb, EYEBROW, PAGE_MAIN, PAGE_TITLE } from "../storefront";
 import { TERMS_INTRO, TERMS_SECTIONS, TERMS_TITLE, TERMS_UPDATED, type TermsSection } from "./termsContent";
 
-// intro, then every section of the terms in one full-width column
-const pad = (n: number) => String(n).padStart(2, "0");
+// intro, then every section of the terms in one full-width column, numbered as in the document (1, 1.1, 1.2, ...)
 
 // clause text, a little softer than headings
 const CLAUSE = "text-[14px] leading-7 text-[#0d0d0d]/80";
+
+// clause number (1.1, 2.3, ...) in the left column
+const CLAUSE_NO = "pt-0.5 text-[13px] leading-6 font-medium text-[#717171]";
 
 // the left column every row lines up on: term name or clause number
 const ROW = "grid grid-cols-1 gap-4 border-b border-[#cecece] py-6 sm:grid-cols-[100px_minmax(0,1fr)] sm:gap-10";
@@ -28,12 +30,12 @@ function SubItems({ items }: { items: string[] }) {
     );
 }
 
-function SectionBlock({ section, index }: { section: TermsSection; index: number }) {
+function SectionBlock({ section }: { section: TermsSection }) {
     return (
         // scroll-mt clears the sticky header when jumping here from a #link
         <section id={section.id} aria-labelledby={`${section.id}-heading`} className="scroll-mt-28">
             <div className="flex items-baseline gap-3.25 border-b border-[#0d0d0d] pb-3">
-                <span className="text-[10px] leading-3.75 tracking-[0.16em] text-[#717171]">{pad(index + 1)}</span>
+                <span className="text-[14px] leading-5 font-medium text-[#717171]">{section.no}.</span>
                 <h2 id={`${section.id}-heading`} className="text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">
                     {section.title}
                 </h2>
@@ -51,10 +53,13 @@ function SectionBlock({ section, index }: { section: TermsSection; index: number
                                 </dd>
                             </div>
                         ) : (
-                            // untitled row (the rules of interpretation): full width, no term column
-                            <div key={i} className={cn(CLAUSE, "border-b border-[#cecece] py-7")}>
-                                <p>{item.text}</p>
-                                {item.list && <SubItems items={item.list} />}
+                            // numbered row (1.1's intro, 1.2's rules of interpretation): clause number in the term column
+                            <div key={i} className={cn(ROW, "py-7")}>
+                                <dt className={CLAUSE_NO}>{item.no}</dt>
+                                <dd className={CLAUSE}>
+                                    <p>{item.text}</p>
+                                    {item.list && <SubItems items={item.list} />}
+                                </dd>
                             </div>
                         ),
                     )}
@@ -63,9 +68,7 @@ function SectionBlock({ section, index }: { section: TermsSection; index: number
                 <ol>
                     {section.items.map((clause, i) => (
                         <li key={i} className={ROW}>
-                            <span className="pt-1.25 text-[10px] leading-3.75 font-medium tracking-[0.14em] text-[#717171]" aria-hidden>
-                                {pad(i + 1)}
-                            </span>
+                            <span className={CLAUSE_NO}>{clause.no}</span>
                             <div className={CLAUSE}>
                                 <p>
                                     {clause.title && <span className="font-medium text-[#0d0d0d]">{clause.title} </span>}
@@ -104,8 +107,8 @@ export function TermsPage() {
             <section>
                 <div className="page-container">
                     <div className="flex min-w-0 flex-col gap-15">
-                        {TERMS_SECTIONS.map((section, index) => (
-                            <SectionBlock key={section.id} section={section} index={index} />
+                        {TERMS_SECTIONS.map((section) => (
+                            <SectionBlock key={section.id} section={section} />
                         ))}
                     </div>
                 </div>
