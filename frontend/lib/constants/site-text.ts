@@ -2,7 +2,7 @@ import type { MenuLink } from "@/lib/types/frontendTypes";
 
 /** The right-side menu. `children` makes a small expandable sub-menu. */
 export const MAIN_MENU_LINKS: MenuLink[] = [
-    { label: "About", href: "/about" },
+    { label: "About", href: "https://akaraart.com/about" },
     {
         label: "Auction",
         href: "/",
@@ -15,13 +15,13 @@ export const MAIN_MENU_LINKS: MenuLink[] = [
             { label: "Absentee bid / Bidding increments", href: "/#absentee-bid" },
         ],
     },
-    { label: "Artists", href: "/artists" },
-    { label: "Press", href: "/press" },
-    { label: "Notable Sales", href: "/notable-sales" },
-    { label: "Exhibition", href: "/exhibition" },
-    { label: "Art fair", href: "/art-fair" },
-    { label: "Contact", href: "/contact" },
-    { label: "Blogs", href: "/blogs" },
+    { label: "Artists", href: "https://akaraart.com/artists" },
+    { label: "Press", href: "https://akaraart.com/press" },
+    { label: "Notable Sales", href: "https://akaraart.com/notablesales" },
+    { label: "Exhibition", href: "https://akaraart.com/exhibition/current" },
+    { label: "Art fair", href: "https://akaraart.com/artfair/past" },
+    { label: "Contact", href: "https://akaraart.com/contact" },
+    { label: "Blogs", href: "https://akaraart.com/blogs" },
 ];
 
 /** The online absentee bid form, under the downloadable form. Off until the client signs it off and the backend saves submissions. */

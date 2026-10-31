@@ -111,6 +111,7 @@ export function MenuDrawer() {
                                                 ) : (
                                                     <Link
                                                         href={link.href}
+                                                        target="_blank"
                                                         onClick={closeDrawer} // also closes when clicking the page you're already on
                                                         aria-current={isCurrentPage(currentPath, link) ? "page" : undefined}
                                                         className={joinClassNames(
