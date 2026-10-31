@@ -69,7 +69,7 @@ export type BidderEligibility =
 export function bidderEligibility(account: Pick<MyAccount, "status" | "role" | "kyc">): BidderEligibility {
     const kycVerified = account.kyc?.status === "VERIFIED"
     if (BIDDER_ROLES.includes(account.role.name) && !kycVerified) return "kyc-pending"
-    // new signups start inactive until the auction house activates them
+    // the auction house switched the account inactive
     if (BIDDER_ROLES.includes(account.role.name) && account.status !== "ACTIVE") return "awaiting-activation"
     if (account.role.name === "BIDDER") return "eligible"
     // KYC approved, but a super admin hasn't made them a bidder yet

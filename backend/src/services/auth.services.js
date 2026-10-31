@@ -339,8 +339,8 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
                 phone: pending.phone,
                 passwordHash: pending.passwordHash,
                 roleId: defaultRole?.id,
-                // can log in and upload KYC; staff make them ACTIVE before they can register or bid
-                status: 'INACTIVE',
+                // active straight away; staff can still switch them INACTIVE
+                status: 'ACTIVE',
                 emailVerified: true,
                 emailVerifiedAt: new Date(),
                 phoneVerified,

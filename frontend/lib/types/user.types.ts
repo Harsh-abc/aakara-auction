@@ -275,7 +275,7 @@ export interface ChangeUserStatusResponse {
     };
 }
 
-// new signups start INACTIVE: they can log in but can't register for auctions or bid
+// new signups start ACTIVE; an INACTIVE account can log in but can't register for auctions or bid
 export interface SetUserActivePayload {
     uuid: string;
     active: boolean;

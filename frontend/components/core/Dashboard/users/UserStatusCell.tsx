@@ -29,8 +29,8 @@ const displayName = (user: User) =>
     `${user.profile?.firstName ?? ""} ${user.profile?.lastName ?? ""}`.trim() || user.username
 
 /**
- * Active / inactive switch for the users table. New signups start inactive: they can log in
- * and upload KYC, but can't register for auctions or bid until staff switch them on.
+ * Active / inactive switch for the users table. New signups start active; an inactive
+ * account can log in and upload KYC, but can't register for auctions or bid.
  */
 export function UserStatusCell({ user }: { user: User }) {
     const dispatch = useAppDispatch()

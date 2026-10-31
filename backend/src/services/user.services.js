@@ -967,9 +967,9 @@ export const setKycStatusService = async ({ uuid, verified, reason, adminId }) =
 
 
 /**
- * Staff switching an account between ACTIVE and INACTIVE. New signups start INACTIVE:
- * they can log in and upload KYC but can't register for auctions or bid until made
- * ACTIVE. Suspended accounts are left to the super admin's suspend / reactivate.
+ * Staff switching an account between ACTIVE and INACTIVE. New signups start ACTIVE;
+ * an INACTIVE account can log in and upload KYC but can't register for auctions or
+ * bid. Suspended accounts are left to the super admin's suspend / reactivate.
  */
 export const setUserActiveService = async ({ uuid, active, actorUuid }) => {
     const user = await prisma.user.findFirst({
