@@ -61,10 +61,6 @@ input[type="password"]::-ms-clear {
     display: none;
 }
 
-/* Hide native password reveal icon in Chrome (newer versions) */
-input[type="password"]::-webkit-textfield-decoration-container {
-    display: none;
-}
 
 
 select option {
