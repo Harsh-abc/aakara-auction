@@ -2,6 +2,7 @@ import { Header } from "@/components/core/frontend/header/header";
 import { Footer } from "@/components/core/frontend/footer/footer";
 import { AkaraToaster } from "@/components/core/frontend/toast/AkaraToaster";
 
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Inter } from "next/font/google";
 
 const inter = Inter({
@@ -20,6 +21,8 @@ export default function FrontendLayout({
             {children}
             <Footer />
             <AkaraToaster />
+            {/* Google Analytics (gtag.js) — public site only, the dashboard isn't tracked */}
+            <GoogleAnalytics gaId="G-2Y5CK9E41W" />
         </div>
     );
 }
