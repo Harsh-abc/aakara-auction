@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAppSelector } from "@/hooks/redux";
 import { cn } from "@/lib/utils";
 
-import { BUTTON, BUTTON_INLINE, BUTTON_SOLID, BUTTON_UNAVAILABLE } from "../storefront";
+import { BUTTON, BUTTON_INLINE, BUTTON_SOLID } from "../storefront";
 
 /**
  * The coming-soon card's call to action, before any sale is published.
@@ -17,7 +17,7 @@ export function ComingSoonRegister({ className }: { className?: string }) {
 
     if (signedIn) {
         return (
-            <span aria-disabled="true" className={cn(BUTTON, BUTTON_INLINE, BUTTON_UNAVAILABLE, className)}>
+            <span aria-disabled="true" className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "cursor-default", className)}>
                 Auction will be live soon
             </span>
         );

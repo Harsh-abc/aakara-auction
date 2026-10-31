@@ -19,6 +19,9 @@ const BANNER = "relative aspect-4/3 w-full overflow-hidden bg-[#ebebeb] sm:aspec
 const BODY_ROW = "flex flex-col gap-6 p-6 md:flex-row md:items-end md:justify-between md:gap-10";
 const TITLE = "mt-4 text-[36px] leading-none font-medium tracking-tight text-[#0d0d0d] sm:text-[48px]";
 
+// the coming-soon card counts down to the inaugural sale — 08 December 2026, Mumbai (IST)
+const COMING_SOON_START = "2026-12-08T19:30:00+05:30";
+
 export function FeaturedAuctionSkeleton() {
     return (
         <section>
@@ -52,12 +55,15 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                             <div className="min-w-0 max-w-lg">
                                 <StatusBadge label="Coming soon" tone="upcoming" />
                                 <h1 className={TITLE}>The Fine Art Sale</h1>
-                                <p className='my-2'>08 December 2026, Mumbai</p>
                                 <p className={cn(BODY, "mt-4")}>
                                     AKARA presents its inaugural Fine Art Sale, bringing together a carefully curated selection of Modern Indian Art. Rooted in our longstanding engagement with Indian modernism, the sale reflects our commitment to presenting works of artistic significance and enduring value.
                                 </p>
                             </div>
-                            <ComingSoonRegister className="shrink-0" />
+
+                            <div className="flex shrink-0 flex-col items-start gap-3 md:items-end">
+                                <AuctionCountdown label="Live in" target={COMING_SOON_START} />
+                                <ComingSoonRegister />
+                            </div>
                         </div>
                     </div>
                 </div>
