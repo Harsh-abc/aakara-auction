@@ -94,6 +94,22 @@ app.use('/api/bidding', biddingRouter)
 app.use('/api/live', liveStreamRouter)
 app.use('/api/website', websiteRouter)
 
+// errors handed to next(err) — answer with JSON the frontend can show, instead of Express's
+// HTML error page. Errors thrown with a statusCode carry a message meant for the user;
+// anything else is unexpected, so it's logged in full and the user gets a generic message.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    const status = err.statusCode ?? err.status;
+    if (status && status < 500) {
+        return res.status(status).json({ success: false, message: err.message });
+    }
+    console.error(`[error] ${req.method} ${req.originalUrl}:`, err);
+    res.status(status ?? 500).json({
+        success: false,
+        message: status ? err.message : "Something went wrong on our side. Please try again in a moment.",
+    });
+});
+
 const PORT = process.env.PORT || 8080;
 
 // Socket.IO shares the HTTP server (live bids — see src/libs/socket.js)
