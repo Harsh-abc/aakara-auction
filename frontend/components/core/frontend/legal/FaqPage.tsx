@@ -15,7 +15,7 @@ export function FaqPage() {
                 <div className="page-container">
                     <Breadcrumb auctions={false} crumbs={[{ label: "Help & policies" }, { label: "FAQs" }]} />
 
-                    <div className="border-b border-[#cecece] pt-12 pb-14 md:pt-16 md:pb-16">
+                    <div className="pt-12 md:pt-16">
                         <p className={EYEBROW}>Help · Buying at Akara</p>
                         <h1 className={cn(PAGE_TITLE, "mt-5 sm:leading-[62.6px]")}>{FAQ_TITLE}</h1>
                         <p className="mt-6 max-w-191.5 text-[15px] leading-7 text-[#717171]">{FAQ_INTRO}</p>
