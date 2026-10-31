@@ -8,9 +8,6 @@ import { bidCountLabel, isClosedLot, lotTag } from "./lotPageDisplay"
 
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
 
-// the current (leading) bid and the last one it beat
-const VISIBLE_BIDS = 2
-
 // the top bid's label: still leading while the lot is open, the result once it closes
 const topBidLabel = (lot: PublicLotDetail) => (lot.status === "SOLD" ? "Sold" : isClosedLot(lot) ? "Highest" : "Leading")
 
@@ -44,12 +41,12 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                     </div>
                 </div>
 
-                <ol className="divide-y divide-[#cecece]">
+                {/* every bid, highest first; a long ladder scrolls inside the box */}
+                <ol className="max-h-105 divide-y divide-[#cecece] overflow-y-auto">
                     {lot.bids.length === 0 ? (
                         <li className="flex h-11 items-center px-4 text-[14px] leading-5 text-[#717171]">No bids yet</li>
                     ) : (
-                        // just the leading bid and the one before it — the full ladder was lot.bids.map(...)
-                        lot.bids.slice(0, VISIBLE_BIDS).map((bid, index) => {
+                        lot.bids.map((bid, index) => {
                             const top = index === 0
                             return (
                                 <li
@@ -60,7 +57,7 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                                     <span className="w-15 shrink-0" aria-hidden />
                                     <span className="flex-1">
                                         <span className={cn(SMALL_CAPS, "block", top ? "text-white/60" : "text-[#717171]")}>
-                                            {top ? "Current bid" : "Last bid"}
+                                            {top ? "Current bid" : index === 1 ? "Last bid" : "Earlier bid"}
                                         </span>
                                         <span className={cn("mt-0.75 block", top ? "text-[18px] leading-7 font-medium" : "text-[14px] leading-5")}>
                                             {money(bid.amount)}

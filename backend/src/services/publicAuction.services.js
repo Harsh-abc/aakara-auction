@@ -286,7 +286,8 @@ const PUBLIC_LOT_DETAIL_SELECT = {
 
 // bids that still count on the ladder
 const LADDER_BID_STATUSES = ["PLACED", "WINNING", "OUTBID", "WON", "LOST"];
-const LADDER_SIZE = 10;
+// the storefront ladder lists every bid
+const LADDER_SIZE = null;
 
 const displayName = (user) => {
     const p = user?.profile;
@@ -320,7 +321,7 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
                   where: { itemId: lot.id, status: { in: LADDER_BID_STATUSES } },
                   // equal amounts: the later row is the one that took the lead (an earlier proxy matching a bid)
                   orderBy: [{ amount: "desc" }, { placedAt: "desc" }, { id: "desc" }],
-                  take: LADDER_SIZE,
+                  ...(LADDER_SIZE && { take: LADDER_SIZE }),
                   select: { uuid: true, amount: true, source: true, placedAt: true },
               }),
         // bidders show by paddle number, never by name

@@ -16,9 +16,6 @@ import { formatMoney } from "../detail/lotDisplay"
 // bids arrive over the socket; this poll only runs while it's disconnected
 const FALLBACK_REFRESH_MS = 10_000
 
-// matches LADDER_SIZE in backend/src/services/publicAuction.services.js
-const LADDER_SIZE = 10
-
 export type LotPageState =
     | { status: "loading" }
     | { status: "ready"; data: PublicLotPage }
@@ -45,7 +42,8 @@ function applyLotUpdate(data: PublicLotPage, update: LiveLotUpdate): PublicLotPa
             ...position,
             ...(update.nextBid !== undefined && { nextBid: update.nextBid }),
             ...(update.leadingPaddle !== undefined && { leadingPaddle: update.leadingPaddle }),
-            bids: [...fresh, ...data.lot.bids].slice(0, LADDER_SIZE),
+            // the ladder keeps every bid
+            bids: [...fresh, ...data.lot.bids],
         },
     }
 }

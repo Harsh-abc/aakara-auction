@@ -818,13 +818,13 @@ export const overlayLiveBids = async (lots) => {
     }
 };
 
-/** One lot's live position + the top of its ladder; null when it has no live state. */
+/** One lot's live position + the top of its ladder (every bid when ladderSize is null); null when it has no live state. */
 export const getLiveLotView = async (lotUuid, ladderSize) => {
     try {
         const [[, state], [, rawBids]] = await redis
             .pipeline()
             .hgetall(bidKeys.lot(lotUuid))
-            .lrange(bidKeys.bids(lotUuid), -ladderSize, -1)
+            .lrange(bidKeys.bids(lotUuid), ladderSize ? -ladderSize : 0, -1)
             .exec();
         if (!state || Object.keys(state).length === 0) return null;
 
