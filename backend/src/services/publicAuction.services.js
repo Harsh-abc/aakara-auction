@@ -289,6 +289,16 @@ const LADDER_BID_STATUSES = ["PLACED", "WINNING", "OUTBID", "WON", "LOST"];
 // the storefront ladder lists every bid
 const LADDER_SIZE = null;
 
+// saved bids show their bidder by paddle number, never by name
+const withPaddles = async (auctionId, bids) => {
+    const participants = await prisma.auctionParticipant.findMany({
+        where: { auctionId, userId: { in: [...new Set(bids.map((bid) => bid.bidderId))] } },
+        select: { userId: true, paddleNumber: true },
+    });
+    const paddles = new Map(participants.map((p) => [String(p.userId), p.paddleNumber]));
+    return bids.map(({ bidderId, ...bid }) => ({ ...bid, paddle: paddles.get(String(bidderId)) ?? null }));
+};
+
 const displayName = (user) => {
     const p = user?.profile;
     const full = [p?.firstName, p?.lastName].filter(Boolean).join(" ");
@@ -322,8 +332,8 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
                   // equal amounts: the later row is the one that took the lead (an earlier proxy matching a bid)
                   orderBy: [{ amount: "desc" }, { placedAt: "desc" }, { id: "desc" }],
                   ...(LADDER_SIZE && { take: LADDER_SIZE }),
-                  select: { uuid: true, amount: true, source: true, placedAt: true },
-              }),
+                  select: { uuid: true, amount: true, source: true, placedAt: true, bidderId: true },
+              }).then((rows) => withPaddles(auctionId, rows)),
         // bidders show by paddle number, never by name
         !live && lot.currentBidderId
             ? prisma.auctionParticipant.findUnique({

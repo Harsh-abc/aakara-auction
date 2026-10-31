@@ -58,6 +58,8 @@ export interface PublicBid {
     amount: string;
     source: BidSource;
     placedAt: string;
+    /** the bidder's paddle number (bidders are never shown by name) */
+    paddle: string | null;
 }
 
 export interface PublicLotMedia {

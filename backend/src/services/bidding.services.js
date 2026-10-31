@@ -410,8 +410,8 @@ const broadcastLot = async (lotUuid, state, result = null) => {
             ...publicView,
             currency: currencyOf(state),
             leadingPaddle: leaderId ? bidders.get(leaderId)?.paddle ?? null : null,
-            // newest first, like the ladder
-            bids: bids.map((bid) => toPublicBid(lotUuid, bid)).reverse(),
+            // newest first, like the ladder; bidders by paddle only
+            bids: bids.map((bid) => ({ ...toPublicBid(lotUuid, bid), paddle: bidders.get(String(bid.u))?.paddle ?? null })).reverse(),
         };
 
         emitTo(rooms.auction(auctionUuid), "lot:update", update);
@@ -829,14 +829,12 @@ export const getLiveLotView = async (lotUuid, ladderSize) => {
         if (!state || Object.keys(state).length === 0) return null;
 
         const { leaderId, ...view } = liveView(lotUuid, state);
-        const leader = leaderId ? await redis.hget(bidKeys.auctionBidders(state.auctionUuid), leaderId) : null;
+        const bids = rawBids.map((raw) => JSON.parse(raw)).reverse();
+        const bidders = await biddersById(state.auctionUuid, state.auctionId, [leaderId, ...bids.map((bid) => bid.u)]);
         return {
             ...view,
-            leadingPaddle: leader ? JSON.parse(leader).paddle : null,
-            bids: rawBids
-                .map((raw) => JSON.parse(raw))
-                .reverse()
-                .map((bid) => toPublicBid(lotUuid, bid)),
+            leadingPaddle: leaderId ? bidders.get(leaderId)?.paddle ?? null : null,
+            bids: bids.map((bid) => ({ ...toPublicBid(lotUuid, bid), paddle: bidders.get(String(bid.u))?.paddle ?? null })),
         };
     } catch (error) {
         console.error(`[bidding] live view failed for lot ${lotUuid}:`, error);

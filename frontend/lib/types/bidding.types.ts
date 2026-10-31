@@ -95,7 +95,8 @@ export interface BidderRef {
     name: string | null
 }
 
-export interface StaffBid extends PublicBid {
+// staff see the paddle on `bidder`
+export interface StaffBid extends Omit<PublicBid, "paddle"> {
     bidder: BidderRef | null
 }
 

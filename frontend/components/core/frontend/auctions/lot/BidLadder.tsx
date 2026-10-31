@@ -70,7 +70,11 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                                     </span>
                                     <span className={SMALL_CAPS}>
                                         {top ? topBidLabel(lot) : "Outbid"}
-                                        {top && lot.leadingPaddle && <span className="ml-2 text-white/60">· Paddle {lot.leadingPaddle}</span>}
+                                        {(bid.paddle ?? (top ? lot.leadingPaddle : null)) && (
+                                            <span className={cn("ml-2", top ? "text-white/60" : "text-[#717171]/70")}>
+                                                · Paddle {bid.paddle ?? lot.leadingPaddle}
+                                            </span>
+                                        )}
                                     </span>
                                 </li>
                             )
