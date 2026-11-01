@@ -18,6 +18,8 @@ const escapeHtml = (value = "") =>
 export const AUCTION_EMAIL = "auction@akaraart.com";
 const BIDS_EMAIL = "bids@akaraart.com";
 const GALLERY_ADDRESS = "3C Amarchand Mansion, 2nd Floor, 16 Madam Cama Road, Mumbai 400001, India";
+// Explicit Maps link so mail clients don't auto-link only part of the address
+const GALLERY_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(GALLERY_ADDRESS)}`;
 const PHONE = "+91 98209 41300";
 const PHONE_HREF = "+919820941300";
 const WEBSITE_URL = "https://akaraart.com";
@@ -119,7 +121,7 @@ const emailLayout = ({ site, heading, content, registrantNotice = true }) => {
                                     Akara Auctions
                                 </p>
                                 <p style="margin:0 0 4px 0; font-size: 11px; line-height: 18px; color:#999999;">
-                                    ${GALLERY_ADDRESS}
+                                    <a href="${escapeHtml(GALLERY_MAP_URL)}" style="color:#999999; text-decoration:none;">${GALLERY_ADDRESS}</a>
                                 </p>
                                 <p style="margin:0 0 4px 0; font-size: 11px; line-height: 18px; color:#999999;">
                                     ${link(`tel:${PHONE_HREF}`, PHONE)} &nbsp;|&nbsp; ${link(`mailto:${AUCTION_EMAIL}`, AUCTION_EMAIL)}
