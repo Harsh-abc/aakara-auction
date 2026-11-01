@@ -493,12 +493,6 @@ export const updateMyProfileService = async ({ userId, data, avatarFile }) => {
 
 
 
-const usernameTakenError = () => {
-    const error = new Error('This username is already taken');
-    error.statusCode = 409;
-    return error;
-};
-
 // staff editing a user's name, date of birth and username from the dashboard
 export const updateUserDetailsService = async ({ uuid, data }) => {
     const user = await prisma.user.findFirst({
@@ -514,34 +508,21 @@ export const updateUserDetailsService = async ({ uuid, data }) => {
 
     // username is a User column; the rest goes to UserProfile
     const { username, ...profileFields } = data;
+    // username holds the person's name, which two accounts may share
     const usernameChanged = username !== undefined && username !== user.username;
 
-    if (usernameChanged) {
-        const taken = await prisma.user.findFirst({
-            where: { username, NOT: { id: user.id } },
-            select: { id: true },
-        });
-        if (taken) throw usernameTakenError();
-    }
-
-    try {
-        await prisma.$transaction(async (tx) => {
-            if (usernameChanged) {
-                await tx.user.update({ where: { id: user.id }, data: { username } });
-            }
-            if (Object.keys(profileFields).length > 0) {
-                await tx.userProfile.upsert({
-                    where: { userId: user.id },
-                    create: { userId: user.id, ...profileFields },
-                    update: profileFields,
-                });
-            }
-        });
-    } catch (err) {
-        // someone else took the username between the check above and the update
-        if (err.code === 'P2002') throw usernameTakenError();
-        throw err;
-    }
+    await prisma.$transaction(async (tx) => {
+        if (usernameChanged) {
+            await tx.user.update({ where: { id: user.id }, data: { username } });
+        }
+        if (Object.keys(profileFields).length > 0) {
+            await tx.userProfile.upsert({
+                where: { userId: user.id },
+                create: { userId: user.id, ...profileFields },
+                update: profileFields,
+            });
+        }
+    });
 
     return getUserByIdService({ uuid });
 };

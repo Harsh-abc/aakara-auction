@@ -308,7 +308,7 @@ export const createUserByAdminService = async (
         }, role.name === "SUPER_ADMIN" ? { isolationLevel: "Serializable" } : undefined);
     } catch (error) {
         if (error.code === "P2002") {
-            const err = new Error("Email, phone or username already in use");
+            const err = new Error("Email or phone already in use");
             err.statusCode = 409;
             throw err;
         }

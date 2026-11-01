@@ -38,7 +38,7 @@ const RESEND_ERRORS = {
 
 const VERIFY_CODE_ERRORS = {
     400: "That code is incorrect. Check it and try again.",
-    409: "This email, username or phone number was just registered by another account. Go back and sign up with different details.",
+    409: "This email or phone number was just registered by another account. Go back and sign up with different details.",
     410: "This code has expired.",
     429: "Too many incorrect attempts with this code.",
 };

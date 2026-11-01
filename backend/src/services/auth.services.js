@@ -72,21 +72,20 @@ export const registerService = async ({ username, email, password, phone, city, 
         throw error;
     }
 
+    // username holds the person's name, so two accounts may share it; only email and phone are unique
     const existing = await prisma.user.findFirst({
         where: {
             OR: [
                 { email },
-                { username },
                 ...(phone ? [{ phone }] : []),
             ],
         },
-        select: { email: true, username: true, phone: true },
+        select: { email: true, phone: true },
     });
 
     if (existing) {
         let field = 'email';
-        if (existing.username === username) field = 'username';
-        else if (phone && existing.phone === phone) field = 'phone';
+        if (existing.email !== email && phone && existing.phone === phone) field = 'phone';
         const error = new Error(`This ${field} is already registered`);
         error.statusCode = 409;
         throw error;
@@ -362,14 +361,13 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
         where: {
             OR: [
                 { email: pending.email },
-                { username: pending.username },
                 ...(pending.phone ? [{ phone: pending.phone }] : []),
             ],
         },
     });
     if (existing) {
         await redis.del(pendingKey(email), attemptsKey(email), resendKey(email));
-        const error = new Error('Email, username, or phone was just taken. Please register again.');
+        const error = new Error('Email or phone was just taken. Please register again.');
         error.statusCode = 409;
         throw error;
     }
