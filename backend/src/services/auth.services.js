@@ -315,7 +315,7 @@ const AUTO_VERIFY_KYC_ON_SIGNUP = true;
 // both go from MAILGUN_FROM (tech@auction.akaraart.com) as "AKARA AUCTIONS", replies to the auction inbox
 const REGISTRATION_MAIL_OPTIONS = { fromName: 'AKARA AUCTIONS', replyTo: AUCTION_EMAIL, inline: REGISTRATION_INLINE_IMAGES };
 const REGISTRATION_ADMIN_TO = AUCTION_EMAIL;
-const REGISTRATION_ADMIN_CC = 'developers.abcdesigns@gmail.com';
+const REGISTRATION_ADMIN_CC = 'tech@auction.akaraart.com';
 
 // a failed email never fails the signup — the account already exists
 const sendRegistrationReceivedEmails = async (user, pending) => {
@@ -620,7 +620,7 @@ export const refreshService = async (refreshToken) => {
     const ttlSeconds = sessionEnd ? Math.floor((sessionEnd.getTime() - Date.now()) / 1000) : 0;
 
     if (!session || ttlSeconds <= 0) {
-        if (session) await prisma.userSession.delete({ where: { id: session.id } }).catch(() => {});
+        if (session) await prisma.userSession.delete({ where: { id: session.id } }).catch(() => { });
         const error = new Error('Session expired. Please log in again.');
         error.statusCode = 401;
         throw error;
