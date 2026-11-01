@@ -7,7 +7,7 @@ const withSenderName = (from, name) => {
     return `${name} <${address}>`;
 };
 
-// options: { fromName, replyTo, text }
+// options: { fromName, replyTo, text, inline }
 const sendEmail = async (to, subject, html, cc = process.env.MAILGUN_CC, options = {}) => {
     try {
         const mailOptions = {
@@ -19,6 +19,7 @@ const sendEmail = async (to, subject, html, cc = process.env.MAILGUN_CC, options
         if (cc) mailOptions.cc = cc;
         if (options.replyTo) mailOptions.replyTo = options.replyTo;
         if (options.text) mailOptions.text = options.text;
+        if (options.inline) mailOptions.inline = options.inline;
         const info = await mailer.sendMail(mailOptions);
         console.log("Email sent:", info.messageId);
         return info;

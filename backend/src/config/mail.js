@@ -13,9 +13,11 @@ mg.domains.get(domain)
     .catch((error) => console.error("Mailer connection failed:", error));
 
 const mailer = {
-    sendMail: async ({ from, to, cc, bcc, replyTo, subject, html, text }) => {
+    // inline: [{ filename, data }] — embedded images, referenced in the html as cid:<filename>
+    sendMail: async ({ from, to, cc, bcc, replyTo, subject, html, text, inline }) => {
         const message = { from, to, subject, html };
         if (text) message.text = text;
+        if (inline?.length) message.inline = inline;
         if (cc) message.cc = cc;
         if (bcc) message.bcc = bcc;
         if (replyTo) message["h:Reply-To"] = replyTo;

@@ -6,7 +6,15 @@ import redis from '../libs/redis.js';
 import { generateOtp } from '../utils/otp.utils.js';
 import sendEmail from '../mail/sendMail.js';
 import { otpVerificationTemplate } from '../mail/templates/otpVerifications.js';
-import { REGISTRATION_RECEIVED_SUBJECT, registrationReceivedTemplate, registrationReceivedText } from '../mail/templates/registrationReceived.js';
+import {
+    AUCTION_EMAIL,
+    REGISTRATION_INLINE_IMAGES,
+    REGISTRATION_RECEIVED_SUBJECT,
+    registrationAdminTemplate,
+    registrationAdminText,
+    registrationReceivedTemplate,
+    registrationReceivedText,
+} from '../mail/templates/registrationReceived.js';
 import { sendOtpSms } from './sms.services.js';
 import { getRolePermissions } from '../libs/rolePermission.js'
 import { SESSION_TTL_SECONDS } from '../libs/session.js'
@@ -304,17 +312,41 @@ const AUTO_VERIFY_KYC_ON_SIGNUP = true;
 
 // "Registration Received" email to the new account. The account already exists by now,
 // so a failed send is logged and the signup still succeeds
-const sendRegistrationReceivedEmail = async (user) => {
-    const mail = { userName: user.username, siteUrl: process.env.FRONTEND_URL };
-    try {
-        await sendEmail(user.email, REGISTRATION_RECEIVED_SUBJECT, registrationReceivedTemplate(mail), undefined, {
-            fromName: 'AKARA AUCTIONS',
-            replyTo: 'auction@akaraart.com',
-            text: registrationReceivedText(mail),
-        });
-    } catch (error) {
-        console.error(`Registration email to ${user.email} failed:`, error.message);
-    }
+// both go from MAILGUN_FROM (tech@auction.akaraart.com) as "AKARA AUCTIONS", replies to the auction inbox
+const REGISTRATION_MAIL_OPTIONS = { fromName: 'AKARA AUCTIONS', replyTo: AUCTION_EMAIL, inline: REGISTRATION_INLINE_IMAGES };
+const REGISTRATION_ADMIN_TO = AUCTION_EMAIL;
+const REGISTRATION_ADMIN_CC = 'developers.abcdesigns@gmail.com';
+
+// a failed email never fails the signup — the account already exists
+const sendRegistrationReceivedEmails = async (user, pending) => {
+    const siteUrl = process.env.FRONTEND_URL;
+    const userMail = { userName: user.username, siteUrl };
+    const adminMail = {
+        siteUrl,
+        userName: user.username,
+        email: user.email,
+        phone: user.phone,
+        phoneVerified: user.phoneVerified,
+        city: pending.city,
+        country: pending.country,
+        registeredAt: user.createdAt,
+    };
+
+    const results = await Promise.allSettled([
+        sendEmail(REGISTRATION_ADMIN_TO, REGISTRATION_RECEIVED_SUBJECT, registrationAdminTemplate(adminMail), REGISTRATION_ADMIN_CC, {
+            ...REGISTRATION_MAIL_OPTIONS,
+            text: registrationAdminText(adminMail),
+        }),
+        // the registrant's copy goes to them alone (null = no MAILGUN_CC)
+        sendEmail(user.email, REGISTRATION_RECEIVED_SUBJECT, registrationReceivedTemplate(userMail), null, {
+            ...REGISTRATION_MAIL_OPTIONS,
+            text: registrationReceivedText(userMail),
+        }),
+    ]);
+
+    const [adminResult, userResult] = results;
+    if (adminResult.status === 'rejected') console.error(`Registration admin email for ${user.email} failed:`, adminResult.reason?.message);
+    if (userResult.status === 'rejected') console.error(`Registration email to ${user.email} failed:`, userResult.reason?.message);
 };
 
 const createUserFromPending = async (email, pending, { phoneVerified }) => {
@@ -392,7 +424,7 @@ const createUserFromPending = async (email, pending, { phoneVerified }) => {
 
     await redis.del(pendingKey(email), attemptsKey(email), resendKey(email));
 
-    await sendRegistrationReceivedEmail(user);
+    await sendRegistrationReceivedEmails(user, pending);
 
     return { uuid: user.uuid, username: user.username, email: user.email, status: user.status };
 };
