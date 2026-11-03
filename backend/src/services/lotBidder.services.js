@@ -287,6 +287,37 @@ export const setLotBiddersVerifiedService = async ({ lotUuid, userUuids, verifie
 // takes those verifications back. Lots of auctions already over keep theirs.
 // =====================================================================
 
+// a user's lots in auctions that aren't over yet
+const OPEN_LOTS = { auction: { status: { in: EDITABLE_AUCTION_STATUSES }, deletedAt: null } };
+
+/**
+ * Turns "Verified for lots" on / off for one user inside the caller's transaction (the switch
+ * below, and giving / removing bidder access). Returns how many lot rows changed. The caller
+ * refreshes live bidding afterwards (invalidateBidderAccess).
+ */
+export const applyLotsVerified = async (tx, userId, verified, actorId) => {
+    const actor = BigInt(actorId);
+    const current = await tx.user.findUnique({ where: { id: userId }, select: { lotsVerifiedAt: true } });
+
+    await tx.user.update({
+        where: { id: userId },
+        data: verified
+            ? { lotsVerifiedAt: current?.lotsVerifiedAt ?? new Date(), lotsVerifiedById: current?.lotsVerifiedAt ? undefined : actor }
+            : { lotsVerifiedAt: null, lotsVerifiedById: null },
+    });
+
+    const { count } = await tx.lotBidder.updateMany({
+        where: { userId, status: verified ? "PENDING" : "VERIFIED", item: OPEN_LOTS },
+        data: verified
+            ? { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: actor }
+            : { status: "PENDING", verifiedAt: null, verifiedBy: null },
+    });
+    if (verified) {
+        await approveRegistrations(tx, { auction: { status: { in: EDITABLE_AUCTION_STATUSES } } }, [userId], actorId);
+    }
+    return count;
+};
+
 export const setUserLotsVerifiedService = async ({ targetUuid, verified, actorId }) => {
     if (!actorId) throw httpError("Authenticated user is required", 401);
 
@@ -308,17 +339,11 @@ export const setUserLotsVerifiedService = async ({ targetUuid, verified, actorId
         if (user.kyc?.status !== "VERIFIED") throw httpError("This user can't be verified until their KYC is verified");
     }
 
-    // their lots in auctions that aren't over yet
-    const openLots = { auction: { status: { in: EDITABLE_AUCTION_STATUSES }, deletedAt: null } };
-    const actor = BigInt(actorId);
-
     const { updated, changed } = await prisma.$transaction(
         async (tx) => {
-            const updated = await tx.user.update({
+            const changed = await applyLotsVerified(tx, user.id, verified, actorId);
+            const updated = await tx.user.findUnique({
                 where: { id: user.id },
-                data: verified
-                    ? { lotsVerifiedAt: user.lotsVerifiedAt ?? new Date(), lotsVerifiedById: actor }
-                    : { lotsVerifiedAt: null, lotsVerifiedById: null },
                 select: {
                     uuid: true,
                     lotsVerifiedAt: true,
@@ -331,24 +356,14 @@ export const setUserLotsVerifiedService = async ({ targetUuid, verified, actorId
                     },
                 },
             });
-
-            const { count } = await tx.lotBidder.updateMany({
-                where: { userId: user.id, status: verified ? "PENDING" : "VERIFIED", item: openLots },
-                data: verified
-                    ? { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: actor }
-                    : { status: "PENDING", verifiedAt: null, verifiedBy: null },
-            });
-            if (verified) {
-                await approveRegistrations(tx, { auction: { status: { in: EDITABLE_AUCTION_STATUSES } } }, [user.id], actorId);
-            }
-            return { updated, changed: count };
+            return { updated, changed };
         },
         { maxWait: 10_000, timeout: 30_000 }
     );
 
     // live bidding re-reads who may bid on their lots
     const lots = await prisma.lotBidder.findMany({
-        where: { userId: user.id, item: openLots },
+        where: { userId: user.id, item: OPEN_LOTS },
         select: { item: { select: { uuid: true } } },
     });
     if (lots.length > 0) {

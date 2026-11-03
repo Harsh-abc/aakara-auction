@@ -261,6 +261,9 @@ export interface ChangeUserRoleResponse {
         roleName: string;
         roleChangedAt: string | null;
         roleChangedBy: RoleChangedBy | null;
+        // giving bidder access turns "Verified for lots" on, removing it turns it off
+        lotsVerifiedAt: string | null;
+        lotsVerifiedBy: RoleChangedBy | null;
     };
 }
 

@@ -2,10 +2,23 @@ import prisma from '../libs/prisma.js';
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { invalidateBidderAccess } from './bidding.services.js';
+import { applyLotsVerified } from './lotBidder.services.js';
 import { blockUserAccess, revokeUserTokens, unblockUserAccess } from '../libs/accountBlock.js';
 import { disconnectUser } from '../libs/socket.js';
 
 const MAX_SUPER_ADMINS = 3;
+
+const PERSON_SELECT = {
+    uuid: true,
+    username: true,
+    profile: { select: { firstName: true, lastName: true, displayName: true } },
+};
+
+// who last set the role, and who turned "Verified for lots" on
+const CHANGED_BY_INCLUDE = {
+    roleChangedBy: { select: PERSON_SELECT },
+    lotsVerifiedBy: { select: PERSON_SELECT },
+};
 
 
 export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, newRoleName }) => {
@@ -48,6 +61,16 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
         throw error;
     }
 
+    const oldRole = await prisma.role.findUnique({ where: { id: targetUser.roleId }, select: { name: true } });
+    // giving bidder access turns "Verified for lots" on (active accounts — the switch needs one too);
+    // taking it away turns it off
+    const lotsVerified =
+        newRole.name === 'BIDDER' && targetUser.status === 'ACTIVE'
+            ? true
+            : oldRole?.name === 'BIDDER'
+                ? false
+                : null;
+
     // their tokens carry the old role: stop them now, not when they expire (up to 24h). Done before
     // the change so a Redis failure refuses the change instead of leaving the old access working
     await revokeUserTokens(targetUser.id);
@@ -67,23 +90,16 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
                 }
             }
 
-            const updated = await tx.user.update({
+            await tx.user.update({
                 where: { id: targetUser.id },
                 data: { roleId: newRole.id, roleChangedAt: new Date(), roleChangedById: BigInt(actorId) },
-                include: {
-                    roleChangedBy: {
-                        select: {
-                            uuid: true,
-                            username: true,
-                            profile: { select: { firstName: true, lastName: true, displayName: true } },
-                        },
-                    },
-                },
             });
+
+            if (lotsVerified !== null) await applyLotsVerified(tx, targetUser.id, lotsVerified, actorId);
 
             await tx.userSession.deleteMany({ where: { userId: targetUser.id } });
 
-            return updated;
+            return tx.user.findUnique({ where: { id: targetUser.id }, include: CHANGED_BY_INCLUDE });
         }, { isolationLevel: 'Serializable' });
     } catch (error) {
         // P2034 = serialization conflict with another concurrent role change
@@ -103,7 +119,6 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
     disconnectUser(targetUser.id);
 
     // only BIDDERs may bid, so gaining or losing the role refreshes who may bid on their lots
-    const oldRole = await prisma.role.findUnique({ where: { id: targetUser.roleId }, select: { name: true } });
     if (oldRole?.name === 'BIDDER' || newRole.name === 'BIDDER') {
         const lots = await prisma.lotBidder.findMany({
             where: { userId: targetUser.id },
@@ -124,6 +139,8 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
         roleName: newRole.name,
         roleChangedAt: updatedUser.roleChangedAt,
         roleChangedBy: updatedUser.roleChangedBy,
+        lotsVerifiedAt: updatedUser.lotsVerifiedAt,
+        lotsVerifiedBy: updatedUser.lotsVerifiedBy,
     };
 }
 
@@ -266,6 +283,8 @@ export const createUserByAdminService = async (
                     createdById: adminId,
                     roleChangedAt: now,
                     roleChangedById: adminId,
+                    // a new bidder is active with verified KYC, so "Verified for lots" starts on
+                    ...(role.name === "BIDDER" ? { lotsVerifiedAt: now, lotsVerifiedById: adminId } : {}),
                 },
             });
 

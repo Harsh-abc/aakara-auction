@@ -193,13 +193,15 @@ const userSlice = createSlice({
             .addCase(changeUserRole.fulfilled, (state, action) => {
                 state.changingRoleFor = null;
                 // update the row in place instead of refetching the list
-                const { uuid, roleName, roleChangedAt, roleChangedBy } = action.payload.data;
+                const { uuid, roleName, roleChangedAt, roleChangedBy, lotsVerifiedAt, lotsVerifiedBy } = action.payload.data;
                 const user = state.users.find((u) => u.uuid === uuid);
                 if (user) user.role = { name: roleName };
                 if (state.selectedUser?.uuid === uuid) {
                     state.selectedUser.role = { name: roleName };
                     state.selectedUser.roleChangedAt = roleChangedAt;
                     state.selectedUser.roleChangedBy = roleChangedBy;
+                    state.selectedUser.lotsVerifiedAt = lotsVerifiedAt;
+                    state.selectedUser.lotsVerifiedBy = lotsVerifiedBy;
                 }
             })
             .addCase(changeUserRole.rejected, (state) => {
