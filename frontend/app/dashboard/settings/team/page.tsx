@@ -12,11 +12,13 @@ import { ALL_ROLES, DASHBOARD_ROLES, MAX_SUPER_ADMINS, ROLE_LABELS } from "@/lib
 import AddUserDialog, { type RoleOption } from "@/components/core/Dashboard/users/AddUserDialog";
 import { getAllUsers } from "@/services/operations/user.api";
 
-// "TEAM" = everyone with dashboard access (excludes bidders and users)
+// only roles with dashboard access belong on the team — bidders and website users are managed elsewhere
+const TEAM_ROLES = ALL_ROLES.filter((role) => DASHBOARD_ROLES.includes(role));
+
+// "TEAM" = every team member, whatever their role
 const roleFilters = [
-    { value: "TEAM", label: "Team members" },
-    { value: "ALL", label: "All users" },
-    ...ALL_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
+    { value: "TEAM", label: "All team members" },
+    ...TEAM_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
 ];
 
 export default function TeamSettings() {
@@ -29,7 +31,7 @@ export default function TeamSettings() {
 
     // Super Admin is offered only while under the limit (the API enforces it too)
     const superAdminCount = users.filter((u) => u.role.name === "SUPER_ADMIN").length;
-    const roleOptions: RoleOption[] = ALL_ROLES.map((role) => ({
+    const roleOptions: RoleOption[] = TEAM_ROLES.map((role) => ({
         value: role,
         label: ROLE_LABELS[role],
         ...(role === "SUPER_ADMIN" &&
@@ -41,7 +43,6 @@ export default function TeamSettings() {
     }, [dispatch]);
 
     const filteredUsers = useMemo(() => {
-        if (roleFilter === "ALL") return users;
         if (roleFilter === "TEAM") return users.filter((u) => DASHBOARD_ROLES.includes(u.role.name));
         return users.filter((u) => u.role.name === roleFilter);
     }, [users, roleFilter]);
@@ -58,10 +59,10 @@ export default function TeamSettings() {
 
                 {isSuperAdmin && (
                     <AddUserDialog
-                        triggerLabel="Add User"
-                        title="Add User"
-                        description="Create an account with the role you choose. Email, phone and KYC are marked verified and the account is active, so they can log in straight away."
-                        submitLabel="Create User"
+                        triggerLabel="Add Team Member"
+                        title="Add Team Member"
+                        description="Give someone access to the dashboard with the role you choose. The account is active straight away, and they are emailed their role along with the email and password to log in."
+                        submitLabel="Add Team Member"
                         roleOptions={roleOptions}
                     />
                 )}

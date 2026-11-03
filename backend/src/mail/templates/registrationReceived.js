@@ -7,7 +7,7 @@ export const REGISTRATION_INLINE_IMAGES = [
     { filename: BANNER_FILENAME, data: readFileSync(new URL(`../assets/${BANNER_FILENAME}`, import.meta.url)) },
 ];
 
-const escapeHtml = (value = "") =>
+export const escapeHtml = (value = "") =>
     String(value)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -32,16 +32,23 @@ const KYC_DOCUMENTS = ["Aadhaar Card (only for Indian Citizens)", "PAN Card", "P
 export const REGISTRATION_RECEIVED_SUBJECT = "The Fine Art Sale: December 2026 | Registration Received";
 const PREHEADER = "Thank you for registering with Akara. Our team will review your application and be in touch shortly.";
 
-const siteBase = (siteUrl) => (siteUrl || WEBSITE_URL).replace(/\/+$/, "");
+export const siteBase = (siteUrl) => (siteUrl || WEBSITE_URL).replace(/\/+$/, "");
 
-const link = (href, label) =>
+export const link = (href, label) =>
     `<a href="${escapeHtml(href)}" style="color:#1a1a1a; text-decoration:underline;">${label}</a>`;
 
 const formatIst = (date) =>
     new Date(date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }) + " IST";
 
-// banner, heading and footer shared by the user and admin emails; `content` is the body rows
-const emailLayout = ({ site, heading, content, registrantNotice = true }) => {
+// banner, heading and footer shared by the Akara emails (also teamMemberAdded.js); `content` is the body rows
+export const emailLayout = ({
+    site,
+    heading,
+    content,
+    registrantNotice = true,
+    preheader = PREHEADER,
+    eyebrow = "The Fine Art Sale &middot; December 2026",
+}) => {
     const bannerUrl = `cid:${BANNER_FILENAME}`;
     const socialLinks = [link(WEBSITE_URL, "akaraart.com"), INSTAGRAM_URL && link(INSTAGRAM_URL, "Instagram")]
         .filter(Boolean)
@@ -61,7 +68,7 @@ const emailLayout = ({ site, heading, content, registrantNotice = true }) => {
     <body style="margin:0; padding:0; background-color:#f5f5f3; font-family: Georgia, 'Times New Roman', serif;">
         <!-- Preheader (inbox preview line) -->
         <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#f5f5f3; opacity:0;">
-            ${PREHEADER}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+            ${preheader}&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
         </div>
 
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f3; padding: 40px 0;">
@@ -82,7 +89,7 @@ const emailLayout = ({ site, heading, content, registrantNotice = true }) => {
                         <tr>
                             <td align="center" style="padding: 40px 40px 0 40px;">
                                 <p style="margin:0 0 12px 0; font-size: 11px; letter-spacing: 2px; color:#999999; text-transform: uppercase;">
-                                    The Fine Art Sale &middot; December 2026
+                                    ${eyebrow}
                                 </p>
                                 <h1 style="margin:0; font-size: 22px; font-weight: 400; letter-spacing: 1px; color:#1a1a1a; text-transform: uppercase;">
                                     ${escapeHtml(heading)}
@@ -151,7 +158,7 @@ const emailLayout = ({ site, heading, content, registrantNotice = true }) => {
     `;
 };
 
-const textFooter = (site, registrantNotice = true) => [
+export const textFooter = (site, registrantNotice = true) => [
     "Warm regards,",
     "AKARA AUCTIONS",
     GALLERY_ADDRESS,

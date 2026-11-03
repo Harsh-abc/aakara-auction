@@ -1,6 +1,6 @@
 
 import { changeRoleSchema, changeUserStatusSchema, setLotsVerifiedSchema } from '../validations/role.validation.js'
-import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService } from '../services/admin.services.js'
+import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService, sendTeamMemberAddedEmail, TEAM_ROLES } from '../services/admin.services.js'
 import { setUserLotsVerifiedService } from '../services/lotBidder.services.js'
 import { createUserWithRoleSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
@@ -126,10 +126,23 @@ export const createUserByAdmin = async (req, res) => {
     try {
         const data = createUserWithRoleSchema.parse(req.body);
         const user = await createUserByAdminService(data, req.user.userId);
+        const roleLabel = user.role.replace("_", " ").toLowerCase();
+
+        // team members (dashboard roles) get their role and login details by email
+        if (TEAM_ROLES.includes(user.role)) {
+            const emailed = await sendTeamMemberAddedEmail({ ...data, roleName: user.role }, req.user.userId);
+            return res.status(201).json({
+                success: true,
+                message: emailed
+                    ? `${data.fullName} was added as ${roleLabel}. Their login details were emailed to ${data.email}.`
+                    : `${data.fullName} was added as ${roleLabel}, but the welcome email could not be sent. Share the login details with them directly.`,
+                data: { ...user, emailSent: emailed },
+            });
+        }
 
         return res.status(201).json({
             success: true,
-            message: `${data.fullName} was added as ${user.role.replace("_", " ").toLowerCase()}`,
+            message: `${data.fullName} was added as ${roleLabel}`,
             data: user,
         });
     } catch (error) {

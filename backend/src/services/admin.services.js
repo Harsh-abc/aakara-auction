@@ -5,8 +5,19 @@ import { invalidateBidderAccess } from './bidding.services.js';
 import { applyLotsVerified } from './lotBidder.services.js';
 import { blockUserAccess, revokeUserTokens, unblockUserAccess } from '../libs/accountBlock.js';
 import { disconnectUser } from '../libs/socket.js';
+import sendEmail from '../mail/sendMail.js';
+import { AUCTION_EMAIL } from '../mail/templates/registrationReceived.js';
+import {
+    TEAM_MEMBER_ADDED_SUBJECT,
+    TEAM_MEMBER_INLINE_IMAGES,
+    teamMemberAddedTemplate,
+    teamMemberAddedText,
+} from '../mail/templates/teamMemberAdded.js';
 
 const MAX_SUPER_ADMINS = 3;
+
+// roles allowed into the dashboard (frontend/lib/constants/roles.ts DASHBOARD_ROLES)
+export const TEAM_ROLES = ['SUPER_ADMIN', 'ADMIN', 'AUCTIONEER', 'OPERATIONS'];
 
 const PERSON_SELECT = {
     uuid: true,
@@ -338,6 +349,35 @@ export const createUserByAdminService = async (
             throw err;
         }
         throw error;
+    }
+};
+
+// a new team member gets their role and login details by email; the password is the one the
+// Super Admin typed (only the hash is stored), so this is the only place it can come from.
+// Returns false instead of throwing — the account already exists either way.
+export const sendTeamMemberAddedEmail = async ({ fullName, email, password, roleName }, creatorId) => {
+    try {
+        const creator = await prisma.user.findUnique({
+            where: { id: BigInt(creatorId) },
+            select: { username: true, profile: { select: { displayName: true, firstName: true, lastName: true } } },
+        });
+        const addedBy = creator?.profile?.displayName
+            || [creator?.profile?.firstName, creator?.profile?.lastName].filter(Boolean).join(" ")
+            || creator?.username
+            || "";
+
+        const mail = { userName: fullName, email, password, roleName, addedBy, siteUrl: process.env.FRONTEND_URL };
+        // to the new member alone (null = no MAILGUN_CC), since it carries their password
+        await sendEmail(email, TEAM_MEMBER_ADDED_SUBJECT, teamMemberAddedTemplate(mail), null, {
+            fromName: 'AKARA AUCTIONS',
+            replyTo: AUCTION_EMAIL,
+            inline: TEAM_MEMBER_INLINE_IMAGES,
+            text: teamMemberAddedText(mail),
+        });
+        return true;
+    } catch (error) {
+        console.error(`Team member email to ${email} failed:`, error?.message);
+        return false;
     }
 };
 
