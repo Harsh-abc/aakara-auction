@@ -1,7 +1,7 @@
 import prisma from '../libs/prisma.js';
 import crypto from "crypto";
 import bcrypt from "bcrypt";
-import { invalidateBidderAccess } from './bidding.services.js';
+import { applyBiddingLimitToProxies, invalidateBiddingLimit, invalidateBidderAccess } from './bidding.services.js';
 import { applyLotsVerified } from './lotBidder.services.js';
 import { blockUserAccess, revokeUserTokens, unblockUserAccess } from '../libs/accountBlock.js';
 import { disconnectUser } from '../libs/socket.js';
@@ -425,4 +425,76 @@ export const resetUserMfaService = async ({ targetUuid }) => {
         console.error(`[admin] could not revoke tokens of user ${targetUser.id} after resetting their authenticator:`, error)
     );
     disconnectUser(targetUser.id);
+};
+
+
+/**
+ * Sets (amount) or removes (amount null) a user's bidding limit — super admin, from the user page.
+ * From the next bid on, no bid, floor bid or proxy maximum of theirs may go above it; proxies they've
+ * already left above it are lowered to it (services/bidding.services.js applyBiddingLimitToProxies).
+ */
+export const setUserBiddingLimitService = async ({ targetUuid, amount, currency, actorId }) => {
+    const user = await prisma.user.findFirst({
+        where: { uuid: targetUuid, deletedAt: null },
+        select: { id: true, role: { select: { name: true } } },
+    });
+    if (!user) {
+        const err = new Error('User not found');
+        err.statusCode = 404;
+        throw err;
+    }
+    if (TEAM_ROLES.includes(user.role.name)) {
+        const err = new Error("Team members don't bid, so they can't have a bidding limit");
+        err.statusCode = 400;
+        throw err;
+    }
+
+    const removing = amount === null;
+    if (!removing) {
+        const active = await prisma.currency.findFirst({ where: { code: currency, isActive: true }, select: { id: true } });
+        if (!active) {
+            const err = new Error(`${currency} isn't an active currency`);
+            err.statusCode = 400;
+            throw err;
+        }
+    }
+
+    const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            biddingLimit: removing ? null : String(amount),
+            biddingLimitCurrency: removing ? null : currency,
+            biddingLimitSetAt: new Date(),
+            biddingLimitSetById: BigInt(actorId),
+        },
+        select: {
+            uuid: true,
+            biddingLimit: true,
+            biddingLimitCurrency: true,
+            biddingLimitSetAt: true,
+            biddingLimitSetBy: { select: PERSON_SELECT },
+        },
+    });
+
+    // the next bid reads the new limit; proxies already left are brought within it
+    await invalidateBiddingLimit(user.id);
+    let proxies = { capped: 0, withdrawn: 0 };
+    if (!removing) {
+        try {
+            proxies = await applyBiddingLimitToProxies({ userId: user.id, limit: { amount, currency } });
+        } catch (error) {
+            // the limit is saved and checked on every new bid; only the proxies already left missed out
+            console.error(`[admin] could not apply the bidding limit to the proxies of user ${user.id}:`, error);
+        }
+    }
+
+    return {
+        uuid: updated.uuid,
+        biddingLimit: updated.biddingLimit === null ? null : updated.biddingLimit.toString(),
+        biddingLimitCurrency: updated.biddingLimitCurrency,
+        biddingLimitSetAt: updated.biddingLimitSetAt,
+        biddingLimitSetBy: updated.biddingLimitSetBy,
+        proxiesCapped: proxies.capped,
+        proxiesWithdrawn: proxies.withdrawn,
+    };
 };

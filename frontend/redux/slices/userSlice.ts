@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, setLotsVerified, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setBiddingLimit, setKycStatus, setLotsVerified, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -32,6 +32,9 @@ interface UserState {
 
     // uuid of the user whose "Verified for lots" is being changed
     changingLotsVerifiedFor: string | null;
+
+    // uuid of the user whose bidding limit is being changed
+    changingBiddingLimitFor: string | null;
 }
 
 const initialState: UserState = {
@@ -60,6 +63,8 @@ const initialState: UserState = {
     changingStatusFor: null,
 
     changingLotsVerifiedFor: null,
+
+    changingBiddingLimitFor: null,
 };
 
 const userSlice = createSlice({
@@ -221,6 +226,23 @@ const userSlice = createSlice({
             })
             .addCase(setLotsVerified.rejected, (state) => {
                 state.changingLotsVerifiedFor = null;
+            })
+
+            .addCase(setBiddingLimit.pending, (state, action) => {
+                state.changingBiddingLimitFor = action.meta.arg.uuid;
+            })
+            .addCase(setBiddingLimit.fulfilled, (state, action) => {
+                state.changingBiddingLimitFor = null;
+                const { uuid, biddingLimit, biddingLimitCurrency, biddingLimitSetAt, biddingLimitSetBy } = action.payload.data;
+                if (state.selectedUser?.uuid === uuid) {
+                    state.selectedUser.biddingLimit = biddingLimit;
+                    state.selectedUser.biddingLimitCurrency = biddingLimitCurrency;
+                    state.selectedUser.biddingLimitSetAt = biddingLimitSetAt;
+                    state.selectedUser.biddingLimitSetBy = biddingLimitSetBy;
+                }
+            })
+            .addCase(setBiddingLimit.rejected, (state) => {
+                state.changingBiddingLimitFor = null;
             })
 
             .addCase(changeUserStatus.pending, (state, action) => {

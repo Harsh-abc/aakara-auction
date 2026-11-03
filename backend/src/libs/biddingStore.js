@@ -44,6 +44,8 @@ export const bidKeys = {
     dirty: "bid:dirty",
     flushPending: "bid:flush-pending",
     rate: (userId) => `bid:rate:${userId}`,
+    // the user's bidding limit ({ amount, currency } JSON, or "" for none) — see bidding.services.js
+    limit: (userId) => `bid:limit:${userId}`,
 };
 
 // ---------------------------------------------------------------------

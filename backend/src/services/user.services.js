@@ -181,6 +181,16 @@ export const getUserByIdService = async ({ uuid }) => {
                     profile: { select: { firstName: true, lastName: true, displayName: true } },
                 },
             },
+            biddingLimit: true,
+            biddingLimitCurrency: true,
+            biddingLimitSetAt: true,
+            biddingLimitSetBy: {
+                select: {
+                    uuid: true,
+                    username: true,
+                    profile: { select: { firstName: true, lastName: true, displayName: true } },
+                },
+            },
             profile: {
                 select: {
                     firstName: true, lastName: true, displayName: true, avatarUrl: true, bio: true,

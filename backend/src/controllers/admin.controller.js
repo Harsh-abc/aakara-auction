@@ -1,6 +1,6 @@
 
-import { changeRoleSchema, changeUserStatusSchema, setLotsVerifiedSchema } from '../validations/role.validation.js'
-import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService, sendTeamMemberAddedEmail, TEAM_ROLES } from '../services/admin.services.js'
+import { changeRoleSchema, changeUserStatusSchema, setBiddingLimitSchema, setLotsVerifiedSchema } from '../validations/role.validation.js'
+import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService, sendTeamMemberAddedEmail, setUserBiddingLimitService, TEAM_ROLES } from '../services/admin.services.js'
 import { setUserLotsVerifiedService } from '../services/lotBidder.services.js'
 import { createUserWithRoleSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
@@ -86,6 +86,39 @@ export const setUserLotsVerified = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: verified ? 'Bidder verified for all their lots' : 'Bidder is no longer verified for lots',
+            data: result,
+        });
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: error.issues?.[0]?.message || "Validation failed",
+            });
+        }
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.statusCode ? error.message : "Internal server error",
+        });
+    }
+};
+
+
+
+// PATCH /api/admin/:uuid/bidding-limit — { amount, currency } sets it, { amount: null } removes it
+export const setUserBiddingLimit = async (req, res) => {
+    try {
+        const { amount, currency } = setBiddingLimitSchema.parse(req.body);
+
+        const result = await setUserBiddingLimitService({
+            targetUuid: req.params.uuid,
+            amount,
+            currency,
+            actorId: req.user.userId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: amount === null ? 'Bidding limit removed' : 'Bidding limit set',
             data: result,
         });
     } catch (error) {

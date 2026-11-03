@@ -69,6 +69,14 @@ model User {
   lotsVerifiedById          BigInt?
   lotsVerifiedBy            User?                  @relation("UserLotsVerifiedBy", fields: [lotsVerifiedById], references: [id], onDelete: SetNull)
   usersLotsVerified         User[]                 @relation("UserLotsVerifiedBy")
+  // optional bidding limit (user page, super admin): no single bid, floor bid or proxy maximum may go
+  // above biddingLimit, in biddingLimitCurrency (services/bidding.services.js). Null = no limit
+  biddingLimit              Decimal?               @db.Decimal(12, 2)
+  biddingLimitCurrency      String?                @db.VarChar(3)
+  biddingLimitSetAt         DateTime?
+  biddingLimitSetById       BigInt?
+  biddingLimitSetBy         User?                  @relation("UserBiddingLimitSetBy", fields: [biddingLimitSetById], references: [id], onDelete: SetNull)
+  usersBiddingLimitSet      User[]                 @relation("UserBiddingLimitSetBy")
   lotBidders             LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
