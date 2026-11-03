@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { changeUserRole, changeUserStatus, createUserByAdmin, resetUserMfa } from '../controllers/admin.controller.js';
+import { changeUserRole, changeUserStatus, createUserByAdmin, resetUserMfa, setUserLotsVerified } from '../controllers/admin.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { exportActivityLogs, getActivityLogs, getActivityLogSummary } from '../controllers/activityLog.controller.js';
@@ -14,6 +14,9 @@ adminRouter.patch('/:uuid/role', authenticate, requireRole('SUPER_ADMIN'), chang
 
 // SUSPEND / REACTIVATE A USER
 adminRouter.patch('/:uuid/status', authenticate, requireRole('SUPER_ADMIN'), changeUserStatus)
+
+// VERIFY / UNVERIFY A BIDDER ON ALL THEIR LOTS
+adminRouter.patch('/:uuid/lots-verified', authenticate, requireRole('SUPER_ADMIN'), setUserLotsVerified)
 
 // RESET A USER'S GOOGLE AUTHENTICATOR (lost / new phone)
 adminRouter.delete('/:uuid/mfa', authenticate, requireRole('SUPER_ADMIN'), resetUserMfa)

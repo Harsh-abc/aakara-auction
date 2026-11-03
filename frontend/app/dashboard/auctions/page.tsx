@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { serverNow } from "@/lib/serverClock";
+import { MANAGE_BIDDERS_HIDDEN } from "@/lib/constants/dashboardAccess";
 
 import type { Auction } from "@/lib/types/auction.types";
 import { AppDispatch, RootState } from "@/redux/store";
@@ -73,7 +74,7 @@ export default function Auctions() {
     const tableMeta: AuctionTableMeta = {
         onView: (auction) => router.push(`/dashboard/auctions/${auction.uuid}`),
         onEdit: (auction) => router.push(`/dashboard/auctions/${auction.uuid}/edit`),
-        onRegistrations: canSeeRegistrations
+        onRegistrations: canSeeRegistrations && !MANAGE_BIDDERS_HIDDEN
             ? (auction) => router.push(`/dashboard/auctions/${auction.uuid}/registrations`)
             : undefined,
         onDelete: (auction) => {

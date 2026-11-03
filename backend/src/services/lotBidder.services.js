@@ -74,6 +74,30 @@ export const approveRegistrations = (tx, auctionWhere, userIds, actorId) =>
         data: { status: "APPROVED", approvedAt: new Date(), approvedBy: BigInt(actorId) },
     });
 
+/**
+ * Verifies the still-PENDING lot rows on this auction of users whose "Verified for lots" is on
+ * (User.lotsVerifiedAt), and approves their registration — run whenever users get lot rows
+ * (registering, being added, lots added to the auction). Returns how many rows were verified.
+ */
+export const verifyLotsForVerifiedUsers = async (tx, auctionId, userIds) => {
+    if (userIds.length === 0) return 0;
+    const users = await tx.user.findMany({
+        where: { id: { in: userIds }, lotsVerifiedAt: { not: null } },
+        select: { id: true, lotsVerifiedById: true },
+    });
+
+    let verified = 0;
+    for (const { id, lotsVerifiedById } of users) {
+        const { count } = await tx.lotBidder.updateMany({
+            where: { userId: id, status: "PENDING", item: { auctionId } },
+            data: { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: lotsVerifiedById },
+        });
+        verified += count;
+        if (lotsVerifiedById) await approveRegistrations(tx, { auctionId }, [id], lotsVerifiedById);
+    }
+    return verified;
+};
+
 const FILTERS = {
     all: {},
     verified: { status: "VERIFIED" },
@@ -254,4 +278,85 @@ export const setLotBiddersVerifiedService = async ({ lotUuid, userUuids, verifie
     await invalidateBidderAccess({ lotUuids: [lotUuid], revokedUserIds: verified ? [] : userIds });
 
     return { lotUuid, verified, requested: uniqueUuids.length, changed };
+};
+
+// =====================================================================
+// "VERIFIED FOR LOTS" ON THE USER PAGE (SUPER_ADMIN)
+// One switch per bidder: on verifies them on every lot they're registered
+// for in auctions not yet over, and on lots they register for later; off
+// takes those verifications back. Lots of auctions already over keep theirs.
+// =====================================================================
+
+export const setUserLotsVerifiedService = async ({ targetUuid, verified, actorId }) => {
+    if (!actorId) throw httpError("Authenticated user is required", 401);
+
+    const user = await prisma.user.findFirst({
+        where: { uuid: targetUuid, deletedAt: null },
+        select: {
+            id: true,
+            uuid: true,
+            status: true,
+            lotsVerifiedAt: true,
+            role: { select: { name: true } },
+            kyc: { select: { status: true } },
+        },
+    });
+    if (!user) throw httpError("User not found", 404);
+    if (!BIDDER_ROLES.includes(user.role.name)) throw httpError("Only bidders can be verified for lots");
+    if (verified) {
+        if (user.status !== "ACTIVE") throw httpError("This user can't be verified until their account is active");
+        if (user.kyc?.status !== "VERIFIED") throw httpError("This user can't be verified until their KYC is verified");
+    }
+
+    // their lots in auctions that aren't over yet
+    const openLots = { auction: { status: { in: EDITABLE_AUCTION_STATUSES }, deletedAt: null } };
+    const actor = BigInt(actorId);
+
+    const { updated, changed } = await prisma.$transaction(
+        async (tx) => {
+            const updated = await tx.user.update({
+                where: { id: user.id },
+                data: verified
+                    ? { lotsVerifiedAt: user.lotsVerifiedAt ?? new Date(), lotsVerifiedById: actor }
+                    : { lotsVerifiedAt: null, lotsVerifiedById: null },
+                select: {
+                    uuid: true,
+                    lotsVerifiedAt: true,
+                    lotsVerifiedBy: {
+                        select: {
+                            uuid: true,
+                            username: true,
+                            profile: { select: { firstName: true, lastName: true, displayName: true } },
+                        },
+                    },
+                },
+            });
+
+            const { count } = await tx.lotBidder.updateMany({
+                where: { userId: user.id, status: verified ? "PENDING" : "VERIFIED", item: openLots },
+                data: verified
+                    ? { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: actor }
+                    : { status: "PENDING", verifiedAt: null, verifiedBy: null },
+            });
+            if (verified) {
+                await approveRegistrations(tx, { auction: { status: { in: EDITABLE_AUCTION_STATUSES } } }, [user.id], actorId);
+            }
+            return { updated, changed: count };
+        },
+        { maxWait: 10_000, timeout: 30_000 }
+    );
+
+    // live bidding re-reads who may bid on their lots
+    const lots = await prisma.lotBidder.findMany({
+        where: { userId: user.id, item: openLots },
+        select: { item: { select: { uuid: true } } },
+    });
+    if (lots.length > 0) {
+        await invalidateBidderAccess({
+            lotUuids: lots.map((row) => row.item.uuid),
+            revokedUserIds: verified ? [] : [user.id],
+        });
+    }
+
+    return serializeBigInt({ ...updated, verified, changed });
 };

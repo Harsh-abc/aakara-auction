@@ -1,6 +1,7 @@
 
-import { changeRoleSchema, changeUserStatusSchema } from '../validations/role.validation.js'
+import { changeRoleSchema, changeUserStatusSchema, setLotsVerifiedSchema } from '../validations/role.validation.js'
 import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService } from '../services/admin.services.js'
+import { setUserLotsVerifiedService } from '../services/lotBidder.services.js'
 import { createUserWithRoleSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
 
@@ -65,6 +66,38 @@ export const changeUserStatus = async (req, res) => {
         return res.status(error.statusCode || 500).json({
             success: false,
             message: error.message || "Internal server error",
+        });
+    }
+};
+
+
+
+// PATCH /api/admin/:uuid/lots-verified — verify / unverify a bidder on all their lots
+export const setUserLotsVerified = async (req, res) => {
+    try {
+        const { verified } = setLotsVerifiedSchema.parse(req.body);
+
+        const result = await setUserLotsVerifiedService({
+            targetUuid: req.params.uuid,
+            verified,
+            actorId: req.user.userId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: verified ? 'Bidder verified for all their lots' : 'Bidder is no longer verified for lots',
+            data: result,
+        });
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: error.issues?.[0]?.message || "Validation failed",
+            });
+        }
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.statusCode ? error.message : "Internal server error",
         });
     }
 };

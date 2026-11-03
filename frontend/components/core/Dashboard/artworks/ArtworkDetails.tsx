@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { useAppSelector } from "@/hooks/redux"
 import { getErrorMessage } from "@/lib/apiError"
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
+import { MANAGE_BIDDERS_HIDDEN } from "@/lib/constants/dashboardAccess"
 import type { ArtworkDetail, ArtworkPerson } from "@/lib/types/artwork.types"
 import { cn } from "@/lib/utils"
 import { getArtwork } from "@/services/operations/artwork.api"
@@ -334,7 +335,7 @@ function Body({ artwork, canManage }: { artwork: ArtworkDetail; canManage: boole
                 <Link href={`/dashboard/bid-history?auction=${artwork.auction.uuid}`} className={ACTION_LINK}>
                     Bid history
                 </Link>
-                {canManage && (
+                {canManage && !MANAGE_BIDDERS_HIDDEN && (
                     <Link href={`/dashboard/auctions/${artwork.auction.uuid}/lots/${artwork.uuid}/bidders`} className={ACTION_LINK}>
                         Lot bidders
                     </Link>

@@ -39,6 +39,7 @@ import type {
     ShippingStrategy,
 } from "@/lib/types/auction.types";
 import { cn } from "@/lib/utils";
+import { MANAGE_BIDDERS_HIDDEN } from "@/lib/constants/dashboardAccess";
 import { isEmptyHtml, sanitizeHtml } from "@/utils/sanitizeHtml";
 import { formatLotSize } from "@/utils/dimensions";
 import RichTextContent from "@/components/common/RichTextContent";
@@ -634,7 +635,7 @@ const LotsTable = ({
                                                     {!canChangeLots && <MenuHint>Draft / scheduled only</MenuHint>}
                                                 </DropdownMenuItem>
 
-                                                {canSeeRegistrations && (
+                                                {canSeeRegistrations && !MANAGE_BIDDERS_HIDDEN && (
                                                     <DropdownMenuItem
                                                         className="py-2 text-[13px]"
                                                         onClick={() => router.push(`${lotPath(lot)}/bidders`)}

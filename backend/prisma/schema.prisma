@@ -63,6 +63,12 @@ model User {
   termsVersion              String?                @db.VarChar(32)
   termsAcceptedIp           String?                @db.VarChar(64)
   termsAcceptedUserAgent    String?                @db.VarChar(500)
+  // "Verified for lots" on the user page (super admin): while on, the bidder is verified on every lot
+  // they're registered for, now and as they register (services/lotBidder.services.js)
+  lotsVerifiedAt            DateTime?
+  lotsVerifiedById          BigInt?
+  lotsVerifiedBy            User?                  @relation("UserLotsVerifiedBy", fields: [lotsVerifiedById], references: [id], onDelete: SetNull)
+  usersLotsVerified         User[]                 @relation("UserLotsVerifiedBy")
   lotBidders             LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")

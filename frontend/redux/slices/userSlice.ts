@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setKycStatus, setLotsVerified, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination } from "@/lib/types/user.types";
 
 interface UserState {
@@ -29,6 +29,9 @@ interface UserState {
 
     // uuid of the user being suspended / reactivated / made active or inactive
     changingStatusFor: string | null;
+
+    // uuid of the user whose "Verified for lots" is being changed
+    changingLotsVerifiedFor: string | null;
 }
 
 const initialState: UserState = {
@@ -55,6 +58,8 @@ const initialState: UserState = {
     changingRoleFor: null,
 
     changingStatusFor: null,
+
+    changingLotsVerifiedFor: null,
 };
 
 const userSlice = createSlice({
@@ -199,6 +204,21 @@ const userSlice = createSlice({
             })
             .addCase(changeUserRole.rejected, (state) => {
                 state.changingRoleFor = null;
+            })
+
+            .addCase(setLotsVerified.pending, (state, action) => {
+                state.changingLotsVerifiedFor = action.meta.arg.uuid;
+            })
+            .addCase(setLotsVerified.fulfilled, (state, action) => {
+                state.changingLotsVerifiedFor = null;
+                const { uuid, lotsVerifiedAt, lotsVerifiedBy } = action.payload.data;
+                if (state.selectedUser?.uuid === uuid) {
+                    state.selectedUser.lotsVerifiedAt = lotsVerifiedAt;
+                    state.selectedUser.lotsVerifiedBy = lotsVerifiedBy;
+                }
+            })
+            .addCase(setLotsVerified.rejected, (state) => {
+                state.changingLotsVerifiedFor = null;
             })
 
             .addCase(changeUserStatus.pending, (state, action) => {

@@ -47,11 +47,21 @@ const PAGE_RULES: { path: RegExp; roles: Role[] }[] = [
     // Artworks, User, Bidders, Settings and anything new: no rule → super admin only
 ]
 
+// Manage Bidders is hidden for every role: bidders are verified for lots with the one switch on
+// the user page instead. Set to false to bring the pages and their links back.
+export const MANAGE_BIDDERS_HIDDEN = true
+
+const MANAGE_BIDDERS_PATHS = [
+    /^\/dashboard\/auctions\/manage-bidders(\/|$)/,
+    /^\/dashboard\/auctions\/[^/]+\/(registrations|lots\/[^/]+\/bidders)(\/|$)/,
+]
+
 /** True when `role` may open the dashboard page at `pathname` (query / hash ignored). */
 export const canAccessPage = (pathname: string, role: string | null | undefined) => {
     if (!role) return false
-    if (role === SA) return true
     const path = pathname.split(/[?#]/)[0]
+    if (MANAGE_BIDDERS_HIDDEN && MANAGE_BIDDERS_PATHS.some((p) => p.test(path))) return false
+    if (role === SA) return true
     const rule = PAGE_RULES.find((r) => r.path.test(path))
     return !!rule && (rule.roles as string[]).includes(role)
 }
