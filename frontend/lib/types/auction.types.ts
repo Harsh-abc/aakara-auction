@@ -108,12 +108,12 @@ export interface AuctionDocument {
 }
 
 export interface AuctionDimension {
-    width: number | string | null;
     height: number | string | null;
+    width: number | string | null;
     depth: number | string | null;
     dimensionUnit: DimensionUnit;
-    secondaryWidth: number | string | null;
     secondaryHeight: number | string | null;
+    secondaryWidth: number | string | null;
     secondaryDepth: number | string | null;
     secondaryDimensionUnit: DimensionUnit;
     weight: number | string | null;

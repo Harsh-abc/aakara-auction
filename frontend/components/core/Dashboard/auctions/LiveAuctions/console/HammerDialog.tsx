@@ -191,7 +191,7 @@ export default function HammerDialog({ open, onOpenChange, lot, position, buyerP
                                         <dd className="tabular-nums text-slate-700">{money(premium, code)}</dd>
                                     </div>
                                     <div className="flex justify-between border-t border-slate-200 pt-1.5 font-semibold">
-                                        <dt className="text-slate-700">Total due from buyer</dt>
+                                        <dt className="text-slate-700">Winning a bid including buyer premium</dt>
                                         <dd className="tabular-nums text-[#414141]">{money(hammer + premium, code)}</dd>
                                     </div>
                                 </>

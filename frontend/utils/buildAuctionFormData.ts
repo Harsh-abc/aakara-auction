@@ -243,11 +243,11 @@ export const buildAuctionFormData = (
 
         const { primary, secondary } = details.dimensions ?? {};
         const measures = {
-            width: num(primary?.width),
             height: num(primary?.height),
+            width: num(primary?.width),
             depth: num(primary?.depth),
-            secondaryWidth: num(secondary?.width),
             secondaryHeight: num(secondary?.height),
+            secondaryWidth: num(secondary?.width),
             secondaryDepth: num(secondary?.depth),
         };
         const weight = num(details.weight);

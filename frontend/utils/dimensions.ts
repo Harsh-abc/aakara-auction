@@ -5,7 +5,8 @@ import type { DimensionUnit } from "@/lib/types/auction.types";
 // (AuctionItemDimension: width… + dimensionUnit, secondaryWidth… + secondaryDimensionUnit)
 // ============================================================
 
-export const DIMENSION_SIDES = ["width", "height", "depth"] as const;
+/** Height first, then width and depth — the catalogue convention, in the form and in every display */
+export const DIMENSION_SIDES = ["height", "width", "depth"] as const;
 
 export const DIMENSION_UNITS: { value: DimensionUnit; label: string }[] = [
     { value: "CM", label: "cm" },
@@ -25,22 +26,22 @@ export const convertMeasure = (value: number, from: DimensionUnit, to: Dimension
 
 type Measure = number | string | null | undefined;
 
-/** One unit's width / height / depth */
+/** One unit's height / width / depth */
 export interface SizeSet {
-    width: Measure;
     height: Measure;
+    width: Measure;
     depth: Measure;
     unit: DimensionUnit;
 }
 
 /** The size as the API returns it */
 export interface StoredLotSize {
-    width: Measure;
     height: Measure;
+    width: Measure;
     depth: Measure;
     dimensionUnit: DimensionUnit;
-    secondaryWidth: Measure;
     secondaryHeight: Measure;
+    secondaryWidth: Measure;
     secondaryDepth: Measure;
     secondaryDimensionUnit: DimensionUnit;
 }
@@ -53,7 +54,7 @@ const positive = (value: Measure): number | null => {
 /** "122 × 91 × 3 cm" — height first, the catalogue convention */
 const formatSet = (set: SizeSet | null | undefined) => {
     if (!set) return null;
-    const sizes = [set.height, set.width, set.depth].map(positive).filter((n): n is number => n !== null);
+    const sizes = DIMENSION_SIDES.map((side) => positive(set[side])).filter((n): n is number => n !== null);
     return sizes.length ? `${sizes.join(" × ")} ${SHORT_LABELS[set.unit] ?? set.unit.toLowerCase()}` : null;
 };
 
@@ -67,10 +68,10 @@ export const formatSizeSets = (primary: SizeSet | null | undefined, secondary: S
 export const formatLotSize = (size: StoredLotSize | null | undefined) =>
     size
         ? formatSizeSets(
-              { width: size.width, height: size.height, depth: size.depth, unit: size.dimensionUnit },
+              { height: size.height, width: size.width, depth: size.depth, unit: size.dimensionUnit },
               {
-                  width: size.secondaryWidth,
                   height: size.secondaryHeight,
+                  width: size.secondaryWidth,
                   depth: size.secondaryDepth,
                   unit: size.secondaryDimensionUnit,
               }

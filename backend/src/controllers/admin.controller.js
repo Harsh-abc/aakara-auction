@@ -1,6 +1,7 @@
 
-import { changeRoleSchema, changeUserStatusSchema } from '../validations/role.validation.js'
-import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService } from '../services/admin.services.js'
+import { changeRoleSchema, changeUserStatusSchema, setLotsVerifiedSchema } from '../validations/role.validation.js'
+import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService, sendTeamMemberAddedEmail, TEAM_ROLES } from '../services/admin.services.js'
+import { setUserLotsVerifiedService } from '../services/lotBidder.services.js'
 import { createUserWithRoleSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
 
@@ -71,6 +72,38 @@ export const changeUserStatus = async (req, res) => {
 
 
 
+// PATCH /api/admin/:uuid/lots-verified — verify / unverify a bidder on all their lots
+export const setUserLotsVerified = async (req, res) => {
+    try {
+        const { verified } = setLotsVerifiedSchema.parse(req.body);
+
+        const result = await setUserLotsVerifiedService({
+            targetUuid: req.params.uuid,
+            verified,
+            actorId: req.user.userId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: verified ? 'Bidder verified for all their lots' : 'Bidder is no longer verified for lots',
+            data: result,
+        });
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: error.issues?.[0]?.message || "Validation failed",
+            });
+        }
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.statusCode ? error.message : "Internal server error",
+        });
+    }
+};
+
+
+
 // DELETE /api/admin/:uuid/mfa — lost / new phone: they set up Google Authenticator again
 export const resetUserMfa = async (req, res) => {
     try {
@@ -93,10 +126,23 @@ export const createUserByAdmin = async (req, res) => {
     try {
         const data = createUserWithRoleSchema.parse(req.body);
         const user = await createUserByAdminService(data, req.user.userId);
+        const roleLabel = user.role.replace("_", " ").toLowerCase();
+
+        // team members (dashboard roles) get their role and login details by email
+        if (TEAM_ROLES.includes(user.role)) {
+            const emailed = await sendTeamMemberAddedEmail({ ...data, roleName: user.role }, req.user.userId);
+            return res.status(201).json({
+                success: true,
+                message: emailed
+                    ? `${data.fullName} was added as ${roleLabel}. Their login details were emailed to ${data.email}.`
+                    : `${data.fullName} was added as ${roleLabel}, but the welcome email could not be sent. Share the login details with them directly.`,
+                data: { ...user, emailSent: emailed },
+            });
+        }
 
         return res.status(201).json({
             success: true,
-            message: `${data.fullName} was added as ${user.role.replace("_", " ").toLowerCase()}`,
+            message: `${data.fullName} was added as ${roleLabel}`,
             data: user,
         });
     } catch (error) {

@@ -79,7 +79,7 @@ export function useAuctionCategoryName(categoryUuid?: string, subCategoryUuid?: 
 
 const isMeasure = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
-// One size set: width / height / depth and its unit. A value typed here fills
+// One size set: height / width / depth and its unit. A value typed here fills
 // the same side of the other set (in that set's unit) while that side is empty
 // or still holds the converted value — once it's typed by hand it's left alone.
 function SizeRow({ lotIndex, set }: { lotIndex: number; set: "primary" | "secondary" }) {

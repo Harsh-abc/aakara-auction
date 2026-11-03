@@ -9,6 +9,7 @@ import {
     REGISTRATION_AUCTION_STATUSES,
     approveRegistrations,
     searchWhere,
+    verifyLotsForVerifiedUsers,
 } from "./lotBidder.services.js";
 
 // =====================================================================
@@ -104,18 +105,21 @@ const findUsersOrThrow = async (userUuids, where, notFoundMessage) => {
 
 /**
  * Gives users a PENDING row on every lot of the auction. Existing rows
- * (e.g. already verified) are left alone. Returns how many rows were created.
+ * (e.g. already verified) are left alone. Users whose "Verified for lots" is
+ * on are verified straight away. Returns how many rows were created and how
+ * many were verified that way.
  */
 const addUsersToAllLots = async (tx, auctionId, users) => {
-    if (users.length === 0) return 0;
+    if (users.length === 0) return { created: 0, autoVerified: 0 };
     const lots = await tx.auctionItem.findMany({ where: { auctionId }, select: { id: true } });
-    if (lots.length === 0) return 0;
+    if (lots.length === 0) return { created: 0, autoVerified: 0 };
 
     const { count } = await tx.lotBidder.createMany({
         data: users.flatMap(({ userId, source }) => lots.map((lot) => ({ itemId: lot.id, userId, source }))),
         skipDuplicates: true,
     });
-    return count;
+    const autoVerified = await verifyLotsForVerifiedUsers(tx, auctionId, users.map((u) => u.userId));
+    return { created: count, autoVerified };
 };
 
 /** Paddle numbers are random 4-digit numbers in this range (inclusive). */
@@ -185,9 +189,9 @@ const registerParticipants = async (tx, auctionId, userIds, source, actorId = nu
         where: { auctionId, userId: { in: userIds } },
         select: { userId: true, source: true },
     });
-    const lotRows = await addUsersToAllLots(tx, auctionId, participants);
+    const { created: lotRows, autoVerified } = await addUsersToAllLots(tx, auctionId, participants);
 
-    return { added, lotRows };
+    return { added, lotRows, autoVerified };
 };
 
 /**
@@ -253,9 +257,9 @@ export const registerForAuctionService = async ({ auctionUuid, userId, termsAcce
 
     // Idempotent: registering again keeps the first registration and only
     // picks up lots added since
-    const participant = await prisma.$transaction(
+    const { participant, autoVerified } = await prisma.$transaction(
         async (tx) => {
-            await registerParticipants(tx, auction.id, [user], "SELF_REGISTERED");
+            const { autoVerified } = await registerParticipants(tx, auction.id, [user], "SELF_REGISTERED");
             // record the acceptance once; an earlier one (first registration) is kept as is
             await tx.auctionParticipant.updateMany({
                 where: { auctionId: auction.id, userId: user, termsAcceptedAt: null },
@@ -267,13 +271,17 @@ export const registerForAuctionService = async ({ auctionUuid, userId, termsAcce
                     auctionTermsAccepted: termsAndConditions?.trim() || null,
                 },
             });
-            return tx.auctionParticipant.findUnique({
+            const participant = await tx.auctionParticipant.findUnique({
                 where: { auctionId_userId: { auctionId: auction.id, userId: user } },
                 select: { paddleNumber: true, source: true, registeredAt: true, termsAcceptedAt: true, termsVersion: true },
             });
+            return { participant, autoVerified };
         },
         { maxWait: 10_000, timeout: 30_000 }
     );
+
+    // verified straight away ("Verified for lots" on) — live bidding re-reads who may bid
+    if (autoVerified > 0) await invalidateBidderAccess({ auctionId: auction.id });
 
     const lots = await prisma.lotBidder.findMany({
         where: { userId: user, item: { auctionId: auction.id } },
@@ -440,7 +448,7 @@ export const addAuctionParticipantsService = async ({ auctionUuid, userUuids, ac
 
     const users = await findUsersOrThrow(userUuids, addableUsersWhere, "can't be added (KYC-verified bidder accounts only)");
 
-    const { added, lotRows } = await prisma.$transaction(
+    const { added, lotRows, autoVerified } = await prisma.$transaction(
         (tx) =>
             registerParticipants(
                 tx,
@@ -451,6 +459,8 @@ export const addAuctionParticipantsService = async ({ auctionUuid, userUuids, ac
             ),
         { maxWait: 10_000, timeout: 30_000 }
     );
+
+    if (autoVerified > 0) await invalidateBidderAccess({ auctionId: auction.id });
 
     return { auctionUuid, requested: users.length, added, alreadyRegistered: users.length - added, lotRows };
 };

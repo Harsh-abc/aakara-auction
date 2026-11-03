@@ -2,10 +2,42 @@ import prisma from '../libs/prisma.js';
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { invalidateBidderAccess } from './bidding.services.js';
+import { applyLotsVerified } from './lotBidder.services.js';
 import { blockUserAccess, revokeUserTokens, unblockUserAccess } from '../libs/accountBlock.js';
 import { disconnectUser } from '../libs/socket.js';
+import sendEmail from '../mail/sendMail.js';
+import { AUCTION_EMAIL } from '../mail/templates/registrationReceived.js';
+import {
+    TEAM_MEMBER_ADDED_SUBJECT,
+    teamMemberAddedTemplate,
+    teamMemberAddedText,
+} from '../mail/templates/teamMemberAdded.js';
 
-const MAX_SUPER_ADMINS = 3;
+const MAX_SUPER_ADMINS = 7;
+
+// roles allowed into the dashboard (frontend/lib/constants/roles.ts DASHBOARD_ROLES)
+export const TEAM_ROLES = ['SUPER_ADMIN', 'ADMIN', 'AUCTIONEER', 'OPERATIONS'];
+
+const TEAM_MAIL_OPTIONS = { fromName: 'AKARA AUCTIONS', replyTo: AUCTION_EMAIL };
+
+// "Harsh Bhosale" from a user with a profile, falling back to their username
+const personName = (person) =>
+    person?.profile?.displayName
+    || [person?.profile?.firstName, person?.profile?.lastName].filter(Boolean).join(" ")
+    || person?.username
+    || "";
+
+const PERSON_SELECT = {
+    uuid: true,
+    username: true,
+    profile: { select: { firstName: true, lastName: true, displayName: true } },
+};
+
+// who last set the role, and who turned "Verified for lots" on
+const CHANGED_BY_INCLUDE = {
+    roleChangedBy: { select: PERSON_SELECT },
+    lotsVerifiedBy: { select: PERSON_SELECT },
+};
 
 
 export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, newRoleName }) => {
@@ -48,6 +80,16 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
         throw error;
     }
 
+    const oldRole = await prisma.role.findUnique({ where: { id: targetUser.roleId }, select: { name: true } });
+    // giving bidder access turns "Verified for lots" on (active accounts — the switch needs one too);
+    // taking it away turns it off
+    const lotsVerified =
+        newRole.name === 'BIDDER' && targetUser.status === 'ACTIVE'
+            ? true
+            : oldRole?.name === 'BIDDER'
+                ? false
+                : null;
+
     // their tokens carry the old role: stop them now, not when they expire (up to 24h). Done before
     // the change so a Redis failure refuses the change instead of leaving the old access working
     await revokeUserTokens(targetUser.id);
@@ -67,23 +109,16 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
                 }
             }
 
-            const updated = await tx.user.update({
+            await tx.user.update({
                 where: { id: targetUser.id },
                 data: { roleId: newRole.id, roleChangedAt: new Date(), roleChangedById: BigInt(actorId) },
-                include: {
-                    roleChangedBy: {
-                        select: {
-                            uuid: true,
-                            username: true,
-                            profile: { select: { firstName: true, lastName: true, displayName: true } },
-                        },
-                    },
-                },
             });
+
+            if (lotsVerified !== null) await applyLotsVerified(tx, targetUser.id, lotsVerified, actorId);
 
             await tx.userSession.deleteMany({ where: { userId: targetUser.id } });
 
-            return updated;
+            return tx.user.findUnique({ where: { id: targetUser.id }, include: CHANGED_BY_INCLUDE });
         }, { isolationLevel: 'Serializable' });
     } catch (error) {
         // P2034 = serialization conflict with another concurrent role change
@@ -103,7 +138,6 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
     disconnectUser(targetUser.id);
 
     // only BIDDERs may bid, so gaining or losing the role refreshes who may bid on their lots
-    const oldRole = await prisma.role.findUnique({ where: { id: targetUser.roleId }, select: { name: true } });
     if (oldRole?.name === 'BIDDER' || newRole.name === 'BIDDER') {
         const lots = await prisma.lotBidder.findMany({
             where: { userId: targetUser.id },
@@ -124,6 +158,8 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
         roleName: newRole.name,
         roleChangedAt: updatedUser.roleChangedAt,
         roleChangedBy: updatedUser.roleChangedBy,
+        lotsVerifiedAt: updatedUser.lotsVerifiedAt,
+        lotsVerifiedBy: updatedUser.lotsVerifiedBy,
     };
 }
 
@@ -266,6 +302,8 @@ export const createUserByAdminService = async (
                     createdById: adminId,
                     roleChangedAt: now,
                     roleChangedById: adminId,
+                    // a new bidder is active with verified KYC, so "Verified for lots" starts on
+                    ...(role.name === "BIDDER" ? { lotsVerifiedAt: now, lotsVerifiedById: adminId } : {}),
                 },
             });
 
@@ -319,6 +357,35 @@ export const createUserByAdminService = async (
             throw err;
         }
         throw error;
+    }
+};
+
+// a new team member gets their role and login details by email; the password is the one the
+// Super Admin typed (only the hash is stored), so this is the only place it can come from.
+// Returns false instead of throwing — the account already exists either way.
+export const sendTeamMemberAddedEmail = async ({ fullName, email, password, roleName }, creatorId) => {
+    try {
+        const creator = await prisma.user.findUnique({
+            where: { id: BigInt(creatorId) },
+            select: { username: true, profile: { select: { displayName: true, firstName: true, lastName: true } } },
+        });
+        const mail = {
+            userName: fullName,
+            email,
+            password,
+            roleName,
+            addedBy: personName(creator),
+            siteUrl: process.env.FRONTEND_URL,
+        };
+        // to the new member alone (null = no MAILGUN_CC), since it carries their password
+        await sendEmail(email, TEAM_MEMBER_ADDED_SUBJECT, teamMemberAddedTemplate(mail), null, {
+            ...TEAM_MAIL_OPTIONS,
+            text: teamMemberAddedText(mail),
+        });
+        return true;
+    } catch (error) {
+        console.error(`Team member email to ${email} failed:`, error?.message);
+        return false;
     }
 };
 

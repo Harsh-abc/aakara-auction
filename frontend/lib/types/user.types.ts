@@ -71,6 +71,9 @@ export interface User {
     // only on GET /users/:uuid — who last set the role (e.g. made them a bidder) and when
     roleChangedAt?: string | null;
     roleChangedBy?: RoleChangedBy | null;
+    // only on GET /users/:uuid — "Verified for lots" is on while lotsVerifiedAt is set
+    lotsVerifiedAt?: string | null;
+    lotsVerifiedBy?: RoleChangedBy | null;
     profile: UserProfile | null;
     kyc: UserKyc | null;
     _count: { bids: number; auctionsWon: number; auctionParticipations: number };
@@ -258,6 +261,27 @@ export interface ChangeUserRoleResponse {
         roleName: string;
         roleChangedAt: string | null;
         roleChangedBy: RoleChangedBy | null;
+        // giving bidder access turns "Verified for lots" on, removing it turns it off
+        lotsVerifiedAt: string | null;
+        lotsVerifiedBy: RoleChangedBy | null;
+    };
+}
+
+export interface SetLotsVerifiedPayload {
+    uuid: string;
+    verified: boolean;
+}
+
+export interface SetLotsVerifiedResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        verified: boolean;
+        // lot rows verified / unverified by this change
+        changed: number;
+        lotsVerifiedAt: string | null;
+        lotsVerifiedBy: RoleChangedBy | null;
     };
 }
 

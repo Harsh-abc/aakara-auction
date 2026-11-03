@@ -138,13 +138,14 @@ export function BidderAccess({ user }: { user: User }) {
                             {isBidder ? (
                                 <>
                                     <b>{name}</b> will go back to a regular user. They won&apos;t be able to register
-                                    for auctions or bid, and any maximum bids they&apos;ve set will be cancelled. Bids
-                                    already placed stand.
+                                    for auctions or bid, their lot verification is removed, and any maximum bids
+                                    they&apos;ve set will be cancelled. Bids already placed stand.
                                 </>
                             ) : (
                                 <>
-                                    <b>{name}</b> will become a bidder and can register for auctions. You&apos;ll be
-                                    recorded as the person who approved them.
+                                    <b>{name}</b> will become a bidder and can register for auctions
+                                    {user.status === "ACTIVE" && ", and will be verified for lots automatically"}.
+                                    You&apos;ll be recorded as the person who approved them.
                                 </>
                             )}{" "}
                             They&apos;ll be logged out of all devices and need to sign in again.

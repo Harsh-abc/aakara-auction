@@ -8,3 +8,8 @@ export const changeRoleSchema = z.object({
 export const changeUserStatusSchema = z.object({
     action: z.enum(['SUSPEND', 'REACTIVATE']),
 })
+
+// "Verified for lots" on the user page (super admin)
+export const setLotsVerifiedSchema = z.object({
+    verified: z.boolean(),
+})

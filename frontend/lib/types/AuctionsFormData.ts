@@ -160,8 +160,8 @@ export interface LotDocumentFile {
 // ============================================================
 
 export interface LotSizeForm {
-    width: number | null;
     height: number | null;
+    width: number | null;
     depth: number | null;
     unit: DimensionUnit;
 }

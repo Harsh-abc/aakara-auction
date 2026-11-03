@@ -15,12 +15,12 @@ export interface ArtworkCurrency {
 }
 
 export interface ArtworkDimensions {
-    width: string | null
     height: string | null
+    width: string | null
     depth: string | null
     dimensionUnit: DimensionUnit
-    secondaryWidth: string | null
     secondaryHeight: string | null
+    secondaryWidth: string | null
     secondaryDepth: string | null
     secondaryDimensionUnit: DimensionUnit
 }

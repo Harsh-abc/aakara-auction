@@ -10,6 +10,7 @@ import AuctionView from "@/components/core/Dashboard/auctions/AuctionView";
 import AuctionStatusControl from "@/components/core/Dashboard/auctions/AuctionStatusControl";
 import { buttonVariants } from "@/components/ui/button";
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus";
+import { MANAGE_BIDDERS_HIDDEN } from "@/lib/constants/dashboardAccess";
 import { cn } from "@/lib/utils";
 
 import type { Auction, AuctionLot, AuctionStatus } from "@/lib/types/auction.types";
@@ -29,7 +30,7 @@ export default function ViewAuction() {
     const role = useSelector((state: RootState) => state.auth.role);
     const isSuperAdmin = role === "SUPER_ADMIN";
     // Admins and auctioneers can view registrations; only a super admin can change them (enforced by the API)
-    const canSeeRegistrations = isSuperAdmin || role === "ADMIN" || role === "AUCTIONEER";
+    const canSeeRegistrations = (isSuperAdmin || role === "ADMIN" || role === "AUCTIONEER") && !MANAGE_BIDDERS_HIDDEN;
 
     // Tagged with the uuid it was loaded for, so a different uuid reads as "loading"
     const [loaded, setLoaded] = useState<

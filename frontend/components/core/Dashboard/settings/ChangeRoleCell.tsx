@@ -19,14 +19,22 @@ import {
     SelectContent,
     SelectGroup,
     SelectItem,
+    SelectSeparator,
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { ALL_ROLES, MAX_SUPER_ADMINS, ROLE_LABELS, RoleName } from "@/lib/constants/roles";
+import { ALL_ROLES, DASHBOARD_ROLES, MAX_SUPER_ADMINS, ROLE_LABELS, RoleName } from "@/lib/constants/roles";
 import { changeUserRole } from "@/services/operations/user.api";
 
 const roleLabel = (role: string) => ROLE_LABELS[role as RoleName] ?? role;
+
+// the Team table only moves people between dashboard roles
+const TEAM_ROLES = ALL_ROLES.filter((role) => DASHBOARD_ROLES.includes(role));
+
+// "Revoke access" makes them a plain website user: no dashboard, logged out everywhere
+const REVOKE = "REVOKE";
+const REVOKED_ROLE = "USER";
 
 export default function ChangeRoleCell({
     uuid,
@@ -52,6 +60,7 @@ export default function ChangeRoleCell({
     const isSelf = me?.uuid === uuid;
     const canChange = myRole === "SUPER_ADMIN" && !isSelf;
     const isChanging = changingRoleFor === uuid;
+    const isRevoking = pendingRole === REVOKE;
 
     if (!canChange) {
         return (
@@ -66,8 +75,13 @@ export default function ChangeRoleCell({
         if (!pendingRole) return;
 
         try {
-            await dispatch(changeUserRole({ uuid, roleName: pendingRole })).unwrap();
-            toast.success(`${name} is now ${roleLabel(pendingRole)}`);
+            const roleName = isRevoking ? REVOKED_ROLE : pendingRole;
+            await dispatch(changeUserRole({ uuid, roleName })).unwrap();
+            toast.success(
+                isRevoking
+                    ? `${name} no longer has dashboard access`
+                    : `${name} is now ${roleLabel(pendingRole)}`
+            );
         } catch (error) {
             toast.error(typeof error === "string" ? error : "Could not change role. Try again.");
         } finally {
@@ -89,7 +103,7 @@ export default function ChangeRoleCell({
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                     <SelectGroup>
-                        {ALL_ROLES.map((role) => {
+                        {TEAM_ROLES.map((role) => {
                             const isFull = role === "SUPER_ADMIN" && superAdminLimitReached && currentRole !== role;
                             return (
                                 <SelectItem key={role} value={role} disabled={isFull} className="text-xs">
@@ -99,6 +113,13 @@ export default function ChangeRoleCell({
                             );
                         })}
                     </SelectGroup>
+                    <SelectSeparator />
+                    <SelectItem
+                        value={REVOKE}
+                        className="text-xs text-red-600 focus:text-red-600"
+                    >
+                        Revoke access
+                    </SelectItem>
                 </SelectContent>
             </Select>
 
@@ -110,11 +131,21 @@ export default function ChangeRoleCell({
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Change role?</AlertDialogTitle>
+                        <AlertDialogTitle>{isRevoking ? "Revoke dashboard access?" : "Change role?"}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {name} will change from <b>{roleLabel(currentRole)}</b> to{" "}
-                            <b>{pendingRole ? roleLabel(pendingRole) : ""}</b>. They will be logged out of
-                            all devices and need to sign in again.
+                            {isRevoking ? (
+                                <>
+                                    {name} will lose their <b>{roleLabel(currentRole)}</b> role and no longer
+                                    be able to open the dashboard. They will be logged out of all devices and
+                                    removed from the team. Their account stays, as a website user.
+                                </>
+                            ) : (
+                                <>
+                                    {name} will change from <b>{roleLabel(currentRole)}</b> to{" "}
+                                    <b>{pendingRole ? roleLabel(pendingRole) : ""}</b>. They will be logged out of
+                                    all devices and need to sign in again.
+                                </>
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -122,9 +153,13 @@ export default function ChangeRoleCell({
                         <AlertDialogAction
                             onClick={handleConfirm}
                             disabled={isChanging}
-                            className="bg-[#491B3A] text-white hover:bg-[#491B3A]/90"
+                            className={
+                                isRevoking
+                                    ? "bg-red-600 text-white hover:bg-red-600/90"
+                                    : "bg-[#491B3A] text-white hover:bg-[#491B3A]/90"
+                            }
                         >
-                            {isChanging ? "Updating..." : "Change role"}
+                            {isChanging ? "Updating..." : isRevoking ? "Revoke access" : "Change role"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

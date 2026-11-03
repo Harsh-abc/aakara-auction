@@ -9,10 +9,11 @@ import { User } from "@/lib/types/user.types"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { KycUpload } from "@/components/core/Dashboard/users/KycUpload"
-import { KycReview } from "@/components/core/Dashboard/users/KycReview"
+// import { KycUpload } from "@/components/core/Dashboard/users/KycUpload"
+// import { KycReview } from "@/components/core/Dashboard/users/KycReview"
 import UserProfile from "@/components/core/Dashboard/users/UserProfiile"
 import { BidderAccess } from "@/components/core/Dashboard/users/BidderAccess"
+import { LotsVerified } from "@/components/core/Dashboard/users/LotsVerified"
 
 const getFullName = (user: User) => {
     const fullName = `${user.profile?.firstName ?? ""} ${user.profile?.lastName ?? ""}`.trim()
@@ -67,6 +68,7 @@ export default function UserPage() {
             )}
 
             <BidderAccess user={user} />
+            <LotsVerified user={user} />
 
             <div className="w-full rounded-[8px] bg-[#f8f8f8] px-5 py-4 h-40.75">
 
@@ -128,14 +130,15 @@ export default function UserPage() {
 
             <UserProfile user={user} />
 
-            {/* Nothing on file yet → staff can upload or request it; otherwise review what's on file, then the profile.
+            {/* Submitted Documents (KYC upload / review) — hidden for now; uncomment the imports above too to bring it back.
+                Nothing on file yet → staff can upload or request it; otherwise review what's on file, then the profile.
                 (A KYC record can exist without documents when staff have only requested them.) */}
-            {!user.kyc?.documents?.length ? (
+            {/* {!user.kyc?.documents?.length ? (
                 <KycUpload user={user} />
             ) : (
 
                 <KycReview user={user} />
-            )}
+            )} */}
 
 
 
