@@ -10,7 +10,6 @@ import { UserActionsCell } from "./UserActionsCell"
 import { UserStatusCell } from "./UserStatusCell"
 
 import { User } from "@/lib/types/user.types"
-import { KYC_DOCUMENTS } from "@/lib/constants/kyc"
 
 // Status column text, used for sorting / filtering (the cell shows the active switch)
 const getAccountStatus = (user: User) => {
@@ -30,15 +29,6 @@ const KYC_STATUS_LABEL: Record<string, string> = {
 const getKycStatus = (user: User) => {
     if (!user.kyc) return "Not Uploaded"
     return KYC_STATUS_LABEL[user.kyc.status] ?? user.kyc.status
-}
-
-// "Aadhaar card, PAN card" — the list sends uploadedDocumentTypes; a row just
-// updated from the user page carries the full documents instead
-const getKycDocuments = (user: User) => {
-    const types =
-        user.kyc?.uploadedDocumentTypes ??
-        (user.kyc?.documents ?? []).filter((doc) => doc.status !== "REJECTED").map((doc) => doc.documentType)
-    return [...new Set(types)].map((type) => KYC_DOCUMENTS[type]?.title ?? type)
 }
 
 const getFullName = (user: User) => {
@@ -171,7 +161,6 @@ export const columns: ColumnDef<AppTableFeatures, User>[] = [
 
         cell: ({ row }) => {
             const kyc = getKycStatus(row.original)
-            const documents = getKycDocuments(row.original)
 
             const kycClass: Record<string, string> = {
                 Approved: "bg-green-50 text-green-600 border-green-100",
@@ -189,14 +178,6 @@ export const columns: ColumnDef<AppTableFeatures, User>[] = [
                     >
                         {kyc}
                     </Badge>
-                    {documents.length > 0 && (
-                        <span
-                            className="max-w-56 truncate text-[11px] text-muted-foreground"
-                            title={documents.join(", ")}
-                        >
-                            {documents.join(", ")}
-                        </span>
-                    )}
                 </div>
             )
         },
