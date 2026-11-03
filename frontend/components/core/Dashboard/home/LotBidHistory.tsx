@@ -108,6 +108,10 @@ const slugify = (text: string) =>
         .replace(/^-+|-+$/g, "")
         .slice(0, 60) || "auction"
 
+// floor bids are entered by the auctioneer; manual ones are placed online by the bidder
+const bidSourceLabel = (source: string) =>
+    source === "PROXY" ? "Proxy" : source === "FLOOR" ? "Auctioneer" : "Online"
+
 function downloadLotCsv(history: LotBidHistory) {
     const header = ["Bid #", "Placed at (UTC)", "Paddle", "Bidder", "Username", "Amount", "Currency", "Source", "Status"]
     const rows = [...history.bids]
@@ -120,7 +124,7 @@ function downloadLotCsv(history: LotBidHistory) {
             bid.bidder?.username ?? "",
             bid.amount,
             history.lot.currency.code,
-            bid.source === "PROXY" ? "Proxy" : bid.source === "FLOOR" ? "Floor" : "Manual",
+            bidSourceLabel(bid.source),
             BID_STATUS[bid.status]?.label ?? bid.status,
         ])
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")
@@ -674,7 +678,7 @@ function LotBids({
                                             <BidderCell bidder={bid.bidder} />
                                         </td>
                                         <td className="px-3 py-2.5 font-semibold text-slate-900">{money(bid.amount, currency)}</td>
-                                        <td className="px-3 py-2.5">{bid.source === "PROXY" ? "Proxy" : bid.source === "FLOOR" ? "Floor" : "Manual"}</td>
+                                        <td className="px-3 py-2.5">{bidSourceLabel(bid.source)}</td>
                                         <td className="px-3 py-2.5 whitespace-nowrap text-[#62666F]">{formatBidTime(bid.placedAt)}</td>
                                         <td className="px-4 py-2.5">
                                             <StatusPill tone={status.tone}>{status.label}</StatusPill>
