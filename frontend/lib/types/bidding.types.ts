@@ -76,6 +76,14 @@ export interface LiveAuctionStatus {
     status: AuctionStatus
 }
 
+/** "auction:viewers" — people watching the sale's live room (each account / browser once) */
+export interface AuctionViewers {
+    auctionUuid: string
+    count: number
+    /** increases with every new count, so a late-arriving older one can be ignored */
+    version: number
+}
+
 /** "bid:outbid" — sent only to the bidder who lost the lead */
 export interface OutbidNotice {
     auctionUuid: string

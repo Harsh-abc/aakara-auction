@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ImageOff } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuctionViewers } from "@/hooks/useAuctionViewers";
 import { cn } from "@/lib/utils";
 
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, PAGE_MAIN } from "../storefront";
@@ -25,9 +26,13 @@ import { useLotPage } from "./lot/useLotPage";
 const ROOM_GRID = "mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-8";
 const LOT_GRID = "grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_320px] md:gap-9";
 
+// "1,121 watching"
+const VIEWER_COUNT = new Intl.NumberFormat("en-IN");
+
 // the live auction room, focused on one lot
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid);
+    const viewers = useAuctionViewers(auctionUuid);
     const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
 
     if (state.status === "loading") {
@@ -87,7 +92,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <div className="order-1 min-w-0 lg:order-2">
                             <div className={LOT_GRID}>
                                 <div>
-                                    {/* LIVE · LOT 08 over the image */}
+                                    {/* LIVE · LOT 08 over the image, how many are watching opposite */}
                                     <div className="flex h-8 items-center gap-3">
                                         {lot.status === "ACTIVE" ? (
                                             <Tag tone="live" label="Live" className="h-5.5 gap-1.25 px-2.5 text-[12px] tracking-[0.08em]" />
@@ -95,6 +100,11 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                                             <LotStatusTag lot={lot} className="h-5.5 gap-1.25 px-2.5" />
                                         )}
                                         <span className="text-[12px] leading-4 font-semibold tracking-[0.08em] text-[#0d0d0d] uppercase">{lotTag(lot)}</span>
+                                        {viewers !== null && (
+                                            <span className="ml-auto inline-flex h-5.75 items-center border border-[#cecece] bg-white px-2 text-[10px] leading-3.75 tracking-[0.14em] text-[#0d0d0d] uppercase tabular-nums">
+                                                {VIEWER_COUNT.format(viewers)} watching
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="mt-3 flex aspect-square items-center justify-center overflow-hidden">
                                         {lot.image ? (

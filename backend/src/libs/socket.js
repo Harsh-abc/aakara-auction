@@ -6,6 +6,7 @@ import prisma from "./prisma.js";
 import redis from "./redis.js";
 import { tokenAccessProblem } from "./accountBlock.js";
 import { DASHBOARD_ROLES, tokenHasFreshMfa } from "./dashboardMfa.js";
+import { readVisitorId, startViewerTracking } from "./viewers.js";
 
 // =====================================================================
 // Real-time channel (Socket.IO over the Redis adapter, so an event sent
@@ -15,6 +16,9 @@ import { DASHBOARD_ROLES, tokenHasFreshMfa } from "./dashboardMfa.js";
 //   auction:{uuid}  storefront lot pages — public lot updates (bidders by paddle only)
 //   staff:{uuid}    dashboard bidding floor — every bid with the bidder's name
 //   user:{userId}   joined automatically when the socket carries a valid token
+//
+// Storefront tabs in auction:{uuid} are counted as viewers (libs/viewers.js) — once
+// per account or browser — and the count is sent to the room as "auction:viewers".
 // =====================================================================
 
 export const STAFF_ROLES = DASHBOARD_ROLES;
@@ -59,9 +63,13 @@ export const initSocket = (server) => {
         adapter: createAdapter(redis.duplicate(), redis.duplicate()),
     });
 
+    const viewers = startViewerTracking(io, rooms.auction);
+
     // A token is optional — guests can watch public sales. A bad or expired token, a
     // suspended account, or a token from before a role / password change is treated as a guest.
+    // `visitor` is the browser's guest id, so a guest's tabs count as one viewer.
     io.use(async (socket, next) => {
+        socket.data.visitor = readVisitorId(socket.handshake.auth?.visitor);
         const token = socket.handshake.auth?.token;
         if (token) {
             try {
@@ -93,8 +101,11 @@ export const initSocket = (server) => {
             try {
                 if (!UUID_RE.test(auctionUuid ?? "")) return reply(ack, { ok: false, message: "Invalid auction id" });
                 if (!(await canWatchAuction(auctionUuid, user))) return reply(ack, { ok: false, message: "Auction not found" });
+                // the tab may have closed while the check ran
+                if (!socket.connected) return;
                 socket.join(rooms.auction(auctionUuid));
                 reply(ack, { ok: true });
+                await viewers.join(socket, auctionUuid);
             } catch (error) {
                 console.error("[socket] auction:join failed:", error);
                 reply(ack, { ok: false, message: "Could not join the auction" });
@@ -102,7 +113,13 @@ export const initSocket = (server) => {
         });
 
         socket.on("auction:leave", ({ auctionUuid } = {}) => {
-            if (UUID_RE.test(auctionUuid ?? "")) socket.leave(rooms.auction(auctionUuid));
+            if (!UUID_RE.test(auctionUuid ?? "")) return;
+            socket.leave(rooms.auction(auctionUuid));
+            viewers.leave(socket, auctionUuid).catch((error) => console.error("[socket] viewer leave failed:", error));
+        });
+
+        socket.on("disconnect", () => {
+            viewers.disconnect(socket).catch((error) => console.error("[socket] viewer disconnect failed:", error));
         });
 
         socket.on("staff:join", ({ auctionUuid } = {}, ack) => {
