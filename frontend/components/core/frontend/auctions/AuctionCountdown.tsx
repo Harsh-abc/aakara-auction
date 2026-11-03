@@ -24,6 +24,8 @@ function splitDuration(ms: number) {
 type AuctionCountdownProps = {
     label: string;
     target: string;
+    /** shown in place of 00 : 00 : 00 : 00 once the target has passed */
+    doneText?: string;
     className?: string;
 };
 
@@ -58,11 +60,15 @@ function subscribeClock(listener: () => void) {
 }
 
 // LIVE IN   65 : 13 : 46 : 57   (Figma countdown — 18px figures over 9px units)
-export function AuctionCountdown({ label, target, className }: AuctionCountdownProps) {
+export function AuctionCountdown({ label, target, doneText, className }: AuctionCountdownProps) {
     // null on the server, so server and first client render agree
     const now = useSyncExternalStore<number | null>(subscribeClock, () => clockNow, () => null);
 
     const remaining = now === null ? null : Math.max(0, new Date(target).getTime() - now);
+
+    if (doneText && remaining === 0) {
+        return <p className={cn("flex text-[14px] leading-5 font-medium text-[#0d0d0d]", className)}>{doneText}</p>;
+    }
 
     return (
         <div className={cn("flex items-start gap-4", className)}>

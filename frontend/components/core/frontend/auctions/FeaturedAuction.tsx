@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { BODY, BUTTON, BUTTON_INLINE, BUTTON_SOLID } from "../storefront";
 import { AuctionCountdown } from "./AuctionCountdown";
 import { ComingSoonRegister } from "./ComingSoonRegister";
-import { auctionHref, countdownFor, isLive } from "./auctionDisplay";
+import { auctionHref, countdownFor, isLive, STARTING_SOON } from "./auctionDisplay";
 import { HomeBannerHero } from "./HomeBannerSlides";
 import { StatusBadge } from "./StatusBadge";
 
@@ -61,7 +61,7 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                             </div>
 
                             <div className="flex shrink-0 flex-col items-start gap-3 md:items-end">
-                                <AuctionCountdown label="Live in" target={COMING_SOON_START} />
+                                <AuctionCountdown label="Live in" target={COMING_SOON_START} doneText={STARTING_SOON} />
                                 <ComingSoonRegister />
                             </div>
                         </div>
@@ -95,7 +95,7 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                         </div>
 
                         <div className="flex shrink-0 flex-col items-start gap-3 md:items-end">
-                            {countdown && <AuctionCountdown label={countdown.label} target={countdown.target} />}
+                            {countdown && <AuctionCountdown label={countdown.label} target={countdown.target} doneText={countdown.doneText} />}
                             <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
                                 View the auction
                             </Link>

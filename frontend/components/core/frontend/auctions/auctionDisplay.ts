@@ -20,12 +20,15 @@ const isFinished = (auction: PublicAuction) => auction.status === "ENDED" || auc
 export const badgeTone = (auction: PublicAuction) =>
     isLive(auction) ? "live" : isFinished(auction) ? "closed" : "upcoming"
 
+// what an opening countdown says once it runs out, until the sale actually goes live
+export const STARTING_SOON = "The Auction will start soon"
+
 // what the countdown counts to: the start for upcoming sales, the close for live ones
-export function countdownFor(auction: PublicAuction): { label: string; target: string } | null {
+export function countdownFor(auction: PublicAuction): { label: string; target: string; doneText?: string } | null {
     if (isFinished(auction)) return null
     return isLive(auction)
         ? { label: "Ends in", target: auction.endTime }
-        : { label: "Live in", target: auction.startTime }
+        : { label: "Live in", target: auction.startTime, doneText: STARTING_SOON }
 }
 
 // "5–14 December 2026 · 40 lots · Online, Mumbai"

@@ -98,7 +98,7 @@ type TopLotsProps = {
     /** "live", "upcoming"… — the sale's state, lowercased in the count line */
     saleStatus: string;
     /** the sale's countdown; null once it has closed */
-    countdown: { label: string; target: string } | null;
+    countdown: { label: string; target: string; doneText?: string } | null;
     onBid: OnBid;
 };
 
@@ -120,7 +120,7 @@ export function TopLots({ auctionUuid, lots, saleStatus, countdown, onBid }: Top
                     <p className={EYEBROW}>
                         {lots.length} {lots.length === 1 ? "lot" : "lots"} · {shown.length} shown · {saleStatus}
                     </p>
-                    {countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} className="shrink-0" /> : <span className={EYEBROW}>Sale closed</span>}
+                    {countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} doneText={countdown.doneText} className="shrink-0" /> : <span className={EYEBROW}>Sale closed</span>}
                 </div>
 
                 <div className="mt-4 flex flex-col gap-3 border border-[#cecece] bg-white p-4 md:flex-row md:items-center">
@@ -174,7 +174,7 @@ export function TopLots({ auctionUuid, lots, saleStatus, countdown, onBid }: Top
                                         <div className="flex items-center gap-5">
                                             {action && (
                                                 <button type="button" onClick={() => onBid(action, lot)} className={ROW_LINK}>
-                                                    Place bid
+                                                    {action === "proxy" ? "Proxy bid" : "Place bid"}
                                                 </button>
                                             )}
                                             {/* the full lot page — the room itself stays on the lot on the block */}
