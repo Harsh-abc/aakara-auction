@@ -166,12 +166,12 @@ export const getPublicAuctionService = async ({ auctionUuid }) => {
 };
 
 const DIMENSION_SELECT = {
-    width: true,
     height: true,
+    width: true,
     depth: true,
     dimensionUnit: true,
-    secondaryWidth: true,
     secondaryHeight: true,
+    secondaryWidth: true,
     secondaryDepth: true,
     secondaryDimensionUnit: true,
 };

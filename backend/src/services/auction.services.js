@@ -196,7 +196,7 @@ const normalizeLot = (lot, index, { isDraft }) => {
         const convert = (value, from, to) => round2((value * CM_PER_UNIT[from]) / CM_PER_UNIT[to]);
 
         const size = { dimensionUnit: unit, secondaryDimensionUnit: secondaryUnit };
-        for (const side of ["width", "height", "depth"]) {
+        for (const side of ["height", "width", "depth"]) {
             const Side = side[0].toUpperCase() + side.slice(1);
             const primary = toNum(d[side], label(side));
             const secondary = toNum(d[`secondary${Side}`], label(`${side} (second unit)`));
@@ -205,7 +205,7 @@ const normalizeLot = (lot, index, { isDraft }) => {
         }
         const weight = toNum(d.weight, label("weight"));
 
-        const sizes = ["width", "height", "depth", "secondaryWidth", "secondaryHeight", "secondaryDepth"].map((key) => size[key]);
+        const sizes = ["height", "width", "depth", "secondaryHeight", "secondaryWidth", "secondaryDepth"].map((key) => size[key]);
         if ([...sizes, weight].some((v) => v !== null)) {
             dimension = {
                 ...size,

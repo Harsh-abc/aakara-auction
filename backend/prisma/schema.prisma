@@ -502,15 +502,15 @@ model AuctionItemDimension {
 
   auctionItemId BigInt @unique
 
-  /// The size in two units, each with its own unit (cm and inches by default) —
+  /// The size (height × width × depth) in two units, each with its own unit (cm and inches by default) —
   /// entered side by side, one auto-filled from the other unless typed by hand
-  width         Decimal?      @db.Decimal(10, 2)
   height        Decimal?      @db.Decimal(10, 2)
+  width         Decimal?      @db.Decimal(10, 2)
   depth         Decimal?      @db.Decimal(10, 2)
   dimensionUnit DIMENSIONUNIT @default(CM)
 
-  secondaryWidth         Decimal?      @db.Decimal(10, 2)
   secondaryHeight        Decimal?      @db.Decimal(10, 2)
+  secondaryWidth         Decimal?      @db.Decimal(10, 2)
   secondaryDepth         Decimal?      @db.Decimal(10, 2)
   secondaryDimensionUnit DIMENSIONUNIT @default(INCH)
 

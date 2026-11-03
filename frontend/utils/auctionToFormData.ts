@@ -54,14 +54,14 @@ const toLotForm = (
             yearCreated: text(lot.yearCreated),
             dimensions: {
                 primary: {
-                    width: num(dimension?.width),
                     height: num(dimension?.height),
+                    width: num(dimension?.width),
                     depth: num(dimension?.depth),
                     unit: dimension?.dimensionUnit ?? "CM",
                 },
                 secondary: {
-                    width: num(dimension?.secondaryWidth),
                     height: num(dimension?.secondaryHeight),
+                    width: num(dimension?.secondaryWidth),
                     depth: num(dimension?.secondaryDepth),
                     unit: dimension?.secondaryDimensionUnit ?? "INCH",
                 },

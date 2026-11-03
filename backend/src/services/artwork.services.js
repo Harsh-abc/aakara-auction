@@ -67,12 +67,12 @@ const buildWhere = ({ search, auctionUuid, categoryUuid, stage }) => {
 };
 
 const DIMENSION_SELECT = {
-    width: true,
     height: true,
+    width: true,
     depth: true,
     dimensionUnit: true,
-    secondaryWidth: true,
     secondaryHeight: true,
+    secondaryWidth: true,
     secondaryDepth: true,
     secondaryDimensionUnit: true,
 };
@@ -80,12 +80,12 @@ const DIMENSION_SELECT = {
 const dimensionOf = (dimension) =>
     dimension
         ? {
-              width: decimal(dimension.width),
               height: decimal(dimension.height),
+              width: decimal(dimension.width),
               depth: decimal(dimension.depth),
               dimensionUnit: dimension.dimensionUnit,
-              secondaryWidth: decimal(dimension.secondaryWidth),
               secondaryHeight: decimal(dimension.secondaryHeight),
+              secondaryWidth: decimal(dimension.secondaryWidth),
               secondaryDepth: decimal(dimension.secondaryDepth),
               secondaryDimensionUnit: dimension.secondaryDimensionUnit,
           }
