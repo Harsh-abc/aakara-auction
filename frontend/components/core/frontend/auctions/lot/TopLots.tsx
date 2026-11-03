@@ -11,7 +11,7 @@ import type { PublicLot } from "@/lib/types/publicAuction.types";
 import { EYEBROW, SectionHeading } from "../../storefront";
 import { AuctionCountdown } from "../AuctionCountdown";
 import { SearchInput } from "../SearchInput";
-import { formatMoney, lotEstimate, lotHeading, lotHref } from "../detail/lotDisplay";
+import { formatMoney, lotDetailsHref, lotEstimate, lotHeading } from "../detail/lotDisplay";
 import { useGallery } from "../detail/useGallery";
 import { LotStatusTag } from "./LotTag";
 import { isClosedLot, isUpcomingLot, lotTag } from "./lotPageDisplay";
@@ -174,10 +174,11 @@ export function TopLots({ auctionUuid, lots, saleStatus, countdown, onBid }: Top
                                         <div className="flex items-center gap-5">
                                             {action && (
                                                 <button type="button" onClick={() => onBid(action, lot)} className={ROW_LINK}>
-                                                    Place a bid
+                                                    Place bid
                                                 </button>
                                             )}
-                                            <Link href={lotHref(auctionUuid, lot)} className={cn(ROW_LINK, "underline underline-offset-2")}>
+                                            {/* the full lot page — the room itself stays on the lot on the block */}
+                                            <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(ROW_LINK, "underline underline-offset-2")}>
                                                 View
                                             </Link>
                                         </div>

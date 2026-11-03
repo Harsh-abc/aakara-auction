@@ -21,7 +21,7 @@ export function LotPricePanel({
     onBid: OnBid
     /** changes after a bid is saved — see BidButtons */
     bidRefreshKey?: number
-    /** where "Place a bid" goes instead of the bid dialog — see BidButtons */
+    /** where "Place bid" goes instead of the bid dialog — see BidButtons */
     bidHref?: string
     className?: string
 }) {

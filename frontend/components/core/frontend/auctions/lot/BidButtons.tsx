@@ -43,21 +43,19 @@ function useMyProxyMax(lot: PublicLot, refreshKey: number) {
     return token && proxy?.lotUuid === lotUuid ? proxy.max : null
 }
 
-// "Place a bid" only while the lot is on the block; proxy bids only before it opens.
-// bidHref: "Place a bid" links there (the live room) instead of opening the bid dialog — open until the lot closes
+// "Place bid" only while the lot is on the block; proxy bids only before it opens.
+// bidHref: "Place bid" links there (the live room) instead of opening the bid dialog — open until the lot closes
 export function BidButtons({
     lot,
     onBid,
     refreshKey = 0,
     bidHref,
-    bidLabel = "Place bid",
     className,
 }: {
     lot: PublicLot
     onBid: OnBid
     refreshKey?: number
     bidHref?: string
-    bidLabel?: string
     className?: string
 }) {
     const proxyOpen = isUpcomingLot(lot)
@@ -68,11 +66,11 @@ export function BidButtons({
         <div className={cn("flex flex-col gap-2", className)}>
             {bidHref && !isClosedLot(lot) ? (
                 <Link href={bidHref} className={cn(BUTTON, BUTTON_SOLID)}>
-                    {bidLabel}
+                    Place bid
                 </Link>
             ) : (
                 <button type="button" onClick={() => onBid("bid", lot)} disabled={lot.status !== "ACTIVE"} className={cn(BUTTON, BUTTON_SOLID)}>
-                    {bidLabel}
+                    Place bid
                 </button>
             )}
             <button

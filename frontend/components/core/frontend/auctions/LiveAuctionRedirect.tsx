@@ -9,7 +9,7 @@ import { getFeaturedAuction, getPublicLot, getPublicLots } from "@/services/oper
 import { Breadcrumb, PAGE_MAIN } from "../storefront";
 import { auctionHref } from "./auctionDisplay";
 import { lotHref } from "./detail/lotDisplay";
-import { isClosedLot } from "./lot/lotPageDisplay";
+import { roomLot } from "./lot/lotPageDisplay";
 
 // nothing live or scheduled — the Upcoming / Live tab on the home page
 const FALLBACK_HREF = "/?tab=upcoming#auctions";
@@ -25,8 +25,7 @@ async function liveRoomHref() {
 
     // the lot page carries the whole order of sale: the lot on the block, else the next to come up
     const { lots } = await getPublicLot(auction.uuid, firstPage[0].uuid);
-    const lot = lots.find((item) => item.status === "ACTIVE") ?? lots.find((item) => !isClosedLot(item)) ?? firstPage[0];
-    return lotHref(auction.uuid, lot);
+    return lotHref(auction.uuid, roomLot(lots) ?? firstPage[0]);
 }
 
 // "Live auction" in the menu lands here and is sent on to the live room

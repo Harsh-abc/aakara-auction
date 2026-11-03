@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ImageOff } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, PAGE_MAIN } from "../storefront";
 import { auctionHref, STOREFRONT_STATUS_LABELS } from "./auctionDisplay";
 import { saleCountdown } from "./detail/AuctionDetail";
-import { lotHeading } from "./detail/lotDisplay";
+import { lotHeading, lotHref } from "./detail/lotDisplay";
 import { BidDialog } from "./lot/BidDialog";
 import { BidLadder } from "./lot/BidLadder";
 import { LotPageMessage } from "./lot/LotPageChrome";
@@ -18,7 +20,7 @@ import { LotSummary } from "./lot/LotSummary";
 import { LotStatusTag, Tag } from "./lot/LotTag";
 import { OrderOfSale } from "./lot/OrderOfSale";
 import { TopLots } from "./lot/TopLots";
-import { lotRange, lotTag } from "./lot/lotPageDisplay";
+import { lotRange, lotTag, roomLot } from "./lot/lotPageDisplay";
 import { useBidAction } from "./lot/useBidAction";
 import { useLotPage } from "./lot/useLotPage";
 
@@ -34,8 +36,16 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
     const state = useLotPage(auctionUuid, lotUuid);
     const viewers = useAuctionViewers(auctionUuid);
     const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
+    const router = useRouter();
 
-    if (state.status === "loading") {
+    // the room isn't a lot browser: it stays on the lot on the block (else the next up),
+    // and moves on with the sale when the next lot opens
+    const followUuid = state.status === "ready" ? roomLot(state.data.lots)?.uuid : undefined;
+    useEffect(() => {
+        if (followUuid && followUuid !== lotUuid) router.replace(lotHref(auctionUuid, { uuid: followUuid }));
+    }, [followUuid, lotUuid, auctionUuid, router]);
+
+    if (state.status === "loading" || (followUuid && followUuid !== lotUuid)) {
         return (
             <main className={PAGE_MAIN}>
                 <section>
@@ -134,7 +144,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <p className={BODY}>Ready to bid on one of these lots? Register once, then bid live or leave a proxy bid.</p>
                         <div className="flex shrink-0 gap-2">
                             <button type="button" onClick={() => onBid(lot.status === "ACTIVE" ? "bid" : "proxy", lot)} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
-                                Place a bid
+                                Place bid
                             </button>
                             <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
                                 Browse all lots

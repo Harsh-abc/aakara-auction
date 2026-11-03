@@ -36,6 +36,9 @@ export function upNextLot(lots: PublicLot[]) {
     return lots.slice(liveIndex + 1).find(isUpcomingLot) ?? null
 }
 
+// the lot the live room shows: the one on the block, else the next to come up (null once every lot has closed)
+export const roomLot = (lots: PublicLot[]) => lots.find((lot) => lot.status === "ACTIVE") ?? lots.find((lot) => !isClosedLot(lot)) ?? null
+
 // what the auctioneer is calling for the lot on the block
 export function auctioneerCall(lot: PublicLot) {
     const current = Number(lot.bidCount) > 0 ? formatMoney(lot.currentBid, lot.currency) : null

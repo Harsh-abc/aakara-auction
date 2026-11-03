@@ -145,7 +145,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                 {lotTag(lot)} is live — proxy bids close when a lot opens.{" "}
                 {current.canBid && (
                     <button type="button" onClick={() => onKindChange("bid")} className="cursor-pointer text-neutral-950 underline underline-offset-2">
-                        Place a bid instead
+                        Place bid instead
                     </button>
                 )}
             </>
@@ -237,7 +237,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                 <div className="flex items-start justify-between gap-4 border-b border-neutral-200 pb-5">
                     <DialogHeader className="gap-2">
                         <p className={cn(SMALL_CAPS, "text-neutral-500")}>
-                            {kind === "bid" ? "Place a bid" : "Proxy bid"} · {lotTag(lot)}
+                            {kind === "bid" ? "Place bid" : "Proxy bid"} · {lotTag(lot)}
                         </p>
                         <DialogTitle className="text-lg leading-snug font-normal text-neutral-950">{lotHeading(lot)}</DialogTitle>
                         <DialogDescription className="sr-only">

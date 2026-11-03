@@ -18,7 +18,7 @@ import { LotFaqs } from "./lot/LotFaqs";
 import { LotGallery } from "./lot/LotGallery";
 import { LotPageMessage } from "./lot/LotPageChrome";
 import { LotPricePanel } from "./lot/LotPricePanel";
-import { lotTag } from "./lot/lotPageDisplay";
+import { lotTag, roomLot } from "./lot/lotPageDisplay";
 import { useBidAction } from "./lot/useBidAction";
 import { useLotPage } from "./lot/useLotPage";
 
@@ -128,13 +128,14 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                         </button>
                     </div>
 
-                    {/* "Place a bid" used to open the bid dialog right here — switch back if needed:
+                    {/* "Place bid" goes to the live room, on the lot on the block (not this lot).
+                    It used to open the bid dialog right here — switch back if needed:
                     <LotPricePanel lot={lot} onBid={onBid} bidRefreshKey={savedCount} className="self-start lg:sticky lg:top-25 lg:mt-10.75" /> */}
                     <LotPricePanel
                         lot={lot}
                         onBid={onBid}
                         bidRefreshKey={savedCount}
-                        bidHref={lotHref(auction.uuid, lot)}
+                        bidHref={lotHref(auction.uuid, roomLot(lots) ?? lot)}
                         className="self-start lg:sticky lg:top-25 lg:mt-10.75"
                     />
                 </div>

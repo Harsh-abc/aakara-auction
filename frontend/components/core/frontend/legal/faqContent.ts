@@ -101,7 +101,7 @@ export const FAQ_SECTIONS: FaqSection[] = [
                 answer: [
                     "You may bid through the following methods, subject to availability.",
                     { heading: "Online Bidding" },
-                    "Select the lot you wish to bid on and click “Place a Bid”. You may enter the next valid bid.",
+                    "Select the lot you wish to bid on and click “Place Bid”. You may enter the next valid bid.",
                     "With regular bidding, you will need to place a new bid each time you are outbid. The platform will show the next valid bid based on the applicable bidding increment.",
                     "You can also view the bid history for each lot on the platform.",
                     { heading: "Telephone Bidding" },

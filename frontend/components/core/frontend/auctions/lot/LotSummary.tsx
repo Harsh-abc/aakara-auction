@@ -67,7 +67,7 @@ export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, className }
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidLabel="Place a bid" className="mt-5" />
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} className="mt-5" />
             <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(BUTTON, BUTTON_OUTLINE, "mt-3")}>
                 View full lot
             </Link>
