@@ -15,7 +15,8 @@ import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import { getCategories, getSubCategories } from "@/services/operations/category.api";
 import { uploadEditorImage } from "@/services/operations/upload.api";
 import type { Category, SubCategory } from "@/lib/types/category.types";
-import { cmToInch, DIMENSION_SIDES, inchToCm } from "@/utils/dimensions";
+import type { DimensionUnit } from "@/lib/types/auction.types";
+import { convertMeasure, DIMENSION_SIDES, DIMENSION_UNITS } from "@/utils/dimensions";
 
 import LotSchedule from "./LotSchedule";
 
@@ -76,25 +77,42 @@ export function useAuctionCategoryName(categoryUuid?: string, subCategoryUuid?: 
 
 
 
-// One unit's width / height / depth. Typing a value fills the same side in the
-// other unit while that side is empty or still holds the converted value —
-// once it's typed in by hand it's left alone.
-function MeasureRow({ lotIndex, unit, label }: { lotIndex: number; unit: "Cm" | "In"; label: string }) {
-    const { register, getValues, setValue } = useFormContext<AuctionFormData>();
+const isMeasure = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
-    const otherUnit = unit === "Cm" ? "In" : "Cm";
-    const convert = unit === "Cm" ? cmToInch : inchToCm;
-    const valid = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+// One size set: width / height / depth and its unit. A value typed here fills
+// the same side of the other set (in that set's unit) while that side is empty
+// or still holds the converted value — once it's typed by hand it's left alone.
+function SizeRow({ lotIndex, set }: { lotIndex: number; set: "primary" | "secondary" }) {
+    const { register, control, getValues, setValue } = useFormContext<AuctionFormData>();
+
+    const base = `lots.${lotIndex}.details.dimensions.${set}` as const;
+    const otherBase = `lots.${lotIndex}.details.dimensions.${set === "primary" ? "secondary" : "primary"}` as const;
+    const unitLabel = useWatch({ control, name: `${base}.unit` });
+    const label = DIMENSION_UNITS.find((u) => u.value === unitLabel)?.label ?? "";
+
+    // a new unit for this set: re-convert whichever side was the converted one
+    const changeUnit = (from: DimensionUnit, to: DimensionUnit) => {
+        const otherUnit = getValues(`${otherBase}.unit`);
+        for (const side of DIMENSION_SIDES) {
+            const mine = getValues(`${base}.${side}`);
+            const other = getValues(`${otherBase}.${side}`);
+            if (isMeasure(other) && (!isMeasure(mine) || mine === convertMeasure(other, otherUnit, from))) {
+                setValue(`${base}.${side}`, convertMeasure(other, otherUnit, to), { shouldDirty: true });
+            } else if (isMeasure(mine) && (!isMeasure(other) || other === convertMeasure(mine, from, otherUnit))) {
+                setValue(`${otherBase}.${side}`, convertMeasure(mine, to, otherUnit), { shouldDirty: true });
+            }
+        }
+    };
 
     return (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
             {DIMENSION_SIDES.map((side) => {
-                const path = `lots.${lotIndex}.details.dimensions.${side}${unit}` as const;
-                const otherPath = `lots.${lotIndex}.details.dimensions.${side}${otherUnit}` as const;
+                const path = `${base}.${side}` as const;
+                const otherPath = `${otherBase}.${side}` as const;
 
                 return (
                     <div key={side} className="input-wrapper">
-                        <label className="block mb-2 capitalize">{`${side} (${label})`}</label>
+                        <label className="block mb-2 capitalize">{label ? `${side} (${label})` : side}</label>
                         <Input
                             type="number"
                             step="any"
@@ -107,12 +125,15 @@ function MeasureRow({ lotIndex, unit, label }: { lotIndex: number; unit: "Cm" | 
                             {...register(path, {
                                 valueAsNumber: true,
                                 onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                                    const unit = getValues(`${base}.unit`);
+                                    const otherUnit = getValues(`${otherBase}.unit`);
                                     const before = Number(e.target.dataset.previous || NaN);
                                     const value = getValues(path);
                                     const other = getValues(otherPath);
-                                    const otherIsConverted = !valid(other) || (valid(before) && other === convert(before));
-                                    if (otherIsConverted) {
-                                        setValue(otherPath, valid(value) ? convert(value) : null, { shouldDirty: true });
+                                    if (!isMeasure(other) || (isMeasure(before) && other === convertMeasure(before, unit, otherUnit))) {
+                                        setValue(otherPath, isMeasure(value) ? convertMeasure(value, unit, otherUnit) : null, {
+                                            shouldDirty: true,
+                                        });
                                     }
                                     e.target.dataset.previous = String(value ?? "");
                                 },
@@ -121,6 +142,32 @@ function MeasureRow({ lotIndex, unit, label }: { lotIndex: number; unit: "Cm" | 
                     </div>
                 );
             })}
+
+            <div className="input-wrapper">
+                <label className="block mb-2">Unit</label>
+                <Controller
+                    name={`${base}.unit`}
+                    control={control}
+                    render={({ field }) => (
+                        <select
+                            value={field.value}
+                            onChange={(e) => {
+                                const next = e.target.value as DimensionUnit;
+                                changeUnit(field.value, next);
+                                field.onChange(next);
+                            }}
+                            onBlur={field.onBlur}
+                            className="w-full border rounded-md px-3 py-2 h-11"
+                        >
+                            {DIMENSION_UNITS.map((u) => (
+                                <option key={u.value} value={u.value}>
+                                    {u.label}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                />
+            </div>
         </div>
     );
 }
@@ -259,11 +306,11 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
                 <h1 className="text-[16px] font-bold">Artwork Measurement</h1>
 
                 <p className="mt-1 text-xs text-slate-500">
-                    Enter the size in either unit — the other is filled in for you, and can be changed by hand.
+                    Enter the size in either row — the other row is converted into its unit for you, and can be changed by hand.
                 </p>
 
-                <MeasureRow lotIndex={lotIndex} unit="Cm" label="cm" />
-                <MeasureRow lotIndex={lotIndex} unit="In" label="in" />
+                <SizeRow lotIndex={lotIndex} set="primary" />
+                <SizeRow lotIndex={lotIndex} set="secondary" />
 
                 <div className="grid grid-cols-3 gap-4">
                     <div className="input-wrapper">

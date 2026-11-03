@@ -1,4 +1,5 @@
 import type { AuctionStatus, AuctionType } from "./auction.types";
+import type { StoredLotSize } from "@/utils/dimensions";
 
 // shape of GET /api/auction/public and /public/featured
 export interface PublicAuction {
@@ -47,7 +48,7 @@ export interface PublicLot {
     scheduledStartAt: string;
     scheduledEndAt: string;
     currency: { code: string; symbol: string | null };
-    dimension: Record<"widthCm" | "heightCm" | "depthCm" | "widthIn" | "heightIn" | "depthIn", string | null> | null;
+    dimension: StoredLotSize | null;
     image: string | null;
 }
 

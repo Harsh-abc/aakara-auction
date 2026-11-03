@@ -241,16 +241,17 @@ export const buildAuctionFormData = (
     const lotsPayload = lots.map((lot, index) => {
         const { details, pricing, condition, provenance, authentication } = lot;
 
-        const size = {
-            widthCm: num(details.dimensions?.widthCm),
-            heightCm: num(details.dimensions?.heightCm),
-            depthCm: num(details.dimensions?.depthCm),
-            widthIn: num(details.dimensions?.widthIn),
-            heightIn: num(details.dimensions?.heightIn),
-            depthIn: num(details.dimensions?.depthIn),
+        const { primary, secondary } = details.dimensions ?? {};
+        const measures = {
+            width: num(primary?.width),
+            height: num(primary?.height),
+            depth: num(primary?.depth),
+            secondaryWidth: num(secondary?.width),
+            secondaryHeight: num(secondary?.height),
+            secondaryDepth: num(secondary?.depth),
         };
         const weight = num(details.weight);
-        const hasDimension = [...Object.values(size), weight].some((v) => v !== null);
+        const hasDimension = [...Object.values(measures), weight].some((v) => v !== null);
 
         const provenanceSummary =
             [
@@ -297,7 +298,9 @@ export const buildAuctionFormData = (
 
             dimension: hasDimension
                 ? {
-                    ...size,
+                    ...measures,
+                    dimensionUnit: primary?.unit ?? "CM",
+                    secondaryDimensionUnit: secondary?.unit ?? "INCH",
                     weight,
                     weightUnit: weight !== null ? "KG" : null,
                 }

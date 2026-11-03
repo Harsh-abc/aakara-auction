@@ -14,7 +14,7 @@ import {
     isImageMedia,
     isVideoMedia,
 } from "@/utils/lotMedia";
-import { formatLotSize } from "@/utils/dimensions";
+import { formatSizeSets } from "@/utils/dimensions";
 
 import { useAuctionCategoryName } from "./LotsDetails";
 
@@ -204,7 +204,7 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
                     : categoryName
                 : "Unknown category";
 
-    const dimensions = formatLotSize(details?.dimensions) ?? EMPTY;
+    const dimensions = formatSizeSets(details?.dimensions?.primary, details?.dimensions?.secondary) ?? EMPTY;
 
     const rows: [string, string][] = [
         ["Lot Title", text(details?.title)],

@@ -6,6 +6,7 @@ import type {
     FeeCalculationType,
     LotStatus,
     DocumentType,
+    DimensionUnit,
     EditionType,
     MediaType,
 } from "./auction.types";
@@ -158,6 +159,13 @@ export interface LotDocumentFile {
 // LOT DETAILS
 // ============================================================
 
+export interface LotSizeForm {
+    width: number | null;
+    height: number | null;
+    depth: number | null;
+    unit: DimensionUnit;
+}
+
 export interface LotDetailsForm {
     title: string;
     artist: string;
@@ -171,14 +179,10 @@ export interface LotDetailsForm {
     medium: string;
     yearCreated: string;
 
-    /** Size in both units — typing one side fills the other until it's edited by hand */
+    /** The size in two units — typing in one set fills the other until it's edited by hand */
     dimensions: {
-        widthCm: number | null;
-        heightCm: number | null;
-        depthCm: number | null;
-        widthIn: number | null;
-        heightIn: number | null;
-        depthIn: number | null;
+        primary: LotSizeForm;
+        secondary: LotSizeForm;
     };
 
     /** Saved to AuctionItemDimension.weight (unit KG). */

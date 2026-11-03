@@ -1,6 +1,6 @@
 // shapes returned by /api/auction/artworks (backend/src/services/artwork.services.js)
 
-import type { AuctionStatus, AuctionType, MediaType } from "./auction.types"
+import type { AuctionStatus, AuctionType, DimensionUnit, MediaType } from "./auction.types"
 import type { LotStatus } from "./publicAuction.types"
 
 export type ArtworkStage = "all" | "upcoming" | "live" | "sold" | "unsold" | "withdrawn"
@@ -15,12 +15,14 @@ export interface ArtworkCurrency {
 }
 
 export interface ArtworkDimensions {
-    widthCm: string | null
-    heightCm: string | null
-    depthCm: string | null
-    widthIn: string | null
-    heightIn: string | null
-    depthIn: string | null
+    width: string | null
+    height: string | null
+    depth: string | null
+    dimensionUnit: DimensionUnit
+    secondaryWidth: string | null
+    secondaryHeight: string | null
+    secondaryDepth: string | null
+    secondaryDimensionUnit: DimensionUnit
 }
 
 export interface ArtworkRow {

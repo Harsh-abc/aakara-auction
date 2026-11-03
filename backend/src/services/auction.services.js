@@ -36,6 +36,7 @@ const ENUMS = {
     ],
     feeCalculationType: ["PERCENTAGE", "FIXED"],
     editionType: ["UNIQUE", "LIMITED", "OPEN"],
+    dimensionUnit: ["CM", "INCH", "MM", "METER", "FEET"],
     weightUnit: ["KG", "GRAM", "LB", "OZ"],
     mediaType: ["IMAGE", "VIDEO"],
     documentType: [
@@ -82,7 +83,7 @@ const toNum = (value, label) => {
     return n;
 };
 
-const CM_PER_INCH = 2.54;
+const CM_PER_UNIT = { CM: 1, MM: 0.1, INCH: 2.54, METER: 100, FEET: 30.48 };
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -186,20 +187,26 @@ const normalizeLot = (lot, index, { isDraft }) => {
 
     const reservePrice = toNum(lot.reservePrice, label("reserve price"));
 
-    // ---- dimension (optional) — size in cm and inches; a side left blank is converted from the other ----
+    // ---- dimension (optional) — the size in two units; a side left blank in one is converted from the other ----
     let dimension = null;
     const d = lot.dimension;
     if (d && typeof d === "object") {
-        const size = {};
+        const unit = pickEnum(d.dimensionUnit, ENUMS.dimensionUnit, "CM", label("dimension unit"));
+        const secondaryUnit = pickEnum(d.secondaryDimensionUnit, ENUMS.dimensionUnit, "INCH", label("second dimension unit"));
+        const convert = (value, from, to) => round2((value * CM_PER_UNIT[from]) / CM_PER_UNIT[to]);
+
+        const size = { dimensionUnit: unit, secondaryDimensionUnit: secondaryUnit };
         for (const side of ["width", "height", "depth"]) {
-            const cm = toNum(d[`${side}Cm`], label(`${side} (cm)`));
-            const inch = toNum(d[`${side}In`], label(`${side} (in)`));
-            size[`${side}Cm`] = cm ?? (inch !== null ? round2(inch * CM_PER_INCH) : null);
-            size[`${side}In`] = inch ?? (cm !== null ? round2(cm / CM_PER_INCH) : null);
+            const Side = side[0].toUpperCase() + side.slice(1);
+            const primary = toNum(d[side], label(side));
+            const secondary = toNum(d[`secondary${Side}`], label(`${side} (second unit)`));
+            size[side] = primary ?? (secondary !== null ? convert(secondary, secondaryUnit, unit) : null);
+            size[`secondary${Side}`] = secondary ?? (primary !== null ? convert(primary, unit, secondaryUnit) : null);
         }
         const weight = toNum(d.weight, label("weight"));
 
-        if ([...Object.values(size), weight].some((v) => v !== null)) {
+        const sizes = ["width", "height", "depth", "secondaryWidth", "secondaryHeight", "secondaryDepth"].map((key) => size[key]);
+        if ([...sizes, weight].some((v) => v !== null)) {
             dimension = {
                 ...size,
                 weight,

@@ -66,11 +66,29 @@ const buildWhere = ({ search, auctionUuid, categoryUuid, stage }) => {
     return where;
 };
 
-const DIMENSION_SELECT = { widthCm: true, heightCm: true, depthCm: true, widthIn: true, heightIn: true, depthIn: true };
+const DIMENSION_SELECT = {
+    width: true,
+    height: true,
+    depth: true,
+    dimensionUnit: true,
+    secondaryWidth: true,
+    secondaryHeight: true,
+    secondaryDepth: true,
+    secondaryDimensionUnit: true,
+};
 
 const dimensionOf = (dimension) =>
     dimension
-        ? Object.fromEntries(Object.keys(DIMENSION_SELECT).map((key) => [key, decimal(dimension[key])]))
+        ? {
+              width: decimal(dimension.width),
+              height: decimal(dimension.height),
+              depth: decimal(dimension.depth),
+              dimensionUnit: dimension.dimensionUnit,
+              secondaryWidth: decimal(dimension.secondaryWidth),
+              secondaryHeight: decimal(dimension.secondaryHeight),
+              secondaryDepth: decimal(dimension.secondaryDepth),
+              secondaryDimensionUnit: dimension.secondaryDimensionUnit,
+          }
         : null;
 
 const ARTWORK_SELECT = {

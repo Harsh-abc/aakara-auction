@@ -165,7 +165,16 @@ export const getPublicAuctionService = async ({ auctionUuid }) => {
     return serializeBigInt(toPublicAuction(auction));
 };
 
-const DIMENSION_SELECT = { widthCm: true, heightCm: true, depthCm: true, widthIn: true, heightIn: true, depthIn: true };
+const DIMENSION_SELECT = {
+    width: true,
+    height: true,
+    depth: true,
+    dimensionUnit: true,
+    secondaryWidth: true,
+    secondaryHeight: true,
+    secondaryDepth: true,
+    secondaryDimensionUnit: true,
+};
 
 const LOT_ORDER = {
     lot: [{ itemNumber: "asc" }],

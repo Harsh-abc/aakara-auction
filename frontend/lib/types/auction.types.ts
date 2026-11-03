@@ -69,6 +69,8 @@ export type MediaType = "IMAGE" | "VIDEO";
 
 export type EditionType = "UNIQUE" | "LIMITED" | "OPEN";
 
+export type DimensionUnit = "CM" | "INCH" | "MM" | "METER" | "FEET";
+
 export type WeightUnit = "KG" | "GRAM" | "LB" | "OZ";
 
 export type AuctionTag = string;
@@ -106,12 +108,14 @@ export interface AuctionDocument {
 }
 
 export interface AuctionDimension {
-    widthCm: number | string | null;
-    heightCm: number | string | null;
-    depthCm: number | string | null;
-    widthIn: number | string | null;
-    heightIn: number | string | null;
-    depthIn: number | string | null;
+    width: number | string | null;
+    height: number | string | null;
+    depth: number | string | null;
+    dimensionUnit: DimensionUnit;
+    secondaryWidth: number | string | null;
+    secondaryHeight: number | string | null;
+    secondaryDepth: number | string | null;
+    secondaryDimensionUnit: DimensionUnit;
     weight: number | string | null;
     weightUnit: WeightUnit | null;
 }

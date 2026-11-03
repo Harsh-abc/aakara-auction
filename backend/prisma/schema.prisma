@@ -502,15 +502,17 @@ model AuctionItemDimension {
 
   auctionItemId BigInt @unique
 
-  /// Size in both catalogue units — entered side by side, the other side
-  /// auto-filled from the conversion unless typed in by hand
-  widthCm  Decimal? @db.Decimal(10, 2)
-  heightCm Decimal? @db.Decimal(10, 2)
-  depthCm  Decimal? @db.Decimal(10, 2)
+  /// The size in two units, each with its own unit (cm and inches by default) —
+  /// entered side by side, one auto-filled from the other unless typed by hand
+  width         Decimal?      @db.Decimal(10, 2)
+  height        Decimal?      @db.Decimal(10, 2)
+  depth         Decimal?      @db.Decimal(10, 2)
+  dimensionUnit DIMENSIONUNIT @default(CM)
 
-  widthIn  Decimal? @db.Decimal(10, 2)
-  heightIn Decimal? @db.Decimal(10, 2)
-  depthIn  Decimal? @db.Decimal(10, 2)
+  secondaryWidth         Decimal?      @db.Decimal(10, 2)
+  secondaryHeight        Decimal?      @db.Decimal(10, 2)
+  secondaryDepth         Decimal?      @db.Decimal(10, 2)
+  secondaryDimensionUnit DIMENSIONUNIT @default(INCH)
 
   weight     Decimal?    @db.Decimal(10, 2)
   weightUnit WEIGHTUNIT?
@@ -957,6 +959,14 @@ enum EDITIONTYPE {
 enum MEDIATYPE {
   IMAGE
   VIDEO
+}
+
+enum DIMENSIONUNIT {
+  CM
+  INCH
+  MM
+  METER
+  FEET
 }
 
 enum WEIGHTUNIT {
