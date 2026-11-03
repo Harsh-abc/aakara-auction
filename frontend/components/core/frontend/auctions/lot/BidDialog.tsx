@@ -1,5 +1,6 @@
 "use client"
 
+import { XIcon } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, type ReactNode } from "react"
 import toast from "react-hot-toast"
@@ -15,6 +16,7 @@ import { getMyLotStanding, placeBid, setProxyBid } from "@/services/operations/b
 
 import { auctionHref } from "../auctionDisplay"
 import { formatMoney, lotHeading } from "../detail/lotDisplay"
+import { AmountSelect } from "./AmountSelect"
 import { bidCountLabel, lotTag, UPCOMING_LOT_STATUSES } from "./lotPageDisplay"
 import type { BidKind } from "./useBidAction"
 
@@ -22,8 +24,11 @@ const SMALL_CAPS = "text-[10px] uppercase tracking-[0.18em]"
 const ACTION =
     "inline-flex h-11 cursor-pointer items-center justify-center px-6 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
 
-// "1,50,000" / "150000.5" → 150000.5; anything else → NaN
-const parseAmount = (value: string) => (value.trim() ? Number(value.replace(/[,\s]/g, "")) : NaN)
+// the amounts, plus `amount` in its place when it isn't one of them
+const withAmount = (amounts: string[], amount: string | null) =>
+    amount === null || amounts.some((option) => Number(option) === Number(amount))
+        ? amounts
+        : [...amounts, amount].sort((a, b) => Number(a) - Number(b))
 
 type BidDialogProps = {
     auctionUuid: string
@@ -43,9 +48,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     const [standing, setStanding] = useState<MyLotStanding | null>(null)
     const [loadError, setLoadError] = useState<{ lotUuid: string; message: string } | null>(null)
     const [reload, setReload] = useState(0)
-    // the maximum the bidder typed, for this lot and kind only
-    const [typed, setTyped] = useState<{ key: string; value: string }>({ key: "", value: "" })
-    // the bid option the bidder picked, for this lot only ("" = the next valid bid)
+    // the maximum the bidder picked, for this lot only
     const [picked, setPicked] = useState<{ key: string; amount: string }>({ key: "", amount: "" })
     // the amount waiting on the bidder's confirmation
     const [confirming, setConfirming] = useState<number | null>(null)
@@ -88,13 +91,6 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     const error = !current && loadError?.lotUuid === lot.uuid ? loadError.message : null
     const money = (amount: string | number | null) => formatMoney(amount, current?.currency ?? lot.currency) ?? "—"
 
-    const inputKey = `${lot.uuid}:${kind}`
-    // a new bid moves the options up; a pick that's no longer offered falls back to the next valid bid
-    const options = kind === "bid" ? current?.bidOptions ?? [] : []
-    const pickedAmount = picked.key === inputKey && options.includes(picked.amount) ? picked.amount : options[0] ?? ""
-    const value = kind === "bid" ? pickedAmount : typed.key === inputKey ? typed.value : ""
-    const amount = parseAmount(value)
-
     const count = Number(current?.bidCount ?? lot.bidCount) || 0
     const verified = current?.registration === "VERIFIED"
     const allowed = kind === "bid" ? current?.canBid : current?.canProxy
@@ -104,6 +100,19 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     // the bidder's proxy, changeable until the lot opens and locked after
     const proxyMax = kind === "proxy" ? current?.proxyMax ?? null : null
     const proxyLocked = Boolean(proxyMax) && !proxyOpen
+
+    // the maximums on offer, with the bidder's current one among them
+    const proxyOptions = kind === "proxy" ? withAmount(current?.proxyOptions ?? [], proxyMax) : []
+    // a bid is always the next valid bid; a proxy is the maximum picked (the current one until another is picked).
+    // a new bid moves the options up — a pick that's no longer offered falls back
+    const pickKey = `${lot.uuid}:${kind}`
+    const value =
+        kind === "bid"
+            ? current?.nextBid ?? ""
+            : picked.key === pickKey && proxyOptions.includes(picked.amount)
+              ? picked.amount
+              : proxyMax ?? proxyOptions[0] ?? ""
+    const amount = value ? Number(value) : NaN
     const sameAsProxy = proxyMax !== null && amount === Number(proxyMax)
 
     // why this kind of bid can't be placed right now (null = it can)
@@ -193,7 +202,6 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
             // topped straight away by someone's proxy: say so, but it isn't an error
             if (data.leading || data.status !== "ACTIVE") toast.success(message)
             else toast(message, { icon: "⚠️" })
-            setTyped({ key: "", value: "" })
             setPicked({ key: "", amount: "" })
             setConfirming(null)
             onSaved?.()
@@ -219,157 +227,124 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     const rows = current
         ? [
               { term: count > 0 ? `Current bid · ${bidCountLabel(count)}` : "Starting bid", value: money(count > 0 ? current.currentBid : lot.startingPrice) },
-              current.nextBid ? { term: "Next valid bid", value: money(current.nextBid) } : null,
-              current.paddleNumber ? { term: "Your paddle", value: current.paddleNumber } : null,
-              count > 0 && verified ? { term: "Your position", value: current.leading ? "Highest bidder" : "Not leading" } : null,
               current.proxyMax ? { term: "Your maximum bid", value: money(current.proxyMax) } : null,
           ].filter((row): row is { term: string; value: string } => row !== null)
         : []
 
     return (
         <Dialog open onOpenChange={handleOpenChange}>
-            <DialogContent ref={setBidPanel} className="max-h-[90dvh] gap-0 overflow-y-auto rounded-none p-0 sm:max-w-md">
-                <DialogHeader className="border-b border-neutral-200 p-6 pr-12">
-                    <p className={cn(SMALL_CAPS, "text-neutral-500")}>{lotTag(lot)}</p>
-                    <DialogTitle className="text-xl leading-snug font-light text-neutral-950">{lotHeading(lot)}</DialogTitle>
-                    <DialogDescription className="sr-only">
-                        {kind === "bid" ? "Place a bid on this lot" : "Set the most you're willing to pay for this lot"}
-                    </DialogDescription>
-
-                    {/* bid now / proxy (proxy closes once the lot opens) */}
-                    <div className="mt-4 grid grid-cols-2 border border-neutral-950" role="tablist">
-                        {(["bid", "proxy"] as const).map((option) => {
-                            const closed = option === "proxy" && !proxyOpen && kind !== "proxy"
-                            return (
-                                <button
-                                    key={option}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={kind === option}
-                                    onClick={() => onKindChange(option)}
-                                    disabled={submitting || closed}
-                                    title={closed ? "Proxy bids close when the lot opens" : undefined}
-                                    className={cn(
-                                        "h-9 cursor-pointer text-[11px] tracking-[0.18em] uppercase transition-colors disabled:cursor-not-allowed disabled:text-neutral-400",
-                                        kind === option ? "bg-neutral-950 text-white" : "bg-white text-neutral-950 not-disabled:hover:bg-neutral-50"
-                                    )}
-                                >
-                                    {option === "bid" ? "Place bid" : "Proxy bid"}
-                                </button>
-                            )
-                        })}
-                    </div>
-                </DialogHeader>
+            <DialogContent ref={setBidPanel} showCloseButton={false} className="max-h-[90dvh] gap-0 overflow-y-auto rounded-none p-6 sm:max-w-md">
+                <div className="flex items-start justify-between gap-4 border-b border-neutral-200 pb-5">
+                    <DialogHeader className="gap-2">
+                        <p className={cn(SMALL_CAPS, "text-neutral-500")}>
+                            {kind === "bid" ? "Place a bid" : "Proxy bid"} · {lotTag(lot)}
+                        </p>
+                        <DialogTitle className="text-lg leading-snug font-normal text-neutral-950">{lotHeading(lot)}</DialogTitle>
+                        <DialogDescription className="sr-only">
+                            {kind === "bid" ? "Place a bid on this lot" : "Set the most you're willing to pay for this lot"}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <button
+                        type="button"
+                        onClick={() => handleOpenChange(false)}
+                        disabled={submitting}
+                        aria-label="Close"
+                        className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center border border-neutral-300 text-neutral-950 transition-colors not-disabled:hover:border-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <XIcon className="size-4" strokeWidth={1.5} />
+                    </button>
+                </div>
 
                 {error ? (
-                    <p className="p-6 text-sm text-red-600">{error}</p>
+                    <p className="pt-5 text-sm text-red-600">{error}</p>
                 ) : !current ? (
-                    <div className="space-y-3 p-6">
-                        <Skeleton className="h-10 w-full rounded-none" />
-                        <Skeleton className="h-10 w-full rounded-none" />
+                    <div className="space-y-3 pt-5">
+                        <Skeleton className="h-5 w-full rounded-none" />
+                        <Skeleton className="h-11 w-full rounded-none" />
                         <Skeleton className="h-11 w-full rounded-none" />
                     </div>
                 ) : (
-                    <div className="p-6">
-                        <dl className="divide-y divide-neutral-200 border-y border-neutral-200">
+                    <>
+                        <dl className="mt-5 space-y-2">
                             {rows.map(({ term, value: rowValue }) => (
-                                <div key={term} className="flex min-h-10 items-center justify-between gap-4 py-2">
-                                    <dt className={cn(SMALL_CAPS, "text-neutral-500")}>{term}</dt>
-                                    <dd className="text-right text-sm font-medium text-neutral-950">{rowValue}</dd>
+                                <div key={term} className="flex items-center justify-between gap-4">
+                                    <dt className="text-xs text-neutral-500">{term}</dt>
+                                    <dd className="text-right text-sm text-neutral-950 tabular-nums">{rowValue}</dd>
                                 </div>
                             ))}
                         </dl>
 
                         {blocker ? (
-                            <p className="mt-5 text-sm leading-relaxed text-neutral-600">{blocker}</p>
+                            <p className="mt-6 text-sm leading-relaxed text-neutral-600">{blocker}</p>
                         ) : leadingOnBid ? (
-                            <p className="mt-5 text-sm leading-relaxed text-neutral-600">You&apos;re the highest bidder.</p>
+                            <p className="mt-6 text-sm leading-relaxed text-neutral-600">You&apos;re the highest bidder.</p>
                         ) : kind === "bid" ? (
-                            <div className="mt-5">
-                                <p id="bid-options-label" className={cn(SMALL_CAPS, "text-neutral-500")}>
-                                    Choose your bid
-                                </p>
-                                <div role="radiogroup" aria-labelledby="bid-options-label" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                                    {options.map((option) => {
-                                        const selected = option === pickedAmount
-                                        return (
-                                            <button
-                                                key={option}
-                                                type="button"
-                                                role="radio"
-                                                aria-checked={selected}
-                                                onClick={() => setPicked({ key: inputKey, amount: option })}
-                                                disabled={submitting}
-                                                className={cn(
-                                                    "h-12 cursor-pointer border px-2 text-sm font-medium tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                                                    selected
-                                                        ? "border-neutral-950 bg-neutral-950 text-white"
-                                                        : "border-neutral-300 bg-white text-neutral-950 not-disabled:hover:border-neutral-950"
-                                                )}
-                                            >
-                                                {money(option)}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                                <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-                                    Bids follow the auction&apos;s increments. Bids are binding and can&apos;t be withdrawn.
+                            <div className="mt-6">
+                                <p className={cn(SMALL_CAPS, "text-neutral-500")}>Your bid</p>
+                                <button
+                                    type="button"
+                                    onClick={review}
+                                    disabled={!canSubmit}
+                                    className={cn(ACTION, "mt-3 w-full justify-between bg-neutral-950 px-5 text-white not-disabled:hover:bg-neutral-800")}
+                                >
+                                    <span>Next bid</span>
+                                    <span className="tracking-widest tabular-nums">{money(current.nextBid)}</span>
+                                </button>
+                                <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+                                    Bids rise in set increments. Minimum next bid {money(current.nextBid)}.
                                 </p>
                             </div>
                         ) : (
-                            <div className="mt-5">
+                            <div className="mt-6">
                                 <label htmlFor="bid-amount" className={cn(SMALL_CAPS, "text-neutral-500")}>
-                                    {proxyMax ? "Your new maximum bid" : "Your maximum bid"}
+                                    Maximum bid amount
                                 </label>
-                                <div className="mt-2 flex h-12 items-center border border-neutral-300 bg-white focus-within:border-neutral-950">
-                                    <span className="pl-3 text-sm text-neutral-500">{current.currency.symbol ?? current.currency.code}</span>
-                                    <input
-                                        id="bid-amount"
-                                        inputMode="decimal"
-                                        autoComplete="off"
-                                        value={value}
-                                        onChange={(event) => setTyped({ key: inputKey, value: event.target.value })}
-                                        onKeyDown={(event) => {
-                                            if (event.key === "Enter") review()
-                                        }}
-                                        placeholder={current.nextBid ? `${Number(current.nextBid)} or more` : ""}
-                                        disabled={submitting}
-                                        className="h-full w-full bg-transparent px-2 text-base text-neutral-950 outline-none placeholder:text-neutral-400"
-                                    />
-                                </div>
-                                {sameAsProxy && <p className="mt-2 text-xs text-red-600">That&apos;s already your maximum bid.</p>}
-                                <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+                                <AmountSelect
+                                    id="bid-amount"
+                                    value={value}
+                                    options={proxyOptions}
+                                    onChange={(next) => setPicked({ key: pickKey, amount: next })}
+                                    format={money}
+                                    disabled={submitting}
+                                    className="mt-3"
+                                />
+                                {sameAsProxy && (
+                                    <p className="mt-2 text-xs text-neutral-500">This is your current maximum. Pick another amount to change it.</p>
+                                )}
+                                <p className="mt-3 text-xs leading-relaxed text-neutral-500">
                                     When the auctioneer calls the hammer, your maximum is placed for you: if it&apos;s the highest, you win at one
                                     increment above the standing bid — never above your maximum. The highest maximum always wins; if two bidders leave the same maximum, the one
                                     who set it first wins (a changed maximum counts from when it was changed). Other bidders don&apos;t see it. You
                                     can change it until the lot opens; after that it&apos;s locked.
                                 </p>
+                                <button
+                                    type="button"
+                                    onClick={review}
+                                    disabled={!canSubmit}
+                                    className={cn(ACTION, "mt-4 w-full bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}
+                                >
+                                    {amount > 0 ? `${proxyMax ? "Update" : "Set"} maximum ${money(amount)}` : proxyMax ? "Update maximum" : "Set maximum"}
+                                </button>
                             </div>
                         )}
-                    </div>
-                )}
 
-                <div className="flex flex-col-reverse gap-3 border-t border-neutral-200 p-6 sm:flex-row sm:justify-end">
-                    <button
-                        type="button"
-                        onClick={() => handleOpenChange(false)}
-                        disabled={submitting}
-                        className={cn(ACTION, "border border-neutral-950 bg-white text-neutral-950 not-disabled:hover:bg-neutral-50")}
-                    >
-                        Cancel
-                    </button>
-                    <button type="button" onClick={review} disabled={!canSubmit} className={cn(ACTION, "bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}>
-                        {kind === "bid"
-                            ? amount > 0
-                                ? `Bid ${money(amount)}`
-                                : "Place bid"
-                            : amount > 0
-                              ? `${proxyMax ? "Update" : "Set"} maximum ${money(amount)}`
-                              : proxyMax
-                                ? "Update maximum"
-                                : "Set maximum"}
-                    </button>
-                </div>
+                        {/* or leave a proxy instead (proxy closes once the lot opens) */}
+                        {kind === "bid" && (
+                            <>
+                                <p className={cn(SMALL_CAPS, "mt-4 text-center text-neutral-400")}>or</p>
+                                <button
+                                    type="button"
+                                    onClick={() => onKindChange("proxy")}
+                                    disabled={submitting || !proxyOpen}
+                                    title={proxyOpen ? undefined : "Proxy bids close when the lot opens"}
+                                    className={cn(ACTION, "mt-4 w-full border border-neutral-950 bg-white text-neutral-950 not-disabled:hover:bg-neutral-50")}
+                                >
+                                    Proxy bid
+                                </button>
+                            </>
+                        )}
+                    </>
+                )}
 
                 {/* last look before the bid is sent */}
                 <Dialog open={confirming !== null} onOpenChange={handleConfirmOpenChange}>

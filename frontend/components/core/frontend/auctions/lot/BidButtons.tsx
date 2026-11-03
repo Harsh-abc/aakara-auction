@@ -50,12 +50,14 @@ export function BidButtons({
     onBid,
     refreshKey = 0,
     bidHref,
+    bidLabel = "Place bid",
     className,
 }: {
     lot: PublicLot
     onBid: OnBid
     refreshKey?: number
     bidHref?: string
+    bidLabel?: string
     className?: string
 }) {
     const proxyOpen = isUpcomingLot(lot)
@@ -66,11 +68,11 @@ export function BidButtons({
         <div className={cn("flex flex-col gap-2", className)}>
             {bidHref && !isClosedLot(lot) ? (
                 <Link href={bidHref} className={cn(BUTTON, BUTTON_SOLID)}>
-                    Place bid
+                    {bidLabel}
                 </Link>
             ) : (
                 <button type="button" onClick={() => onBid("bid", lot)} disabled={lot.status !== "ACTIVE"} className={cn(BUTTON, BUTTON_SOLID)}>
-                    Place bid
+                    {bidLabel}
                 </button>
             )}
             <button

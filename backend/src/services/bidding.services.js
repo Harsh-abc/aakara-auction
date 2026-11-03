@@ -2,17 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import prisma from "../libs/prisma.js";
 import redis from "../libs/redis.js";
-import {
-    AUCTION_STATUS_TTL_SECONDS,
-    ELIGIBLE_SENTINEL,
-    ELIGIBLE_TTL_SECONDS,
-    auctionKeyList,
-    bidKeys,
-    hydrateLotState,
-    lotKeyList,
-    readLotState,
-    runBidEngine,
-} from "../libs/biddingStore.js";
+import { AUCTION_STATUS_TTL_SECONDS, ELIGIBLE_SENTINEL, ELIGIBLE_TTL_SECONDS, auctionKeyList, bidKeys, hydrateLotState, lotKeyList, readLotState, runBidEngine } from "../libs/biddingStore.js";
 import { emitTo, rooms } from "../libs/socket.js";
 import { bidOptions, nextValidBid } from "../utils/bidIncrement.js";
 import { serializeBigInt } from "../utils/serialize.js";
@@ -41,6 +31,9 @@ const httpError = (message, statusCode = 400, details) => {
 
 /** Auctions whose lots take bids (LIVE) or proxy bids (any of these) */
 export const BIDDING_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
+
+/** How many steps of the increment chart the proxy (maximum) bid dropdown offers */
+const PROXY_OPTION_COUNT = 10;
 
 /** Auctions whose bid history is written to the database and cleared from Redis */
 const FINISHED_AUCTION_STATUSES = ["ENDED", "SETTLED", "CANCELLED"];
@@ -143,7 +136,7 @@ const staticFields = (lot) => {
                 rangeMin: decimalOrNull(rule.rangeMin),
                 rangeMax: decimalOrNull(rule.rangeMax),
                 value: Number(rule.value),
-            }))
+            })),
         ),
     };
 };
@@ -160,8 +153,7 @@ const savedPosition = (lot) => {
     };
 };
 
-const setAuctionStatusCache = (auctionUuid, status) =>
-    redis.set(bidKeys.auctionStatus(auctionUuid), status, "EX", AUCTION_STATUS_TTL_SECONDS);
+const setAuctionStatusCache = (auctionUuid, status) => redis.set(bidKeys.auctionStatus(auctionUuid), status, "EX", AUCTION_STATUS_TTL_SECONDS);
 
 const ensureAuctionStatus = async (auctionUuid) => {
     const cached = await redis.get(bidKeys.auctionStatus(auctionUuid));
@@ -186,11 +178,7 @@ const restoreProxies = async (lotUuid, lotId) => {
 
     const pipe = redis.pipeline();
     for (const row of rows) {
-        pipe.hsetnx(
-            bidKeys.proxies(lotUuid),
-            row.bidderId.toString(),
-            JSON.stringify({ max: Number(row.maxAmount), at: row.createdAt.getTime() })
-        );
+        pipe.hsetnx(bidKeys.proxies(lotUuid), row.bidderId.toString(), JSON.stringify({ max: Number(row.maxAmount), at: row.createdAt.getTime() }));
     }
     await pipe.exec();
 };
@@ -221,11 +209,7 @@ const ensureLotState = async (lotUuid) => {
 
 const isVerifiedBidder = async (lotUuid, lotId, userId) => {
     const key = bidKeys.eligible(lotUuid);
-    const [[, loaded], [, member]] = await redis
-        .pipeline()
-        .sismember(key, ELIGIBLE_SENTINEL)
-        .sismember(key, String(userId))
-        .exec();
+    const [[, loaded], [, member]] = await redis.pipeline().sismember(key, ELIGIBLE_SENTINEL).sismember(key, String(userId)).exec();
     if (loaded) return member === 1;
 
     const rows = await prisma.lotBidder.findMany({
@@ -262,9 +246,7 @@ const notVerifiedError = async (lotId, userId) => {
     if (account.kyc?.status !== "VERIFIED") {
         return httpError("Your KYC must be verified before you can bid. Check your profile for documents to resubmit.", 403);
     }
-    return row
-        ? httpError("Your registration for this lot is awaiting verification by the auction house", 403)
-        : httpError("Register for this auction to bid on its lots", 403);
+    return row ? httpError("Your registration for this lot is awaiting verification by the auction house", 403) : httpError("Register for this auction to bid on its lots", 403);
 };
 
 /**
@@ -274,11 +256,7 @@ const notVerifiedError = async (lotId, userId) => {
  */
 export const invalidateBidderAccess = async ({ auctionId, lotUuids, revokedUserIds = [] }) => {
     try {
-        const uuids =
-            lotUuids ??
-            (await prisma.auctionItem.findMany({ where: { auctionId: BigInt(auctionId) }, select: { uuid: true } })).map(
-                (lot) => lot.uuid
-            );
+        const uuids = lotUuids ?? (await prisma.auctionItem.findMany({ where: { auctionId: BigInt(auctionId) }, select: { uuid: true } })).map((lot) => lot.uuid);
         if (uuids.length === 0) return;
 
         const pipe = redis.pipeline();
@@ -335,7 +313,7 @@ const biddersById = async (auctionUuid, auctionId, userIds) => {
     await Promise.all(
         ids.map(async (id, index) => {
             result.set(id, cached[index] ? JSON.parse(cached[index]) : await loadBidder(auctionUuid, auctionId, id));
-        })
+        }),
     );
     return result;
 };
@@ -360,12 +338,7 @@ const liveView = (lotUuid, state) => {
     const nextBid =
         state.nextBid !== undefined && state.nextBid !== ""
             ? String(state.nextBid)
-            : String(
-                  nextValidBid(
-                      { startingPrice: state.startingPrice, currentBid, bidCount: count },
-                      JSON.parse(state.rules || "[]")
-                  )
-              );
+            : String(nextValidBid({ startingPrice: state.startingPrice, currentBid, bidCount: count }, JSON.parse(state.rules || "[]")));
     return {
         auctionUuid: state.auctionUuid,
         lotUuid,
@@ -379,11 +352,7 @@ const liveView = (lotUuid, state) => {
 };
 
 const readStats = async (auctionUuid) => {
-    const [[, stats], [, bidders]] = await redis
-        .pipeline()
-        .hgetall(bidKeys.auctionStats(auctionUuid))
-        .zcard(bidKeys.auctionCounts(auctionUuid))
-        .exec();
+    const [[, stats], [, bidders]] = await redis.pipeline().hgetall(bidKeys.auctionStats(auctionUuid)).zcard(bidKeys.auctionCounts(auctionUuid)).exec();
     return {
         totalBids: Number(stats.total) || 0,
         manualBids: Number(stats.manual) || 0,
@@ -409,7 +378,7 @@ const broadcastLot = async (lotUuid, state, result = null) => {
         const update = {
             ...publicView,
             currency: currencyOf(state),
-            leadingPaddle: leaderId ? bidders.get(leaderId)?.paddle ?? null : null,
+            leadingPaddle: leaderId ? (bidders.get(leaderId)?.paddle ?? null) : null,
             // newest first, like the ladder; bidders by paddle only
             bids: bids.map((bid) => ({ ...toPublicBid(lotUuid, bid), paddle: bidders.get(String(bid.u))?.paddle ?? null })).reverse(),
         };
@@ -422,9 +391,7 @@ const broadcastLot = async (lotUuid, state, result = null) => {
                 title: state.title,
                 // the console's quick increments: the next ask and the two steps above it
                 bidOptions: bidOptions(view.nextBid, JSON.parse(state.rules || "[]")).map(String),
-                bids: bids
-                    .map((bid) => ({ ...toPublicBid(lotUuid, bid), bidder: bidders.get(String(bid.u)) ?? null }))
-                    .reverse(),
+                bids: bids.map((bid) => ({ ...toPublicBid(lotUuid, bid), bidder: bidders.get(String(bid.u)) ?? null })).reverse(),
                 stats: await readStats(auctionUuid),
             });
         }
@@ -530,9 +497,7 @@ export const placeBidService = async ({ lotUuid, userId, amount, ip, userAgent }
     const { lot, result } = await runForUser({ mode: "BID", lotUuid, userId, amount, ip, userAgent });
     const money = (value) => formatMoney(value, lot.currencyCode);
     return {
-        message: result.leading
-            ? `Your bid of ${money(amount)} is the highest bid`
-            : `Your bid of ${money(amount)} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
+        message: result.leading ? `Your bid of ${money(amount)} is the highest bid` : `Your bid of ${money(amount)} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
         data: result,
     };
 };
@@ -575,9 +540,7 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
     } catch (error) {
         // the lot hasn't opened, so the proxy hasn't bid — safe to put back as it was
         const key = bidKeys.proxies(lotUuid);
-        const restore = prevProxy
-            ? redis.hset(key, String(userId), JSON.stringify({ max: prevProxy.max, at: prevProxy.at }))
-            : redis.hdel(key, String(userId));
+        const restore = prevProxy ? redis.hset(key, String(userId), JSON.stringify({ max: prevProxy.max, at: prevProxy.at })) : redis.hdel(key, String(userId));
         await restore.catch(() => {});
         throw error;
     }
@@ -670,10 +633,10 @@ export const executeProxiesService = async ({ lotUuid }) => {
 
     const view = liveView(lotUuid, merged);
     const bidders = await biddersById(lot.auctionUuid, lot.auctionId, [view.leaderId]);
-    const leader = view.leaderId ? bidders.get(String(view.leaderId)) ?? null : null;
+    const leader = view.leaderId ? (bidders.get(String(view.leaderId)) ?? null) : null;
     const proxyCount = await redis.hlen(bidKeys.proxies(lotUuid));
     const money = (value) => formatMoney(value, lot.currencyCode);
-    const who = leader?.paddle ? `Paddle #${leader.paddle}` : leader?.name ?? "the top bidder";
+    const who = leader?.paddle ? `Paddle #${leader.paddle}` : (leader?.name ?? "the top bidder");
 
     let message;
     if (result.bids.length > 0) message = `Proxy bid placed — ${who} leads at ${money(view.currentBid)}`;
@@ -747,11 +710,13 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
     if (state) {
         const view = liveView(lotUuid, state);
         const proxy = await redis.hget(bidKeys.proxies(lotUuid), String(userId));
+        const rules = JSON.parse(state.rules || "[]");
         position = {
             currentBid: view.currentBid,
             bidCount: view.bidCount,
             nextBid: biddingOpen ? view.nextBid : null,
-            bidOptions: biddingOpen ? bidOptions(view.nextBid, JSON.parse(state.rules || "[]")).map(String) : [],
+            bidOptions: biddingOpen ? bidOptions(view.nextBid, rules).map(String) : [],
+            proxyOptions: biddingOpen ? bidOptions(view.nextBid, rules, PROXY_OPTION_COUNT).map(String) : [],
             leading: view.leaderId === String(userId),
             proxyMax: proxy ? String(JSON.parse(proxy).max) : null,
         };
@@ -762,17 +727,14 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
             bidCount: String(count),
             nextBid: null,
             bidOptions: [],
+            proxyOptions: [],
             leading: count > 0 && lot.currentBidderId === user,
             proxyMax: null,
         };
     }
 
     const bidder = lot.bidders[0]?.user;
-    const verified =
-        registration === "VERIFIED" &&
-        bidder?.status === "ACTIVE" &&
-        bidder?.role.name === "BIDDER" &&
-        bidder?.kyc?.status === "VERIFIED";
+    const verified = registration === "VERIFIED" && bidder?.status === "ACTIVE" && bidder?.role.name === "BIDDER" && bidder?.kyc?.status === "VERIFIED";
     return serializeBigInt({
         lotUuid,
         itemNumber: lot.itemNumber,
@@ -833,7 +795,7 @@ export const getLiveLotView = async (lotUuid, ladderSize) => {
         const bidders = await biddersById(state.auctionUuid, state.auctionId, [leaderId, ...bids.map((bid) => bid.u)]);
         return {
             ...view,
-            leadingPaddle: leaderId ? bidders.get(leaderId)?.paddle ?? null : null,
+            leadingPaddle: leaderId ? (bidders.get(leaderId)?.paddle ?? null) : null,
             bids: bids.map((bid) => ({ ...toPublicBid(lotUuid, bid), paddle: bidders.get(String(bid.u))?.paddle ?? null })),
         };
     } catch (error) {
@@ -900,11 +862,7 @@ export const getAuctionActivityService = async ({ auctionUuid }) => {
     const top = [];
     for (let i = 0; i < topRaw.length; i += 2) top.push({ userId: topRaw[i], bids: Number(topRaw[i + 1]) });
 
-    const bidders = await biddersById(auctionUuid, auction.id, [
-        ...feed.map((bid) => bid.u),
-        ...top.map((row) => row.userId),
-        ...proxies.map((proxy) => proxy.userId),
-    ]);
+    const bidders = await biddersById(auctionUuid, auction.id, [...feed.map((bid) => bid.u), ...top.map((row) => row.userId), ...proxies.map((proxy) => proxy.userId)]);
     const bidderOf = (userId) => bidders.get(String(userId)) ?? null;
 
     const since = Date.now() - RECENT_WINDOW_MS;
@@ -926,9 +884,7 @@ export const getAuctionActivityService = async ({ auctionUuid }) => {
             bidder: bidderOf(bid.u),
         })),
         topBidders: top.map(({ userId, bids }) => ({ bidder: bidderOf(userId), bids })),
-        proxies: proxies
-            .sort((a, b) => Number(b.maxAmount) - Number(a.maxAmount))
-            .map(({ userId, ...proxy }) => ({ ...proxy, bidder: bidderOf(userId) })),
+        proxies: proxies.sort((a, b) => Number(b.maxAmount) - Number(a.maxAmount)).map(({ userId, ...proxy }) => ({ ...proxy, bidder: bidderOf(userId) })),
     });
 };
 
@@ -1021,9 +977,7 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
 
     const biddingOpen = BIDDING_AUCTION_STATUSES.includes(auction.status);
     const state = biddingOpen ? await ensureLotState(lotUuid) : await readLotState(lotUuid);
-    const [rawBids, rawProxies] = state
-        ? await Promise.all([redis.lrange(bidKeys.bids(lotUuid), -CONSOLE_LADDER, -1), redis.hgetall(bidKeys.proxies(lotUuid))])
-        : [[], {}];
+    const [rawBids, rawProxies] = state ? await Promise.all([redis.lrange(bidKeys.bids(lotUuid), -CONSOLE_LADDER, -1), redis.hgetall(bidKeys.proxies(lotUuid))]) : [[], {}];
     const ladder = rawBids.map((raw) => JSON.parse(raw)).reverse(); // newest first
     // proxies waiting for the hammer: the console places them when the auctioneer clicks Sell
     const proxyMaxes = Object.values(rawProxies).map((raw) => Number(JSON.parse(raw).max));
@@ -1082,10 +1036,7 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
         position: {
             ...openPosition,
             reserveMet: openPosition.currentBid !== null && (reserve === null || Number(openPosition.currentBid) >= reserve),
-            leader:
-                leaderId && top
-                    ? { ...(bidders.get(String(leaderId)) ?? { uuid: null, paddle: null, name: null }), source: toPublicBid(lotUuid, top).source }
-                    : null,
+            leader: leaderId && top ? { ...(bidders.get(String(leaderId)) ?? { uuid: null, paddle: null, name: null }), source: toPublicBid(lotUuid, top).source } : null,
         },
         bids: ladder.map((bid) => ({ ...toPublicBid(lotUuid, bid), bidder: bidders.get(String(bid.u)) ?? null })),
         floorBidders,
@@ -1111,9 +1062,7 @@ export const getSalesBidSnapshot = async (auctions, { feedSize = 10 } = {}) => {
     const feeds = (await feedPipe.exec()).map(([, raw]) => (raw ?? []).map((bid) => JSON.parse(bid)));
 
     // where each lot stands now (lots in the feeds + each sale's live lot)
-    const lotUuids = [
-        ...new Set([...feeds.flat().map((bid) => bid.lot), ...auctions.map((a) => a.liveLotUuid).filter(Boolean)]),
-    ];
+    const lotUuids = [...new Set([...feeds.flat().map((bid) => bid.lot), ...auctions.map((a) => a.liveLotUuid).filter(Boolean)])];
     const lotPipe = redis.pipeline();
     for (const lotUuid of lotUuids) {
         lotPipe.hmget(bidKeys.lot(lotUuid), "currentBid", "bidCount", "leaderId", "title", "currencyCode", "currencySymbol");
@@ -1133,7 +1082,7 @@ export const getSalesBidSnapshot = async (auctions, { feedSize = 10 } = {}) => {
                     currency: code ? { code, symbol: symbol || null } : null,
                 },
             ];
-        })
+        }),
     );
 
     await Promise.all(
@@ -1141,7 +1090,11 @@ export const getSalesBidSnapshot = async (auctions, { feedSize = 10 } = {}) => {
             const feed = feeds[index];
             const [stats, bidders] = await Promise.all([
                 readStats(uuid),
-                biddersById(uuid, id, feed.map((bid) => bid.u)),
+                biddersById(
+                    uuid,
+                    id,
+                    feed.map((bid) => bid.u),
+                ),
             ]);
             const live = liveLotUuid ? lots.get(liveLotUuid) : null;
 
@@ -1161,7 +1114,7 @@ export const getSalesBidSnapshot = async (auctions, { feedSize = 10 } = {}) => {
                     };
                 }),
             });
-        })
+        }),
     );
 
     return result;
@@ -1192,7 +1145,7 @@ export const readLiveLotBids = async (lotUuids) => {
             raw.map((entry) => {
                 const bid = JSON.parse(entry);
                 return { ...toPublicBid(lotUuid, bid), seq: Number(bid.seq), userId: String(bid.u) };
-            })
+            }),
         );
     });
     return result;
@@ -1378,7 +1331,7 @@ const persistLot = async ({ state, rawBids, rawProxies, auctionStatus }) => {
                 });
             }
         },
-        { maxWait: 10_000, timeout: 60_000 }
+        { maxWait: 10_000, timeout: 60_000 },
     );
 };
 
@@ -1390,11 +1343,7 @@ const persistLot = async ({ state, rawBids, rawProxies, auctionStatus }) => {
  */
 export const saveClosedLotBids = async (lotUuid) => {
     try {
-        const [[, state], [, rawBids]] = await redis
-            .pipeline()
-            .hgetall(bidKeys.lot(lotUuid))
-            .lrange(bidKeys.bids(lotUuid), 0, -1)
-            .exec();
+        const [[, state], [, rawBids]] = await redis.pipeline().hgetall(bidKeys.lot(lotUuid)).lrange(bidKeys.bids(lotUuid), 0, -1).exec();
         if (!state || Object.keys(state).length === 0 || rawBids.length === 0) return;
 
         const lot = await prisma.auctionItem.findUnique({
@@ -1425,12 +1374,7 @@ export const flushAuctionBids = async (auctionUuid) => {
     let bidTotal = 0;
 
     for (const lotUuid of lotUuids) {
-        const [[, state], [, rawBids], [, rawProxies]] = await redis
-            .pipeline()
-            .hgetall(bidKeys.lot(lotUuid))
-            .lrange(bidKeys.bids(lotUuid), 0, -1)
-            .hgetall(bidKeys.proxies(lotUuid))
-            .exec();
+        const [[, state], [, rawBids], [, rawProxies]] = await redis.pipeline().hgetall(bidKeys.lot(lotUuid)).lrange(bidKeys.bids(lotUuid), 0, -1).hgetall(bidKeys.proxies(lotUuid)).exec();
 
         if (state && Object.keys(state).length > 0) {
             await persistLot({ state, rawBids, rawProxies, auctionStatus: auction.status });

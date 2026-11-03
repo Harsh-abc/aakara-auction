@@ -1,124 +1,57 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import Link from "next/link";
-import { ImageOff } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import type { PublicLot } from "@/lib/types/publicAuction.types";
 
-import { formatMoney, lotHeading, lotHref } from "../detail/lotDisplay";
-import { LivePlayer } from "./LivePlayer";
+import { lotHeading } from "../detail/lotDisplay";
 import { Tag } from "./LotTag";
-import { auctioneerCall, closedLabel, isClosedLot, lotTag, lotNo, upNextLot } from "./lotPageDisplay";
+import { isClosedLot, lotNo, upNextLot } from "./lotPageDisplay";
 
 type OrderOfSaleProps = {
-    auctionUuid: string;
     lots: PublicLot[];
-    /** the lot this page is showing */
-    currentLotUuid: string;
     saleClosed: boolean;
-    /** the sale is live — show the auctioneer's video stream */
-    streaming: boolean;
     className?: string;
 };
 
-// what's on the block — the auctioneer's live video (the live lot's image until it starts), with their call under it
-function OnTheBlock({ auctionUuid, lot, saleClosed, streaming }: { auctionUuid: string; lot: PublicLot | null; saleClosed: boolean; streaming: boolean }) {
-    const poster = (
-        <div className="absolute inset-0 flex items-center justify-center">
-            {lot?.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={lot.image} alt={lotHeading(lot)} className="h-full w-full object-contain" />
-            ) : (
-                <ImageOff className="size-6 text-neutral-400" />
-            )}
-        </div>
-    );
-
-    return (
-        <div className="border-b border-[#cecece] p-4">
-            <div className="relative aspect-266/150 overflow-hidden bg-[#ebebeb]">
-                {/* stays mounted between lots, so the stream doesn't drop when one closes */}
-                {streaming ? <LivePlayer auctionUuid={auctionUuid} fallback={poster} /> : poster}
-
-                {lot && (
-                    <>
-                        <span className="absolute top-3 left-4.25 z-2 flex h-5 items-center bg-white px-2.25 text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">
-                            {lotTag(lot)}
-                        </span>
-                        <Tag tone="live" label="Live" className="absolute top-3 right-3 z-2" />
-                    </>
-                )}
-            </div>
-
-            {/* <p className="mt-4 text-[12px] leading-[19.5px] text-[#717171]">
-                {lot ? auctioneerCall(lot) : saleClosed ? "This sale has closed." : "No lot is on the block right now."}
-            </p> */}
-        </div>
-    );
-}
-
-export function OrderOfSale({ auctionUuid, lots, currentLotUuid, saleClosed, streaming, className }: OrderOfSaleProps) {
-    const liveLot = lots.find((lot) => lot.status === "ACTIVE") ?? null;
+// the lots still to sell, in order — hammered lots drop off, so the lot on the block rises to the top.
+// a running order to follow, not a menu: the rows don't link anywhere
+export function OrderOfSale({ lots, saleClosed, className }: OrderOfSaleProps) {
     const upNext = upNextLot(lots);
-    const hammered = lots.filter(isClosedLot).length;
-
-    // bring the lot on the block (or the one being viewed) into the list's view, without moving the page
-    const listRef = useRef<HTMLOListElement>(null);
-    const focusUuid = liveLot?.uuid ?? currentLotUuid;
-    useEffect(() => {
-        const list = listRef.current;
-        const row = list?.querySelector<HTMLElement>(`[data-lot="${focusUuid}"]`);
-        if (list && row) list.scrollTop = Math.max(0, row.offsetTop - list.clientHeight / 3);
-    }, [focusUuid]);
+    const remaining = lots.filter((lot) => !isClosedLot(lot));
+    const stillToCome = remaining.filter((lot) => lot.status !== "ACTIVE").length;
 
     return (
         <aside className={cn("self-start border border-[#cecece] bg-white", className)}>
-            <OnTheBlock auctionUuid={auctionUuid} lot={liveLot} saleClosed={saleClosed} streaming={streaming} />
-
             <div className="flex h-11.25 items-center justify-between border-b border-[#cecece] px-4">
                 <h2 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">Order of sale</h2>
-                <span className="text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">
-                    {hammered} of {lots.length} hammered
-                </span>
+                <span className="text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">{stillToCome} still to come</span>
             </div>
 
-            <ol ref={listRef} className="relative max-h-152 overflow-y-auto">
-                {lots.map((lot) => {
-                    const live = lot.status === "ACTIVE";
-                    const next = lot.uuid === upNext?.uuid;
-                    const closed = isClosedLot(lot);
-                    const current = lot.uuid === currentLotUuid;
-                    const sold = lot.status === "SOLD" ? formatMoney(lot.currentBid, lot.currency) : null;
+            {remaining.length === 0 ? (
+                <p className="px-4 py-3 text-[14px] leading-5 text-[#717171]">{saleClosed ? "This sale has closed." : "Every lot has been hammered."}</p>
+            ) : (
+                <ol className="relative max-h-152 overflow-y-auto">
+                    {remaining.map((lot) => {
+                        const live = lot.status === "ACTIVE";
+                        const next = lot.uuid === upNext?.uuid;
 
-                    return (
-                        <li key={lot.uuid} data-lot={lot.uuid} className={cn("border-b", live ? "border-black" : "border-[#cecece]")}>
-                            <Link
-                                href={lotHref(auctionUuid, lot)}
-                                aria-current={current ? "page" : undefined}
+                        return (
+                            <li
+                                key={lot.uuid}
+                                aria-current={live ? "true" : undefined}
                                 className={cn(
-                                    "flex items-center px-4",
-                                    live ? "h-11.75 bg-[#0d0d0d] text-white" : next ? "h-10.75" : "h-10",
-                                    !live && (current ? "bg-[#f5f5f5]" : "hover:bg-[#fafafa]"),
+                                    "flex items-center border-b px-4",
+                                    live ? "h-11.75 border-black bg-[#0d0d0d] text-white" : cn("border-[#cecece]", next ? "h-10.75" : "h-10"),
                                 )}
                             >
                                 <span className={cn("w-14 shrink-0 text-[11px] leading-[13.2px] tracking-[0.16em] uppercase", live ? "text-white" : "text-[#717171]")}>{lotNo(lot)}</span>
-                                <span className={cn("min-w-0 flex-1 truncate text-[14px] leading-5", live ? "font-medium text-white" : closed ? "text-[#717171]" : "text-[#0d0d0d]")}>
-                                    {lotHeading(lot)}
-                                </span>
-                                {live ? (
-                                    <Tag tone="live" label="Live" className="ml-2" />
-                                ) : next ? (
-                                    <Tag tone="up-next" label="Up next" className="ml-2" />
-                                ) : closed ? (
-                                    <span className="ml-2 shrink-0 text-right text-[12px] leading-4 text-[#717171]">{sold ?? closedLabel(lot)}</span>
-                                ) : null}
-                            </Link>
-                        </li>
-                    );
-                })}
-            </ol>
+                                <span className={cn("min-w-0 flex-1 truncate text-[14px] leading-5", live ? "font-medium text-white" : "text-[#0d0d0d]")}>{lotHeading(lot)}</span>
+                                {next && <Tag tone="up-next" label="Up next" className="ml-2" />}
+                            </li>
+                        );
+                    })}
+                </ol>
+            )}
         </aside>
     );
 }
