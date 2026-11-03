@@ -17,7 +17,7 @@ export const ALL_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS", "AUCTIONEER", "B
 export type RoleName = (typeof ALL_ROLES)[number]
 
 // must match MAX_SUPER_ADMINS in backend/src/services/admin.services.js
-export const MAX_SUPER_ADMINS = 3
+export const MAX_SUPER_ADMINS = 7
 
 export const ROLE_LABELS: Record<RoleName, string> = {
     SUPER_ADMIN: "Super Admin",

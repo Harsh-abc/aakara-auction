@@ -14,7 +14,7 @@ import {
     teamMemberAddedText,
 } from '../mail/templates/teamMemberAdded.js';
 
-const MAX_SUPER_ADMINS = 3;
+const MAX_SUPER_ADMINS = 7;
 
 // roles allowed into the dashboard (frontend/lib/constants/roles.ts DASHBOARD_ROLES)
 export const TEAM_ROLES = ['SUPER_ADMIN', 'ADMIN', 'AUCTIONEER', 'OPERATIONS'];
