@@ -7,14 +7,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, PAGE_MAIN } from "../storefront";
-import { AuctionCountdown } from "./AuctionCountdown";
-import { auctionHref, isLive, STOREFRONT_STATUS_LABELS } from "./auctionDisplay";
+import { auctionHref, STOREFRONT_STATUS_LABELS } from "./auctionDisplay";
 import { saleCountdown } from "./detail/AuctionDetail";
 import { lotHeading } from "./detail/lotDisplay";
 import { BidDialog } from "./lot/BidDialog";
 import { BidLadder } from "./lot/BidLadder";
 import { LotPageMessage } from "./lot/LotPageChrome";
 import { LotSummary } from "./lot/LotSummary";
+import { LotStatusTag, Tag } from "./lot/LotTag";
 import { OrderOfSale } from "./lot/OrderOfSale";
 import { TopLots } from "./lot/TopLots";
 import { lotRange, lotTag } from "./lot/lotPageDisplay";
@@ -64,36 +64,48 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
     const countdown = saleCountdown(auction);
     const saleStatus = (STOREFRONT_STATUS_LABELS[auction.status] ?? auction.status).toLowerCase();
     const subline = [lotRange(lots), auction.auctioneer].filter(Boolean).join(" · ");
+    const liveLot = lots.find((item) => item.status === "ACTIVE") ?? null;
 
     return (
         <main className={PAGE_MAIN}>
-            {/* the room: sale header, order of sale + live video, the lot on view and its ladder */}
+            {/* the room: sale header, order of sale, the lot on view and its ladder */}
             <section>
                 <div className="page-container">
-                    <Breadcrumb crumbs={[{ label: auction.title, href: auctionHref(auction) }, { label: lotTag(lot) }]} />
+                    <Breadcrumb crumbs={[{ label: "Live auction" }]} />
 
-                    <header className="mt-6 flex flex-col gap-4 border-b border-[#cecece] pb-4.25 md:flex-row md:items-end md:justify-between">
+                    <header className="mt-6 flex flex-col gap-4 border-b border-[#cecece] pb-4 md:flex-row md:items-end md:justify-between">
                         <div>
                             <h1 className="text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">{auction.title}</h1>
-                            {subline && <p className={cn(EYEBROW, "mt-1.75")}>{subline}</p>}
+                            {subline && <p className={cn(EYEBROW, "mt-2")}>{subline}</p>}
                         </div>
-                        {countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} className="shrink-0" /> : <span className={EYEBROW}>Sale closed</span>}
+                        <span className={EYEBROW}>{liveLot ? `${lotTag(liveLot)} on the block` : countdown ? "No lot on the block" : "Sale closed"}</span>
                     </header>
 
                     <div className={ROOM_GRID}>
-                        <OrderOfSale auctionUuid={auction.uuid} lots={lots} currentLotUuid={lot.uuid} saleClosed={!countdown} streaming={isLive(auction)} className="order-2 lg:order-1" />
+                        <OrderOfSale lots={lots} saleClosed={!countdown} className="order-2 lg:order-1" />
 
                         <div className="order-1 min-w-0 lg:order-2">
                             <div className={LOT_GRID}>
-                                <div className="flex aspect-square items-center justify-center overflow-hidden">
-                                    {lot.image ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={lot.image} alt={lotHeading(lot)} className="h-full w-full object-contain" />
-                                    ) : (
-                                        <div className="flex h-full w-full items-center justify-center bg-[#ebebeb]">
-                                            <ImageOff className="size-8 text-[#cecece]" />
-                                        </div>
-                                    )}
+                                <div>
+                                    {/* LIVE · LOT 08 over the image */}
+                                    <div className="flex h-8 items-center gap-3">
+                                        {lot.status === "ACTIVE" ? (
+                                            <Tag tone="live" label="Live" className="h-5.5 gap-1.25 px-2.5 text-[12px] tracking-[0.08em]" />
+                                        ) : (
+                                            <LotStatusTag lot={lot} className="h-5.5 gap-1.25 px-2.5" />
+                                        )}
+                                        <span className="text-[12px] leading-4 font-semibold tracking-[0.08em] text-[#0d0d0d] uppercase">{lotTag(lot)}</span>
+                                    </div>
+                                    <div className="mt-3 flex aspect-square items-center justify-center overflow-hidden">
+                                        {lot.image ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={lot.image} alt={lotHeading(lot)} className="h-full w-full object-contain" />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center bg-[#ebebeb]">
+                                                <ImageOff className="size-8 text-[#cecece]" />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} />
                             </div>
@@ -104,12 +116,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                 </div>
             </section>
 
-            {/* a hairline closes the room before the sale-wide table */}
-            <div className="page-container" aria-hidden>
-                <div className="border-t border-[#cecece]" />
-            </div>
-
-            <TopLots auctionUuid={auction.uuid} lots={lots} saleStatus={saleStatus} onBid={onBid} />
+            <TopLots auctionUuid={auction.uuid} lots={lots} saleStatus={saleStatus} countdown={countdown} onBid={onBid} />
 
             <section>
                 <div className="page-container">
@@ -117,7 +124,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <p className={BODY}>Ready to bid on one of these lots? Register once, then bid live or leave a proxy bid.</p>
                         <div className="flex shrink-0 gap-2">
                             <button type="button" onClick={() => onBid(lot.status === "ACTIVE" ? "bid" : "proxy", lot)} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
-                                Place bid
+                                Place a bid
                             </button>
                             <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
                                 Browse all lots

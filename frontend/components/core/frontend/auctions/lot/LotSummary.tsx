@@ -5,8 +5,7 @@ import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
 
 import { formatMoney, lotDetailsHref, lotDimensions, lotEstimate } from "../detail/lotDisplay"
 import { BidButtons, BUTTON, BUTTON_OUTLINE, type OnBid } from "./BidButtons"
-import { LotStatusTag, Tag } from "./LotTag"
-import { bidCountLabel, lotTag } from "./lotPageDisplay"
+import { bidCountLabel } from "./lotPageDisplay"
 
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
 
@@ -40,18 +39,12 @@ export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, className }
 
     return (
         <div className={className}>
-            <div className="flex items-center gap-3">
-                <span className="text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">{lotTag(lot)}</span>
-                {lot.status === "ACTIVE" ? <Tag tone="live" label="Live" /> : <LotStatusTag lot={lot} />}
-            </div>
-
-            <h2 className="mt-3.75 text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">
-                {lot.artistName ?? lot.title}
-            </h2>
-            {lot.artistName && <p className="mt-1.75 text-[18px] leading-7 text-[#0d0d0d]">{lot.title}</p>}
+            {/* the lot number and live tag sit over the image (see LotDetailPage) */}
+            <h2 className="text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">{lot.artistName ?? lot.title}</h2>
+            {lot.artistName && <p className="mt-1 text-[18px] leading-7 text-[#0d0d0d]">{lot.title}</p>}
 
             {facts.length > 0 && (
-                <dl className="mt-6 divide-y divide-[#cecece] border-y border-[#cecece]">
+                <dl className="mt-5 divide-y divide-[#cecece] border-y border-[#cecece]">
                     {facts.map(({ term, value }) => (
                         <div key={term} className="flex min-h-9.25 items-center justify-between gap-4 py-2">
                             <dt className={cn(SMALL_CAPS, "text-[#717171]")}>{term}</dt>
@@ -61,7 +54,7 @@ export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, className }
                 </dl>
             )}
 
-            <div className="mt-5 flex items-start justify-between gap-4">
+            <div className="mt-5 flex items-end justify-between gap-4">
                 <div>
                     <p className={cn(SMALL_CAPS, "text-[#717171]")}>{bidHeading(lot, count)}</p>
                     <p className="mt-px text-[30px] leading-9 font-medium text-[#0d0d0d]">{amount}</p>
@@ -74,8 +67,8 @@ export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, className }
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} className="mt-5" />
-            <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(BUTTON, BUTTON_OUTLINE, "mt-2")}>
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidLabel="Place a bid" className="mt-5" />
+            <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(BUTTON, BUTTON_OUTLINE, "mt-3")}>
                 View full lot
             </Link>
         </div>

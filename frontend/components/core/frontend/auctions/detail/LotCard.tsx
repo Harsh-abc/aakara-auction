@@ -112,10 +112,10 @@ export function LotRow({ lot, auctionUuid, gallery }: LotProps) {
                 <LotText lot={lot} />
             </div>
             {/* stacked: gallery button on top, View pinned to the bottom of the row */}
-            <div className="col-span-2 flex flex-col gap-2 sm:col-span-1 sm:self-stretch">
+            <div className="col-span-2 flex flex-col justify-center gap-2 sm:col-span-1 sm:self-stretch">
                 {gallery && <GalleryButton lot={lot} gallery={gallery} className="w-full" />}
                 {/* <Link href={lotHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, !gallery && "flex-1")}> */}
-                <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, "mt-auto w-full")}>
+                <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(VIEW_BUTTON, "w-full")}>
                     View
                 </Link>
             </div>
