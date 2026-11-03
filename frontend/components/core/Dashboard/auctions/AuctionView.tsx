@@ -40,6 +40,7 @@ import type {
 } from "@/lib/types/auction.types";
 import { cn } from "@/lib/utils";
 import { isEmptyHtml, sanitizeHtml } from "@/utils/sanitizeHtml";
+import { formatLotSize } from "@/utils/dimensions";
 import RichTextContent from "@/components/common/RichTextContent";
 
 // =====================================================================
@@ -255,9 +256,7 @@ const sortedImages = (lot: AuctionLot) =>
 const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) => {
     const images = sortedImages(lot);
     const dim = lot.dimension;
-    const dimensions = dim
-        ? [dim.width, dim.height, dim.depth].filter((v) => toNumber(v) !== null).join(" × ")
-        : "";
+    const dimensions = formatLotSize(dim);
     const estimateLow = formatMoney(lot.estimateLow, currency);
     const estimateHigh = formatMoney(lot.estimateHigh, currency);
 
@@ -322,7 +321,7 @@ const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) =>
                         <Field label="Edition" value={toTitle(lot.editionType)} />
                         <Field
                             label="Dimensions"
-                            value={dimensions ? `${dimensions} ${dim?.dimensionUnit.toLowerCase()}` : null}
+                            value={dimensions}
                         />
                         <Field
                             label="Weight"

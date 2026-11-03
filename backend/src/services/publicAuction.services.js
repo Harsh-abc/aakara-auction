@@ -165,6 +165,8 @@ export const getPublicAuctionService = async ({ auctionUuid }) => {
     return serializeBigInt(toPublicAuction(auction));
 };
 
+const DIMENSION_SELECT = { widthCm: true, heightCm: true, depthCm: true, widthIn: true, heightIn: true, depthIn: true };
+
 const LOT_ORDER = {
     lot: [{ itemNumber: "asc" }],
     "estimate-asc": [{ estimateLow: { sort: "asc", nulls: "last" } }, { itemNumber: "asc" }],
@@ -191,7 +193,7 @@ export const PUBLIC_LOT_SELECT = {
     scheduledStartAt: true,
     scheduledEndAt: true,
     currency: { select: { code: true, symbol: true } },
-    dimension: { select: { width: true, height: true, depth: true, dimensionUnit: true } },
+    dimension: { select: DIMENSION_SELECT },
     // the cover: primary image first, then the gallery order (videos can't be a thumbnail)
     images: {
         where: { mediaType: "IMAGE" },
@@ -278,7 +280,7 @@ const PUBLIC_LOT_DETAIL_SELECT = {
     scheduledStartAt: true,
     scheduledEndAt: true,
     currency: { select: { code: true, symbol: true } },
-    dimension: { select: { width: true, height: true, depth: true, dimensionUnit: true } },
+    dimension: { select: DIMENSION_SELECT },
     images: {
         orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
         select: { url: true, thumbnailUrl: true, caption: true, mediaType: true },

@@ -105,22 +105,6 @@ const dateOnlyToIso = (date: string, timeZone: string): string =>
 const dateOnlyToEndOfDayIso = (date: string, timeZone: string): string =>
     date ? zonedTimeToIso(date, "23:59:59.999", timeZone) : "";
 
-const DIMENSION_UNIT_MAP: Record<string, string> = {
-    cm: "CM",
-    mm: "MM",
-    m: "METER",
-    meter: "METER",
-    in: "INCH",
-    inch: "INCH",
-    ft: "FEET",
-    feet: "FEET",
-};
-
-const toDimensionUnit = (unit: string | undefined): string => {
-    if (!unit) return "CM";
-    return DIMENSION_UNIT_MAP[unit.toLowerCase()] ?? unit.toUpperCase();
-};
-
 const appendIfPresent = (formData: FormData, key: string, value: unknown) => {
     const s = str(value);
     if (s !== null) formData.append(key, s);
@@ -257,11 +241,16 @@ export const buildAuctionFormData = (
     const lotsPayload = lots.map((lot, index) => {
         const { details, pricing, condition, provenance, authentication } = lot;
 
-        const width = num(details.dimensions?.width);
-        const height = num(details.dimensions?.height);
-        const depth = num(details.dimensions?.depth);
+        const size = {
+            widthCm: num(details.dimensions?.widthCm),
+            heightCm: num(details.dimensions?.heightCm),
+            depthCm: num(details.dimensions?.depthCm),
+            widthIn: num(details.dimensions?.widthIn),
+            heightIn: num(details.dimensions?.heightIn),
+            depthIn: num(details.dimensions?.depthIn),
+        };
         const weight = num(details.weight);
-        const hasDimension = [width, height, depth, weight].some((v) => v !== null);
+        const hasDimension = [...Object.values(size), weight].some((v) => v !== null);
 
         const provenanceSummary =
             [
@@ -308,10 +297,7 @@ export const buildAuctionFormData = (
 
             dimension: hasDimension
                 ? {
-                    width,
-                    height,
-                    depth,
-                    dimensionUnit: toDimensionUnit(details.dimensions?.unit),
+                    ...size,
                     weight,
                     weightUnit: weight !== null ? "KG" : null,
                 }

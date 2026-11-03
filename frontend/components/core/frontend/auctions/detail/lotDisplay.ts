@@ -1,4 +1,5 @@
 import type { LotStatus, PublicLot } from "@/lib/types/publicAuction.types"
+import { formatLotSize } from "@/utils/dimensions"
 
 // "₹4,50,000" for INR (lakh grouping), "$45,000" etc. for the rest
 export function formatMoney(amount: string | number | null, currency: PublicLot["currency"]) {
@@ -22,16 +23,12 @@ export const lotNumber = (lot: PublicLot) => `Lot ${lot.itemNumber.padStart(2, "
 // "Artist name · Work title"
 export const lotHeading = (lot: PublicLot) => [lot.artistName, lot.title].filter(Boolean).join(" · ")
 
-const trimDecimal = (value: string) => String(Number(value))
-
-// "122 × 91 × 3 cm" — height first, the catalogue convention
+// "122 × 91 × 3 cm (48 × 35.83 × 1.18 in)"
 export function lotDimensions(lot: PublicLot) {
-    const d = lot.dimension
-    const sizes = d ? [d.height, d.width, d.depth].filter((v): v is string => !!v && Number(v) > 0).map(trimDecimal) : []
-    return sizes.length ? `${sizes.join(" × ")} ${d!.dimensionUnit.toLowerCase()}` : null
+    return formatLotSize(lot.dimension)
 }
 
-// "Oil on canvas · 1978 · 122 × 91 × 3 cm"
+// "Oil on canvas · 1978 · 122 × 91 × 3 cm (48 × 35.83 × 1.18 in)"
 export function lotDetails(lot: PublicLot) {
     return [lot.medium, lot.yearCreated, lotDimensions(lot)].filter(Boolean).join(" · ")
 }

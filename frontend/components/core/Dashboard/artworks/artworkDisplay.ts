@@ -1,6 +1,7 @@
 import type { ArtworkDimensions, ArtworkRow, ArtworkStage } from "@/lib/types/artwork.types"
 import type { LotStatus } from "@/lib/types/publicAuction.types"
 
+import { formatLotSize } from "@/utils/dimensions"
 import { money, type PillTone } from "../home/dashboardUi"
 
 export const ARTWORK_STATUS: Record<LotStatus, { label: string; tone: PillTone }> = {
@@ -34,17 +35,8 @@ export const VISIBILITY_LABELS: Record<ArtworkRow["auction"]["visibility"], stri
     PRIVATE_INVITE_ONLY: "Invite only",
 }
 
-const UNIT_LABELS: Record<ArtworkDimensions["unit"], string> = { CM: "cm", INCH: "in", MM: "mm", METER: "m", FEET: "ft" }
-
-/** "120.00" → "120", "45.50" → "45.5" */
-const trimNumber = (value: string) => String(Number(value))
-
-/** "120 × 90 × 4 cm" (height × width × depth, the catalogue convention) */
-export const formatDimensions = (dimensions: ArtworkDimensions | null) => {
-    if (!dimensions) return null
-    const parts = [dimensions.height, dimensions.width, dimensions.depth].filter((v): v is string => !!v && Number(v) > 0)
-    return parts.length ? `${parts.map(trimNumber).join(" × ")} ${UNIT_LABELS[dimensions.unit] ?? dimensions.unit.toLowerCase()}` : null
-}
+/** "120 × 90 × 4 cm (47.24 × 35.43 × 1.57 in)" (height × width × depth, the catalogue convention) */
+export const formatDimensions = (dimensions: ArtworkDimensions | null) => formatLotSize(dimensions)
 
 export const formatEstimate = (row: Pick<ArtworkRow, "estimateLow" | "estimateHigh" | "currency">) => {
     const { estimateLow: low, estimateHigh: high } = row

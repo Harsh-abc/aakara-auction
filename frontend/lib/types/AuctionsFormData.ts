@@ -6,7 +6,6 @@ import type {
     FeeCalculationType,
     LotStatus,
     DocumentType,
-    DimensionUnit,
     EditionType,
     MediaType,
 } from "./auction.types";
@@ -172,11 +171,14 @@ export interface LotDetailsForm {
     medium: string;
     yearCreated: string;
 
+    /** Size in both units — typing one side fills the other until it's edited by hand */
     dimensions: {
-        width: number | null;
-        height: number | null;
-        depth: number | null;
-        unit: DimensionUnit;
+        widthCm: number | null;
+        heightCm: number | null;
+        depthCm: number | null;
+        widthIn: number | null;
+        heightIn: number | null;
+        depthIn: number | null;
     };
 
     /** Saved to AuctionItemDimension.weight (unit KG). */

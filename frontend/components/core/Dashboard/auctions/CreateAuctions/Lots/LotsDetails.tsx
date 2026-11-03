@@ -15,6 +15,7 @@ import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import { getCategories, getSubCategories } from "@/services/operations/category.api";
 import { uploadEditorImage } from "@/services/operations/upload.api";
 import type { Category, SubCategory } from "@/lib/types/category.types";
+import { cmToInch, DIMENSION_SIDES, inchToCm } from "@/utils/dimensions";
 
 import LotSchedule from "./LotSchedule";
 
@@ -74,6 +75,55 @@ export function useAuctionCategoryName(categoryUuid?: string, subCategoryUuid?: 
 }
 
 
+
+// One unit's width / height / depth. Typing a value fills the same side in the
+// other unit while that side is empty or still holds the converted value —
+// once it's typed in by hand it's left alone.
+function MeasureRow({ lotIndex, unit, label }: { lotIndex: number; unit: "Cm" | "In"; label: string }) {
+    const { register, getValues, setValue } = useFormContext<AuctionFormData>();
+
+    const otherUnit = unit === "Cm" ? "In" : "Cm";
+    const convert = unit === "Cm" ? cmToInch : inchToCm;
+    const valid = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+
+    return (
+        <div className="grid grid-cols-3 gap-4">
+            {DIMENSION_SIDES.map((side) => {
+                const path = `lots.${lotIndex}.details.dimensions.${side}${unit}` as const;
+                const otherPath = `lots.${lotIndex}.details.dimensions.${side}${otherUnit}` as const;
+
+                return (
+                    <div key={side} className="input-wrapper">
+                        <label className="block mb-2 capitalize">{`${side} (${label})`}</label>
+                        <Input
+                            type="number"
+                            step="any"
+                            min={0}
+                            className="w-full border rounded-md px-3 py-2 h-11"
+                            // the value before each keystroke rides on the input itself
+                            onFocus={(e) => {
+                                e.currentTarget.dataset.previous = String(getValues(path) ?? "");
+                            }}
+                            {...register(path, {
+                                valueAsNumber: true,
+                                onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                                    const before = Number(e.target.dataset.previous || NaN);
+                                    const value = getValues(path);
+                                    const other = getValues(otherPath);
+                                    const otherIsConverted = !valid(other) || (valid(before) && other === convert(before));
+                                    if (otherIsConverted) {
+                                        setValue(otherPath, valid(value) ? convert(value) : null, { shouldDirty: true });
+                                    }
+                                    e.target.dataset.previous = String(value ?? "");
+                                },
+                            })}
+                        />
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 export default function LotsDetail({ lotIndex }: LotsDetailProps) {
     const { register, control, setValue, getValues } = useFormContext<AuctionFormData>();
@@ -208,48 +258,14 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
             <div className="px-6 bg-[#f4f2f2] py-6 my-6 rounded-[8px]">
                 <h1 className="text-[16px] font-bold">Artwork Measurement</h1>
 
-                <div className="grid grid-cols-5 gap-4">
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Width</label>
-                        <Input
-                            type="number"
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(`lots.${lotIndex}.details.dimensions.width`, { valueAsNumber: true })}
-                        />
-                    </div>
+                <p className="mt-1 text-xs text-slate-500">
+                    Enter the size in either unit — the other is filled in for you, and can be changed by hand.
+                </p>
 
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Height</label>
-                        <Input
-                            type="number"
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(`lots.${lotIndex}.details.dimensions.height`, { valueAsNumber: true })}
-                        />
-                    </div>
+                <MeasureRow lotIndex={lotIndex} unit="Cm" label="cm" />
+                <MeasureRow lotIndex={lotIndex} unit="In" label="in" />
 
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Depth</label>
-                        <Input
-                            type="number"
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(`lots.${lotIndex}.details.dimensions.depth`, { valueAsNumber: true })}
-                        />
-                    </div>
-
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Unit</label>
-                        <select
-                            {...register(`lots.${lotIndex}.details.dimensions.unit`)}
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                        >
-                            <option value="CM">cm</option>
-                            <option value="MM">mm</option>
-                            <option value="INCH">inch</option>
-                            <option value="METER">m</option>
-                            <option value="FEET">ft</option>
-                        </select>
-                    </div>
-
+                <div className="grid grid-cols-3 gap-4">
                     <div className="input-wrapper">
                         <label className="block mb-2">Weight (in Kg)</label>
                         <Input

@@ -6,7 +6,7 @@ import { FileText, Play } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { AuctionFormData, LotImageFile } from "@/lib/types/AuctionsFormData";
-import type { DocumentType, DimensionUnit, EditionType } from "@/lib/types/auction.types";
+import type { DocumentType, EditionType } from "@/lib/types/auction.types";
 import { useCurrencies } from "@/hooks/useCurrencies";
 import {
     getDocumentName,
@@ -14,6 +14,7 @@ import {
     isImageMedia,
     isVideoMedia,
 } from "@/utils/lotMedia";
+import { formatLotSize } from "@/utils/dimensions";
 
 import { useAuctionCategoryName } from "./LotsDetails";
 
@@ -32,14 +33,6 @@ const EDITION_LABELS: Record<EditionType, string> = {
     UNIQUE: "Unique / Original",
     LIMITED: "Limited Edition",
     OPEN: "Open Edition",
-};
-
-const UNIT_LABELS: Record<DimensionUnit, string> = {
-    CM: "cm",
-    MM: "mm",
-    INCH: "inch",
-    METER: "m",
-    FEET: "ft",
 };
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
@@ -211,16 +204,7 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
                     : categoryName
                 : "Unknown category";
 
-    const unit = UNIT_LABELS[details?.dimensions?.unit ?? "CM"];
-    const measures = [
-        details?.dimensions?.width,
-        details?.dimensions?.height,
-        details?.dimensions?.depth,
-    ].filter(hasNumber);
-
-    const dimensions = measures.length
-        ? measures.map((value) => `${value} ${unit}`).join(" × ")
-        : EMPTY;
+    const dimensions = formatLotSize(details?.dimensions) ?? EMPTY;
 
     const rows: [string, string][] = [
         ["Lot Title", text(details?.title)],
@@ -231,7 +215,7 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
         ["Lot Ends", formatDateTime(schedule?.endDate, schedule?.endTime)],
         ["Medium", text(details?.medium)],
         ["Year of Creation", text(details?.yearCreated)],
-        ["Dimensions (W × H × D)", dimensions],
+        ["Dimensions (H × W × D)", dimensions],
         ["Weight", hasNumber(details?.weight) ? `${details.weight} kg` : EMPTY],
         ["Edition Type", details?.editionType ? EDITION_LABELS[details.editionType] : EMPTY],
         ["Description", text(details?.description)],

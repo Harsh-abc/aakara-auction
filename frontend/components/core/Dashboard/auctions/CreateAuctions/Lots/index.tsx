@@ -80,10 +80,12 @@ export default function AddLots({
                 yearCreated: "",
 
                 dimensions: {
-                    width: null,
-                    height: null,
-                    depth: null,
-                    unit: "CM",
+                    widthCm: null,
+                    heightCm: null,
+                    depthCm: null,
+                    widthIn: null,
+                    heightIn: null,
+                    depthIn: null,
                 },
 
                 weight: null,

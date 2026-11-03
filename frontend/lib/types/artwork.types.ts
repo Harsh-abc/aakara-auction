@@ -15,10 +15,12 @@ export interface ArtworkCurrency {
 }
 
 export interface ArtworkDimensions {
-    width: string | null
-    height: string | null
-    depth: string | null
-    unit: "CM" | "INCH" | "MM" | "METER" | "FEET"
+    widthCm: string | null
+    heightCm: string | null
+    depthCm: string | null
+    widthIn: string | null
+    heightIn: string | null
+    depthIn: string | null
 }
 
 export interface ArtworkRow {

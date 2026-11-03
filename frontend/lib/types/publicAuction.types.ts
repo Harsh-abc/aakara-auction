@@ -47,7 +47,7 @@ export interface PublicLot {
     scheduledStartAt: string;
     scheduledEndAt: string;
     currency: { code: string; symbol: string | null };
-    dimension: { width: string | null; height: string | null; depth: string | null; dimensionUnit: string } | null;
+    dimension: Record<"widthCm" | "heightCm" | "depthCm" | "widthIn" | "heightIn" | "depthIn", string | null> | null;
     image: string | null;
 }
 

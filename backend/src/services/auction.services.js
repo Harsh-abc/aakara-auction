@@ -36,7 +36,6 @@ const ENUMS = {
     ],
     feeCalculationType: ["PERCENTAGE", "FIXED"],
     editionType: ["UNIQUE", "LIMITED", "OPEN"],
-    dimensionUnit: ["CM", "INCH", "MM", "METER", "FEET"],
     weightUnit: ["KG", "GRAM", "LB", "OZ"],
     mediaType: ["IMAGE", "VIDEO"],
     documentType: [
@@ -82,6 +81,10 @@ const toNum = (value, label) => {
     if (n < 0) throw httpError(`${label} cannot be negative`);
     return n;
 };
+
+const CM_PER_INCH = 2.54;
+
+const round2 = (n) => Math.round(n * 100) / 100;
 
 /** Returns a valid Date or null. Throws on an unparsable value. */
 const toDate = (value, label) => {
@@ -183,21 +186,22 @@ const normalizeLot = (lot, index, { isDraft }) => {
 
     const reservePrice = toNum(lot.reservePrice, label("reserve price"));
 
-    // ---- dimension (optional) ----
+    // ---- dimension (optional) — size in cm and inches; a side left blank is converted from the other ----
     let dimension = null;
     const d = lot.dimension;
     if (d && typeof d === "object") {
-        const width = toNum(d.width, label("width"));
-        const height = toNum(d.height, label("height"));
-        const depth = toNum(d.depth, label("depth"));
+        const size = {};
+        for (const side of ["width", "height", "depth"]) {
+            const cm = toNum(d[`${side}Cm`], label(`${side} (cm)`));
+            const inch = toNum(d[`${side}In`], label(`${side} (in)`));
+            size[`${side}Cm`] = cm ?? (inch !== null ? round2(inch * CM_PER_INCH) : null);
+            size[`${side}In`] = inch ?? (cm !== null ? round2(cm / CM_PER_INCH) : null);
+        }
         const weight = toNum(d.weight, label("weight"));
 
-        if ([width, height, depth, weight].some((v) => v !== null)) {
+        if ([...Object.values(size), weight].some((v) => v !== null)) {
             dimension = {
-                width,
-                height,
-                depth,
-                dimensionUnit: pickEnum(d.dimensionUnit, ENUMS.dimensionUnit, "CM", label("dimension unit")),
+                ...size,
                 weight,
                 weightUnit:
                     weight !== null
