@@ -284,6 +284,109 @@ export const invalidateBidderAccess = async ({ auctionId, lotUuids, revokedUserI
 };
 
 // =====================================================================
+// BIDDING LIMIT (optional, per user — set on the user page)
+// No single bid, floor bid or proxy maximum may go above it. It's in one
+// currency; a lot in another currency can't be bid on while it's set (there
+// are no exchange rates to compare with). Cached in Redis like the eligible set.
+// =====================================================================
+
+const BIDDING_LIMIT_TTL_SECONDS = 600;
+
+/** { amount, currency } or null when the user has no limit. */
+export const getBiddingLimit = async (userId) => {
+    const key = bidKeys.limit(userId);
+    const cached = await redis.get(key);
+    if (cached !== null) return cached ? JSON.parse(cached) : null;
+
+    const user = await prisma.user.findUnique({
+        where: { id: BigInt(userId) },
+        select: { biddingLimit: true, biddingLimitCurrency: true },
+    });
+    const limit = user?.biddingLimit != null ? { amount: Number(user.biddingLimit), currency: user.biddingLimitCurrency ?? "INR" } : null;
+    await redis.set(key, limit ? JSON.stringify(limit) : "", "EX", BIDDING_LIMIT_TTL_SECONDS);
+    return limit;
+};
+
+/** Call after a user's limit changes, so the next bid reads it again. */
+export const invalidateBiddingLimit = async (userId) => {
+    await redis.del(bidKeys.limit(userId)).catch((error) => console.error("[bidding] could not refresh bidding limit:", error));
+};
+
+/**
+ * After a limit is set or lowered: proxies the user left on lots that haven't closed are brought
+ * within it — a maximum above the limit is lowered to the limit (keeping its place in the queue),
+ * and one on a lot in another currency is withdrawn. With no limit, nothing changes.
+ */
+export const applyBiddingLimitToProxies = async ({ userId, limit }) => {
+    if (!limit) return { capped: 0, withdrawn: 0 };
+
+    const rows = await prisma.autoBid.findMany({
+        where: {
+            bidderId: BigInt(userId),
+            isActive: true,
+            withdrawnAt: null,
+            item: { status: { in: [...PROXY_LOT_STATUSES, "ACTIVE"] } },
+        },
+        select: {
+            id: true,
+            maxAmount: true,
+            item: { select: { uuid: true, currency: { select: { code: true } }, auction: { select: { currency: { select: { code: true } } } } } },
+        },
+    });
+
+    let capped = 0;
+    let withdrawn = 0;
+    for (const row of rows) {
+        const code = row.item.currency?.code ?? row.item.auction.currency.code;
+        const key = bidKeys.proxies(row.item.uuid);
+
+        if (code !== limit.currency) {
+            await redis.hdel(key, String(userId));
+            await prisma.autoBid.update({
+                where: { id: row.id },
+                data: { isActive: false, withdrawnAt: new Date(), withdrawnReason: `The bidder's bidding limit is in ${limit.currency}` },
+            });
+            withdrawn++;
+        } else if (Number(row.maxAmount) > limit.amount) {
+            const live = await redis.hget(key, String(userId));
+            if (live) await redis.hset(key, String(userId), JSON.stringify({ ...JSON.parse(live), max: limit.amount }));
+            await prisma.autoBid.update({ where: { id: row.id }, data: { maxAmount: String(limit.amount) } });
+            capped++;
+        }
+    }
+    return { capped, withdrawn };
+};
+
+/**
+ * Throws when `amount` (in the lot's currency) is over the user's limit. `who` words the message:
+ * "you" for the bidder, or e.g. "Paddle #101" for the auctioneer's console.
+ */
+const assertWithinBiddingLimit = async ({ userId, amount, currencyCode, who = null }) => {
+    const limit = await getBiddingLimit(userId);
+    if (!limit) return;
+
+    const max = formatMoney(limit.amount, limit.currency);
+    if (limit.currency !== currencyCode) {
+        throw httpError(
+            who
+                ? `${who} has a bidding limit in ${limit.currency}, so they can't bid on a lot in ${currencyCode}`
+                : `Your bidding limit is set in ${limit.currency}, so you can't bid on lots in ${currencyCode}. Contact the auction house to change it.`,
+            403,
+            { biddingLimit: String(limit.amount), biddingLimitCurrency: limit.currency },
+        );
+    }
+    if (Number(amount) > limit.amount) {
+        throw httpError(
+            who
+                ? `${who} has a bidding limit of ${max} — this bid is above it`
+                : `This is above your bidding limit of ${max}. Contact the auction house to raise it.`,
+            403,
+            { biddingLimit: String(limit.amount), biddingLimitCurrency: limit.currency },
+        );
+    }
+};
+
+// =====================================================================
 // BIDDERS (paddle + name, cached per auction)
 // =====================================================================
 
@@ -443,6 +546,8 @@ const runForUser = async ({ mode, lotUuid, userId, amount, ip, userAgent }) => {
 
     const lot = await ensureLotState(lotUuid);
     if (!(await isVerifiedBidder(lotUuid, lot.lotId, userId))) throw await notVerifiedError(lot.lotId, userId);
+    // a bid, or a proxy's maximum, can't go above the bidder's limit
+    await assertWithinBiddingLimit({ userId, amount, currencyCode: lot.currencyCode });
 
     return settleBid({ mode, lot, lotUuid, userId, amount, ip, userAgent });
 };
@@ -580,6 +685,7 @@ export const placeFloorBidService = async ({ lotUuid, paddleNumber, amount, ip, 
     if (!(await isVerifiedBidder(lotUuid, lot.lotId, userId))) {
         throw httpError(`Paddle ${paddle} isn't verified to bid on Lot #${lot.itemNumber}`, 403);
     }
+    await assertWithinBiddingLimit({ userId, amount, currencyCode: lot.currencyCode, who: `Paddle ${paddle}` });
 
     const { result } = await settleBid({
         mode: "FLOOR",

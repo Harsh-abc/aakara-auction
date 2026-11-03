@@ -74,6 +74,11 @@ export interface User {
     // only on GET /users/:uuid — "Verified for lots" is on while lotsVerifiedAt is set
     lotsVerifiedAt?: string | null;
     lotsVerifiedBy?: RoleChangedBy | null;
+    // only on GET /users/:uuid — the most any one bid of theirs may be (null = no limit), and who last set it
+    biddingLimit?: string | null;
+    biddingLimitCurrency?: string | null;
+    biddingLimitSetAt?: string | null;
+    biddingLimitSetBy?: RoleChangedBy | null;
     profile: UserProfile | null;
     kyc: UserKyc | null;
     _count: { bids: number; auctionsWon: number; auctionParticipations: number };
@@ -282,6 +287,28 @@ export interface SetLotsVerifiedResponse {
         changed: number;
         lotsVerifiedAt: string | null;
         lotsVerifiedBy: RoleChangedBy | null;
+    };
+}
+
+// amount null removes the limit
+export interface SetBiddingLimitPayload {
+    uuid: string;
+    amount: number | null;
+    currency: string;
+}
+
+export interface SetBiddingLimitResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        biddingLimit: string | null;
+        biddingLimitCurrency: string | null;
+        biddingLimitSetAt: string | null;
+        biddingLimitSetBy: RoleChangedBy | null;
+        // proxy bids already left above the new limit: lowered to it / withdrawn (lot in another currency)
+        proxiesCapped: number;
+        proxiesWithdrawn: number;
     };
 }
 

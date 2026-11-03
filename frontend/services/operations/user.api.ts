@@ -2,12 +2,12 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { getErrorMessage } from "@/lib/apiError";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, SetKycStatusPayload, SetKycStatusResponse, SetLotsVerifiedPayload, SetLotsVerifiedResponse, SetUserActivePayload, SetUserActiveResponse, UpdateUserDetailsPayload, UpdateUserDetailsResponse, UploadUserKycPayload, UploadUserKycResponse, UserStats } from "@/lib/types/user.types";
+import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, SetBiddingLimitPayload, SetBiddingLimitResponse, SetKycStatusPayload, SetKycStatusResponse, SetLotsVerifiedPayload, SetLotsVerifiedResponse, SetUserActivePayload, SetUserActiveResponse, UpdateUserDetailsPayload, UpdateUserDetailsResponse, UploadUserKycPayload, UploadUserKycResponse, User, UserStats } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
 const { GET_ALL_USERS_API, GET_USER_STATS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API, SET_KYC_STATUS_API, SET_USER_ACTIVE_API, UPDATE_USER_DETAILS_API } = userEndPoints;
 
-const { CREATE_USER_API, CHANGE_USER_ROLE_API, CHANGE_USER_STATUS_API, SET_USER_LOTS_VERIFIED_API } = adminEndPoints;
+const { CREATE_USER_API, CHANGE_USER_ROLE_API, CHANGE_USER_STATUS_API, SET_USER_LOTS_VERIFIED_API, SET_USER_BIDDING_LIMIT_API } = adminEndPoints;
 
 // counts for the users page cards — read straight from the database, not the loaded page of users
 export async function getUserStats(token: string | null): Promise<UserStats> {
@@ -17,6 +17,25 @@ export async function getUserStats(token: string | null): Promise<UserStats> {
         header: { Authorization: `Bearer ${token}` },
     });
     return response.data.data;
+}
+
+// every user, page by page (the API serves 100 at most per page) — for the CSV export, so it
+// doesn't touch the users slice the table reads
+export async function fetchAllUsers(token: string | null): Promise<User[]> {
+    const users: User[] = [];
+    for (let page = 1; ; page++) {
+        const response = await apiConnector<GetAllUsersResponse>({
+            method: "GET",
+            url: GET_ALL_USERS_API,
+            params: { page, limit: 100 },
+            header: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.data.success) throw new Error(response.data.message || "Could not fetch users");
+
+        const { users: batch, pagination } = response.data.data;
+        users.push(...batch);
+        if (batch.length === 0 || page >= pagination.totalPages) return users;
+    }
 }
 
 
@@ -322,6 +341,35 @@ export const setLotsVerified = createAsyncThunk<
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not change lot verification. Try again."));
+        }
+    }
+);
+
+// the most any one bid of theirs may be (super admin); amount null removes it
+export const setBiddingLimit = createAsyncThunk<
+    SetBiddingLimitResponse,
+    SetBiddingLimitPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/setBiddingLimit",
+    async ({ uuid, amount, currency }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<SetBiddingLimitResponse>({
+                method: "PATCH",
+                url: SET_USER_BIDDING_LIMIT_API(uuid),
+                body: { amount, currency },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not change the bidding limit");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not change the bidding limit. Try again."));
         }
     }
 );

@@ -179,6 +179,7 @@ export const adminEndPoints = {
     CHANGE_USER_STATUS_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/status`,
     // PATCH { verified }: "Verified for lots" on the user page
     SET_USER_LOTS_VERIFIED_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/lots-verified`,
+    SET_USER_BIDDING_LIMIT_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/bidding-limit`,
     // DELETE: lost / new phone — they set up Google Authenticator again
     RESET_USER_MFA_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/mfa`,
     // Settings → Activity Logs (super admin only)
