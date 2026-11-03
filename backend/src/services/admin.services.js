@@ -8,16 +8,9 @@ import { disconnectUser } from '../libs/socket.js';
 import sendEmail from '../mail/sendMail.js';
 import { AUCTION_EMAIL } from '../mail/templates/registrationReceived.js';
 import {
-    TEAM_ACCESS_REVOKED_SUBJECT,
     TEAM_MEMBER_ADDED_SUBJECT,
-    TEAM_MEMBER_INLINE_IMAGES,
-    TEAM_ROLE_CHANGED_SUBJECT,
-    teamAccessRevokedTemplate,
-    teamAccessRevokedText,
     teamMemberAddedTemplate,
     teamMemberAddedText,
-    teamRoleChangedTemplate,
-    teamRoleChangedText,
 } from '../mail/templates/teamMemberAdded.js';
 
 const MAX_SUPER_ADMINS = 7;
@@ -25,7 +18,7 @@ const MAX_SUPER_ADMINS = 7;
 // roles allowed into the dashboard (frontend/lib/constants/roles.ts DASHBOARD_ROLES)
 export const TEAM_ROLES = ['SUPER_ADMIN', 'ADMIN', 'AUCTIONEER', 'OPERATIONS'];
 
-const TEAM_MAIL_OPTIONS = { fromName: 'AKARA AUCTIONS', replyTo: AUCTION_EMAIL, inline: TEAM_MEMBER_INLINE_IMAGES };
+const TEAM_MAIL_OPTIONS = { fromName: 'AKARA AUCTIONS', replyTo: AUCTION_EMAIL };
 
 // "Harsh Bhosale" from a user with a profile, falling back to their username
 const personName = (person) =>
@@ -33,32 +26,6 @@ const personName = (person) =>
     || [person?.profile?.firstName, person?.profile?.lastName].filter(Boolean).join(" ")
     || person?.username
     || "";
-
-// joining, moving within or leaving the team gets an email; bidder ↔ website user changes don't.
-// Never throws — the role change is already saved.
-const sendTeamRoleChangeEmail = async ({ user, oldRoleName, newRoleName, changedBy, changedAt }) => {
-    const wasTeam = TEAM_ROLES.includes(oldRoleName);
-    const isTeam = TEAM_ROLES.includes(newRoleName);
-    if (!wasTeam && !isTeam) return;
-
-    const mail = {
-        userName: personName(user),
-        oldRoleName,
-        newRoleName,
-        changedBy,
-        changedAt,
-        siteUrl: process.env.FRONTEND_URL,
-    };
-    const [subject, html, text] = isTeam
-        ? [TEAM_ROLE_CHANGED_SUBJECT, teamRoleChangedTemplate(mail), teamRoleChangedText(mail)]
-        : [TEAM_ACCESS_REVOKED_SUBJECT, teamAccessRevokedTemplate(mail), teamAccessRevokedText(mail)];
-
-    try {
-        await sendEmail(user.email, subject, html, null, { ...TEAM_MAIL_OPTIONS, text });
-    } catch (error) {
-        console.error(`Role change email to ${user.email} failed:`, error?.message);
-    }
-};
 
 const PERSON_SELECT = {
     uuid: true,
@@ -76,10 +43,7 @@ const CHANGED_BY_INCLUDE = {
 export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, newRoleName }) => {
     const targetUser = await prisma.user.findUnique({
         where: { uuid: targetUUuid },
-        include: {
-            kyc: { select: { status: true } },
-            profile: { select: { firstName: true, lastName: true, displayName: true } },
-        },
+        include: { kyc: { select: { status: true } } },
     });
 
     if (!targetUser) {
@@ -172,15 +136,6 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
     );
     // live connections drop out of staff rooms; they come back as whatever their token allows
     disconnectUser(targetUser.id);
-
-    // tell them when their dashboard access changes; the role change stands even if the email fails
-    await sendTeamRoleChangeEmail({
-        user: targetUser,
-        oldRoleName: oldRole?.name,
-        newRoleName: newRole.name,
-        changedBy: personName(updatedUser.roleChangedBy),
-        changedAt: updatedUser.roleChangedAt,
-    });
 
     // only BIDDERs may bid, so gaining or losing the role refreshes who may bid on their lots
     if (oldRole?.name === 'BIDDER' || newRole.name === 'BIDDER') {

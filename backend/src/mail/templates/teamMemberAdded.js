@@ -7,12 +7,7 @@ import {
     textFooter,
 } from "./registrationReceived.js";
 
-// same inline banner as the registration emails
-export { REGISTRATION_INLINE_IMAGES as TEAM_MEMBER_INLINE_IMAGES } from "./registrationReceived.js";
-
 export const TEAM_MEMBER_ADDED_SUBJECT = "Welcome to the Akara Team | Your Dashboard Access";
-export const TEAM_ROLE_CHANGED_SUBJECT = "Akara Team | Your Role Has Been Updated";
-export const TEAM_ACCESS_REVOKED_SUBJECT = "Akara Team | Your Dashboard Access Has Been Removed";
 const PREHEADER = "You have been added to the Akara Auctions team. Your login details are inside.";
 
 // what each dashboard role is for, in the words the team uses (frontend/lib/constants/roles.ts)
@@ -33,9 +28,6 @@ const ROLE_DETAILS = {
         label: "Auctioneer",
         summary: "Run live auctions from the bidding console: start lots, take floor bids and hammer.",
     },
-    // not team roles — they only show as the "Previous role" when someone joins or leaves the team
-    BIDDER: { label: "Bidder", summary: "" },
-    USER: { label: "Website user", summary: "" },
 };
 
 const roleDetails = (roleName) =>
@@ -83,9 +75,6 @@ const loginButton = (site) => `
                                 </a>
                             </td>
                         </tr>`;
-
-const formatIst = (date) =>
-    new Date(date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }) + " IST";
 
 // sent when a Super Admin adds a team member (Settings → Team → Add Team Member)
 export const teamMemberAddedTemplate = ({ userName = "", email, password, roleName, addedBy = "", siteUrl = "" }) => {
@@ -139,6 +128,7 @@ export const teamMemberAddedTemplate = ({ userName = "", email, password, roleNa
         preheader: PREHEADER,
         content,
         registrantNotice: false,
+        banner: false,
     });
 };
 
@@ -168,152 +158,3 @@ export const teamMemberAddedText = ({ userName = "", email, password, roleName, 
     ].join("\n");
 };
 
-// ── Role changed ─────────────────────────────────────
-// sent when a Super Admin moves someone to another dashboard role (Settings → Team → Role),
-// or gives an existing website user / bidder a dashboard role
-const roleChangeRows = ({ oldRoleName, newRoleName, changedBy, changedAt }) => [
-    ["Previous role", roleDetails(oldRoleName).label],
-    ["New role", roleDetails(newRoleName).label],
-    ...(changedBy ? [["Changed by", changedBy]] : []),
-    ["Changed on", formatIst(changedAt ?? new Date())],
-];
-
-export const teamRoleChangedTemplate = ({ userName = "", siteUrl = "", ...change }) => {
-    const site = siteBase(siteUrl);
-    const { label, summary } = roleDetails(change.newRoleName);
-    const greeting = userName ? `Dear ${escapeHtml(userName)},` : "Hello,";
-
-    const content = `
-                        <!-- Body -->
-                        <tr>
-                            <td style="padding: 32px 48px 0 48px;">
-                                <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">
-                                    ${greeting}
-                                </p>
-                                <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    Your role on the AKARA Auctions team has been updated to
-                                    <span style="color:#1a1a1a;">${escapeHtml(label)}</span>.
-                                    ${summary ? escapeHtml(summary) : ""}
-                                </p>
-                                <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    You have been logged out of all devices. Please log in again with your existing
-                                    email and password to continue with your new role.
-                                </p>
-                            </td>
-                        </tr>
-
-                        ${detailsBox("Role update", roleChangeRows(change))}
-
-                        ${loginButton(site)}
-
-                        <tr>
-                            <td style="padding: 24px 48px 32px 48px;">
-                                <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    If you were not expecting this change, please contact us at ${link(`mailto:${AUCTION_EMAIL}`, AUCTION_EMAIL)}.
-                                </p>
-                            </td>
-                        </tr>`;
-
-    return emailLayout({
-        site,
-        heading: "Your Role Has Been Updated",
-        eyebrow: "Akara Auctions &middot; Dashboard Access",
-        preheader: `Your role on the Akara Auctions team is now ${escapeHtml(label)}.`,
-        content,
-        registrantNotice: false,
-    });
-};
-
-export const teamRoleChangedText = ({ userName = "", siteUrl = "", ...change }) => {
-    const site = siteBase(siteUrl);
-    const { label, summary } = roleDetails(change.newRoleName);
-    return [
-        userName ? `Dear ${userName},` : "Hello,",
-        "",
-        `Your role on the AKARA Auctions team has been updated to ${label}.${summary ? ` ${summary}` : ""}`,
-        "",
-        "You have been logged out of all devices. Please log in again with your existing email and password to continue with your new role.",
-        "",
-        ...roleChangeRows(change).map(([rowLabel, value]) => `${rowLabel}: ${value}`),
-        "",
-        `Log in: ${loginUrl(site)}`,
-        "",
-        `If you were not expecting this change, please contact us at ${AUCTION_EMAIL}.`,
-        "",
-        ...textFooter(site, false),
-    ].join("\n");
-};
-
-// ── Access revoked ───────────────────────────────────
-// sent when a Super Admin revokes someone's dashboard access (Settings → Team → Role → Revoke access)
-const revokedRows = ({ oldRoleName, changedBy, changedAt }) => [
-    ["Previous role", roleDetails(oldRoleName).label],
-    ...(changedBy ? [["Removed by", changedBy]] : []),
-    ["Removed on", formatIst(changedAt ?? new Date())],
-];
-
-export const teamAccessRevokedTemplate = ({ userName = "", siteUrl = "", ...change }) => {
-    const site = siteBase(siteUrl);
-    const { label } = roleDetails(change.oldRoleName);
-    const greeting = userName ? `Dear ${escapeHtml(userName)},` : "Hello,";
-
-    const content = `
-                        <!-- Body -->
-                        <tr>
-                            <td style="padding: 32px 48px 0 48px;">
-                                <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">
-                                    ${greeting}
-                                </p>
-                                <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    Your <span style="color:#1a1a1a;">${escapeHtml(label)}</span> role on the AKARA Auctions team
-                                    has been removed, and you no longer have access to the dashboard.
-                                </p>
-                                <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    You have been logged out of all devices. Your account remains active on the
-                                    ${link(site, "Akara website")}, where you can continue to browse our auctions.
-                                </p>
-                            </td>
-                        </tr>
-
-                        ${detailsBox("Access update", revokedRows(change))}
-
-                        <tr>
-                            <td style="padding: 24px 48px 32px 48px;">
-                                <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    Thank you for your work with the Akara team.
-                                </p>
-                                <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    If you believe this was a mistake, please contact us at ${link(`mailto:${AUCTION_EMAIL}`, AUCTION_EMAIL)}.
-                                </p>
-                            </td>
-                        </tr>`;
-
-    return emailLayout({
-        site,
-        heading: "Dashboard Access Removed",
-        eyebrow: "Akara Auctions &middot; Dashboard Access",
-        preheader: "Your access to the Akara Auctions dashboard has been removed.",
-        content,
-        registrantNotice: false,
-    });
-};
-
-export const teamAccessRevokedText = ({ userName = "", siteUrl = "", ...change }) => {
-    const site = siteBase(siteUrl);
-    const { label } = roleDetails(change.oldRoleName);
-    return [
-        userName ? `Dear ${userName},` : "Hello,",
-        "",
-        `Your ${label} role on the AKARA Auctions team has been removed, and you no longer have access to the dashboard.`,
-        "",
-        `You have been logged out of all devices. Your account remains active on the Akara website (${site}), where you can continue to browse our auctions.`,
-        "",
-        ...revokedRows(change).map(([rowLabel, value]) => `${rowLabel}: ${value}`),
-        "",
-        "Thank you for your work with the Akara team.",
-        "",
-        `If you believe this was a mistake, please contact us at ${AUCTION_EMAIL}.`,
-        "",
-        ...textFooter(site, false),
-    ].join("\n");
-};
