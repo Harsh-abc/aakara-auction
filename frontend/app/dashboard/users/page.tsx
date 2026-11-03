@@ -5,6 +5,7 @@ import { UsersTable } from "@/components/core/Dashboard/users/users-table";
 
 import UserStats from "@/components/core/Dashboard/users/UserStats";
 import AddUserDialog from "@/components/core/Dashboard/users/AddUserDialog";
+import ExportUsersButton from "@/components/core/Dashboard/users/ExportUsersButton";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -39,7 +40,8 @@ export default function Users() {
         <div className="px-8 py-8">
             <div className=" flex items-center justify-between">
                 <h3 className="text-2xl font-bold">Platform Users</h3>
-                <div>
+                <div className="flex items-center gap-3">
+                    <ExportUsersButton />
                     <AddUserDialog />
                 </div>
             </div>
