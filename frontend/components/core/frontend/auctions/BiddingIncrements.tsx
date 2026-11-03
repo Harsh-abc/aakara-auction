@@ -14,7 +14,7 @@ import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, Sec
 export const ABSENTEE_FORM_URL = "/downloads/akara-registration-form.pdf";
 
 // the chart on the form — the same ladder the backend bids on (utils/bidIncrement.js), keep in step with it
-const increments: { range: string; step: string; example?: string }[] = [
+export const increments: { range: string; step: string; example?: string }[] = [
     { range: "₹5,00,000 – ₹10,00,000", step: "₹50,000" },
     { range: "₹10,00,000 – ₹20,00,000", step: "₹1,00,000" },
     { range: "₹20,00,000 – ₹30,00,000", step: "₹2,00,000" },
@@ -26,7 +26,7 @@ const increments: { range: string; step: string; example?: string }[] = [
     { range: "₹5,00,00,000 – ₹10,00,00,000", step: "₹50,00,000" },
     { range: "₹10,00,00,000 – ₹20,00,00,000", step: "₹1,00,00,000" },
     { range: "₹20,00,00,000 – ₹30,00,00,000", step: "₹2,00,00,000" },
-    { range: "₹30,00,00,000 – ₹50,00,00,000", step: "₹2,00,00,000, ₹5,00,00,000, ₹8,00,00,000", example: "₹32,00,00,000, ₹35,00,00,000, ₹38,00,00,000" },
+    { range: "₹30,00,00,000 – ₹40,00,00,000", step: "₹2,00,00,000, ₹5,00,00,000, ₹8,00,00,000", example: "₹32,00,00,000, ₹35,00,00,000, ₹38,00,00,000" },
     { range: "₹50,00,00,000 – ₹1,00,00,00,000", step: "₹5,00,00,000" },
 ];
 
@@ -68,8 +68,8 @@ export function BiddingIncrements() {
                     <div className="">
                         <h3 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">Bidding increments</h3>
                         <p className={cn(BODY, "mt-3")}>
-                            Bidding begins below the low estimate and rises in increments. The next valid bid follows the chart below. If you leave a proxy bid online, the next bid is placed at the
-                            minimum increment.
+                            Bidding begins below the lower estimate, and increases in steps, or increments. The next valid bid is based on the increments listed below. If bidders enter a proxy
+                            bid online, the next bid is placed at the minimum incremental value.
                         </p>
 
                         <div className="mt-6 overflow-x-auto">

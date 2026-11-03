@@ -12,6 +12,7 @@ import { getPublicAuctions } from "@/services/operations/publicAuction.api";
 import { cn } from "@/lib/utils";
 
 import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, SectionHeading } from "../storefront";
+import { increments } from "./BiddingIncrements";
 
 /*
  * "Absentee bid" (client PDF): a bidder who can't follow the sale leaves a maximum bid per lot.
@@ -25,14 +26,6 @@ type Errors = Record<string, string | undefined>;
 const MAX_LOTS = 20;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^\+?[0-9][0-9\s-]{7,15}$/;
-
-// the house increment chart (backend utils/bidIncrement.js) — keep in step with it
-const increments = [
-    { range: "₹10,000 – ₹20,000", step: "₹1,000" },
-    { range: "₹20,000 – ₹30,000", step: "₹2,000" },
-    { range: "₹30,000 – ₹50,000", step: "₹2,000 / ₹3,000 (₹32,000, ₹35,000, ₹38,000, ₹40,000…)" },
-    { range: "₹50,000 – ₹1,00,000", step: "₹5,000" },
-];
 
 // 1500000 → "15,00,000"
 const formatAmount = (digits: string) => (digits ? Number(digits).toLocaleString("en-IN") : "");
@@ -352,7 +345,7 @@ export function AbsenteeBid() {
                         <h3 id="bidding-increments-heading" className="text-[14px] leading-5 font-medium text-[#0d0d0d]">
                             Bidding increments
                         </h3>
-                        <table className="mt-3 w-full text-left text-[14px] leading-[22.75px]">
+                        <table className="mt-3 w-full text-left text-[13px] leading-5 tabular-nums">
                             <thead>
                                 <tr className="border-b border-[#cecece] text-[11px] tracking-[0.16em] text-[#717171] uppercase">
                                     <th className="py-2 pr-4 font-normal">Current bid</th>
@@ -362,14 +355,18 @@ export function AbsenteeBid() {
                             <tbody>
                                 {increments.map((row) => (
                                     <tr key={row.range} className="border-b border-[#e2ded8] align-top">
-                                        <td className="py-2 pr-4 whitespace-nowrap text-[#0d0d0d]">{row.range}</td>
-                                        <td className="py-2 text-[#717171]">{row.step}</td>
+                                        <td className="py-2 pr-4 text-[#0d0d0d]">{row.range}</td>
+                                        <td className="py-2 text-[#717171]">
+                                            {row.step}
+                                            {row.example && <span className="mt-1 block text-[12px] leading-4.5">e.g. {row.example}</span>}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                         <p className={cn(BODY, "mt-3")}>
-                            The same steps repeat at every level — e.g. ₹1,00,000 – ₹2,00,000 rises by ₹10,000. A sale may set its own increments; the next valid bid is always shown on the lot page.
+                            Bidding begins below the lower estimate and increases in these increments. If you enter a proxy bid online, the next bid is placed at the minimum incremental value. The
+                            next valid bid is always shown on the lot page.
                         </p>
                         <p className={cn(BODY, "mt-3")}>
                             Questions?{" "}
