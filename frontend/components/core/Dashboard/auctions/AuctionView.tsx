@@ -48,7 +48,7 @@ import RichTextContent from "@/components/common/RichTextContent";
 
 export const TYPE_LABEL: Record<Auction["auctionType"], string> = {
     LIVE: "Live",
-    FLOOR: "Floor",
+    ONLINE: "Online",
     HYBRID: "Hybrid",
 };
 

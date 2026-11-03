@@ -111,7 +111,7 @@ export const getAuctionConsole = async (req, res) => {
 
 // -----------------------------------------------------------------
 // POST /api/bidding/lots/:lotUuid/floor-bids   Body: { paddleNumber, amount }
-// Auctioneer enters a bid for a paddle in the room (floor / hybrid sales)
+// Auctioneer enters a bid for a paddle in the room (online / hybrid sales)
 // -----------------------------------------------------------------
 
 export const placeFloorBid = async (req, res) => {

@@ -14,7 +14,7 @@ import type { BidSource } from "./publicAuction.types";
 // ENUMS
 // =====================================================================
 
-export type AuctionType = "LIVE" | "FLOOR" | "HYBRID";
+export type AuctionType = "LIVE" | "ONLINE" | "HYBRID";
 
 export type AuctionStatus =
     | "DRAFT"

@@ -523,7 +523,7 @@ const StatCard = ({ label, value, tone = "slate" }: { label: string; value?: num
 
 const AUCTION_TYPE_LABEL: Record<ParticipantAuction["auctionType"], string> = {
     LIVE: "Live",
-    FLOOR: "Floor",
+    ONLINE: "Online",
     HYBRID: "Hybrid",
 };
 

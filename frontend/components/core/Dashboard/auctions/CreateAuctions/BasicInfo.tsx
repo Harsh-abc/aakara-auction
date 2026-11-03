@@ -314,7 +314,7 @@ export default function BasicInfo() {
                             >
                                 <option value="">Select auction type</option>
                                 <option value="LIVE">Live Auction</option>
-                                <option value="FLOOR">Floor Auction</option>
+                                <option value="ONLINE">Online Auction</option>
                                 <option value="HYBRID">Hybrid Auction</option>
                             </select>
                             {errors.basicInfo?.auctionType && (

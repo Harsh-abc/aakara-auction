@@ -56,7 +56,7 @@ const STATUS_STYLES: Record<AuctionStatus, string> = {
 
 const TYPE_LABEL: Record<TimelineAuction["auctionType"], string> = {
     LIVE: "Live",
-    FLOOR: "Floor",
+    ONLINE: "Online",
     HYBRID: "Hybrid",
 };
 

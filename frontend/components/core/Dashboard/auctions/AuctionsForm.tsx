@@ -24,7 +24,7 @@ export const EMPTY_AUCTION_FORM: AuctionFormData = {
     basicInfo: {
         auctionName: "",
         auctionId: "",
-        auctionType: "FLOOR",
+        auctionType: "ONLINE",
         description: "",
         shortDescription: "",
         categoryUuid: "",

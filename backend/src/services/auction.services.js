@@ -15,7 +15,7 @@ const httpError = (message, statusCode = 400) => {
 };
 
 const ENUMS = {
-    auctionType: ["LIVE", "FLOOR", "HYBRID"],
+    auctionType: ["LIVE", "ONLINE", "HYBRID"],
     auctionStatus: ["DRAFT", "SCHEDULED"], // statuses allowed at creation time
     itemStatus: ["DRAFT", "SCHEDULED"],
     shippingStrategy: [
@@ -426,7 +426,7 @@ export const createAuctionService = async (data) => {
 
     const auctionStatus = pickEnum(status, ENUMS.auctionStatus, "DRAFT", "auction status");
     const isDraft = auctionStatus === "DRAFT";
-    const type = pickEnum(auctionType, ENUMS.auctionType, "FLOOR", "auction type");
+    const type = pickEnum(auctionType, ENUMS.auctionType, "ONLINE", "auction type");
 
     const start = toDate(startTime, "Start time");
     const end = toDate(endTime, "End time");
@@ -1048,7 +1048,7 @@ export const updateAuctionService = async (data) => {
 
     const auctionStatus = pickEnum(status, ENUMS.auctionStatus, "DRAFT", "auction status");
     const isDraft = auctionStatus === "DRAFT";
-    const type = pickEnum(auctionType, ENUMS.auctionType, "FLOOR", "auction type");
+    const type = pickEnum(auctionType, ENUMS.auctionType, "ONLINE", "auction type");
 
     const start = toDate(startTime, "Start time");
     const end = toDate(endTime, "End time");

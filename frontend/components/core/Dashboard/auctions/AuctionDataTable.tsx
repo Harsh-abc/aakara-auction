@@ -82,7 +82,7 @@ const statusItems = [
 const typeItems = [
     { label: "Type : All", value: "all" },
     { label: "Live", value: "LIVE" },
-    { label: "Floor", value: "FLOOR" },
+    { label: "Online", value: "ONLINE" },
     { label: "Hybrid", value: "HYBRID" },
 ]
 

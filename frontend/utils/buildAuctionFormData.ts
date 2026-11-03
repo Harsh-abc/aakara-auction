@@ -157,7 +157,7 @@ export const buildAuctionFormData = (
 
     appendIfPresent(formData, "description", basicInfo.description);
     appendIfPresent(formData, "short_description", basicInfo.shortDescription);
-    formData.append("auctionType", basicInfo.auctionType || "FLOOR");
+    formData.append("auctionType", basicInfo.auctionType || "ONLINE");
     formData.append("categoryUuid", basicInfo.categoryUuid);
     appendIfPresent(formData, "subCategoryUuid", basicInfo.subCategoryUuid);
 
