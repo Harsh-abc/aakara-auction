@@ -9,7 +9,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { getAllUsers } from "@/services/operations/user.api";
 
-const CUSTOMER_ROLES = ["USER", "BIDDER"];
 
 export default function Bidders() {
     const [search, setSearch] = useState("")
@@ -17,17 +16,14 @@ export default function Bidders() {
     const dispatch = useDispatch<AppDispatch>();
     const { users, loading, error } = useSelector((state: RootState) => state.user);
 
-    // customers (users and bidders) whose KYC is verified — the Bidder column shows who has bidder access
+    // only accounts with the Bidder role — website users without bidder access are on the Users page
     useEffect(() => {
-        dispatch(getAllUsers({ page: 1, limit: 100, role: CUSTOMER_ROLES.join(","), kycStatus: "VERIFIED" }));
+        dispatch(getAllUsers({ page: 1, limit: 100, role: "BIDDER" }));
     }, [dispatch]);
 
     // the users slice is shared with other pages, so guard against stale unfiltered data
-    const verifiedCustomers = useMemo(
-        () =>
-            (users ?? []).filter(
-                (u) => CUSTOMER_ROLES.includes(u.role?.name) && u.kyc?.status === "VERIFIED"
-            ),
+    const bidders = useMemo(
+        () => (users ?? []).filter((u) => u.role?.name === "BIDDER"),
         [users]
     );
 
@@ -36,7 +32,7 @@ export default function Bidders() {
 
             <div className="">
                 <h1 className="text-[24px] font-bold">Bidders</h1>
-                <p className="text-sm text-muted-foreground">Customers with verified KYC and whether they have bidder access</p>
+                <p className="text-sm text-muted-foreground">Everyone with bidder access</p>
             </div>
 
             <div className="w-full rounded-[8px] pb-4">
@@ -59,7 +55,7 @@ export default function Bidders() {
                 ) : error ? (
                     <p className="text-sm text-red-500">{error}</p>
                 ) : (
-                    <UsersTable columns={bidderColumns} data={verifiedCustomers} search={search} />
+                    <UsersTable columns={bidderColumns} data={bidders} search={search} />
                 )}
 
             </div>
