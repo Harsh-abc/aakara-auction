@@ -1,45 +1,45 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { TermsOfSaleDocument } from "@/components/core/frontend/auctions/TermsOfSaleDocument"
-import { TERMS_OF_SALE } from "@/lib/constants/termsOfSale"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TermsOfSaleDocument } from "@/components/core/frontend/auctions/TermsOfSaleDocument";
+import { TERMS_OF_SALE } from "@/lib/constants/termsOfSale";
 
 /** px from the bottom that still counts as having scrolled to the end (sub-pixel rounding, zoom) */
-const SCROLL_END_TOLERANCE = 16
+const SCROLL_END_TOLERANCE = 16;
 
 type SignupTermsDialogProps = {
-    open: boolean
-    onAccept: () => void
+    open: boolean;
+    onAccept: () => void;
     /** "Decline", the close button or Escape */
-    onDecline: () => void
-}
+    onDecline: () => void;
+};
 
 // The sign-up checkbox opens this: the full Terms and Conditions, and "Accept" only once they've been scrolled to the end
 export function SignupTermsDialog({ open, onAccept, onDecline }: SignupTermsDialogProps) {
-    const [readToEnd, setReadToEnd] = useState(false)
-    const termsRef = useRef<HTMLDivElement>(null)
+    const [readToEnd, setReadToEnd] = useState(false);
+    const termsRef = useRef<HTMLDivElement>(null);
 
     const markReadIfAtEnd = (el: HTMLElement) => {
-        if (el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_END_TOLERANCE) setReadToEnd(true)
-    }
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_END_TOLERANCE) setReadToEnd(true);
+    };
 
     // terms short enough to fit without scrolling count as read
     useEffect(() => {
-        if (!open) return
+        if (!open) return;
         const frame = requestAnimationFrame(() => {
-            if (termsRef.current) markReadIfAtEnd(termsRef.current)
-        })
-        return () => cancelAnimationFrame(frame)
-    }, [open])
+            if (termsRef.current) markReadIfAtEnd(termsRef.current);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [open]);
 
     // the terms are read fresh every time it opens
     const close = (accepted: boolean) => {
-        setReadToEnd(false)
-        if (accepted) onAccept()
-        else onDecline()
-    }
+        setReadToEnd(false);
+        if (accepted) onAccept();
+        else onDecline();
+    };
 
     return (
         <Dialog open={open} onOpenChange={(next) => !next && close(false)}>
@@ -47,9 +47,7 @@ export function SignupTermsDialog({ open, onAccept, onDecline }: SignupTermsDial
                 <DialogHeader className="border-b border-neutral-200 p-6 pr-12">
                     <p className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">Version {TERMS_OF_SALE.version}</p>
                     <DialogTitle className="text-xl font-light leading-snug text-neutral-950">Terms and conditions</DialogTitle>
-                    <DialogDescription className="text-xs leading-relaxed  text-red-700">
-                        Please read the terms to the end. You need to accept them to create an account.
-                    </DialogDescription>
+                    <DialogDescription className="text-xs leading-relaxed  text-red-700">Please read the Terms and Conditions in full. Acceptance is required to create an account.</DialogDescription>
                 </DialogHeader>
 
                 <div
@@ -86,5 +84,5 @@ export function SignupTermsDialog({ open, onAccept, onDecline }: SignupTermsDial
                 </div>
             </DialogContent>
         </Dialog>
-    )
+    );
 }

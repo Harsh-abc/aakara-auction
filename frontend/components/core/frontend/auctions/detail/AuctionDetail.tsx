@@ -96,7 +96,7 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
                     <h1 className={cn(PAGE_TITLE, "mt-6")}>{auction.title}: Overview</h1>
                     <p className={cn(BODY, "mt-3 max-w-168.5")}>
                         {/* part of a sentence — the short description's formatting is dropped here */}
-                        {status} · {auctionMeta(auction)}.{auction.short_description && ` ${htmlToPlainText(auction.short_description)}`}
+                        <span className="font-semibold">{status} · {auctionMeta(auction)}.</span>{auction.short_description && ` ${htmlToPlainText(auction.short_description)}`}
                     </p>
                     {/* until the sale closes, like the home list (the button itself explains a closed registration window) */}
                     {countdown && (

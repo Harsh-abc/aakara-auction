@@ -40,9 +40,7 @@ export function LotPricePanel({
     return (
         <aside className={className}>
             <h2 className="text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">{lot.artistName ?? lot.title}</h2>
-            <p className="mt-1 text-[14px] leading-5 text-[#717171] italic">
-                {[lot.artistName ? lot.title : null, lot.yearCreated].filter(Boolean).join(", ")}
-            </p>
+            {lot.yearCreated && <p className="mt-1 text-[14px] leading-5 text-[#717171] italic">{lot.yearCreated}</p>}
             {lot.artworkType && <p className={cn(SMALL_CAPS, "mt-1.75 text-[#717171]")}>{lot.artworkType}</p>}
 
             <dl className="mt-5 border-b border-[#cecece] bg-white">

@@ -1,61 +1,58 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { Check, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react";
+import { Check, X } from "lucide-react";
 
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
-import { BODY, BUTTON, BUTTON_SOLID, EYEBROW } from "@/components/core/frontend/storefront"
-import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { BODY, BUTTON, BUTTON_SOLID, EYEBROW } from "@/components/core/frontend/storefront";
+import { cn } from "@/lib/utils";
 
 /** seconds before the popup closes by itself */
-const AUTO_CLOSE_SECONDS = 10
+const AUTO_CLOSE_SECONDS = 10;
 
 type SignupSuccessDialogProps = {
     /** first name, for the greeting */
-    name: string
-    email: string
+    name: string;
+    email: string;
     /** they were logged in straight after signing up; if not, closing takes them to the login form */
-    signedIn: boolean
+    signedIn: boolean;
     /** the X, "Continue", Escape, a click outside, or the countdown running out (called once) */
-    onClose: () => void
-}
+    onClose: () => void;
+};
 
 // shown once the phone code is verified and the account exists; mounted only while it's showing
 export function SignupSuccessDialog({ name, email, signedIn, onClose }: SignupSuccessDialogProps) {
-    const [secondsLeft, setSecondsLeft] = useState(AUTO_CLOSE_SECONDS)
+    const [secondsLeft, setSecondsLeft] = useState(AUTO_CLOSE_SECONDS);
 
     // the countdown and a click can land together; only the first one counts
-    const closed = useRef(false)
+    const closed = useRef(false);
     const close = () => {
-        if (closed.current) return
-        closed.current = true
-        onClose()
-    }
+        if (closed.current) return;
+        closed.current = true;
+        onClose();
+    };
 
     // the bar starts full and is emptied a frame later, so the width change animates
-    const [barRunning, setBarRunning] = useState(false)
+    const [barRunning, setBarRunning] = useState(false);
 
     useEffect(() => {
-        const frame = requestAnimationFrame(() => setBarRunning(true))
-        const timer = setInterval(() => setSecondsLeft((s) => Math.max(s - 1, 0)), 1000)
+        const frame = requestAnimationFrame(() => setBarRunning(true));
+        const timer = setInterval(() => setSecondsLeft((s) => Math.max(s - 1, 0)), 1000);
         return () => {
-            cancelAnimationFrame(frame)
-            clearInterval(timer)
-        }
-    }, [])
+            cancelAnimationFrame(frame);
+            clearInterval(timer);
+        };
+    }, []);
 
     useEffect(() => {
-        if (secondsLeft === 0) close()
+        if (secondsLeft === 0) close();
         // close only reads a ref and the latest onClose
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [secondsLeft])
+    }, [secondsLeft]);
 
     return (
         <Dialog open onOpenChange={(next) => !next && close()}>
-            <DialogContent
-                showCloseButton={false}
-                className="gap-0 overflow-hidden rounded-none border border-[#333] bg-white p-0 ring-0 sm:max-w-[440px]"
-            >
+            <DialogContent showCloseButton={false} className="gap-0 overflow-hidden rounded-none border border-[#333] bg-white p-0 ring-0 sm:max-w-[440px]">
                 <button
                     type="button"
                     onClick={close}
@@ -71,9 +68,7 @@ export function SignupSuccessDialog({ name, email, signedIn, onClose }: SignupSu
                     </span>
 
                     <p className={cn(EYEBROW, "mt-6")}>Registration complete</p>
-                    <DialogTitle className="mt-3 text-[26px] leading-tight font-medium tracking-tight text-[#0d0d0d]">
-                        Thank you for registering{name ? `, ${name}` : ""}
-                    </DialogTitle>
+                    <DialogTitle className="mt-3 text-[26px] leading-tight font-medium tracking-tight text-[#0d0d0d]">Thank you for registering{name ? `, ${name}` : ""}</DialogTitle>
 
                     <DialogDescription className={cn(BODY, "mt-4")}>
                         Your Akara account has been created and your email address and mobile number are verified.
@@ -87,8 +82,8 @@ export function SignupSuccessDialog({ name, email, signedIn, onClose }: SignupSu
                         </li>
                         <li className="mt-2 flex gap-3">
                             <span className="mt-2 size-1 shrink-0 bg-[#cea25a]" aria-hidden />
-                            To bid, complete your KYC in My Profile and register for an auction — our team reviews it
-                            before bidding opens to you.
+                            Update your details under My Profile and register for an auction to begin bidding. Our team will review your registration and notify you once your bidding access is
+                            approved.
                         </li>
                         <li className="mt-2 flex gap-3">
                             <span className="mt-2 size-1 shrink-0 bg-[#cea25a]" aria-hidden />
@@ -118,5 +113,5 @@ export function SignupSuccessDialog({ name, email, signedIn, onClose }: SignupSu
                 </div>
             </DialogContent>
         </Dialog>
-    )
+    );
 }

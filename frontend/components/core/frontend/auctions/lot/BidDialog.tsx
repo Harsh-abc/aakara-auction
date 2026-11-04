@@ -1,122 +1,114 @@
-"use client"
+"use client";
 
-import { XIcon } from "lucide-react"
-import Link from "next/link"
-import { useEffect, useState, type ReactNode } from "react"
-import toast from "react-hot-toast"
+import { XIcon } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState, type ReactNode } from "react";
+import toast from "react-hot-toast";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useAppSelector } from "@/hooks/redux"
-import { getErrorMessage } from "@/lib/apiError"
-import type { MyLotStanding } from "@/lib/types/bidding.types"
-import type { PublicLot } from "@/lib/types/publicAuction.types"
-import { cn } from "@/lib/utils"
-import { getMyLotStanding, placeBid, setProxyBid } from "@/services/operations/bidding.api"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAppSelector } from "@/hooks/redux";
+import { getErrorMessage } from "@/lib/apiError";
+import type { MyLotStanding } from "@/lib/types/bidding.types";
+import type { PublicLot } from "@/lib/types/publicAuction.types";
+import { cn } from "@/lib/utils";
+import { getMyLotStanding, placeBid, setProxyBid } from "@/services/operations/bidding.api";
 
-import { auctionHref } from "../auctionDisplay"
-import { formatMoney, lotHeading } from "../detail/lotDisplay"
-import { AmountSelect } from "./AmountSelect"
-import { bidCountLabel, lotTag, UPCOMING_LOT_STATUSES } from "./lotPageDisplay"
-import type { BidKind } from "./useBidAction"
+import { auctionHref } from "../auctionDisplay";
+import { formatMoney, lotHeading } from "../detail/lotDisplay";
+import { AmountSelect } from "./AmountSelect";
+import { bidCountLabel, lotTag, UPCOMING_LOT_STATUSES } from "./lotPageDisplay";
+import type { BidKind } from "./useBidAction";
 
-const SMALL_CAPS = "text-[10px] uppercase tracking-[0.18em]"
-const ACTION =
-    "inline-flex h-11 cursor-pointer items-center justify-center px-6 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+const SMALL_CAPS = "text-[10px] uppercase tracking-[0.18em]";
+const ACTION = "inline-flex h-11 cursor-pointer items-center justify-center px-6 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 // the amounts, plus `amount` in its place when it isn't one of them
 const withAmount = (amounts: string[], amount: string | null) =>
-    amount === null || amounts.some((option) => Number(option) === Number(amount))
-        ? amounts
-        : [...amounts, amount].sort((a, b) => Number(a) - Number(b))
+    amount === null || amounts.some((option) => Number(option) === Number(amount)) ? amounts : [...amounts, amount].sort((a, b) => Number(a) - Number(b));
 
 type BidDialogProps = {
-    auctionUuid: string
+    auctionUuid: string;
     /** the lot as the page has it — a new bid on it refreshes the dialog's numbers */
-    lot: PublicLot | null
-    kind: BidKind
-    onKindChange: (kind: BidKind) => void
-    onClose: () => void
+    lot: PublicLot | null;
+    kind: BidKind;
+    onKindChange: (kind: BidKind) => void;
+    onClose: () => void;
     /** a bid or proxy went through */
-    onSaved?: () => void
-}
+    onSaved?: () => void;
+};
 
 // place a bid on a live lot, or leave a proxy (maximum) bid on an upcoming one — changeable until it opens
 export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSaved }: BidDialogProps) {
-    const token = useAppSelector((state) => state.auth.accessToken)
+    const token = useAppSelector((state) => state.auth.accessToken);
 
-    const [standing, setStanding] = useState<MyLotStanding | null>(null)
-    const [loadError, setLoadError] = useState<{ lotUuid: string; message: string } | null>(null)
-    const [reload, setReload] = useState(0)
+    const [standing, setStanding] = useState<MyLotStanding | null>(null);
+    const [loadError, setLoadError] = useState<{ lotUuid: string; message: string } | null>(null);
+    const [reload, setReload] = useState(0);
     // the maximum the bidder picked, for this lot only
-    const [picked, setPicked] = useState<{ key: string; amount: string }>({ key: "", amount: "" })
+    const [picked, setPicked] = useState<{ key: string; amount: string }>({ key: "", amount: "" });
     // the amount waiting on the bidder's confirmation
-    const [confirming, setConfirming] = useState<number | null>(null)
-    const [submitting, setSubmitting] = useState(false)
+    const [confirming, setConfirming] = useState<number | null>(null);
+    const [submitting, setSubmitting] = useState(false);
     // the bid dialog's height, so the confirmation covers it exactly
-    const [bidPanel, setBidPanel] = useState<HTMLDivElement | null>(null)
-    const [bidPanelHeight, setBidPanelHeight] = useState<number | null>(null)
+    const [bidPanel, setBidPanel] = useState<HTMLDivElement | null>(null);
+    const [bidPanelHeight, setBidPanelHeight] = useState<number | null>(null);
 
     useEffect(() => {
-        if (!bidPanel) return
-        const observer = new ResizeObserver(() => setBidPanelHeight(bidPanel.offsetHeight))
-        observer.observe(bidPanel)
-        return () => observer.disconnect()
-    }, [bidPanel])
+        if (!bidPanel) return;
+        const observer = new ResizeObserver(() => setBidPanelHeight(bidPanel.offsetHeight));
+        observer.observe(bidPanel);
+        return () => observer.disconnect();
+    }, [bidPanel]);
 
-    const lotUuid = lot?.uuid
-    const bidCount = lot?.bidCount
-    const lotStatus = lot?.status
+    const lotUuid = lot?.uuid;
+    const bidCount = lot?.bidCount;
+    const lotStatus = lot?.status;
 
     useEffect(() => {
-        if (!lotUuid) return
-        let cancelled = false
+        if (!lotUuid) return;
+        let cancelled = false;
         getMyLotStanding(lotUuid, token)
             .then((data) => {
-                if (cancelled) return
-                setStanding(data)
-                setLoadError(null)
+                if (cancelled) return;
+                setStanding(data);
+                setLoadError(null);
             })
             .catch((err) => {
-                if (!cancelled) setLoadError({ lotUuid, message: getErrorMessage(err) })
-            })
+                if (!cancelled) setLoadError({ lotUuid, message: getErrorMessage(err) });
+            });
         return () => {
-            cancelled = true
-        }
-    }, [lotUuid, bidCount, lotStatus, token, reload])
+            cancelled = true;
+        };
+    }, [lotUuid, bidCount, lotStatus, token, reload]);
 
-    if (!lot) return null
+    if (!lot) return null;
 
-    const current = standing?.lotUuid === lot.uuid ? standing : null
-    const error = !current && loadError?.lotUuid === lot.uuid ? loadError.message : null
-    const money = (amount: string | number | null) => formatMoney(amount, current?.currency ?? lot.currency) ?? "—"
+    const current = standing?.lotUuid === lot.uuid ? standing : null;
+    const error = !current && loadError?.lotUuid === lot.uuid ? loadError.message : null;
+    const money = (amount: string | number | null) => formatMoney(amount, current?.currency ?? lot.currency) ?? "—";
 
-    const count = Number(current?.bidCount ?? lot.bidCount) || 0
-    const verified = current?.registration === "VERIFIED"
-    const allowed = kind === "bid" ? current?.canBid : current?.canProxy
-    const leadingOnBid = kind === "bid" && current?.leading
+    const count = Number(current?.bidCount ?? lot.bidCount) || 0;
+    const verified = current?.registration === "VERIFIED";
+    const allowed = kind === "bid" ? current?.canBid : current?.canProxy;
+    const leadingOnBid = kind === "bid" && current?.leading;
     // proxy bids close as soon as the lot opens (the page's live status can be ahead of the dialog's)
-    const proxyOpen = UPCOMING_LOT_STATUSES.includes(lot.status) && (!current || UPCOMING_LOT_STATUSES.includes(current.status))
+    const proxyOpen = UPCOMING_LOT_STATUSES.includes(lot.status) && (!current || UPCOMING_LOT_STATUSES.includes(current.status));
     // the bidder's proxy, changeable until the lot opens and locked after
-    const proxyMax = kind === "proxy" ? current?.proxyMax ?? null : null
-    const proxyLocked = Boolean(proxyMax) && !proxyOpen
+    const proxyMax = kind === "proxy" ? (current?.proxyMax ?? null) : null;
+    const proxyLocked = Boolean(proxyMax) && !proxyOpen;
 
     // the maximums on offer, with the bidder's current one among them
-    const proxyOptions = kind === "proxy" ? withAmount(current?.proxyOptions ?? [], proxyMax) : []
+    const proxyOptions = kind === "proxy" ? withAmount(current?.proxyOptions ?? [], proxyMax) : [];
     // a bid is always the next valid bid; a proxy is the maximum picked (the current one until another is picked).
     // a new bid moves the options up — a pick that's no longer offered falls back
-    const pickKey = `${lot.uuid}:${kind}`
-    const value =
-        kind === "bid"
-            ? current?.nextBid ?? ""
-            : picked.key === pickKey && proxyOptions.includes(picked.amount)
-              ? picked.amount
-              : proxyMax ?? proxyOptions[0] ?? ""
-    const amount = value ? Number(value) : NaN
-    const sameAsProxy = proxyMax !== null && amount === Number(proxyMax)
+    const pickKey = `${lot.uuid}:${kind}`;
+    const value = kind === "bid" ? (current?.nextBid ?? "") : picked.key === pickKey && proxyOptions.includes(picked.amount) ? picked.amount : (proxyMax ?? proxyOptions[0] ?? "");
+    const amount = value ? Number(value) : NaN;
+    const sameAsProxy = proxyMax !== null && amount === Number(proxyMax);
 
     // why this kind of bid can't be placed right now (null = it can)
-    let blocker: ReactNode = null
+    let blocker: ReactNode = null;
     if (current && current.registration === "NOT_REGISTERED") {
         blocker = (
             <>
@@ -125,20 +117,19 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                     Register to bid
                 </Link>
             </>
-        )
+        );
     } else if (current && current.registration === "PENDING") {
-        blocker = "Your registration is awaiting verification by the auction house. You can bid once it's approved."
+        blocker = "Your registration is pending approval. Bidding will be enabled once verified.";
     } else if (current && proxyLocked) {
         blocker = (
             <>
-                Your maximum bid of <span className="font-medium text-neutral-950">{money(proxyMax)}</span> is set.{" "}
-                {lotTag(lot)} has opened, so it can no longer be changed.
+                Your maximum bid of <span className="font-medium text-neutral-950">{money(proxyMax)}</span> is set. {lotTag(lot)} has opened, so it can no longer be changed.
             </>
-        )
+        );
     } else if (current && kind === "proxy" && proxyOpen && !current.proxyEnabled) {
         blocker = current.proxyMax
             ? `Proxy bids are turned off for this sale. Your maximum bid of ${money(current.proxyMax)} still stands, but it can't be changed.`
-            : `Proxy bids are turned off for this sale. You can bid when ${lotTag(lot)} opens.`
+            : `Proxy bids are turned off for this sale. You can bid when ${lotTag(lot)} opens.`;
     } else if (current && kind === "proxy" && !proxyOpen && current.status === "ACTIVE") {
         blocker = (
             <>
@@ -149,14 +140,13 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                     </button>
                 )}
             </>
-        )
+        );
     } else if (current && !allowed) {
         if (kind === "bid" && UPCOMING_LOT_STATUSES.includes(current.status)) {
             blocker = current.canProxy ? (
                 current.proxyMax ? (
                     <>
-                        {lotTag(lot)} isn&apos;t on the block yet. Your maximum bid of {money(current.proxyMax)} is placed for you when the auctioneer
-                        calls the hammer.{" "}
+                        {lotTag(lot)} isn&apos;t on the block yet. Your maximum bid of {money(current.proxyMax)} is placed for you when the auctioneer calls the hammer.{" "}
                         <button type="button" onClick={() => onKindChange("proxy")} className="cursor-pointer text-neutral-950 underline underline-offset-2">
                             Change it
                         </button>{" "}
@@ -175,61 +165,60 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                 `${lotTag(lot)} isn't on the block yet. Your maximum bid of ${money(current.proxyMax)} is placed for you when the auctioneer calls the hammer.`
             ) : (
                 `${lotTag(lot)} isn't on the block yet. You can bid when it opens.`
-            )
+            );
         } else if (kind === "bid" && current.status === "ACTIVE" && current.auctionStatus === "PAUSED") {
-            blocker = "Bidding is paused. It resumes when the auctioneer restarts the sale."
+            blocker = "Bidding is paused. It resumes when the auctioneer restarts the sale.";
         } else {
-            blocker = `Bidding on ${lotTag(lot)} has closed.`
+            blocker = `Bidding on ${lotTag(lot)} has closed.`;
         }
     }
 
-    const canPlace = Boolean(current && verified && allowed && !leadingOnBid && !submitting && (kind === "bid" || proxyOpen))
-    const canSubmit = canPlace && amount > 0 && !sameAsProxy
+    const canPlace = Boolean(current && verified && allowed && !leadingOnBid && !submitting && (kind === "bid" || proxyOpen));
+    const canSubmit = canPlace && amount > 0 && !sameAsProxy;
 
     // someone bid while the bidder was confirming, and the amount no longer reaches the next bid
-    const outpaced = kind === "bid" && confirming !== null && Number(current?.nextBid) > confirming
+    const outpaced = kind === "bid" && confirming !== null && Number(current?.nextBid) > confirming;
 
     const review = () => {
-        if (canSubmit) setConfirming(amount)
-    }
+        if (canSubmit) setConfirming(amount);
+    };
 
     const submit = async () => {
-        if (!canPlace || confirming === null || outpaced) return
-        setSubmitting(true)
+        if (!canPlace || confirming === null || outpaced) return;
+        setSubmitting(true);
         try {
-            const { message, data } =
-                kind === "bid" ? await placeBid(lot.uuid, confirming, token) : await setProxyBid(lot.uuid, confirming, token)
+            const { message, data } = kind === "bid" ? await placeBid(lot.uuid, confirming, token) : await setProxyBid(lot.uuid, confirming, token);
             // topped straight away by someone's proxy: say so, but it isn't an error
-            if (data.leading || data.status !== "ACTIVE") toast.success(message)
-            else toast(message, { icon: "⚠️" })
-            setPicked({ key: "", amount: "" })
-            setConfirming(null)
-            onSaved?.()
-            onClose()
+            if (data.leading || data.status !== "ACTIVE") toast.success(message);
+            else toast(message, { icon: "⚠️" });
+            setPicked({ key: "", amount: "" });
+            setConfirming(null);
+            onSaved?.();
+            onClose();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Your bid didn't go through. Please try again."))
-            setConfirming(null)
+            toast.error(getErrorMessage(err, "Your bid didn't go through. Please try again."));
+            setConfirming(null);
             // someone may have bid first — show the new asking price
-            setReload((n) => n + 1)
+            setReload((n) => n + 1);
         } finally {
-            setSubmitting(false)
+            setSubmitting(false);
         }
-    }
+    };
 
     const handleOpenChange = (open: boolean) => {
-        if (!open && !submitting) onClose()
-    }
+        if (!open && !submitting) onClose();
+    };
 
     const handleConfirmOpenChange = (open: boolean) => {
-        if (!open && !submitting) setConfirming(null)
-    }
+        if (!open && !submitting) setConfirming(null);
+    };
 
     const rows = current
         ? [
               { term: count > 0 ? `Current bid · ${bidCountLabel(count)}` : "Starting bid", value: money(count > 0 ? current.currentBid : lot.startingPrice) },
               current.proxyMax ? { term: "Your maximum bid", value: money(current.proxyMax) } : null,
           ].filter((row): row is { term: string; value: string } => row !== null)
-        : []
+        : [];
 
     return (
         <Dialog open onOpenChange={handleOpenChange}>
@@ -240,9 +229,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                             {kind === "bid" ? "Place bid" : "Proxy bid"} · {lotTag(lot)}
                         </p>
                         <DialogTitle className="text-lg leading-snug font-normal text-neutral-950">{lotHeading(lot)}</DialogTitle>
-                        <DialogDescription className="sr-only">
-                            {kind === "bid" ? "Place a bid on this lot" : "Set the most you're willing to pay for this lot"}
-                        </DialogDescription>
+                        <DialogDescription className="sr-only">{kind === "bid" ? "Place a bid on this lot" : "Set the most you're willing to pay for this lot"}</DialogDescription>
                     </DialogHeader>
                     <button
                         type="button"
@@ -290,9 +277,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                     <span>Next bid</span>
                                     <span className="tracking-widest tabular-nums">{money(current.nextBid)}</span>
                                 </button>
-                                <p className="mt-3 text-xs leading-relaxed text-neutral-500">
-                                    Bids rise in set increments. Minimum next bid {money(current.nextBid)}.
-                                </p>
+                                <p className="mt-3 text-xs leading-relaxed text-neutral-500">Bids rise in set increments. Minimum next bid {money(current.nextBid)}.</p>
                             </div>
                         ) : (
                             <div className="mt-6">
@@ -308,21 +293,13 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                     disabled={submitting}
                                     className="mt-3"
                                 />
-                                {sameAsProxy && (
-                                    <p className="mt-2 text-xs text-neutral-500">This is your current maximum. Pick another amount to change it.</p>
-                                )}
+                                {sameAsProxy && <p className="mt-2 text-xs text-neutral-500">This is your current maximum. Pick another amount to change it.</p>}
                                 <p className="mt-3 text-xs leading-relaxed text-neutral-500">
-                                    When the auctioneer calls the hammer, your maximum is placed for you: if it&apos;s the highest, you win at one
-                                    increment above the standing bid — never above your maximum. The highest maximum always wins; if two bidders leave the same maximum, the one
-                                    who set it first wins (a changed maximum counts from when it was changed). Other bidders don&apos;t see it. You
-                                    can change it until the lot opens; after that it&apos;s locked.
+                                    When the auctioneer calls the hammer, your maximum is placed for you: if it&apos;s the highest, you win at one increment above the standing bid — never above your
+                                    maximum. The highest maximum always wins; if two bidders leave the same maximum, the one who set it first wins (a changed maximum counts from when it was changed).
+                                    Other bidders don&apos;t see it. You can change it until the lot opens; after that it&apos;s locked.
                                 </p>
-                                <button
-                                    type="button"
-                                    onClick={review}
-                                    disabled={!canSubmit}
-                                    className={cn(ACTION, "mt-4 w-full bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}
-                                >
+                                <button type="button" onClick={review} disabled={!canSubmit} className={cn(ACTION, "mt-4 w-full bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}>
                                     {amount > 0 ? `${proxyMax ? "Update" : "Set"} maximum ${money(amount)}` : proxyMax ? "Update maximum" : "Set maximum"}
                                 </button>
                             </div>
@@ -356,9 +333,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                     >
                         <DialogHeader className="border-b border-neutral-200 p-6">
                             <p className={cn(SMALL_CAPS, "text-neutral-500")}>{lotTag(lot)}</p>
-                            <DialogTitle className="text-xl leading-snug font-light text-neutral-950">
-                                {kind === "bid" ? "Confirm your bid" : "Confirm your maximum bid"}
-                            </DialogTitle>
+                            <DialogTitle className="text-xl leading-snug font-light text-neutral-950">{kind === "bid" ? "Confirm your bid" : "Confirm your maximum bid"}</DialogTitle>
                             <DialogDescription className="text-sm text-neutral-600">{lotHeading(lot)}</DialogDescription>
                         </DialogHeader>
 
@@ -383,12 +358,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                             >
                                 Back
                             </button>
-                            <button
-                                type="button"
-                                onClick={submit}
-                                disabled={submitting || !canPlace || outpaced}
-                                className={cn(ACTION, "bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}
-                            >
+                            <button type="button" onClick={submit} disabled={submitting || !canPlace || outpaced} className={cn(ACTION, "bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}>
                                 {submitting ? "Sending..." : kind === "bid" ? "Confirm bid" : "Confirm maximum"}
                             </button>
                         </div>
@@ -396,5 +366,5 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                 </Dialog>
             </DialogContent>
         </Dialog>
-    )
+    );
 }
