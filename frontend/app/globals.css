@@ -154,4 +154,9 @@
   html {
     @apply font-sans;
   }
+
+  /* storefront pages use Inter; set on body (not the layout wrapper) so portaled menus, dialogs and toasts get it too */
+  body:has(.site-frontend) {
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
 }

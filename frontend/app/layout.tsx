@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Nunito_Sans } from "next/font/google";
+import { Inter, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import "./master.css";
 import Providers from "./providers";
@@ -7,6 +7,13 @@ import Providers from "./providers";
 const nunitoSans = Nunito_Sans({
     variable: "--font-nunito-sans",
     subsets: ["latin"],
+});
+
+// the storefront's font; exposed as a variable on <html> so portaled UI (dialogs, dropdowns, toasts) can use it too
+const inter = Inter({
+    variable: "--font-inter",
+    subsets: ["latin"],
+    display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +34,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" className={`${nunitoSans.variable} h-full antialiased`}>
+        <html lang="en" className={`${nunitoSans.variable} ${inter.variable} h-full antialiased`}>
             <body className="min-h-full flex flex-col">
                 {/* each route group mounts its own toaster: the storefront's is styled, the dashboard's is the default */}
                 <Providers>{children}</Providers>
