@@ -84,6 +84,17 @@ export interface AuctionViewers {
     version: number
 }
 
+/** "lot:callout" — the auctioneer's words to the room ("Fair warning", "Going once") */
+export interface LotCallout {
+    id: string
+    auctionUuid: string
+    lotUuid: string
+    itemNumber: string
+    message: string
+    /** ISO time it was sent */
+    at: string
+}
+
 /** "bid:outbid" — sent only to the bidder who lost the lead */
 export interface OutbidNotice {
     auctionUuid: string

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { setLotLive } from "@/services/operations/auction.api";
 import { executeProxies, getAuctionConsole, hammerLot, placeFloorBid } from "@/services/operations/bidding.api";
 
+import CalloutPanel from "./CalloutPanel";
 import FloorBidDialog from "./FloorBidDialog";
 import HammerDialog, { type ProxyStep } from "./HammerDialog";
 import ProxyBook from "./ProxyBook";
@@ -245,6 +246,10 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                             <LotCard lot={lot} />
 
                             <CurrentAsk position={position} code={code} />
+
+                            {canControl && (
+                                <CalloutPanel lot={lot} position={position} code={code} token={token} disabled={paused} />
+                            )}
 
                             <div className="min-h-6 flex-1" />
 

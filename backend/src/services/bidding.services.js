@@ -764,6 +764,32 @@ export const executeProxiesService = async ({ lotUuid }) => {
 };
 
 // =====================================================================
+// CALLOUT (auctioneer console)
+// What the auctioneer says to the room — "Fair warning", "Going once" — shown
+// to everyone watching the sale. Not stored: it's only for those watching now.
+// =====================================================================
+
+export const sendLotCalloutService = async ({ lotUuid, message }) => {
+    const lot = await ensureLotState(lotUuid);
+    if (lot.status !== "ACTIVE") throw httpError(`Lot #${lot.itemNumber} isn't live`, 409);
+    if ((await ensureAuctionStatus(lot.auctionUuid)) !== "LIVE") {
+        throw httpError("Bidding is paused for this auction", 409);
+    }
+
+    const callout = {
+        id: randomUUID(),
+        auctionUuid: lot.auctionUuid,
+        lotUuid,
+        itemNumber: String(lot.itemNumber),
+        message,
+        at: new Date().toISOString(),
+    };
+    emitTo(rooms.auction(lot.auctionUuid), "lot:callout", callout);
+
+    return { message: "Sent to the room", data: callout };
+};
+
+// =====================================================================
 // MY STANDING ON A LOT (bid dialog)
 // =====================================================================
 

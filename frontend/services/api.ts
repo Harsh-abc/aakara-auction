@@ -82,6 +82,7 @@ export const biddingEndPoints = {
     FLOOR_BID_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/floor-bids`,
     // hammer step 1: place the lot's proxy bids
     EXECUTE_PROXIES_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/execute-proxies`,
+    LOT_CALLOUT_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/callouts`,
     // proxy bids page (super admin / admin)
     PROXY_BIDS_API: `${BASE_URL}/api/bidding/proxy-bids`,
     PROXY_BIDS_SUMMARY_API: `${BASE_URL}/api/bidding/proxy-bids/summary`,

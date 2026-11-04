@@ -52,3 +52,12 @@ export const placeFloorBidSchema = z.object({
         .pipe(z.string().min(1, "Enter the bidder's paddle number").max(20, "Paddle number is too long")),
     amount: money("Bid"),
 });
+
+// console: a line the auctioneer sends to everyone watching ("Fair warning", or their own words)
+export const lotCalloutSchema = z.object({
+    message: z
+        .string({ message: "Enter a message" })
+        .trim()
+        .min(1, "Enter a message")
+        .max(160, "Keep the message under 160 characters"),
+});

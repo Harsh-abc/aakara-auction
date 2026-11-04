@@ -7,6 +7,7 @@ import {
     getMyLotStanding,
     placeBid,
     placeFloorBid,
+    sendLotCallout,
     setProxyBid,
 } from "../controllers/bidding.controller.js";
 import {
@@ -50,5 +51,7 @@ biddingRouter.get("/auctions/:auctionUuid/console", authenticate, requireRole(..
 biddingRouter.post("/lots/:lotUuid/floor-bids", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), placeFloorBid);
 // hammer step 1: place the lot's proxy bids (then POST /api/auction/lots/:lotUuid/hammer sells)
 biddingRouter.post("/lots/:lotUuid/execute-proxies", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), executeProxies);
+// the auctioneer's callouts ("Fair warning", "Going once") to everyone watching
+biddingRouter.post("/lots/:lotUuid/callouts", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "AUCTIONEER"), sendLotCallout);
 
 export default biddingRouter;

@@ -7,10 +7,11 @@ import {
     getMyLotStandingService,
     placeBidService,
     placeFloorBidService,
+    sendLotCalloutService,
     setProxyBidService,
 } from "../services/bidding.services.js";
 import { auctionUuidParamSchema, lotUuidParamSchema } from "../validations/auction.validation.js";
-import { placeBidSchema, placeFloorBidSchema, setProxyBidSchema } from "../validations/bidding.validation.js";
+import { lotCalloutSchema, placeBidSchema, placeFloorBidSchema, setProxyBidSchema } from "../validations/bidding.validation.js";
 import { getClientIp } from "../utils/clientIp.js";
 
 const handleError = (res, error, label, fallback) => {
@@ -138,5 +139,21 @@ export const executeProxies = async (req, res) => {
         return res.status(200).json({ success: true, message, data });
     } catch (error) {
         return handleError(res, error, "Execute proxy bids", "Failed to place the proxy bids");
+    }
+};
+
+// -----------------------------------------------------------------
+// POST /api/bidding/lots/:lotUuid/callouts   Body: { message }
+// The auctioneer's words to the room, shown to everyone watching the live lot
+// -----------------------------------------------------------------
+
+export const sendLotCallout = async (req, res) => {
+    try {
+        const { lotUuid } = lotUuidParamSchema.parse(req.params);
+        const { message: text } = lotCalloutSchema.parse(req.body ?? {});
+        const { message, data } = await sendLotCalloutService({ lotUuid, message: text });
+        return res.status(201).json({ success: true, message, data });
+    } catch (error) {
+        return handleError(res, error, "Send callout", "Failed to send the message");
     }
 };

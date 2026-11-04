@@ -6,6 +6,7 @@ import type {
     BidResult,
     ExecuteProxiesResult,
     HammerResult,
+    LotCallout,
     MyLotStanding,
 } from "@/lib/types/bidding.types"
 
@@ -17,6 +18,7 @@ const {
     AUCTION_CONSOLE_API,
     FLOOR_BID_API,
     EXECUTE_PROXIES_API,
+    LOT_CALLOUT_API,
 } = biddingEndPoints
 const { HAMMER_LOT_API } = auctionEndPoints
 
@@ -81,6 +83,17 @@ export async function placeFloorBid(
 export async function executeProxies(lotUuid: string, token: string | null): Promise<{ message: string; data: ExecuteProxiesResult }> {
     const response = await apiConnector({ method: "POST", url: EXECUTE_PROXIES_API(lotUuid), header: authHeader(token) })
     return { message: response.data.message, data: response.data.data }
+}
+
+// console: the auctioneer's words to everyone watching the live lot ("Fair warning", or their own)
+export async function sendLotCallout(lotUuid: string, message: string, token: string | null): Promise<LotCallout> {
+    const response = await apiConnector({
+        method: "POST",
+        url: LOT_CALLOUT_API(lotUuid),
+        body: { message },
+        header: authHeader(token),
+    })
+    return response.data.data
 }
 
 // console: sell the live lot to its leader — bidCount is what the auctioneer saw, so a later bid stops it

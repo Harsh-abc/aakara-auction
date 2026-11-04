@@ -3,10 +3,11 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ImageOff } from "lucide-react";
+import { ImageOff, Megaphone } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuctionViewers } from "@/hooks/useAuctionViewers";
+import { useLotCallout } from "@/hooks/useLotCallout";
 import { cn } from "@/lib/utils";
 
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, PAGE_MAIN } from "../storefront";
@@ -35,6 +36,7 @@ const VIEWER_COUNT = new Intl.NumberFormat("en-IN");
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid);
     const viewers = useAuctionViewers(auctionUuid);
+    const callout = useLotCallout(auctionUuid);
     const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
     const router = useRouter();
 
@@ -100,6 +102,21 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <OrderOfSale lots={lots} saleClosed={!countdown} className="order-2 lg:order-1" />
 
                         <div className="order-1 min-w-0 lg:order-2">
+                            {callout && callout.lotUuid === lot.uuid && (
+                                // keyed so each new callout animates in
+                                <div
+                                    key={callout.id}
+                                    role="status"
+                                    aria-live="polite"
+                                    className="mb-5 flex items-center gap-3 border border-[#d0a55d] bg-[#fdedd6] px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 duration-300"
+                                >
+                                    <Megaphone className="size-4 shrink-0 text-[#0d0d0d]" />
+                                    <p className="text-[14px] leading-5 text-[#0d0d0d]">
+                                        <span className="mr-2 text-[11px] font-semibold tracking-[0.12em] uppercase">Auctioneer</span>
+                                        {callout.message}
+                                    </p>
+                                </div>
+                            )}
                             <div className={LOT_GRID}>
                                 <div>
                                     {/* LIVE · LOT 08 over the image, how many are watching opposite */}
