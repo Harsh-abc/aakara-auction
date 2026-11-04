@@ -247,10 +247,6 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
 
                             <CurrentAsk position={position} code={code} />
 
-                            {canControl && (
-                                <CalloutPanel lot={lot} position={position} code={code} token={token} disabled={paused} />
-                            )}
-
                             <div className="min-h-6 flex-1" />
 
                             <p className="text-[12px] font-semibold text-[#414141]">Quick Increment Triggers</p>
@@ -336,6 +332,9 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                             code={code}
                             reload={reload}
                         />
+                    )}
+                    {canControl && lot && position && (
+                        <CalloutPanel lot={lot} position={position} code={code} token={token} disabled={paused} />
                     )}
                 </div>
             </div>
