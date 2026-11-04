@@ -203,8 +203,6 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
     const code = lot?.currency.code ?? auction.currency.code;
     const onFloor = FLOOR_STATUSES.includes(auction.status);
     const paused = auction.status === "PAUSED";
-    // online-only sales take no bids from the room
-    const takesFloorBids = auction.auctionType !== "LIVE";
 
     const options = position?.bidOptions ?? [];
     const selectedAmount = picked && options.includes(picked) ? picked : options[0] ?? null;
@@ -253,7 +251,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                             <p className="text-[12px] font-semibold text-[#414141]">Quick Increment Triggers</p>
                             <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
                                 {(options.length ? options : [null, null, null]).map((option, index) => {
-                                    const selectable = Boolean(option) && takesFloorBids && canControl && !paused;
+                                    const selectable = Boolean(option) && canControl && !paused;
                                     const selected = option !== null && option === selectedAmount;
                                     return (
                                         <button
@@ -280,17 +278,15 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                             </div>
 
                             {canControl && (
-                                <div className={cn("mt-4 grid gap-3", takesFloorBids ? "grid-cols-2" : "grid-cols-1")}>
-                                    {takesFloorBids && (
-                                        <Button
-                                            type="button"
-                                            className="h-10 rounded-[6px] bg-[#22C55E] text-[13px] font-medium text-white hover:bg-[#22C55E]/90"
-                                            disabled={!selectedAmount || paused || busy !== null}
-                                            onClick={() => setFloorOpen(true)}
-                                        >
-                                            Place Bid
-                                        </Button>
-                                    )}
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                    <Button
+                                        type="button"
+                                        className="h-10 rounded-[6px] bg-[#22C55E] text-[13px] font-medium text-white hover:bg-[#22C55E]/90"
+                                        disabled={!selectedAmount || paused || busy !== null}
+                                        onClick={() => setFloorOpen(true)}
+                                    >
+                                        Place Bid
+                                    </Button>
                                     <Button
                                         type="button"
                                         className="h-10 rounded-[6px] bg-[#F59E0B] text-[13px] font-medium text-white hover:bg-[#F59E0B]/90"
@@ -351,19 +347,17 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                         busy={busy === "hammer"}
                         onConfirm={confirmHammer}
                     />
-                    {takesFloorBids && (
-                        <FloorBidDialog
-                            open={floorOpen}
-                            onOpenChange={setFloorOpen}
-                            itemNumber={lot.itemNumber}
-                            currency={code}
-                            amount={selectedAmount ?? position.nextBid}
-                            nextBid={position.nextBid}
-                            floorBidders={data.floorBidders}
-                            busy={busy === "floor"}
-                            onSubmit={submitFloorBid}
-                        />
-                    )}
+                    <FloorBidDialog
+                        open={floorOpen}
+                        onOpenChange={setFloorOpen}
+                        itemNumber={lot.itemNumber}
+                        currency={code}
+                        amount={selectedAmount ?? position.nextBid}
+                        nextBid={position.nextBid}
+                        floorBidders={data.floorBidders}
+                        busy={busy === "floor"}
+                        onSubmit={submitFloorBid}
+                    />
                 </>
             )}
         </ConsoleFrame>

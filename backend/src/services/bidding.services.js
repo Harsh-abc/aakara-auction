@@ -664,8 +664,8 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
 // =====================================================================
 // FLOOR BID (auctioneer console)
 // The auctioneer enters a bid for a paddle raised in the room. The paddle
-// holder must be verified on the lot, like any online bidder. Online-only
-// (LIVE type) sales take no floor bids.
+// holder must be verified on the lot, like any online bidder. Every auction
+// type takes floor bids, so the auctioneer can bid on a bidder's behalf.
 // =====================================================================
 
 export const placeFloorBidService = async ({ lotUuid, paddleNumber, amount, ip, userAgent }) => {
@@ -675,14 +675,10 @@ export const placeFloorBidService = async ({ lotUuid, paddleNumber, amount, ip, 
     const auction = await prisma.auction.findUnique({
         where: { id: BigInt(lot.auctionId) },
         select: {
-            auctionType: true,
             participants: { where: { paddleNumber }, select: { userId: true } },
         },
     });
     if (!auction) throw httpError("Auction not found", 404);
-    if (auction.auctionType === "LIVE") {
-        throw httpError("This is an online-only sale — bids can't be entered from the floor", 409);
-    }
 
     const userId = auction.participants[0]?.userId?.toString();
     if (!userId) throw httpError(`No bidder holds paddle ${paddle} in this auction`, 404);
@@ -1113,26 +1109,23 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
     const reserve = lot.reservePrice === null ? null : Number(lot.reservePrice);
 
     // paddles the auctioneer can enter floor bids for
-    let floorBidders = [];
-    if (auction.auctionType !== "LIVE") {
-        const rows = await prisma.lotBidder.findMany({
-            where: { itemId: lot.id, ...ELIGIBLE_LOT_BIDDER_WHERE },
-            select: {
-                user: {
-                    select: {
-                        uuid: true,
-                        username: true,
-                        profile: { select: { displayName: true, firstName: true, lastName: true } },
-                        auctionParticipations: { where: { auctionId: auction.id }, select: { paddleNumber: true } },
-                    },
+    const rows = await prisma.lotBidder.findMany({
+        where: { itemId: lot.id, ...ELIGIBLE_LOT_BIDDER_WHERE },
+        select: {
+            user: {
+                select: {
+                    uuid: true,
+                    username: true,
+                    profile: { select: { displayName: true, firstName: true, lastName: true } },
+                    auctionParticipations: { where: { auctionId: auction.id }, select: { paddleNumber: true } },
                 },
             },
-        });
-        floorBidders = rows
-            .map(({ user }) => ({ uuid: user.uuid, paddle: user.auctionParticipations[0]?.paddleNumber ?? null, name: displayName(user) }))
-            .filter((bidder) => bidder.paddle)
-            .sort(byPaddle);
-    }
+        },
+    });
+    const floorBidders = rows
+        .map(({ user }) => ({ uuid: user.uuid, paddle: user.auctionParticipations[0]?.paddleNumber ?? null, name: displayName(user) }))
+        .filter((bidder) => bidder.paddle)
+        .sort(byPaddle);
 
     const { images, category, id, ...lotFields } = lot; // eslint-disable-line no-unused-vars
     return serializeBigInt({
