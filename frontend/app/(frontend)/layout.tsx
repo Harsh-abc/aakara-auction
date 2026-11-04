@@ -3,12 +3,6 @@ import { Footer } from "@/components/core/frontend/footer/footer";
 import { AkaraToaster } from "@/components/core/frontend/toast/AkaraToaster";
 
 import { GoogleAnalytics } from "@next/third-parties/google";
-import { Inter } from "next/font/google";
-
-const inter = Inter({
-    subsets: ["latin"],
-    display: "swap",
-});
 
 export default function FrontendLayout({
     children,
@@ -16,7 +10,7 @@ export default function FrontendLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <div className={`flex min-h-dvh flex-col ${inter.className}`}>
+        <div className="site-frontend flex min-h-dvh flex-col">
             <Header />
             {children}
             <Footer />
