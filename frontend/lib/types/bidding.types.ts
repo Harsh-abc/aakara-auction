@@ -214,8 +214,8 @@ export interface AuctionConsole {
     position: ConsolePosition | null
     /** the live lot's bids, newest first */
     bids: StaffBid[]
-    /** paddles verified on the live lot — online / hybrid sales only */
-    floorBidders: (BidderRef & { paddle: string })[]
+    /** paddles verified on the live lot — those holding a proxy on it first; `proxyMax` is their maximum */
+    floorBidders: (BidderRef & { paddle: string; proxyMax: string | null })[]
     /** proxy bids on the live lot, placed when the auctioneer clicks Sell */
     proxyBook: { count: number; topMax: string | null }
 }

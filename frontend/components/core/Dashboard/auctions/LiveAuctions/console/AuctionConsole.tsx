@@ -365,6 +365,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                         amount={selectedAmount ?? position.nextBid}
                         nextBid={position.nextBid}
                         floorBidders={data.floorBidders}
+                        leaderUuid={position.leader?.uuid ?? null}
                         busy={busy === "floor"}
                         onSubmit={submitFloorBid}
                     />

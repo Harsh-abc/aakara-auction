@@ -701,8 +701,8 @@ export const placeFloorBidService = async ({ lotUuid, paddleNumber, amount, ip, 
 
     return {
         message: result.leading
-            ? `Floor bid of ${money(amount)} for paddle ${paddle} is the highest bid`
-            : `Floor bid of ${money(amount)} for paddle ${paddle} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
+            ? `Bid of ${money(amount)} for paddle ${paddle} is the highest bid`
+            : `Bid of ${money(amount)} for paddle ${paddle} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
         data: result,
     };
 };
@@ -1134,12 +1134,13 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
     const top = ladder[0];
     const reserve = lot.reservePrice === null ? null : Number(lot.reservePrice);
 
-    // paddles the auctioneer can enter floor bids for
+    // paddles the auctioneer can enter bids for — those holding a proxy on the lot first, highest maximum on top
     const rows = await prisma.lotBidder.findMany({
         where: { itemId: lot.id, ...ELIGIBLE_LOT_BIDDER_WHERE },
         select: {
             user: {
                 select: {
+                    id: true,
                     uuid: true,
                     username: true,
                     profile: { select: { displayName: true, firstName: true, lastName: true } },
@@ -1148,10 +1149,19 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
             },
         },
     });
+    const proxyMaxOf = (userId) => {
+        const raw = rawProxies[userId.toString()];
+        return raw ? String(JSON.parse(raw).max) : null;
+    };
     const floorBidders = rows
-        .map(({ user }) => ({ uuid: user.uuid, paddle: user.auctionParticipations[0]?.paddleNumber ?? null, name: displayName(user) }))
+        .map(({ user }) => ({
+            uuid: user.uuid,
+            paddle: user.auctionParticipations[0]?.paddleNumber ?? null,
+            name: displayName(user),
+            proxyMax: proxyMaxOf(user.id),
+        }))
         .filter((bidder) => bidder.paddle)
-        .sort(byPaddle);
+        .sort((a, b) => Number(b.proxyMax ?? -1) - Number(a.proxyMax ?? -1) || byPaddle(a, b));
 
     const { images, category, id, ...lotFields } = lot; // eslint-disable-line no-unused-vars
     return serializeBigInt({
