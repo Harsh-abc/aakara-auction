@@ -6,7 +6,12 @@ import { applyLotsVerified } from './lotBidder.services.js';
 import { blockUserAccess, revokeUserTokens, unblockUserAccess } from '../libs/accountBlock.js';
 import { disconnectUser } from '../libs/socket.js';
 import sendEmail from '../mail/sendMail.js';
-import { AUCTION_EMAIL } from '../mail/templates/registrationReceived.js';
+import { AUCTION_EMAIL, REGISTRATION_INLINE_IMAGES } from '../mail/templates/registrationReceived.js';
+import {
+    REGISTRATION_APPROVED_SUBJECT,
+    registrationApprovedTemplate,
+    registrationApprovedText,
+} from '../mail/templates/registrationApproved.js';
 import {
     TEAM_MEMBER_ADDED_SUBJECT,
     teamMemberAddedTemplate,
@@ -43,7 +48,10 @@ const CHANGED_BY_INCLUDE = {
 export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, newRoleName }) => {
     const targetUser = await prisma.user.findUnique({
         where: { uuid: targetUUuid },
-        include: { kyc: { select: { status: true } } },
+        include: {
+            kyc: { select: { status: true } },
+            profile: { select: { firstName: true, lastName: true, displayName: true } },
+        },
     });
 
     if (!targetUser) {
@@ -150,6 +158,9 @@ export const changeUserRoleService = async ({ actorId, actorUuid, targetUUuid, n
             });
         }
     }
+
+    // bidding access given: tell the user (not awaited — a failed email never undoes the change)
+    if (newRole.name === 'BIDDER') sendRegistrationApprovedEmail(targetUser);
 
     return {
         uuid: updatedUser.uuid,
@@ -357,6 +368,22 @@ export const createUserByAdminService = async (
             throw err;
         }
         throw error;
+    }
+};
+
+// "Registration Approved" to a user made a BIDDER — same look and sender as the "Registration Received" email.
+// Logs instead of throwing: the role change is already saved
+const sendRegistrationApprovedEmail = async (user) => {
+    try {
+        const mail = { userName: personName(user), siteUrl: process.env.FRONTEND_URL };
+        // to the user alone (null = no MAILGUN_CC)
+        await sendEmail(user.email, REGISTRATION_APPROVED_SUBJECT, registrationApprovedTemplate(mail), null, {
+            ...TEAM_MAIL_OPTIONS,
+            inline: REGISTRATION_INLINE_IMAGES,
+            text: registrationApprovedText(mail),
+        });
+    } catch (error) {
+        console.error(`Registration approved email to ${user.email} failed:`, error?.message);
     }
 };
 
