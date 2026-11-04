@@ -13,7 +13,7 @@ import { htmlToPlainText } from "@/utils/sanitizeHtml";
 
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_SOLID, EYEBROW, PAGE_MAIN, PAGE_TITLE } from "../../storefront";
 import { AuctionCountdown } from "../AuctionCountdown";
-import { auctionMeta, isLive, STOREFRONT_STATUS_LABELS } from "../auctionDisplay";
+import { auctionMeta, isLive, STARTING_SOON, STOREFRONT_STATUS_LABELS } from "../auctionDisplay";
 import { RegisterToBidButton } from "../RegisterToBidButton";
 import { useBidderStatus } from "../useBidderStatus";
 import { AuctionLots } from "./AuctionLots";
@@ -21,9 +21,9 @@ import { AuctionLots } from "./AuctionLots";
 type AuctionState = { status: "loading" } | { status: "ready"; auction: PublicAuction } | { status: "not-found" } | { status: "error"; message: string };
 
 // counts to the close while the sale is live, to the opening before that
-export function saleCountdown(auction: PublicAuction) {
+export function saleCountdown(auction: PublicAuction): { label: string; target: string; doneText?: string } | null {
     if (isLive(auction)) return { label: "Closes in", target: auction.endTime };
-    if (auction.status === "SCHEDULED" || auction.status === "PREVIEW") return { label: "Opens in", target: auction.startTime };
+    if (auction.status === "SCHEDULED" || auction.status === "PREVIEW") return { label: "Opens in", target: auction.startTime, doneText: STARTING_SOON };
     return null;
 }
 
@@ -113,7 +113,7 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
 
             <AuctionLots
                 auctionUuid={auction.uuid}
-                aside={countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} className="shrink-0" /> : <span className={EYEBROW}>Sale closed</span>}
+                aside={countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} doneText={countdown.doneText} className="shrink-0" /> : <span className={EYEBROW}>Sale closed</span>}
             />
         </main>
     );

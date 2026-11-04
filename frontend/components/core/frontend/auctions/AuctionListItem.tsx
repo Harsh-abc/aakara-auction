@@ -50,7 +50,7 @@ export function AuctionListItem({ auction, paddleNumber, eligibility, onRegister
             </div>
 
             <div className="flex flex-col gap-6 md:col-span-2 lg:col-span-1 lg:justify-between">
-                {countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} className="lg:justify-end" /> : <span className="hidden lg:block" />}
+                {countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} doneText={countdown.doneText} className="lg:justify-end" /> : <span className="hidden lg:block" />}
                 <div className="flex flex-col gap-2">
                     {!isPast && <RegisterToBidButton auction={auction} paddleNumber={paddleNumber} eligibility={eligibility} onRegistered={onRegistered} />}
                     <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_OUTLINE)}>
