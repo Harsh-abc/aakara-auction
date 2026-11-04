@@ -275,7 +275,7 @@ const Stat = ({ icon, label, value, hint }: { icon: ReactNode; label: string; va
 
 const SOURCE_BADGES: Record<BidSource, { label: string; className: string }> = {
     MANUAL: { label: "Bid", className: "bg-sky-50 text-sky-700" },
-    FLOOR: { label: "Floor", className: "bg-amber-50 text-amber-700" },
+    FLOOR: { label: "Auctioneer", className: "bg-amber-50 text-amber-700" },
     PROXY: { label: "Proxy", className: "bg-violet-50 text-[#7b365d]" },
 };
 

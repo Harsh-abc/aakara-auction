@@ -586,7 +586,7 @@ const BidLog = ({ bids, code, connected }: { bids: StaffBid[]; code: string; con
                                 key={bid.uuid}
                                 title={bid.bidder?.name ?? undefined}
                                 className={cn(
-                                    "grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-[12px] animate-in fade-in-0 slide-in-from-top-1 duration-300",
+                                    "grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-[12px] animate-in fade-in-0 slide-in-from-top-1 duration-300",
                                     index === 0 && "bg-emerald-50/60"
                                 )}
                             >

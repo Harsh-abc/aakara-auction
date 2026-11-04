@@ -23,9 +23,9 @@ export const compactMoney = (amount: number, code: string) => {
 export const paddleLabel = (bidder: Pick<BidderRef, "paddle" | "name"> | null | undefined) =>
     bidder?.paddle ? `Paddle #${bidder.paddle}` : bidder?.name ?? "Unknown bidder";
 
-/** How a bid reached the floor — the console says ONLINE for bids placed on the site */
+/** How a bid reached the floor — ONLINE for bids placed on the site, AUCTIONEER for those the auctioneer entered for a paddle */
 export const SOURCE_BADGES: Record<BidSource, { label: string; className: string }> = {
-    FLOOR: { label: "Floor", className: "bg-[#FFF3D6] text-[#B7791F]" },
+    FLOOR: { label: "Auctioneer", className: "bg-[#FFF3D6] text-[#B7791F]" },
     MANUAL: { label: "Online", className: "bg-[#E4F7F0] text-[#00865A]" },
     PROXY: { label: "Proxy", className: "bg-violet-50 text-[#7b365d]" },
 };
