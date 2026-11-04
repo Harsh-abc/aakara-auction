@@ -277,7 +277,9 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                     <span>Next bid</span>
                                     <span className="tracking-widest tabular-nums">{money(current.nextBid)}</span>
                                 </button>
-                                <p className="mt-3 text-xs leading-relaxed text-neutral-500">Bids rise in set increments. Minimum next bid {money(current.nextBid)}.</p>
+                                <p className="mt-3 text-xs leading-relaxed text-neutral-500">
+                                    Bids follow the auction's prescribed increments and cannot be withdrawn once placed. Minimum next bid {money(current.nextBid)}.
+                                </p>
                             </div>
                         ) : (
                             <div className="mt-6">
@@ -295,9 +297,8 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                 />
                                 {sameAsProxy && <p className="mt-2 text-xs text-neutral-500">This is your current maximum. Pick another amount to change it.</p>}
                                 <p className="mt-3 text-xs leading-relaxed text-neutral-500">
-                                    When the auctioneer calls the hammer, your maximum is placed for you: if it&apos;s the highest, you win at one increment above the standing bid — never above your
-                                    maximum. The highest maximum always wins; if two bidders leave the same maximum, the one who set it first wins (a changed maximum counts from when it was changed).
-                                    Other bidders don&apos;t see it. You can change it until the lot opens; after that it&apos;s locked.
+                                    This bid is placed by you to a maximum amount you are willing to pay, and the auction system automatically bids on your behalf, only increasing the bid as necessary
+                                    to maintain your position.
                                 </p>
                                 <button type="button" onClick={review} disabled={!canSubmit} className={cn(ACTION, "mt-4 w-full bg-neutral-950 text-white not-disabled:hover:bg-neutral-800")}>
                                     {amount > 0 ? `${proxyMax ? "Update" : "Set"} maximum ${money(amount)}` : proxyMax ? "Update maximum" : "Set maximum"}
@@ -344,7 +345,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                 {outpaced
                                     ? `Another bidder got there first — the next bid is now ${money(current?.nextBid ?? null)}. Go back and choose again.`
                                     : kind === "bid"
-                                      ? "By confirming you agree to buy this lot at this price if yours is the winning bid. Bids are binding and can't be withdrawn."
+                                      ? "By confirming, you agree to purchase this lot at the stated price, premiums and applicable taxes if you win. Bids are binding and cannot be withdrawn."
                                       : `We'll bid for you up to this amount when the auctioneer calls the hammer. If it wins, you agree to buy this lot at the winning price.${proxyMax ? ` It replaces your current maximum of ${money(proxyMax)}.` : ""} You can change it until the lot opens; after that it can't be changed or withdrawn.`}
                             </p>
                         </div>

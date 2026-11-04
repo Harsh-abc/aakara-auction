@@ -15,23 +15,20 @@ const HOME = "/"
 
 /**
  * The 404 page body: says the page doesn't exist and counts down to the home page.
- * "Go back" returns to the previous page when it was on this site, otherwise goes home;
- * "Stay on this page" stops the countdown.
+ * "Go back" returns to the previous page when it was on this site, otherwise goes home.
  */
 export function NotFoundView() {
     const router = useRouter()
     const [seconds, setSeconds] = useState(REDIRECT_SECONDS)
-    const [stayed, setStayed] = useState(false)
 
     useEffect(() => {
-        if (stayed) return
         if (seconds <= 0) {
             router.replace(HOME)
             return
         }
         const id = window.setTimeout(() => setSeconds((s) => s - 1), 1000)
         return () => window.clearTimeout(id)
-    }, [seconds, stayed, router])
+    }, [seconds, router])
 
     // back only within the site — a visitor who arrived from a search result or another site goes home instead
     const goBack = () => {
@@ -67,22 +64,13 @@ export function NotFoundView() {
 
                         {/* countdown to the home page, with a gold hairline running down */}
                         <div className="mt-12 w-full max-w-xs">
-                            <p className={EYEBROW}>{stayed ? "Redirect cancelled" : `Taking you home in ${seconds}s`}</p>
+                            <p className={EYEBROW}>{`Taking you home in ${seconds}s`}</p>
                             <div aria-hidden className="mt-3 h-px w-full bg-[#cecece]">
                                 <div
                                     className="h-full bg-[#d0a55d] transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
-                                    style={{ width: stayed ? "0%" : `${(seconds / REDIRECT_SECONDS) * 100}%` }}
+                                    style={{ width: `${(seconds / REDIRECT_SECONDS) * 100}%` }}
                                 />
                             </div>
-                            {!stayed && (
-                                <button
-                                    type="button"
-                                    onClick={() => setStayed(true)}
-                                    className="mt-3 cursor-pointer text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase underline underline-offset-2 hover:text-[#0d0d0d]"
-                                >
-                                    Stay on this page
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>
