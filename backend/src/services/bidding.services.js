@@ -377,13 +377,10 @@ const assertWithinBiddingLimit = async ({ userId, amount, currencyCode, who = nu
         );
     }
     if (Number(amount) > limit.amount) {
-        throw httpError(
-            who
-                ? `${who} has a bidding limit of ${max} — this bid is above it`
-                : `This is above your bidding limit of ${max}. Contact the auction house to raise it.`,
-            403,
-            { biddingLimit: String(limit.amount), biddingLimitCurrency: limit.currency },
-        );
+        throw httpError(who ? `${who} has a bidding limit of ${max} — this bid is above it` : `This is above your bidding limit of ${max}. Contact the auction house to raise it.`, 403, {
+            biddingLimit: String(limit.amount),
+            biddingLimitCurrency: limit.currency,
+        });
     }
 };
 
@@ -603,7 +600,7 @@ export const placeBidService = async ({ lotUuid, userId, amount, ip, userAgent }
     const { lot, result } = await runForUser({ mode: "BID", lotUuid, userId, amount, ip, userAgent });
     const money = (value) => formatMoney(value, lot.currencyCode);
     return {
-        message: result.leading ? `Your bid of ${money(amount)} is the highest bid` : `Your bid of ${money(amount)} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
+        message: result.leading ? `Your bid of ${money(amount)} is currently the highest bid` : `Your bid of ${money(amount)} was topped by a proxy bid — the bid is now ${money(result.currentBid)}`,
         data: result,
     };
 };
