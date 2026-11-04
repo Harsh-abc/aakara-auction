@@ -45,7 +45,7 @@ export const FOOTER_CONTENT = {
             ] as MenuLink[],
         },
     ],
-    contactLines: ["3C Amarchand Mansion, 2nd Floor, 16 Madam Cama Road, Mumbai 400001, India", "auction@akaraart.com", "+91 98209 41300"],
+    contactLines: ["3C Amarchand Mansion, 2nd Floor\n16 Madam Cama Road\nMumbai 400001, India", "auction@akaraart.com", "+91 98209 41300"],
 };
 
 export const AUCTION_EMAIL = "auction@akaraart.com";

@@ -29,7 +29,8 @@ function ContactLine({ text }: { text: string }) {
                 {text}
             </a>
         );
-    return <span className="text-sm text-[#717171]">{text}</span>;
+    // whitespace-pre-line so "\n" in the address renders as line breaks
+    return <span className="text-sm text-[#717171] whitespace-pre-line">{text}</span>;
 }
 
 export function Footer() {
