@@ -842,9 +842,11 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
         const view = liveView(lotUuid, state);
         const proxy = await redis.hget(bidKeys.proxies(lotUuid), String(userId));
         const rules = JSON.parse(state.rules || "[]");
-        // up to 5× the high estimate (the low one, or the starting price, when there's none), the rest behind "View more"
+        // from the low estimate (the next bid once bidding has passed it) up to 5× the high estimate
+        // (the low one, or the starting price, when there's none), the rest behind "View more"
+        const from = Math.max(Number(view.nextBid), Number(lot.estimateLow ?? 0));
         const estimate = Number(lot.estimateHigh ?? lot.estimateLow ?? lot.startingPrice);
-        const maximums = biddingOpen ? proxyBidOptions(view.nextBid, rules, estimate * PROXY_ESTIMATE_MULTIPLE) : { options: [], moreOptions: [] };
+        const maximums = biddingOpen ? proxyBidOptions(from, rules, estimate * PROXY_ESTIMATE_MULTIPLE) : { options: [], moreOptions: [] };
         position = {
             currentBid: view.currentBid,
             bidCount: view.bidCount,

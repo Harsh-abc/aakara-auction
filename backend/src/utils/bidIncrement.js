@@ -63,14 +63,14 @@ export const BID_LADDER_END = 1_000_000_000;
 const MAX_PROXY_OPTIONS = 1000;
 
 /**
- * The maximums a proxy bidder picks from, split in two:
- *   options      the next valid bid and every step up to `upTo` (5× the high estimate) — at least the next bid
+ * The maximums a proxy bidder picks from, starting at `from` (the low estimate, or the next valid bid once past it), split in two:
+ *   options      `from` and every step up to `upTo` (5× the high estimate) — at least `from`
  *   moreOptions  the steps after those, to the end of the chart ("View more")
  */
-export const proxyBidOptions = (nextBid, rules = [], upTo) => {
+export const proxyBidOptions = (from, rules = [], upTo) => {
     const options = [];
     const moreOptions = [];
-    let amount = Number(nextBid);
+    let amount = Number(from);
     while (options.length === 0 || (amount <= BID_LADDER_END && options.length + moreOptions.length < MAX_PROXY_OPTIONS)) {
         (options.length === 0 || amount <= upTo ? options : moreOptions).push(amount);
         amount = nextValidBid({ currentBid: amount, bidCount: 1 }, rules);
