@@ -56,3 +56,24 @@ export const bidOptions = (nextBid, rules = [], count = 3) => {
     while (options.length < count) options.push(nextValidBid({ currentBid: options.at(-1), bidCount: 1 }, rules));
     return options;
 };
+
+/** Where the increment chart ends (₹1,00,00,00,000) — the highest maximum a proxy picks from. */
+export const BID_LADDER_END = 1_000_000_000;
+// a fine increment over a wide range could run to millions of steps
+const MAX_PROXY_OPTIONS = 1000;
+
+/**
+ * The maximums a proxy bidder picks from, split in two:
+ *   options      the next valid bid and every step up to `upTo` (5× the high estimate) — at least the next bid
+ *   moreOptions  the steps after those, to the end of the chart ("View more")
+ */
+export const proxyBidOptions = (nextBid, rules = [], upTo) => {
+    const options = [];
+    const moreOptions = [];
+    let amount = Number(nextBid);
+    while (options.length === 0 || (amount <= BID_LADDER_END && options.length + moreOptions.length < MAX_PROXY_OPTIONS)) {
+        (options.length === 0 || amount <= upTo ? options : moreOptions).push(amount);
+        amount = nextValidBid({ currentBid: amount, bidCount: 1 }, rules);
+    }
+    return { options, moreOptions };
+};

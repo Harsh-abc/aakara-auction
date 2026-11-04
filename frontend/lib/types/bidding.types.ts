@@ -23,8 +23,10 @@ export interface MyLotStanding {
     nextBid: string | null
     /** the next valid bid and the two steps of the increment chart above it; empty once bidding is over */
     bidOptions: string[]
-    /** the maximums a proxy bid picks from: the next valid bid and the steps of the increment chart above it */
+    /** the maximums a proxy bid picks from: the next valid bid and the steps of the increment chart above it, up to 5× the high estimate */
     proxyOptions: string[]
+    /** the steps after proxyOptions, to the end of the increment chart — offered behind "View more" */
+    proxyMoreOptions: string[]
     leading: boolean
     /** the bidder's proxy (maximum) bid on this lot */
     proxyMax: string | null

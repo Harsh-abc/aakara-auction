@@ -47,6 +47,8 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     const [reload, setReload] = useState(0);
     // the maximum the bidder picked, for this lot only
     const [picked, setPicked] = useState<{ key: string; amount: string }>({ key: "", amount: "" });
+    // the lot whose maximums were opened past 5× the high estimate ("View more")
+    const [expandedLot, setExpandedLot] = useState<string | null>(null);
     // the amount waiting on the bidder's confirmation
     const [confirming, setConfirming] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -98,8 +100,10 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     const proxyMax = kind === "proxy" ? (current?.proxyMax ?? null) : null;
     const proxyLocked = Boolean(proxyMax) && !proxyOpen;
 
-    // the maximums on offer, with the bidder's current one among them
-    const proxyOptions = kind === "proxy" ? withAmount(current?.proxyOptions ?? [], proxyMax) : [];
+    // the maximums on offer (up to 5× the high estimate, or to the end of the chart after "View more"), with the bidder's current one among them
+    const moreProxyOptions = current?.proxyMoreOptions ?? [];
+    const expanded = expandedLot === lot.uuid;
+    const proxyOptions = kind === "proxy" ? withAmount([...(current?.proxyOptions ?? []), ...(expanded ? moreProxyOptions : [])], proxyMax) : [];
     // a bid is always the next valid bid; a proxy is the maximum picked (the current one until another is picked).
     // a new bid moves the options up — a pick that's no longer offered falls back
     const pickKey = `${lot.uuid}:${kind}`;
@@ -294,6 +298,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                     format={money}
                                     disabled={submitting}
                                     className="mt-3"
+                                    onViewMore={!expanded && moreProxyOptions.length > 0 ? () => setExpandedLot(lot.uuid) : undefined}
                                 />
                                 {sameAsProxy && <p className="mt-2 text-xs text-neutral-500">This is your current maximum. Pick another amount to change it.</p>}
                                 <p className="mt-3 text-xs leading-relaxed text-neutral-500">

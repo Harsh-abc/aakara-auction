@@ -4,7 +4,7 @@ import prisma from "../libs/prisma.js";
 import redis from "../libs/redis.js";
 import { AUCTION_STATUS_TTL_SECONDS, ELIGIBLE_SENTINEL, ELIGIBLE_TTL_SECONDS, auctionKeyList, bidKeys, hydrateLotState, lotKeyList, readLotState, runBidEngine } from "../libs/biddingStore.js";
 import { emitTo, rooms } from "../libs/socket.js";
-import { bidOptions, nextValidBid } from "../utils/bidIncrement.js";
+import { bidOptions, nextValidBid, proxyBidOptions } from "../utils/bidIncrement.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { sendProxyBidSetEmail } from "./auctionMail.services.js";
 
@@ -33,8 +33,8 @@ const httpError = (message, statusCode = 400, details) => {
 /** Auctions whose lots take bids (LIVE) or proxy bids (any of these) */
 export const BIDDING_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
 
-/** How many steps of the increment chart the proxy (maximum) bid dropdown offers */
-const PROXY_OPTION_COUNT = 10;
+/** The proxy (maximum) bid dropdown first offers the steps up to this many times the lot's high estimate */
+const PROXY_ESTIMATE_MULTIPLE = 5;
 
 /** Auctions whose bid history is written to the database and cleared from Redis */
 const FINISHED_AUCTION_STATUSES = ["ENDED", "SETTLED", "CANCELLED"];
@@ -802,6 +802,8 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
             title: true,
             status: true,
             startingPrice: true,
+            estimateLow: true,
+            estimateHigh: true,
             currentBid: true,
             currentBidderId: true,
             bidCount: true,
@@ -840,12 +842,16 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
         const view = liveView(lotUuid, state);
         const proxy = await redis.hget(bidKeys.proxies(lotUuid), String(userId));
         const rules = JSON.parse(state.rules || "[]");
+        // up to 5× the high estimate (the low one, or the starting price, when there's none), the rest behind "View more"
+        const estimate = Number(lot.estimateHigh ?? lot.estimateLow ?? lot.startingPrice);
+        const maximums = biddingOpen ? proxyBidOptions(view.nextBid, rules, estimate * PROXY_ESTIMATE_MULTIPLE) : { options: [], moreOptions: [] };
         position = {
             currentBid: view.currentBid,
             bidCount: view.bidCount,
             nextBid: biddingOpen ? view.nextBid : null,
             bidOptions: biddingOpen ? bidOptions(view.nextBid, rules).map(String) : [],
-            proxyOptions: biddingOpen ? bidOptions(view.nextBid, rules, PROXY_OPTION_COUNT).map(String) : [],
+            proxyOptions: maximums.options.map(String),
+            proxyMoreOptions: maximums.moreOptions.map(String),
             leading: view.leaderId === String(userId),
             proxyMax: proxy ? String(JSON.parse(proxy).max) : null,
         };
@@ -857,6 +863,7 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
             nextBid: null,
             bidOptions: [],
             proxyOptions: [],
+            proxyMoreOptions: [],
             leading: count > 0 && lot.currentBidderId === user,
             proxyMax: null,
         };

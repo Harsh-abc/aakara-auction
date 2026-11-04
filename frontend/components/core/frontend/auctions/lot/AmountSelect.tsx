@@ -52,10 +52,12 @@ type AmountSelectProps = {
     disabled?: boolean
     colors?: Partial<AmountSelectColors>
     className?: string
+    /** shows a "View more" button at the end of the list, for more options than `options` holds */
+    onViewMore?: () => void
 }
 
 // a styled pick-one list of amounts (Base UI select rather than a native one, so the open list can be styled)
-export function AmountSelect({ id, value, options, onChange, format, disabled, colors, className }: AmountSelectProps) {
+export function AmountSelect({ id, value, options, onChange, format, disabled, colors, className, onViewMore }: AmountSelectProps) {
     const style = colorVars(colors)
 
     return (
@@ -93,6 +95,15 @@ export function AmountSelect({ id, value, options, onChange, format, disabled, c
                                 </Select.Item>
                             ))}
                         </Select.List>
+                        {onViewMore && (
+                            <button
+                                type="button"
+                                onClick={onViewMore}
+                                className="w-full cursor-pointer border-t border-(--amount-select-border) px-3 py-2.5 text-left text-[11px] font-medium tracking-[0.2em] text-(--amount-select-text) uppercase outline-none hover:bg-(--amount-select-highlight) focus-visible:bg-(--amount-select-highlight)"
+                            >
+                                View more
+                            </button>
+                        )}
                     </Select.Popup>
                 </Select.Positioner>
             </Select.Portal>
