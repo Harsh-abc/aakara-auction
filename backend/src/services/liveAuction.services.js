@@ -1,6 +1,7 @@
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { freezeLotBidding, saveClosedLotBids, syncLotBidding } from "./bidding.services.js";
+import { sendWinningBidEmail } from "./auctionMail.services.js";
 
 const httpError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -195,6 +196,9 @@ const closingLot = async (lotUuid, work) => {
         await syncLotBidding(lotUuid).catch((error) => console.error(`[bidding] could not sync lot ${lotUuid}:`, error));
         // a closed lot's bids go to the database now, not only when the sale ends
         await saveClosedLotBids(lotUuid);
+        // sold (hammered, or stopped over its reserve): tell the buyer. A lot can only become
+        // SOLD once here — starting / stopping / hammering a sold lot throws above
+        sendWinningBidEmail(lotUuid);
         return result;
     } catch (error) {
         if (frozen) await syncLotBidding(lotUuid).catch((err) => console.error(`[bidding] could not reopen lot ${lotUuid}:`, err));
@@ -205,7 +209,8 @@ const closingLot = async (lotUuid, work) => {
 /**
  * Closes every open lot of an ending auction: the live lot closes as if stopped,
  * lots never offered become UNSOLD. Call inside a transaction that already locked the auction row;
- * if it fails, call syncAuctionBidding so the live lot takes bids again.
+ * if it fails, call syncAuctionBidding so the live lot takes bids again. If `liveLot` comes back
+ * SOLD, call sendWinningBidEmail(liveLot.uuid) once the transaction has committed.
  */
 export const closeAuctionLots = async (tx, auctionId) => {
     const live = await tx.auctionItem.findFirst({
@@ -221,7 +226,7 @@ export const closeAuctionLots = async (tx, auctionId) => {
         liveLot = await tx.auctionItem.update({
             where: { id: live.id },
             data: { status: closedLotStatus(closed), ...final },
-            select: { itemNumber: true, status: true },
+            select: { uuid: true, itemNumber: true, status: true },
         });
         if (liveLot.status === "SOLD") {
             await recordWinner(tx, { auctionId, itemId: live.id, winnerId: closed.currentBidderId, hammerPrice: closed.currentBid });

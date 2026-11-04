@@ -7,11 +7,11 @@ const withSenderName = (from, name) => {
     return `${name} <${address}>`;
 };
 
-// options: { fromName, replyTo, text, inline }
+// options: { fromName, fromAddress (instead of MAILGUN_FROM), replyTo, text, inline }
 const sendEmail = async (to, subject, html, cc = process.env.MAILGUN_CC, options = {}) => {
     try {
         const mailOptions = {
-            from: withSenderName(process.env.MAILGUN_FROM, options.fromName),
+            from: withSenderName(options.fromAddress || process.env.MAILGUN_FROM, options.fromName),
             to,
             subject,
             html,

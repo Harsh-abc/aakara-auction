@@ -3,6 +3,7 @@ import { serializeBigInt } from "../utils/serialize.js";
 import { syncParticipantsToLots } from "./auctionParticipant.services.js";
 import { closeAuctionLots, startOpeningLot } from "./liveAuction.services.js";
 import { overlayLiveBids, syncAuctionBidding } from "./bidding.services.js";
+import { sendWinningBidEmail } from "./auctionMail.services.js";
 
 // =====================================================================
 // Helpers
@@ -794,9 +795,20 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
             console.error(`[bidding] could not sync auction ${auctionUuid}:`, error)
         );
 
+    // set by the transaction when ending the sale sells its live lot
+    let soldLotUuid = null;
+
     try {
-        const updated = await changeAuctionStatusTx({ auctionUuid, status, reason, changedBy });
+        const updated = await changeAuctionStatusTx({
+            auctionUuid,
+            status,
+            reason,
+            changedBy,
+            onLotSold: (uuid) => (soldLotUuid = uuid),
+        });
         await syncBidding();
+        // committed: tell the buyer (not awaited — a failed email never undoes the sale)
+        if (soldLotUuid) sendWinningBidEmail(soldLotUuid);
         return updated;
     } catch (error) {
         await syncBidding();
@@ -804,7 +816,7 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
     }
 };
 
-const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy }) =>
+const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy, onLotSold }) =>
     prisma.$transaction(
         async (tx) => {
             const auction = await tx.auction.findUnique({
@@ -873,7 +885,8 @@ const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy }) =>
 
             // Ending the sale closes its lots, same as the scheduled auto-end
             if (status === "ENDED") {
-                await closeAuctionLots(tx, auction.id);
+                const { liveLot } = await closeAuctionLots(tx, auction.id);
+                if (liveLot?.status === "SOLD") onLotSold(liveLot.uuid);
             }
 
             // Back to draft: a lot left live (ACTIVE) goes back to draft too, so the

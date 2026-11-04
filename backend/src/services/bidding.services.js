@@ -6,6 +6,7 @@ import { AUCTION_STATUS_TTL_SECONDS, ELIGIBLE_SENTINEL, ELIGIBLE_TTL_SECONDS, au
 import { emitTo, rooms } from "../libs/socket.js";
 import { bidOptions, nextValidBid } from "../utils/bidIncrement.js";
 import { serializeBigInt } from "../utils/serialize.js";
+import { sendProxyBidSetEmail } from "./auctionMail.services.js";
 
 // =====================================================================
 // Live bidding
@@ -649,6 +650,9 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
         await restore.catch(() => {});
         throw error;
     }
+
+    // saved: confirm it to the bidder (not awaited — a failed email never undoes the proxy)
+    sendProxyBidSetEmail({ lotUuid, userId, maxAmount, setAt: record.createdAt });
 
     const max = formatMoney(maxAmount, lot.currencyCode);
     return {

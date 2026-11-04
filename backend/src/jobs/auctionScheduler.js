@@ -2,6 +2,7 @@ import prisma from "../libs/prisma.js";
 import { logActivity, SYSTEM_ACTOR } from "../libs/activityLog.js";
 import { closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
 import { flushPendingAuctions, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
+import { sendWinningBidEmail } from "../services/auctionMail.services.js";
 
 /**
  * Every tick:
@@ -93,6 +94,13 @@ const endSale = (auctionId, now) =>
         { maxWait: 10_000, timeout: 20_000 }
     );
 
+// the live lot sold as the sale ended: tell the buyer, now the end is committed
+const endSaleAndNotify = async (auctionId, now) => {
+    const result = await endSale(auctionId, now);
+    if (result?.liveLot?.status === "SOLD") sendWinningBidEmail(result.liveLot.uuid);
+    return result;
+};
+
 // Live bidding follows the auction's new status. Also runs after a failed end,
 // which may have stopped bids on the live lot.
 const syncBidding = (uuid) =>
@@ -138,7 +146,7 @@ const endDueAuctions = () =>
         "end",
         "AUCTION_AUTO_END",
         (now) => ({ status: { in: ENDABLE_AUCTION_STATUSES }, endTime: { lte: now } }),
-        endSale,
+        endSaleAndNotify,
         ({ title, liveLot, unoffered }) =>
             `"${title}" has ENDED` +
             (liveLot ? ` — closed lot #${liveLot.itemNumber} as ${liveLot.status}` : "") +
