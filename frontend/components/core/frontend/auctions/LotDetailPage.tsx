@@ -82,6 +82,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
     const saleStatus = (STOREFRONT_STATUS_LABELS[auction.status] ?? auction.status).toLowerCase();
     const subline = [lotRange(lots), auction.auctioneer].filter(Boolean).join(" · ");
     const liveLot = lots.find((item) => item.status === "ACTIVE") ?? null;
+    const showCallout = callout !== null && callout.lotUuid === lot.uuid;
 
     return (
         <main className={PAGE_MAIN}>
@@ -102,21 +103,6 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <OrderOfSale lots={lots} saleClosed={!countdown} className="order-2 lg:order-1" />
 
                         <div className="order-1 min-w-0 lg:order-2">
-                            {callout && callout.lotUuid === lot.uuid && (
-                                // keyed so each new callout animates in
-                                <div
-                                    key={callout.id}
-                                    role="status"
-                                    aria-live="polite"
-                                    className="mb-5 flex items-center gap-3 border border-[#d0a55d] bg-[#fdedd6] px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 duration-300"
-                                >
-                                    <Megaphone className="size-4 shrink-0 text-[#0d0d0d]" />
-                                    <p className="text-[14px] leading-5 text-[#0d0d0d]">
-                                        <span className="mr-2 text-[11px] font-semibold tracking-[0.12em] uppercase">Auctioneer</span>
-                                        {callout.message}
-                                    </p>
-                                </div>
-                            )}
                             <div className={LOT_GRID}>
                                 <div>
                                     {/* LIVE · LOT 08 over the image, how many are watching opposite */}
@@ -147,7 +133,24 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                                 <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} />
                             </div>
 
-                            <BidLadder lot={lot} className="mt-8" />
+                            {/* the auctioneer's callout, between the lot and its ladder */}
+                            {showCallout && (
+                                // keyed so each new callout animates in
+                                <div
+                                    key={callout.id}
+                                    role="status"
+                                    aria-live="polite"
+                                    className="mt-8 flex items-center gap-3 border border-[#d0a55d] bg-[#fdedd6] px-4 py-3 animate-in fade-in-0 slide-in-from-top-1 duration-300"
+                                >
+                                    <Megaphone className="size-4 shrink-0 text-[#0d0d0d]" />
+                                    <p className="text-[14px] leading-5 text-[#0d0d0d]">
+                                        <span className="mr-2 text-[11px] font-semibold tracking-[0.12em] uppercase">Auctioneer</span>
+                                        {callout.message}
+                                    </p>
+                                </div>
+                            )}
+
+                            <BidLadder lot={lot} className={showCallout ? "mt-5" : "mt-8"} />
                         </div>
                     </div>
                 </div>
