@@ -113,7 +113,7 @@ export default function ProxyBook({ token, lotUuid, itemNumber, live, startingPr
     const stillIn = live ? inPlay.filter((row) => statusOf.get(row.id) !== STATUS_STYLES.outbid).length : inPlay.length;
 
     return (
-        <section className="flex min-h-40 flex-col rounded-[8px] bg-[#F4F4F4] p-3 lg:max-h-96">
+        <section className="flex shrink-0 flex-col rounded-[8px] bg-[#F4F4F4] p-3 lg:max-h-56">
             <div className="flex items-start justify-between gap-2 px-1 pb-3">
                 <div>
                     <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[#414141]">
@@ -133,11 +133,11 @@ export default function ProxyBook({ token, lotUuid, itemNumber, live, startingPr
 
             <div className="min-h-0 flex-1 overflow-y-auto">
                 {!data ? (
-                    <p className="rounded-[6px] bg-white px-3 py-6 text-center text-[12px] text-slate-500">
+                    <p className="rounded-[6px] bg-white px-3 py-4 text-center text-[12px] text-slate-500">
                         {state?.failed ? "Couldn't load the proxy bids." : "Loading proxy bids…"}
                     </p>
                 ) : proxies.length === 0 ? (
-                    <p className="rounded-[6px] bg-white px-3 py-6 text-center text-[12px] text-slate-500">No proxy bids on this lot.</p>
+                    <p className="rounded-[6px] bg-white px-3 py-4 text-center text-[12px] text-slate-500">No proxy bids on this lot.</p>
                 ) : (
                     <ol className="rounded-[6px] bg-white py-1">
                         {proxies.map((row, index) => {

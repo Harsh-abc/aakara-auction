@@ -26,6 +26,12 @@ const LOG_LIMIT = 100;
 /** Refetched on this beat as well as on socket events (reserve, paddles, a missed event) */
 const RESYNC_MS = 30_000;
 
+/**
+ * Both columns fill the screen under the dashboard header and breadcrumb, so the
+ * whole console is in view without scrolling the page (the bid log scrolls inside)
+ */
+const SCREEN_HEIGHT = "lg:h-[calc(100vh-11rem)] lg:min-h-130";
+
 /** Auctions the console runs (lots only go live on these) */
 const FLOOR_STATUSES = ["LIVE", "PAUSED"];
 
@@ -238,7 +244,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
 
             <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
                 {/* left: lot, current ask, increments, actions */}
-                <div className="flex min-w-0 flex-col lg:min-h-160">
+                <div className={cn("flex min-w-0 flex-col", SCREEN_HEIGHT)}>
                     {lastSale && <SoldBanner sale={lastSale} />}
 
                     {lot && position ? (
@@ -319,7 +325,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                 </div>
 
                 {/* right: bid log, and the proxy book of the live lot (or the next one up) */}
-                <div className="flex min-w-0 flex-col gap-5">
+                <div className={cn("flex min-w-0 flex-col gap-3", SCREEN_HEIGHT)}>
                     <BidLog bids={data.bids} code={code} connected={connected} />
                     {proxyLot && (
                         <ProxyBook
@@ -557,7 +563,7 @@ const CurrentAsk = ({ position, code }: { position: ConsolePosition; code: strin
 };
 
 const BidLog = ({ bids, code, connected }: { bids: StaffBid[]; code: string; connected: boolean }) => (
-    <aside className="flex min-h-80 flex-col rounded-[8px] bg-[#F4F4F4] p-3 lg:max-h-[calc(100vh-10rem)]">
+    <aside className="flex min-h-80 flex-1 flex-col rounded-[8px] bg-[#F4F4F4] p-3 lg:min-h-32">
         <div className="flex items-center justify-between px-1 pb-3">
             <p className="text-[13px] font-semibold text-[#414141]">Real-Time Bidding Log</p>
             <span

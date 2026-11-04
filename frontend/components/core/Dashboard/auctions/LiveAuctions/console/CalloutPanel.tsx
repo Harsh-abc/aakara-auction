@@ -14,7 +14,7 @@ import { money } from "./consoleDisplay";
 
 /** Matches lotCalloutSchema in backend/src/validations/bidding.validation.js */
 const MAX_LENGTH = 160;
-/** Sent callouts kept under the box */
+/** Sent callouts remembered (the last one for the live lot shows under the box) */
 const RECENT_LIMIT = 3;
 
 type CalloutGroup = { label: string; lines: string[] };
@@ -96,6 +96,11 @@ export default function CalloutPanel({ lot, position, code, token, disabled }: C
     const [text, setText] = useState("");
     const [sending, setSending] = useState<string | null>(null);
     const [recent, setRecent] = useState<LotCallout[]>([]);
+    const [tab, setTab] = useState<string | null>(null);
+
+    const groups = calloutGroups(lot, position, code);
+    // the picked tab, unless the lot moved on and it's gone (e.g. "Opening" once bids are in)
+    const active = groups.find((group) => group.label === tab) ?? groups[0];
 
     const send = async (message: string) => {
         const trimmed = message.trim();
@@ -117,82 +122,85 @@ export default function CalloutPanel({ lot, position, code, token, disabled }: C
         send(text);
     };
 
-    // a callout sent for an earlier lot doesn't belong under this one
-    const sentHere = recent.filter((callout) => callout.lotUuid === lot.uuid);
+    // the last line sent for this lot (one sent for an earlier lot doesn't belong here)
+    const lastSent = recent.find((callout) => callout.lotUuid === lot.uuid) ?? null;
 
     return (
-        <section className="flex flex-col rounded-[8px] bg-[#F4F4F4] p-3">
-            <div className="px-1 pb-3">
+        <section className="flex shrink-0 flex-col rounded-[8px] bg-[#F4F4F4] p-3">
+            <div className="flex items-center justify-between gap-2 px-1 pb-2">
                 <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[#414141]">
                     <Megaphone className="h-3.5 w-3.5" />
                     Auctioneer Callouts
                 </p>
-                <p className="mt-0.5 text-[10px] text-slate-500">Shown to everyone watching the sale</p>
+                <span className="text-[10px] text-slate-500">To everyone watching</span>
             </div>
 
-            <div className="space-y-3 rounded-[6px] bg-white p-3">
-                {calloutGroups(lot, position, code).map((group) => (
-                    <div key={group.label}>
-                        <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-[#777777] uppercase">{group.label}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                            {group.lines.map((line) => (
-                                <button
-                                    key={line}
-                                    type="button"
-                                    disabled={disabled || sending !== null}
-                                    onClick={() => send(line)}
-                                    className={cn(
-                                        "flex items-center gap-1 rounded-full border border-[#D9D9D9] bg-white px-2.5 py-1 text-left text-[11px] leading-snug text-[#414141] transition-colors",
-                                        "cursor-pointer hover:border-[#7A3D5E] hover:bg-[#F8F0F4] disabled:cursor-not-allowed disabled:opacity-50"
-                                    )}
-                                >
-                                    {sending === line && <Loader2 className="h-3 w-3 shrink-0 animate-spin" />}
-                                    {line}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-
-                <form onSubmit={submit} className="border-t border-[#F0F0F0] pt-3">
-                    <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-[#777777] uppercase">Your own words</p>
-                    <div className="flex gap-1.5">
-                        <input
-                            type="text"
-                            value={text}
-                            maxLength={MAX_LENGTH}
-                            disabled={disabled}
-                            onChange={(event) => setText(event.target.value)}
-                            placeholder="Message to the room…"
-                            className="h-8 min-w-0 flex-1 rounded-[6px] border border-[#D9D9D9] px-2.5 text-[12px] text-[#414141] outline-none focus:border-[#7A3D5E] disabled:bg-slate-50"
-                        />
-                        <Button
-                            type="submit"
-                            aria-label="Send"
-                            className="h-8 w-8 shrink-0 rounded-[6px] bg-[#7A3D5E] p-0 text-white hover:bg-[#7A3D5E]/90"
-                            disabled={disabled || !text.trim() || sending !== null}
+            <div className="rounded-[6px] bg-white p-2.5">
+                {/* one moment of the lot at a time keeps the panel short */}
+                <div role="tablist" className="flex gap-1 rounded-[6px] bg-[#F4F4F4] p-0.5">
+                    {groups.map((group) => (
+                        <button
+                            key={group.label}
+                            type="button"
+                            role="tab"
+                            aria-selected={group === active}
+                            onClick={() => setTab(group.label)}
+                            className={cn(
+                                "flex-1 cursor-pointer rounded-[5px] py-1 text-[11px] font-medium transition-colors",
+                                group === active ? "bg-white text-[#7A3D5E] shadow-sm" : "text-[#777777] hover:text-[#414141]"
+                            )}
                         >
-                            {sending !== null && sending === text.trim() ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                        </Button>
-                    </div>
+                            {group.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div role="tabpanel" className="mt-2 flex flex-wrap gap-1.5">
+                    {active.lines.map((line) => (
+                        <button
+                            key={line}
+                            type="button"
+                            disabled={disabled || sending !== null}
+                            onClick={() => send(line)}
+                            className={cn(
+                                "flex items-center gap-1 rounded-full border border-[#D9D9D9] bg-white px-2.5 py-1 text-left text-[11px] leading-snug text-[#414141] transition-colors",
+                                "cursor-pointer hover:border-[#7A3D5E] hover:bg-[#F8F0F4] disabled:cursor-not-allowed disabled:opacity-50"
+                            )}
+                        >
+                            {sending === line && <Loader2 className="h-3 w-3 shrink-0 animate-spin" />}
+                            {line}
+                        </button>
+                    ))}
+                </div>
+
+                <form onSubmit={submit} className="mt-2.5 flex gap-1.5 border-t border-[#F0F0F0] pt-2.5">
+                    <input
+                        type="text"
+                        value={text}
+                        maxLength={MAX_LENGTH}
+                        disabled={disabled}
+                        onChange={(event) => setText(event.target.value)}
+                        placeholder="Or write your own…"
+                        className="h-8 min-w-0 flex-1 rounded-[6px] border border-[#D9D9D9] px-2.5 text-[12px] text-[#414141] outline-none focus:border-[#7A3D5E] disabled:bg-slate-50"
+                    />
+                    <Button
+                        type="submit"
+                        aria-label="Send"
+                        className="h-8 w-8 shrink-0 rounded-[6px] bg-[#7A3D5E] p-0 text-white hover:bg-[#7A3D5E]/90"
+                        disabled={disabled || !text.trim() || sending !== null}
+                    >
+                        {sending !== null && sending === text.trim() ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    </Button>
                 </form>
 
-                {sentHere.length > 0 && (
-                    <div className="border-t border-[#F0F0F0] pt-2">
-                        <p className="mb-1 text-[10px] font-semibold tracking-wide text-[#777777] uppercase">Sent</p>
-                        <ol className="space-y-1">
-                            {sentHere.map((callout) => (
-                                <li key={callout.id} className="flex items-baseline justify-between gap-2 text-[11px]">
-                                    <span className="truncate text-[#555555]" title={callout.message}>
-                                        {callout.message}
-                                    </span>
-                                    <span className="shrink-0 text-[#999999] tabular-nums">
-                                        {new Date(callout.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                    </span>
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
+                {lastSent && (
+                    <p className="mt-1.5 flex items-baseline gap-1.5 text-[10px] text-[#777777]" title={lastSent.message}>
+                        <span className="shrink-0 font-semibold uppercase">Sent</span>
+                        <span className="min-w-0 flex-1 truncate">{lastSent.message}</span>
+                        <span className="shrink-0 tabular-nums">
+                            {new Date(lastSent.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                    </p>
                 )}
             </div>
         </section>
