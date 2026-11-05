@@ -310,22 +310,6 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                 </button>
                             </div>
                         )}
-
-                        {/* or leave a proxy instead (proxy closes once the lot opens) */}
-                        {kind === "bid" && (
-                            <>
-                                <p className={cn(SMALL_CAPS, "mt-4 text-center text-neutral-400")}>or</p>
-                                <button
-                                    type="button"
-                                    onClick={() => onKindChange("proxy")}
-                                    disabled={submitting || !proxyOpen}
-                                    title={proxyOpen ? undefined : "Proxy bids close when the lot opens"}
-                                    className={cn(ACTION, "mt-4 w-full border border-neutral-950 bg-white text-neutral-950 not-disabled:hover:bg-neutral-50")}
-                                >
-                                    Proxy bid
-                                </button>
-                            </>
-                        )}
                     </>
                 )}
 
