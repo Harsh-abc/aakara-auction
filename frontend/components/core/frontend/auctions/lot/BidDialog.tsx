@@ -116,7 +116,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     if (current && current.registration === "NOT_REGISTERED") {
         blocker = (
             <>
-                Register for this sale to bid on its lots.{" "}
+                Register for auction to bid on its lots.{" "}
                 <Link href={auctionHref({ uuid: auctionUuid })} onClick={onClose} className="text-neutral-950 underline underline-offset-2">
                     Register to bid
                 </Link>

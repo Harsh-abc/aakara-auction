@@ -1,4 +1,5 @@
 import prisma from "../libs/prisma.js";
+import { emitTo, rooms } from "../libs/socket.js";
 import sendEmail from "../mail/sendMail.js";
 import { AUCTION_EMAIL, REGISTRATION_INLINE_IMAGES } from "../mail/templates/registrationReceived.js";
 import { WINNING_BID_SUBJECT, winningBidTemplate, winningBidText } from "../mail/templates/winningBid.js";
@@ -39,22 +40,25 @@ const formatMoney = (amount, currency) => {
 };
 
 /**
- * "Winning Bid Confirmation" to the buyer of a sold lot. Call only after the transaction that
- * sold the lot has committed (hammer, stopping a lot over its reserve, or the auction ending),
- * and don't await it: a failed email is logged and never undoes the sale.
+ * Tells the buyer of a sold lot: a "lot:won" socket event to their own room (the storefront's
+ * congratulations popup) and the "Winning Bid Confirmation" email. Call only after the
+ * transaction that sold the lot has committed (hammer, stopping a lot over its reserve, or the
+ * auction ending), and don't await it: a failed notice is logged and never undoes the sale.
  */
-export const sendWinningBidEmail = async (lotUuid) => {
+export const notifyLotWinner = async (lotUuid) => {
     try {
         const lot = await prisma.auctionItem.findUnique({
             where: { uuid: lotUuid },
             select: {
                 itemNumber: true,
                 title: true,
+                artistName: true,
                 status: true,
                 currency: { select: { code: true, symbol: true } },
-                auction: { select: { title: true, startTime: true, currency: { select: { code: true, symbol: true } } } },
+                auction: { select: { uuid: true, title: true, startTime: true, currency: { select: { code: true, symbol: true } } } },
                 winner: {
                     select: {
+                        winnerId: true,
                         finalHammerPrice: true,
                         winner: {
                             select: {
@@ -67,9 +71,24 @@ export const sendWinningBidEmail = async (lotUuid) => {
                 },
             },
         });
-        if (lot?.status !== "SOLD" || !lot.winner?.winner?.email) return;
+        if (lot?.status !== "SOLD" || !lot.winner) return;
 
         const { auction, winner } = lot;
+        const currency = lot.currency ?? auction.currency;
+
+        // only the buyer's signed-in tabs are in this room
+        emitTo(rooms.user(String(winner.winnerId)), "lot:won", {
+            auctionUuid: auction.uuid,
+            auctionTitle: auction.title,
+            lotUuid,
+            itemNumber: String(lot.itemNumber),
+            title: lot.title,
+            artistName: lot.artistName,
+            hammerPrice: String(winner.finalHammerPrice),
+            currency,
+        });
+
+        if (!winner.winner?.email) return;
         const auctionDate = formatDate(auction.startTime);
         const mail = {
             userName: personName(winner.winner),
@@ -77,7 +96,7 @@ export const sendWinningBidEmail = async (lotUuid) => {
             auctionName: [auction.title, auctionDate].filter(Boolean).join(" — "),
             lotNumber: String(lot.itemNumber),
             lotName: lot.title,
-            winningBidAmount: formatMoney(winner.finalHammerPrice, lot.currency ?? auction.currency),
+            winningBidAmount: formatMoney(winner.finalHammerPrice, currency),
         };
 
         // to the buyer alone (null = no MAILGUN_CC)
@@ -86,7 +105,7 @@ export const sendWinningBidEmail = async (lotUuid) => {
             text: winningBidText(mail),
         });
     } catch (error) {
-        console.error(`Winning bid email for lot ${lotUuid} failed:`, error?.message);
+        console.error(`Winner notice for lot ${lotUuid} failed:`, error?.message);
     }
 };
 

@@ -83,7 +83,7 @@ export function LiveRoomGate({ auctionUuid, children }: { auctionUuid: string; c
                                 </Link>
                             )}
                             <Link href={`/auctions/${auctionUuid}`} className={cn(BUTTON, code === "SIGN_IN" ? BUTTON_OUTLINE : BUTTON_SOLID, BUTTON_INLINE)}>
-                                {code === "REGISTER" ? "Register for this sale" : "Back to the sale"}
+                                {code === "REGISTER" ? "Register for auction" : "Back to the sale"}
                             </Link>
                         </div>
                     </div>
