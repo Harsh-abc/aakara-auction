@@ -10,24 +10,25 @@ import {
 export const WINNING_BID_SUBJECT = "The Fine Art Sale, December 2026 | Winning Bid Confirmation";
 const PREHEADER = "Congratulations — you have won a lot at AKARA's Inaugural Fine Art Sale.";
 
-const detailRows = ({ auctionName, lotNumber, lotName, winningBidAmount, buyerPremiumRate, buyerPremiumAmount, totalAmountDue }) => [
+const PREMIUM_NOTE = "Including buyer's premium";
+
+// [label, value, note] — winningBidAmount is the hammer price plus the buyer's premium
+const detailRows = ({ auctionName, lotNumber, lotName, winningBidAmount }) => [
     ["Auction", auctionName],
     ["Lot Number", lotNumber],
     ["Lot Name", lotName],
-    ["Winning Bid", winningBidAmount],
-    [buyerPremiumRate ? `Buyer's Premium (${buyerPremiumRate})` : "Buyer's Premium", buyerPremiumAmount],
-    ["Total Amount Due", totalAmountDue],
-].map(([label, value]) => [label, value || "—"]);
+    ["Winning Bid", winningBidAmount, winningBidAmount && PREMIUM_NOTE],
+].map(([label, value, note]) => [label, value || "—", note]);
 
 // sent when a lot is sold to the user (services/auctionMail.services.js)
 export const winningBidTemplate = ({ userName = "", siteUrl = "", ...lot }) => {
     const site = siteBase(siteUrl);
     const greeting = userName ? `Dear ${escapeHtml(userName)},` : "Dear Collector,";
     const rows = detailRows(lot)
-        .map(([label, value]) => `
+        .map(([label, value, note]) => `
                                                 <tr>
-                                                    <td style="padding: 8px 0; width: 130px; font-size: 11px; letter-spacing: 1.5px; color:#999999; text-transform: uppercase; vertical-align: top;">${escapeHtml(label)}</td>
-                                                    <td style="padding: 8px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">${escapeHtml(value)}</td>
+                                                    <td style="padding: 8px 0; width: 130px; font-size: 11px; letter-spacing: 1.5px; color:#999999; text-transform: uppercase; vertical-align: top;">${label}</td>
+                                                    <td style="padding: 8px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">${escapeHtml(value)}${note ? `<br><span style="font-size: 11px; line-height: 16px; color:#999999;">${escapeHtml(note)}</span>` : ""}</td>
                                                 </tr>`)
         .join("");
 
@@ -85,7 +86,7 @@ export const winningBidText = ({ userName = "", siteUrl = "", ...lot }) => [
     "We are pleased to confirm that you have won the following lot at AKARA's Inaugural Fine Art Sale in December 2026. Thank you for your participation.",
     "",
     "Winning Details",
-    ...detailRows(lot).map(([label, value]) => `- ${label}: ${value}`),
+    ...detailRows(lot).map(([label, value, note]) => `- ${label}: ${value}${note ? ` (${note.toLowerCase()})` : ""}`),
     "",
     "Your invoice will be sent to you shortly, along with details regarding payment and collection.",
     "",
