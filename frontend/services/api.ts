@@ -11,8 +11,9 @@ export const authEndPoints = {
     VERIFY_PHONE_OTP_API: `${BASE_URL}/api/auth/verify-phone-otp`,
     RESEND_PHONE_OTP_API: `${BASE_URL}/api/auth/resend-phone-otp`,
     LOGOUT_API: `${BASE_URL}/api/auth/logout`,
-    // forgot password → emailed link → new password
+    // forgot password → emailed 6-digit code → new password
     FORGOT_PASSWORD_API: `${BASE_URL}/api/auth/forgot-password`,
+    VERIFY_RESET_OTP_API: `${BASE_URL}/api/auth/verify-reset-otp`,
     RESET_PASSWORD_API: `${BASE_URL}/api/auth/reset-password`,
     REFRESH_API: `${BASE_URL}/api/auth/refresh`,
     // Google Authenticator before the dashboard opens (dashboard roles)

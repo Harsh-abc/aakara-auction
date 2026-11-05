@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { forgotPassword, getMfaStatus, login, logout, resetPassword, refresh, register, resendOtp, resendPhoneOtp, startMfaSetup, verifyMfa, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
+import { forgotPassword, getMfaStatus, login, logout, resetPassword, refresh, verifyResetOtp, register, resendOtp, resendPhoneOtp, startMfaSetup, verifyMfa, verifyOtp, verifyPhoneOtp } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { verifyRecaptcha } from '../middleware/recaptcha.middleware.js';
 
@@ -29,8 +29,10 @@ authRouter.post('/refresh', refresh);
 // LOGOUT
 authRouter.post('/logout', logout);
 
-// FORGOT / RESET PASSWORD — email a reset link, then set a new password from it (rate-limited in the service)
+// FORGOT / RESET PASSWORD — email a 6-digit code, swap the right code for a reset token,
+// then set a new password with it (rate-limited in the service)
 authRouter.post('/forgot-password', forgotPassword);
+authRouter.post('/verify-reset-otp', verifyResetOtp);
 authRouter.post('/reset-password', resetPassword);
 
 // DASHBOARD AUTHENTICATOR — a dashboard login enters a Google Authenticator code before the

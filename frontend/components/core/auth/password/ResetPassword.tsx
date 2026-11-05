@@ -31,21 +31,29 @@ function validate(password: string, confirmPassword: string): FieldErrors {
     return errors
 }
 
-// the backend's answers for a link that can't be used (expired, used, or cut short)
+// the backend's answers for a reset token that can't be used (expired, used, or cut short)
 const DEAD_LINK = /expired|already been used|incomplete/i
 
-/** Step 2 of resetting a password: the page the emailed button opens (?token=…). */
-export function ResetPassword() {
+type ResetPasswordProps = {
+    // from a verified emailed code; without it, ?token= (older emailed links) is used
+    token?: string
+    // starts the forgot-password steps over, in place of linking back to them
+    onRestart?: () => void
+}
+
+/** Last step of resetting a password: choose the new one. */
+export function ResetPassword({ token: tokenProp, onRestart }: ResetPasswordProps = {}) {
     const router = useRouter()
     const dispatch = useAppDispatch()
-    const token = useSearchParams().get("token") ?? ""
+    const queryToken = useSearchParams().get("token") ?? ""
+    const token = tokenProp ?? queryToken
 
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [errors, setErrors] = useState<FieldErrors>({})
     const [saving, setSaving] = useState(false)
     // the link can't be used: say why, and offer a fresh one
-    const [deadLink, setDeadLink] = useState<string | null>(token ? null : "This reset link is incomplete. Request a new one.")
+    const [deadLink, setDeadLink] = useState<string | null>(token ? null : "This reset is incomplete. Please start again.")
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault()
@@ -76,13 +84,19 @@ export function ResetPassword() {
 
     if (deadLink) {
         return (
-            <PasswordPageShell crumb="Reset password" title="Link expired" intro="Reset links last 30 minutes and work once.">
+            <PasswordPageShell crumb="Reset password" title="Time ran out" intro="For your security, a reset has to be finished within 15 minutes.">
                 <div className="flex flex-col gap-4" role="alert">
                     <p className="text-[14px] leading-[22.75px] text-[#717171]">{deadLink}</p>
                     <div className="mt-2 flex flex-col gap-3">
-                        <Link href="/forgot-password" className={cn(BUTTON, BUTTON_SOLID, "h-12 text-[14px]")}>
-                            Request a new link
-                        </Link>
+                        {onRestart ? (
+                            <button type="button" onClick={onRestart} className={cn(BUTTON, BUTTON_SOLID, "h-12 text-[14px]")}>
+                                Get a new code
+                            </button>
+                        ) : (
+                            <Link href="/forgot-password" className={cn(BUTTON, BUTTON_SOLID, "h-12 text-[14px]")}>
+                                Get a new code
+                            </Link>
+                        )}
                         <Link href="/registration" className={PASSWORD_LINK}>
                             Back to log in
                         </Link>

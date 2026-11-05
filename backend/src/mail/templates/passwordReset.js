@@ -5,8 +5,8 @@ const escapeHtml = (value = "") =>
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
 
-// "Reset your password" — same look as the other Akara emails (kycDocumentsRequested.js)
-export const passwordResetTemplate = ({ userName = "", resetUrl, expiresInMinutes }) => `
+// "Reset your password" code — same look as the other Akara emails (otpVerifications.js)
+export const passwordResetTemplate = ({ userName = "", otp, expiresInMinutes }) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -45,40 +45,36 @@ export const passwordResetTemplate = ({ userName = "", resetUrl, expiresInMinute
 
                         <!-- Message -->
                         <tr>
-                            <td style="padding: 16px 48px 0 48px;">
+                            <td align="center" style="padding: 16px 48px 0 48px;">
                                 <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
                                     ${userName ? `Hello ${escapeHtml(userName)},` : "Hello,"}<br/>
                                     We received a request to reset the password for your Akara account.
-                                    Click the button below to choose a new one.
+                                    Enter this code on the reset password page to choose a new one.
                                 </p>
                             </td>
                         </tr>
 
-                        <!-- Button -->
+                        <!-- Code -->
                         <tr>
-                            <td align="center" style="padding: 32px 40px 24px 40px;">
-                                <a href="${escapeHtml(resetUrl)}" style="display:inline-block; background-color:#1a1a1a; color:#ffffff; padding: 14px 32px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; text-decoration:none;">
-                                    Reset password
-                                </a>
+                            <td align="center" style="padding: 32px 40px;">
+                                <table role="presentation" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="border: 1px solid #1a1a1a; padding: 16px 40px;">
+                                            <span style="font-size: 30px; letter-spacing: 10px; color:#1a1a1a; font-family: Georgia, serif;">
+                                                ${escapeHtml(otp)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
                         </tr>
 
                         <!-- Expiry + ignore note -->
                         <tr>
-                            <td style="padding: 0 48px 32px 48px;">
-                                <p style="margin:0; font-size: 12px; line-height: 20px; color:#888888; text-align:center;">
-                                    This link expires in ${expiresInMinutes} minutes and can be used once.<br/>
+                            <td align="center" style="padding: 0 48px 40px 48px;">
+                                <p style="margin:0; font-size: 12px; line-height: 20px; color:#888888;">
+                                    This code expires in ${expiresInMinutes} minutes. Do not share it with anyone.<br/>
                                     If you didn't ask to reset your password, you can ignore this email — your password won't change.
-                                </p>
-                            </td>
-                        </tr>
-
-                        <!-- Fallback link -->
-                        <tr>
-                            <td style="padding: 0 48px 32px 48px;">
-                                <p style="margin:0; font-size: 11px; line-height: 18px; color:#999999; word-break: break-all;">
-                                    Button not working? Paste this link into your browser:<br/>
-                                    <a href="${escapeHtml(resetUrl)}" style="color:#999999;">${escapeHtml(resetUrl)}</a>
                                 </p>
                             </td>
                         </tr>

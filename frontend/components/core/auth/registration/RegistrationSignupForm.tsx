@@ -87,6 +87,8 @@ function validate(data: FormData): FieldErrors {
     if (!data.password) errors.password = "Enter a password"
     else if (data.password.length < 8) errors.password = "Password must be at least 8 characters"
     else if (data.password.length > 64) errors.password = "Password must be 64 characters or fewer"
+    else if (!/[0-9]/.test(data.password)) errors.password = "Password must contain at least one number"
+    else if (!/[^A-Za-z0-9]/.test(data.password)) errors.password = "Password must contain at least one symbol"
 
     if (!data.confirmPassword) errors.confirmPassword = "Re-enter your password"
     else if (data.confirmPassword !== data.password) errors.confirmPassword = "Passwords do not match"
@@ -391,7 +393,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 label="Password *"
                 type="password"
                 autoComplete="new-password"
-                placeholder="At least 8 characters"
+                placeholder="8+ characters, a number and a symbol"
                 maxLength={64}
                 value={formData.password}
                 onChange={handleChange}
@@ -403,7 +405,7 @@ export function RegistrationSignupForm({ onAccountCreated }: RegistrationSignupF
                 label="Confirm password *"
                 type="password"
                 autoComplete="new-password"
-                placeholder="At least 8 characters"
+                placeholder="Re-enter your password"
                 maxLength={64}
                 value={formData.confirmPassword}
                 onChange={handleChange}
