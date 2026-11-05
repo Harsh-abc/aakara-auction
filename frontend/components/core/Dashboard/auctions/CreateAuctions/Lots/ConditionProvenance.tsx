@@ -177,6 +177,20 @@ export default function ConditionProvenance({
                     </div>
                 </div>
 
+                {/* Provenance — shown under Lot details › Provenance */}
+                <div className="grid grid-cols-1 gap-2 w-full mt-4">
+                    <div className="input-wrapper">
+                        <label className="block mb-2">Provenance</label>
+
+                        <textarea
+                            rows={3}
+                            placeholder="List previous collections and how the work was acquired, one per line"
+                            className="w-full border rounded-md px-3 py-2"
+                            {...register(`lots.${lotIndex}.provenance.provenanceText`)}
+                        />
+                    </div>
+                </div>
+
                 {/* Exhibition History */}
                 <div className="grid grid-cols-1 gap-2 w-full mt-4">
                     <div className="input-wrapper">

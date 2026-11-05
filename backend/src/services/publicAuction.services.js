@@ -212,6 +212,25 @@ export const PUBLIC_LOT_SELECT = {
     },
 };
 
+// the next lot to come up: the first not yet opened after the live one (or from the start when none is live)
+const findUpNextLotUuid = async (auctionId) => {
+    const live = await prisma.auctionItem.findFirst({
+        where: { auctionId, status: "ACTIVE" },
+        orderBy: { itemNumber: "asc" },
+        select: { itemNumber: true },
+    });
+    const next = await prisma.auctionItem.findFirst({
+        where: {
+            auctionId,
+            status: { in: ["DRAFT", "SCHEDULED"] },
+            ...(live ? { itemNumber: { gt: live.itemNumber } } : {}),
+        },
+        orderBy: { itemNumber: "asc" },
+        select: { uuid: true },
+    });
+    return next?.uuid ?? null;
+};
+
 export const getPublicLotsService = async ({ auctionUuid, search, sort, page, limit }) => {
     const auction = await findPublicAuction(auctionUuid, { id: true, currency: { select: { code: true, symbol: true } } });
 
@@ -225,7 +244,7 @@ export const getPublicLotsService = async ({ auctionUuid, search, sort, page, li
         ];
     }
 
-    const [total, lots] = await Promise.all([
+    const [total, lots, upNextUuid] = await Promise.all([
         prisma.auctionItem.count({ where }),
         prisma.auctionItem.findMany({
             where,
@@ -234,10 +253,13 @@ export const getPublicLotsService = async ({ auctionUuid, search, sort, page, li
             take: limit,
             select: PUBLIC_LOT_SELECT,
         }),
+        findUpNextLotUuid(auction.id),
     ]);
 
     return serializeBigInt({
         lots: (await overlayLiveBids(lots)).map((lot) => toPublicLot(lot, auction.currency)),
+        // the one lot to tag "Upcoming": next after the lot on the block, else the first yet to open
+        upNextUuid,
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
 };
@@ -264,6 +286,7 @@ const PUBLIC_LOT_DETAIL_SELECT = {
     artistName: true,
     medium: true,
     yearCreated: true,
+    catalogueNote: true,
     editionType: true,
     provenance: true,
     previousOwner: true,
@@ -294,6 +317,8 @@ const PUBLIC_LOT_DETAIL_SELECT = {
         orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
         select: { url: true, thumbnailUrl: true, caption: true, mediaType: true },
     },
+    // written when the lot is hammered sold
+    winner: { select: { winnerId: true, finalHammerPrice: true, buyerPremiumAmount: true, totalAmountDue: true } },
 };
 
 // bids that still count on the ladder
@@ -335,7 +360,7 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
     // while the sale runs, bids live in Redis (written to the bids table once it ends)
     const live = await getLiveLotView(lot.uuid, LADDER_SIZE);
 
-    const [lots, bids, leader] = await Promise.all([
+    const [lots, bids, leader, winnerParticipant] = await Promise.all([
         prisma.auctionItem.findMany({ where: { auctionId }, orderBy: LOT_ORDER.lot, select: PUBLIC_LOT_SELECT }).then(overlayLiveBids),
         live
             ? live.bids
@@ -353,9 +378,16 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
                   select: { paddleNumber: true },
               })
             : null,
+        // the winner also shows by paddle number only
+        lot.winner
+            ? prisma.auctionParticipant.findUnique({
+                  where: { auctionId_userId: { auctionId, userId: lot.winner.winnerId } },
+                  select: { paddleNumber: true },
+              })
+            : null,
     ]);
 
-    const { id, currentBidderId, images, currency, category, subCategory, auctheticateDate, ...detail } = lot;
+    const { id, currentBidderId, images, currency, category, subCategory, auctheticateDate, winner, ...detail } = lot;
 
     return serializeBigInt({
         auction: { ...toPublicAuction(auction), auctioneer: displayName(creator) },
@@ -370,6 +402,15 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
             media: images,
             leadingPaddle: live ? live.leadingPaddle : leader?.paddleNumber ?? null,
             nextBid: live ? live.nextBid : String(nextValidBid(lot, rules)),
+            // sold lots: who won (by paddle) and the price including buyer's premium
+            winner: winner
+                ? {
+                      paddle: winnerParticipant?.paddleNumber ?? null,
+                      hammerPrice: String(winner.finalHammerPrice),
+                      buyerPremium: String(winner.buyerPremiumAmount),
+                      totalPrice: String(winner.totalAmountDue),
+                  }
+                : null,
             // highest first; the top one is the leading bid
             bids,
         },

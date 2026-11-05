@@ -116,7 +116,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
     if (current && current.registration === "NOT_REGISTERED") {
         blocker = (
             <>
-                Register for this sale to bid on its lots.{" "}
+                Register for auction to bid on its lots.{" "}
                 <Link href={auctionHref({ uuid: auctionUuid })} onClick={onClose} className="text-neutral-950 underline underline-offset-2">
                     Register to bid
                 </Link>
@@ -310,31 +310,15 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                 </button>
                             </div>
                         )}
-
-                        {/* or leave a proxy instead (proxy closes once the lot opens) */}
-                        {kind === "bid" && (
-                            <>
-                                <p className={cn(SMALL_CAPS, "mt-4 text-center text-neutral-400")}>or</p>
-                                <button
-                                    type="button"
-                                    onClick={() => onKindChange("proxy")}
-                                    disabled={submitting || !proxyOpen}
-                                    title={proxyOpen ? undefined : "Proxy bids close when the lot opens"}
-                                    className={cn(ACTION, "mt-4 w-full border border-neutral-950 bg-white text-neutral-950 not-disabled:hover:bg-neutral-50")}
-                                >
-                                    Proxy bid
-                                </button>
-                            </>
-                        )}
                     </>
                 )}
 
                 {/* last look before the bid is sent */}
                 <Dialog open={confirming !== null} onOpenChange={handleConfirmOpenChange}>
-                    {/* same size as the bid dialog behind it, so it sits squarely on top; the buttons stay at the bottom */}
+                    {/* at least the bid dialog's size, so it covers it (growing if its own content needs more); the buttons stay at the bottom */}
                     <DialogContent
                         showCloseButton={false}
-                        style={bidPanelHeight ? { height: bidPanelHeight } : undefined}
+                        style={bidPanelHeight ? { minHeight: bidPanelHeight } : undefined}
                         className="flex max-h-[90dvh] flex-col gap-0 overflow-y-auto rounded-none p-0 sm:max-w-md"
                     >
                         <DialogHeader className="border-b border-neutral-200 p-6">

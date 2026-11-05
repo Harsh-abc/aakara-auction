@@ -2,7 +2,7 @@ import prisma from "../libs/prisma.js";
 import { logActivity, SYSTEM_ACTOR } from "../libs/activityLog.js";
 import { closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
 import { flushPendingAuctions, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
-import { sendWinningBidEmail } from "../services/auctionMail.services.js";
+import { notifyLotWinner } from "../services/auctionMail.services.js";
 
 /**
  * Every tick:
@@ -97,7 +97,7 @@ const endSale = (auctionId, now) =>
 // the live lot sold as the sale ended: tell the buyer, now the end is committed
 const endSaleAndNotify = async (auctionId, now) => {
     const result = await endSale(auctionId, now);
-    if (result?.liveLot?.status === "SOLD") sendWinningBidEmail(result.liveLot.uuid);
+    if (result?.liveLot?.status === "SOLD") notifyLotWinner(result.liveLot.uuid);
     return result;
 };
 

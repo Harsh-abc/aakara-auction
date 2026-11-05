@@ -83,6 +83,12 @@ export function LiveStudio() {
 
     const setConnection = (next: Connection) => requestKey && setResult({ key: requestKey, ...next })
 
+    // LiveKit bills every connected minute, so the studio only joins the room while broadcasting:
+    // "Go live" connects, "End live" disconnects. Tied to the token it's for — a new auction / attempt starts on standby.
+    const [roomFor, setRoomFor] = useState<string | null>(null)
+    const roomOn = Boolean(requestKey) && roomFor === requestKey
+    const setRoomOn = (on: boolean) => setRoomFor(on ? requestKey : null)
+
     const pick = (uuid: string) => {
         setPickedUuid(uuid)
         router.replace(`/dashboard/go-live?auction=${uuid}`, { scroll: false })
@@ -186,11 +192,12 @@ export function LiveStudio() {
                 key={connection.access.auction.uuid}
                 serverUrl={connection.access.url}
                 token={connection.access.token}
-                connect
+                connect={roomOn}
                 audio={false}
                 video={false}
                 onDisconnected={(reason) => {
                     setOnAir(false)
+                    setRoomOn(false)
                     if (reason === DisconnectReason.CLIENT_INITIATED) return
                     setConnection({ status: "dropped", message: "The connection to the stream was lost. Reconnect to keep broadcasting." })
                 }}
@@ -200,6 +207,8 @@ export function LiveStudio() {
                     auctionUuid={connection.access.auction.uuid}
                     liveLotUuid={selected.liveLot?.uuid}
                     onLiveChange={setOnAir}
+                    roomOn={roomOn}
+                    onRoomChange={setRoomOn}
                     onLeave={() => router.push("/dashboard/auctions/live-auctions")}
                 />
             </LiveKitRoom>

@@ -449,6 +449,7 @@ model AuctionItem {
   medium                 String?
   dimension              AuctionItemDimension?
   yearCreated            String?
+  catalogueNote          String?
   provenance             String?
   conditionReport        String?
   overallCondition       String?

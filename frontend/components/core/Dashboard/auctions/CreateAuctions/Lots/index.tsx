@@ -78,6 +78,7 @@ export default function AddLots({
                 categoryUuid: "",
                 medium: "",
                 yearCreated: "",
+                catalogueNote: "",
 
                 dimensions: {
                     primary: { height: null, width: null, depth: null, unit: "CM" },
@@ -116,6 +117,7 @@ export default function AddLots({
                 previousOwner: "",
                 acquisitionMethod: "",
                 acquisitionDate: "",
+                provenanceText: "",
                 exhibitionHistory: "",
             },
 

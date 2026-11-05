@@ -1,17 +1,22 @@
 import type { LotStatus, PublicLot } from "@/lib/types/publicAuction.types"
 import { formatLotSize } from "@/utils/dimensions"
 
-// "₹4,50,000" for INR (lakh grouping), "$45,000" etc. for the rest
+// "₹ 4,50,000" for INR (lakh grouping), "$ 45,000" etc. for the rest
 export function formatMoney(amount: string | number | null, currency: PublicLot["currency"]) {
     if (amount === null || amount === "") return null
     const value = Number(amount)
     if (!Number.isFinite(value)) return null
     try {
-        return new Intl.NumberFormat(currency.code === "INR" ? "en-IN" : "en-US", {
+        const parts = new Intl.NumberFormat(currency.code === "INR" ? "en-IN" : "en-US", {
             style: "currency",
             currency: currency.code,
             maximumFractionDigits: 0,
-        }).format(value)
+        }).formatToParts(value)
+        // non-breaking space after the symbol so it never wraps away from the amount
+        return parts
+            .map((part, i) => (part.type === "currency" && parts[i + 1]?.type !== "literal" ? `${part.value} ` : part.value))
+            .join("")
+            .trim()
     } catch {
         // unknown currency code
         return `${currency.symbol ?? currency.code} ${value.toLocaleString("en-IN")}`

@@ -17,11 +17,12 @@ import { BillingShippingForm } from "./BillingShippingForm"
 import { ChangePasswordForm } from "./ChangePasswordForm"
 import { KycDocumentsForm } from "./KycDocumentsForm"
 import { MyGallery } from "./MyGallery"
+import { MyWinnings } from "./MyWinnings"
 import { PersonalDetailsForm } from "./PersonalDetailsForm"
 import { ProfileSection } from "./ProfileUI"
 import { RegistrationCard } from "./RegistrationCard"
 
-type ProfileTab = "personal" | "billing" | "kyc" | "orders" | "gallery"
+type ProfileTab = "personal" | "billing" | "kyc" | "orders" | "gallery" | "winnings"
 
 const tabLabels: Record<ProfileTab, string> = {
     personal: "Personal details",
@@ -29,6 +30,7 @@ const tabLabels: Record<ProfileTab, string> = {
     kyc: "KYC documents",
     orders: "My orders",
     gallery: "My auction gallery",
+    winnings: "My winnings",
 }
 
 // left out of the tab bar; ?tab=kyc still opens KYC, since "Register to bid" / "Manage KYC" link there
@@ -242,6 +244,22 @@ export function MyProfile() {
                                             <EmptyState
                                                 title="No saved lots yet"
                                                 body="Tap “+ Add to my auction gallery” on any artwork while browsing and it will be collected here."
+                                            />
+                                        }
+                                    />
+                                </ProfileSection>
+                            </TabsContent>
+
+                            <TabsContent value="winnings" className="pt-8">
+                                <ProfileSection
+                                    title="My winnings"
+                                    description="Lots you won at auction, with the hammer price, buyer's premium and total due."
+                                >
+                                    <MyWinnings
+                                        empty={
+                                            <EmptyState
+                                                title="No winnings yet"
+                                                body="When the hammer falls in your favour, the lot will appear here with what you owe."
                                             />
                                         }
                                     />

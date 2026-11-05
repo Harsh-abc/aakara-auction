@@ -60,15 +60,27 @@ export function ago(date?: Date) {
 }
 
 // "Chrome · Windows" from the user agent the viewer token carries
+// "Bidder" or "Staff" — only signed-in bidders and staff can watch
+export function viewerKind(metadata?: string) {
+    try {
+        return JSON.parse(metadata ?? "{}").kind === "staff" ? "Staff" : "Bidder"
+    } catch {
+        return "Bidder"
+    }
+}
+
 export function device(metadata?: string) {
     try {
-        const ua: string = JSON.parse(metadata ?? "{}").ua ?? ""
-        const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : ""
-        const browser = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : /Firefox\//.test(ua) ? "Firefox" : ""
-        return [browser, os].filter(Boolean).join(" · ") || "Browser"
+        return deviceFromUa(JSON.parse(metadata ?? "{}").ua ?? "")
     } catch {
         return "Browser"
     }
+}
+
+export function deviceFromUa(ua: string) {
+    const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : ""
+    const browser = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : /Firefox\//.test(ua) ? "Firefox" : ""
+    return [browser, os].filter(Boolean).join(" · ") || "Browser"
 }
 
 const QUALITY: Record<string, [string, string]> = {

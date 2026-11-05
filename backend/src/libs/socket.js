@@ -7,6 +7,8 @@ import redis from "./redis.js";
 import { tokenAccessProblem } from "./accountBlock.js";
 import { DASHBOARD_ROLES, tokenHasFreshMfa } from "./dashboardMfa.js";
 import { readVisitorId, startViewerTracking } from "./viewers.js";
+import { startWatcherTracking } from "./liveWatchers.js";
+import { canWatchLiveRoom } from "../services/liveStream.services.js";
 
 // =====================================================================
 // Real-time channel (Socket.IO over the Redis adapter, so an event sent
@@ -19,6 +21,8 @@ import { readVisitorId, startViewerTracking } from "./viewers.js";
 //
 // Storefront tabs in auction:{uuid} are counted as viewers (libs/viewers.js) — once
 // per account or browser — and the count is sent to the room as "auction:viewers".
+// Signed-in, eligible tabs on the live room page are also listed by name
+// (libs/liveWatchers.js): "live:watch" / "live:unwatch", and staff:{uuid} hears "live:watchers".
 // =====================================================================
 
 export const STAFF_ROLES = DASHBOARD_ROLES;
@@ -64,6 +68,7 @@ export const initSocket = (server) => {
     });
 
     const viewers = startViewerTracking(io, rooms.auction);
+    const watchers = startWatcherTracking(io, rooms.staff);
 
     // A token is optional — guests can watch public sales. A bad or expired token, a
     // suspended account, or a token from before a role / password change is treated as a guest.
@@ -118,8 +123,32 @@ export const initSocket = (server) => {
             viewers.leave(socket, auctionUuid).catch((error) => console.error("[socket] viewer leave failed:", error));
         });
 
+        // the live room page (bidders and staff only) — the studio lists who's on it
+        socket.on("live:watch", async ({ auctionUuid } = {}, ack) => {
+            try {
+                if (!user) return reply(ack, { ok: false, message: "Sign in to join the live room" });
+                if (!UUID_RE.test(auctionUuid ?? "")) return reply(ack, { ok: false, message: "Invalid auction id" });
+                if (!(await canWatchLiveRoom({ auctionUuid, userId: user.userId, role: user.role }))) {
+                    return reply(ack, { ok: false, message: "Not allowed" });
+                }
+                // the tab may have closed while the check ran
+                if (!socket.connected) return;
+                await watchers.join(socket, auctionUuid);
+                reply(ack, { ok: true });
+            } catch (error) {
+                console.error("[socket] live:watch failed:", error);
+                reply(ack, { ok: false, message: "Could not join the live room" });
+            }
+        });
+
+        socket.on("live:unwatch", ({ auctionUuid } = {}) => {
+            if (!UUID_RE.test(auctionUuid ?? "")) return;
+            watchers.leave(socket, auctionUuid).catch((error) => console.error("[socket] live:unwatch failed:", error));
+        });
+
         socket.on("disconnect", () => {
             viewers.disconnect(socket).catch((error) => console.error("[socket] viewer disconnect failed:", error));
+            watchers.disconnect(socket).catch((error) => console.error("[socket] watcher disconnect failed:", error));
         });
 
         socket.on("staff:join", ({ auctionUuid } = {}, ack) => {

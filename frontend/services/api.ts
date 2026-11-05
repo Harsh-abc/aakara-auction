@@ -98,11 +98,13 @@ export const biddingEndPoints = {
 // live video (LiveKit) — viewers watch (login optional); the dashboard studio goes live and moderates
 export const liveStreamEndPoints = {
     VIEWER_TOKEN_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/token`,
+    WATCH_ACCESS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/access`,
     HOST_TOKEN_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/host-token`,
     ON_AIR_API: `${BASE_URL}/api/live/on-air`,
     REMOVE_VIEWER_API: (auctionUuid: string, identity: string) =>
         `${BASE_URL}/api/live/${auctionUuid}/viewers/${encodeURIComponent(identity)}/remove`,
     BANS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/bans`,
+    WATCHERS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/watchers`,
     UNBAN_API: (auctionUuid: string, identity: string) =>
         `${BASE_URL}/api/live/${auctionUuid}/bans/${encodeURIComponent(identity)}`,
 };
@@ -155,6 +157,8 @@ export const profileEndpoints = {
     // GET the saved lots; POST / DELETE one lot by uuid
     MY_GALLERY_API: `${BASE_URL}/api/users/me/gallery`,
     MY_GALLERY_LOT_API: (lotUuid: string) => `${BASE_URL}/api/users/me/gallery/${lotUuid}`,
+    // lots the user won
+    MY_WINNINGS_API: `${BASE_URL}/api/users/me/winnings`,
 }
 
 

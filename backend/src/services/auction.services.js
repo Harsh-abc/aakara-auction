@@ -3,7 +3,7 @@ import { serializeBigInt } from "../utils/serialize.js";
 import { syncParticipantsToLots } from "./auctionParticipant.services.js";
 import { closeAuctionLots, startOpeningLot } from "./liveAuction.services.js";
 import { overlayLiveBids, syncAuctionBidding } from "./bidding.services.js";
-import { sendWinningBidEmail } from "./auctionMail.services.js";
+import { notifyLotWinner } from "./auctionMail.services.js";
 
 // =====================================================================
 // Helpers
@@ -251,6 +251,7 @@ const normalizeLot = (lot, index, { isDraft }) => {
         artistName: toStr(lot.artistName),
         medium: toStr(lot.medium),
         yearCreated: toStr(lot.yearCreated),
+        catalogueNote: toStr(lot.catalogueNote),
         provenance: toStr(lot.provenance),
         conditionReport: toStr(lot.conditionReport),
         overallCondition: toStr(lot.overallCondition),
@@ -802,7 +803,7 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
         });
         await syncBidding();
         // committed: tell the buyer (not awaited — a failed email never undoes the sale)
-        if (soldLotUuid) sendWinningBidEmail(soldLotUuid);
+        if (soldLotUuid) notifyLotWinner(soldLotUuid);
         return updated;
     } catch (error) {
         await syncBidding();

@@ -246,6 +246,20 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
                 </div>
             </div>
 
+            {/* shown on the lot page under Lot details › Description, one line per row */}
+            <div className="input-wrapper">
+                <label className="block mb-2">Catalogue Description</label>
+                <textarea
+                    rows={4}
+                    placeholder={"eg. signed and dated lower right\ninscribed on the reverse"}
+                    className="w-full border rounded-md px-3 py-2"
+                    {...register(`lots.${lotIndex}.details.catalogueNote`)}
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                    Shown on the lot page under Lot details › Description. Each line appears on its own row; leave a blank line to start a new block.
+                </p>
+            </div>
+
             {/* =========================
                 SCHEDULE (inside the auction window)
             ========================== */}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 import { LotDetailPage } from "@/components/core/frontend/auctions/LotDetailPage"
+import { LiveRoomGate } from "@/components/core/frontend/auctions/lot/LiveRoomGate"
 import { publicAuctionEndPoints } from "@/services/api"
 import { htmlToPlainText } from "@/utils/sanitizeHtml"
 
@@ -31,8 +32,11 @@ export default async function LotPage({ params }: LotPageProps) {
 
     return (
         <div className="min-h-svh bg-white">
-            {/* keyed so moving between lots starts from a clean state */}
-            <LotDetailPage key={lotUuid} auctionUuid={auctionUuid} lotUuid={lotUuid} />
+            {/* the live room is for bidders only (and staff) */}
+            <LiveRoomGate auctionUuid={auctionUuid}>
+                {/* keyed so moving between lots starts from a clean state */}
+                <LotDetailPage key={lotUuid} auctionUuid={auctionUuid} lotUuid={lotUuid} />
+            </LiveRoomGate>
         </div>
     )
 }

@@ -108,6 +108,18 @@ export interface OutbidNotice {
     currency: Currency
 }
 
+/** "lot:won" — sent to the buyer alone once their lot is sold */
+export interface LotWonNotice {
+    auctionUuid: string
+    auctionTitle: string | null
+    lotUuid: string
+    itemNumber: string
+    title: string
+    artistName: string | null
+    hammerPrice: string
+    currency: Currency
+}
+
 // ---------------------------------------------------------------------
 // dashboard
 // ---------------------------------------------------------------------

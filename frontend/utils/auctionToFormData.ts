@@ -52,6 +52,7 @@ const toLotForm = (
             categoryUuid,
             medium: text(lot.medium),
             yearCreated: text(lot.yearCreated),
+            catalogueNote: text(lot.catalogueNote),
             dimensions: {
                 primary: {
                     height: num(dimension?.height),
@@ -102,6 +103,7 @@ const toLotForm = (
             previousOwner: text(lot.previousOwner),
             acquisitionMethod: text(lot.acquisitionMethod),
             acquisitionDate: text(lot.acquisitionDate),
+            provenanceText: text(lot.provenance),
             exhibitionHistory: text(lot.exhibitionHistory),
         },
 

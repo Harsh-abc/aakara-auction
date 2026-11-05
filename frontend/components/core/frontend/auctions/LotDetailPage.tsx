@@ -11,11 +11,12 @@ import { useLotCallout } from "@/hooks/useLotCallout";
 import { cn } from "@/lib/utils";
 
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, EYEBROW, PAGE_MAIN } from "../storefront";
-import { auctionHref, STOREFRONT_STATUS_LABELS } from "./auctionDisplay";
+import { auctionHref, isLive, STOREFRONT_STATUS_LABELS } from "./auctionDisplay";
 import { saleCountdown } from "./detail/AuctionDetail";
 import { lotHeading, lotHref } from "./detail/lotDisplay";
 import { BidDialog } from "./lot/BidDialog";
 import { BidLadder } from "./lot/BidLadder";
+import { LivePlayer } from "./lot/LivePlayer";
 import { LotPageMessage } from "./lot/LotPageChrome";
 import { LotSummary } from "./lot/LotSummary";
 import { LotStatusTag, Tag } from "./lot/LotTag";
@@ -31,6 +32,9 @@ const LOT_GRID = "grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_320px] md:g
 
 // "1,121 watching"
 const VIEWER_COUNT = new Intl.NumberFormat("en-IN");
+
+// white boxed labels over the live video: "LOT 06", "1,164 WATCHING"
+const OVERLAY_TAG = "inline-flex h-7 items-center border border-[#cecece] bg-white px-3 text-[12px] leading-4 tracking-[0.12em] text-[#0d0d0d] uppercase";
 
 // the live auction room, focused on one lot
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
@@ -84,6 +88,20 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
     const liveLot = lots.find((item) => item.status === "ACTIVE") ?? null;
     const showCallout = callout !== null && callout.lotUuid === lot.uuid;
 
+    // shown while the video isn't playing: the lot on the block, else the next one up (the room follows it)
+    const lotPoster = (
+        <div className="absolute inset-0 flex items-center justify-center bg-white">
+            {lot.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={lot.image} alt={lotHeading(lot)} className="h-full w-full object-contain" />
+            ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[#ebebeb]">
+                    <ImageOff className="size-8 text-[#cecece]" />
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <main className={PAGE_MAIN}>
             {/* the room: sale header, order of sale, the lot on view and its ladder */}
@@ -104,31 +122,24 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
 
                         <div className="order-1 min-w-0 lg:order-2">
                             <div className={LOT_GRID}>
-                                <div>
-                                    {/* LIVE · LOT 08 over the image, how many are watching opposite */}
-                                    <div className="flex h-8 items-center gap-3">
+                                {/* the auctioneer's live video (bidders only); the lot on the block / up next until it plays.
+                                    LIVE · LOT 06 top left, how many are watching top right, mute bottom right */}
+                                <div className="relative aspect-square overflow-hidden border border-[#cecece] bg-[#ebebeb]">
+                                    {isLive(auction) ? <LivePlayer auctionUuid={auction.uuid} fallback={lotPoster} /> : lotPoster}
+
+                                    <div className="pointer-events-none absolute top-3.5 left-3.5 z-2 flex items-center gap-2.5">
                                         {lot.status === "ACTIVE" ? (
-                                            <Tag tone="live" label="Live" className="h-5.5 gap-1.25 px-2.5 text-[12px] tracking-[0.08em]" />
+                                            <Tag tone="live" label="Live" className="h-7 gap-1.5 px-3 text-[12px] tracking-[0.12em]" />
                                         ) : (
-                                            <LotStatusTag lot={lot} className="h-5.5 gap-1.25 px-2.5" />
+                                            <LotStatusTag lot={lot} className="h-7 gap-1.5 bg-white px-3 text-[12px] tracking-[0.12em]" />
                                         )}
-                                        <span className="text-[12px] leading-4 font-semibold tracking-[0.08em] text-[#0d0d0d] uppercase">{lotTag(lot)}</span>
-                                        {viewers !== null && (
-                                            <span className="ml-auto inline-flex h-5.75 items-center border border-[#cecece] bg-white px-2 text-[10px] leading-3.75 tracking-[0.14em] text-[#0d0d0d] uppercase tabular-nums">
-                                                {VIEWER_COUNT.format(viewers)} watching
-                                            </span>
-                                        )}
+                                        <span className={OVERLAY_TAG}>{lotTag(lot)}</span>
                                     </div>
-                                    <div className="mt-3 flex aspect-square items-center justify-center overflow-hidden">
-                                        {lot.image ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img src={lot.image} alt={lotHeading(lot)} className="h-full w-full object-contain" />
-                                        ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-[#ebebeb]">
-                                                <ImageOff className="size-8 text-[#cecece]" />
-                                            </div>
-                                        )}
-                                    </div>
+                                    {viewers !== null && (
+                                        <span className={cn(OVERLAY_TAG, "pointer-events-none absolute top-3.5 right-3.5 z-2 tabular-nums")}>
+                                            {VIEWER_COUNT.format(viewers)} watching
+                                        </span>
+                                    )}
                                 </div>
                                 <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} />
                             </div>

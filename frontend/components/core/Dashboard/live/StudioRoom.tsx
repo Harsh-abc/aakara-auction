@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import toast from "react-hot-toast"
-import { VideoTrack, useConnectionState, useLocalParticipant, useMediaDeviceSelect, useTracks } from "@livekit/components-react"
-import { ConnectionState, Track } from "livekit-client"
+import { VideoTrack, useConnectionState, useLocalParticipant, useMediaDeviceSelect, useRoomContext, useTracks } from "@livekit/components-react"
+import { ConnectionState, RoomEvent, Track } from "livekit-client"
 import {
     CheckIcon,
     ChevronUpIcon,
@@ -37,7 +37,7 @@ import {
     type Res,
 } from "./liveStudio.constants"
 import { StudioShare } from "./StudioShare"
-import { StudioViewers, useViewers } from "./StudioViewers"
+import { StudioViewers, useAudience } from "./StudioViewers"
 import { useActualFps, useLiveTimer } from "./studioHelpers"
 
 type StudioRoomProps = {
@@ -45,7 +45,13 @@ type StudioRoomProps = {
     liveLotUuid?: string | null
     onLiveChange: (live: boolean) => void
     onLeave: () => void
+    /** whether the studio should be in the LiveKit room (billed per minute) */
+    roomOn: boolean
+    onRoomChange: (on: boolean) => void
 }
+
+// connecting on "Go live" gives up after this
+const CONNECT_TIMEOUT_MS = 20_000
 
 type Busy = "live" | "end" | "mic" | "cam" | "screen" | "quality" | "leave" | null
 
@@ -64,10 +70,12 @@ function readQuality(): { res: Res; fps: Fps } {
 }
 
 // the auctioneer's studio: camera / mic / screen, stream quality, viewers and share links
-export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: StudioRoomProps) {
+export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave, roomOn, onRoomChange }: StudioRoomProps) {
+    const room = useRoomContext()
     const connection = useConnectionState()
     const { localParticipant, isCameraEnabled, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant()
-    const viewers = useViewers()
+    const audience = useAudience(auctionUuid)
+    const viewers = audience.people
 
     // the studio only renders in the browser (after the studio token arrives)
     const [{ res, fps }, setQuality] = useState(readQuality)
@@ -79,7 +87,9 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
     const screen = local.find((track) => track.source === Track.Source.ScreenShare)
     const camera = local.find((track) => track.source === Track.Source.Camera)
     const main = screen ?? camera
-    const live = Boolean(main) || isMicrophoneEnabled
+    // live = in the room (from "Go live" until "End live"), even with the camera and mic switched off —
+    // viewers can join and stay while it lasts
+    const live = roomOn && connection !== ConnectionState.Disconnected && connection !== ConnectionState.Connecting
     const elapsed = useLiveTimer(live)
     const actualFps = useActualFps(main?.publication?.track?.mediaStreamTrack)
 
@@ -113,12 +123,51 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
         setBusy(null)
     }
 
-    const toggleMic = () => run("mic", () => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled, MIC_OPTIONS))
-    const toggleCam = () => run("cam", () => localParticipant.setCameraEnabled(!isCameraEnabled, ...cameraOptions(res, fps)))
-    const toggleScreen = () => run("screen", () => localParticipant.setScreenShareEnabled(!isScreenShareEnabled, ...screenOptions(res, fps)))
+    // join the LiveKit room only when something is about to be published
+    const onRoomChangeRef = useRef(onRoomChange)
+    useEffect(() => {
+        onRoomChangeRef.current = onRoomChange
+    })
+    const ensureConnected = async () => {
+        if (room.state === ConnectionState.Connected) return
+        onRoomChangeRef.current(true)
+        await new Promise<void>((resolve, reject) => {
+            const done = () => {
+                clearTimeout(timer)
+                room.off(RoomEvent.Connected, onConnected)
+            }
+            const onConnected = () => {
+                done()
+                resolve()
+            }
+            const timer = setTimeout(() => {
+                done()
+                onRoomChangeRef.current(false)
+                reject(new Error("Couldn't reach the stream server. Try again."))
+            }, CONNECT_TIMEOUT_MS)
+            room.on(RoomEvent.Connected, onConnected)
+        })
+    }
+
+    const toggleMic = () =>
+        run("mic", async () => {
+            if (!isMicrophoneEnabled) await ensureConnected()
+            await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled, MIC_OPTIONS)
+        })
+    const toggleCam = () =>
+        run("cam", async () => {
+            if (!isCameraEnabled) await ensureConnected()
+            await localParticipant.setCameraEnabled(!isCameraEnabled, ...cameraOptions(res, fps))
+        })
+    const toggleScreen = () =>
+        run("screen", async () => {
+            if (!isScreenShareEnabled) await ensureConnected()
+            await localParticipant.setScreenShareEnabled(!isScreenShareEnabled, ...screenOptions(res, fps))
+        })
 
     const goLive = () =>
         run("live", async () => {
+            await ensureConnected()
             await localParticipant.setCameraEnabled(true, ...cameraOptions(res, fps))
             await localParticipant.setMicrophoneEnabled(true, MIC_OPTIONS)
             toast.success("You're live")
@@ -129,14 +178,20 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
         await localParticipant.setCameraEnabled(false)
         await localParticipant.setMicrophoneEnabled(false)
     }
-    const endStream = () => run("end", async () => {
-        await stopAll()
-        toast.success("Stream ended")
-    })
-    const leave = () => run("leave", async () => {
-        if (live) await stopAll()
-        onLeave()
-    })
+    // ending leaves the room too — the meter stops for the studio, and viewers leave when the host is gone
+    const endStream = () =>
+        run("end", async () => {
+            await stopAll()
+            onRoomChangeRef.current(false)
+            toast.success("Stream ended")
+        })
+    const leave = () =>
+        run("leave", async () => {
+            if (live) await stopAll()
+            onRoomChangeRef.current(false)
+            onLeave()
+        })
+
 
     // a new quality republishes whatever is on
     const applyQuality = (nextRes: Res, nextFps: Fps) =>
@@ -156,6 +211,7 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
         })
 
     const connected = connection === ConnectionState.Connected
+    const standby = connection === ConnectionState.Disconnected
 
     return (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -185,9 +241,14 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
                                 {res}p · {actualFps ?? fps} fps
                             </Chip>
                         )}
-                        <Chip>
-                            <span className={cn("size-1.5 rounded-full", connected ? "bg-emerald-500" : "animate-pulse bg-amber-500")} />
-                            {connected ? "Connected" : connection.charAt(0).toUpperCase() + connection.slice(1)}
+                        <Chip title={standby ? "Not connected to the stream server — no streaming minutes are used until you go live" : undefined}>
+                            <span
+                                className={cn(
+                                    "size-1.5 rounded-full",
+                                    connected ? "bg-emerald-500" : standby ? "bg-slate-400" : "animate-pulse bg-amber-500"
+                                )}
+                            />
+                            {connected ? "Connected" : standby ? "Standby" : connection.charAt(0).toUpperCase() + connection.slice(1)}
                         </Chip>
                     </div>
                 </header>
@@ -202,15 +263,19 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
                                     <GoLiveIcon className="size-7" />
                                 </span>
                                 <div>
-                                    <p className="text-lg font-semibold text-white">{live ? "Audio only" : "You're not broadcasting"}</p>
+                                    <p className="text-lg font-semibold text-white">
+                                        {!live ? "You're not broadcasting" : isMicrophoneEnabled ? "Audio only" : "Camera and mic are off"}
+                                    </p>
                                     <p className="mt-1 text-xs text-white/60">
-                                        {live
-                                            ? "Viewers hear you but see the lot image. Start video or share your screen."
-                                            : `Starts camera + microphone at ${res}p · ${fps} fps`}
+                                        {!live
+                                            ? `Starts camera + microphone at ${res}p · ${fps} fps`
+                                            : isMicrophoneEnabled
+                                              ? "Viewers hear you but see the lot image. Start video or share your screen."
+                                              : "You're still live — viewers can join and stay, and see the lot image. End live to close the stream."}
                                     </p>
                                 </div>
                                 {!live && (
-                                    <Button onClick={goLive} disabled={!!busy || !connected} className={cn("h-10 rounded-lg px-8 text-sm", BRAND)}>
+                                    <Button onClick={goLive} disabled={!!busy} className={cn("h-10 rounded-lg px-8 text-sm", BRAND)}>
                                         {busy === "live" ? "Starting..." : "Go live"}
                                     </Button>
                                 )}
@@ -304,7 +369,7 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
                                 {busy === "end" ? "Ending..." : "End live"}
                             </Button>
                         ) : (
-                            <Button onClick={goLive} disabled={!!busy || !connected} className={cn("h-9 rounded-lg px-5", BRAND)}>
+                            <Button onClick={goLive} disabled={!!busy} className={cn("h-9 rounded-lg px-5", BRAND)}>
                                 <GoLiveIcon className="size-4" />
                                 {busy === "live" ? "Starting..." : "Go live"}
                             </Button>
@@ -325,7 +390,7 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
                         </TabsTrigger>
                     </TabsList>
                     <TabsContent value="viewers" className="flex min-h-0 flex-1 flex-col">
-                        <StudioViewers auctionUuid={auctionUuid} />
+                        <StudioViewers auctionUuid={auctionUuid} audience={audience} />
                     </TabsContent>
                     <TabsContent value="share" className="flex min-h-0 flex-1 flex-col">
                         <StudioShare auctionUuid={auctionUuid} liveLotUuid={liveLotUuid} />
@@ -344,9 +409,9 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
 
 /* ---------------- pieces ---------------- */
 
-function Chip({ children }: { children: ReactNode }) {
+function Chip({ children, title }: { children: ReactNode; title?: string }) {
     return (
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
+        <span title={title} className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
             {children}
         </span>
     )
