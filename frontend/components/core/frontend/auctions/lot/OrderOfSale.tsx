@@ -76,8 +76,12 @@ export function OrderOfSale({ lots, saleClosed, className }: OrderOfSaleProps) {
                     >
                       {lotHeading(lot)}
                     </span>
+                    {/* the site's own lot tags — the live one outlined so it reads on the black row */}
+                    {live && (
+                      <Tag tone="live" label="Live" className="ml-2 border border-white/40" />
+                    )}
                     {next && (
-                      <Tag tone="up-next" label="Up next" className="ml-2" />
+                      <Tag tone="upcoming" label="Upcoming" className="ml-2" />
                     )}
                   </li>
                 );
