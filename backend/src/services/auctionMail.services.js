@@ -39,11 +39,16 @@ const formatMoney = (amount, currency) => {
     }
 };
 
+// "25%" / "20% + ₹5,000" — the sale's active buyer's premium fees, as charged in recordWinner
+const premiumRate = (fees = [], currency) =>
+    fees
+        .map((fee) => (fee.calculationType === "PERCENTAGE" ? `${Number(fee.value)}%` : formatMoney(fee.value, currency)))
+        .join(" + ");
+
 /**
- * Tells the buyer of a sold lot: a "lot:won" socket event to their own room (the storefront's
- * congratulations popup) and the "Winning Bid Confirmation" email. Call only after the
- * transaction that sold the lot has committed (hammer, stopping a lot over its reserve, or the
- * auction ending), and don't await it: a failed notice is logged and never undoes the sale.
+ * "Winning Bid Confirmation" to the buyer of a sold lot. Call only after the transaction that
+ * sold the lot has committed (hammer, stopping a lot over its reserve, or the auction ending),
+ * and don't await it: a failed email is logged and never undoes the sale.
  */
 export const notifyLotWinner = async (lotUuid) => {
     try {
@@ -55,11 +60,23 @@ export const notifyLotWinner = async (lotUuid) => {
                 artistName: true,
                 status: true,
                 currency: { select: { code: true, symbol: true } },
-                auction: { select: { uuid: true, title: true, startTime: true, currency: { select: { code: true, symbol: true } } } },
+                auction: {
+                    select: {
+                        title: true,
+                        startTime: true,
+                        currency: { select: { code: true, symbol: true } },
+                        auctionFees: {
+                            where: { feeType: "BUYER_PREMIUM", isActive: true },
+                            select: { calculationType: true, value: true },
+                        },
+                    },
+                },
                 winner: {
                     select: {
                         winnerId: true,
                         finalHammerPrice: true,
+                        buyerPremiumAmount: true,
+                        totalAmountDue: true,
                         winner: {
                             select: {
                                 email: true,
@@ -90,6 +107,7 @@ export const notifyLotWinner = async (lotUuid) => {
 
         if (!winner.winner?.email) return;
         const auctionDate = formatDate(auction.startTime);
+        const currency = lot.currency ?? auction.currency;
         const mail = {
             userName: personName(winner.winner),
             siteUrl: process.env.FRONTEND_URL,
@@ -97,6 +115,9 @@ export const notifyLotWinner = async (lotUuid) => {
             lotNumber: String(lot.itemNumber),
             lotName: lot.title,
             winningBidAmount: formatMoney(winner.finalHammerPrice, currency),
+            buyerPremiumRate: premiumRate(auction.auctionFees, currency),
+            buyerPremiumAmount: formatMoney(winner.buyerPremiumAmount, currency),
+            totalAmountDue: formatMoney(winner.totalAmountDue, currency),
         };
 
         // to the buyer alone (null = no MAILGUN_CC)

@@ -10,11 +10,13 @@ import {
 export const WINNING_BID_SUBJECT = "The Fine Art Sale, December 2026 | Winning Bid Confirmation";
 const PREHEADER = "Congratulations — you have won a lot at AKARA's Inaugural Fine Art Sale.";
 
-const detailRows = ({ auctionName, lotNumber, lotName, winningBidAmount }) => [
+const detailRows = ({ auctionName, lotNumber, lotName, winningBidAmount, buyerPremiumRate, buyerPremiumAmount, totalAmountDue }) => [
     ["Auction", auctionName],
     ["Lot Number", lotNumber],
     ["Lot Name", lotName],
     ["Winning Bid", winningBidAmount],
+    [buyerPremiumRate ? `Buyer's Premium (${buyerPremiumRate})` : "Buyer's Premium", buyerPremiumAmount],
+    ["Total Amount Due", totalAmountDue],
 ].map(([label, value]) => [label, value || "—"]);
 
 // sent when a lot is sold to the user (services/auctionMail.services.js)
@@ -24,7 +26,7 @@ export const winningBidTemplate = ({ userName = "", siteUrl = "", ...lot }) => {
     const rows = detailRows(lot)
         .map(([label, value]) => `
                                                 <tr>
-                                                    <td style="padding: 8px 0; width: 130px; font-size: 11px; letter-spacing: 1.5px; color:#999999; text-transform: uppercase; vertical-align: top;">${label}</td>
+                                                    <td style="padding: 8px 0; width: 130px; font-size: 11px; letter-spacing: 1.5px; color:#999999; text-transform: uppercase; vertical-align: top;">${escapeHtml(label)}</td>
                                                     <td style="padding: 8px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">${escapeHtml(value)}</td>
                                                 </tr>`)
         .join("");
