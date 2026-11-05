@@ -4,29 +4,21 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import axios from "axios"
 import { AudioTrack, LiveKitRoom, VideoTrack, useTracks } from "@livekit/components-react"
 import { DisconnectReason, Track } from "livekit-client"
-import { Maximize2, Minimize2, Volume2 } from "lucide-react"
+import { Maximize2, Minimize2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useAppSelector } from "@/hooks/redux"
 import { getLiveStreamToken, type LiveStreamAccess } from "@/services/operations/liveStream.api"
 
+// LiveKit bills every connected viewer by the minute, so the player only stays connected while it's watched.
 // after a dropped connection or a failed token request
 const RETRY_MS = 8_000
-
-// a stable id per browser, so the auctioneer can remove / ban a guest
-function viewerId() {
-    const fresh = () => (crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`)
-    try {
-        let id = localStorage.getItem("akara-viewer-id")
-        if (!id) {
-            id = fresh()
-            localStorage.setItem("akara-viewer-id", id)
-        }
-        return id
-    } catch {
-        return fresh()
-    }
-}
+// waiting for the auctioneer to go live — the backend won't hand out a token for an empty room
+const OFF_AIR_POLL_MS = 15_000
+// a tab in the background this long leaves the room; it rejoins when shown again
+const HIDDEN_DISCONNECT_MS = 2 * 60_000
+// connected, but the auctioneer stopped publishing this long — leave and go back to waiting
+const IDLE_DISCONNECT_MS = 60_000
 
 type LivePlayerProps = {
     auctionUuid: string
@@ -35,8 +27,11 @@ type LivePlayerProps = {
     className?: string
 }
 
+// why the player isn't connecting: not allowed, removed, or playing in another tab / device
+type Blocked = { kind: "denied" | "removed" | "elsewhere"; message: string }
+
 /**
- * Watch-only WebRTC player (LiveKit, ~0.3 s behind the room).
+ * Watch-only WebRTC player (LiveKit, ~0.3 s behind the room). Eligible bidders (and staff) only.
  * Screen share fills the frame with the camera as picture-in-picture; otherwise the camera alone.
  */
 export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps) {
@@ -49,38 +44,86 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
     })
 
     const [access, setAccess] = useState<LiveStreamAccess | null>(null)
-    const [removed, setRemoved] = useState(false)
+    const [blocked, setBlocked] = useState<Blocked | null>(null)
+    // the tab has been in the background a while — out of the room until it's shown again
+    const [hidden, setHidden] = useState(false)
     const [attempt, setAttempt] = useState(0)
 
-    // a new token on mount, on login / logout, and after each retry
-    useEffect(() => {
-        let cancelled = false
-        let retry: ReturnType<typeof setTimeout> | undefined
+    const retryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+    const retryIn = (ms: number) => {
+        clearTimeout(retryRef.current)
+        retryRef.current = setTimeout(() => setAttempt((n) => n + 1), ms)
+    }
+    useEffect(() => () => clearTimeout(retryRef.current), [])
 
-        getLiveStreamToken(auctionUuid, viewerId(), accessTokenRef.current)
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const onVisibility = () => {
+            clearTimeout(timer)
+            if (document.visibilityState === "visible") return setHidden(false)
+            timer = setTimeout(() => {
+                setHidden(true)
+                setAccess(null)
+            }, HIDDEN_DISCONNECT_MS)
+        }
+        document.addEventListener("visibilitychange", onVisibility)
+        return () => {
+            clearTimeout(timer)
+            document.removeEventListener("visibilitychange", onVisibility)
+        }
+    }, [])
+
+    // signing in / out starts over
+    const [blockedFor, setBlockedFor] = useState(userUuid)
+    if (blockedFor !== userUuid) {
+        setBlockedFor(userUuid)
+        setBlocked(null)
+    }
+
+    // a new token on mount, on login / logout, after each retry, and when the tab comes back
+    useEffect(() => {
+        if (hidden || blocked) return
+        if (!userUuid || !accessTokenRef.current) {
+            setBlocked({ kind: "denied", message: "Sign in with your bidder account to watch the live auction." })
+            return
+        }
+        let cancelled = false
+
+        getLiveStreamToken(auctionUuid, accessTokenRef.current)
             .then((data) => !cancelled && setAccess(data))
             .catch((error) => {
                 if (cancelled) return
-                const status = axios.isAxiosError(error) ? error.response?.status : undefined
-                if (status === 403) return setRemoved(true)
+                const response = axios.isAxiosError(error) ? error.response : undefined
+                const status = response?.status
+                const message: string = response?.data?.message ?? "You can't watch this live stream."
+                if (response?.data?.code === "REMOVED") return setBlocked({ kind: "removed", message })
+                // not signed in / not an eligible bidder for this sale
+                if (status === 401 || status === 403) return setBlocked({ kind: "denied", message })
                 // not configured / no such sale — stay on the lot image
                 if (status === 503 || status === 404) return
-                retry = setTimeout(() => setAttempt((n) => n + 1), RETRY_MS)
+                // the sale or the auctioneer isn't live yet — check back now and then
+                retryIn(status === 409 ? OFF_AIR_POLL_MS : RETRY_MS)
             })
 
         return () => {
             cancelled = true
-            clearTimeout(retry)
         }
-    }, [auctionUuid, userUuid, attempt])
+    }, [auctionUuid, userUuid, attempt, hidden, blocked])
 
-    if (removed) {
+    if (blocked) {
         return (
-            <div className={cn("absolute inset-0 flex items-center justify-center bg-[#ebebeb] p-4 text-center text-[11px] text-[#717171]", className)}>
-                You have been removed from this live stream.
+            <div className={cn("absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#ebebeb] p-4 text-center text-[11px] text-[#717171]", className)}>
+                <p>{blocked.message}</p>
+                {blocked.kind === "elsewhere" && (
+                    <button type="button" onClick={() => setBlocked(null)} className="bg-[#0d0d0d] px-3 py-1.5 text-[10px] tracking-[0.12em] text-white uppercase">
+                        Watch here
+                    </button>
+                )}
             </div>
         )
     }
+
+    if (hidden) return <>{fallback}</>
 
     if (!access) return <>{fallback}</>
 
@@ -93,20 +136,33 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
             video={false}
             options={{ adaptiveStream: true, dynacast: true }}
             onDisconnected={(reason) => {
-                if (reason === DisconnectReason.PARTICIPANT_REMOVED) return setRemoved(true)
                 if (reason === DisconnectReason.CLIENT_INITIATED) return
-                // room closed or network lost — fetch a fresh token and rejoin
                 setAccess(null)
-                setTimeout(() => setAttempt((n) => n + 1), RETRY_MS)
+                if (reason === DisconnectReason.PARTICIPANT_REMOVED) {
+                    return setBlocked({ kind: "removed", message: "You have been removed from this live stream." })
+                }
+                // the same account joined from another tab or device — don't fight it for the seat
+                if (reason === DisconnectReason.DUPLICATE_IDENTITY) {
+                    return setBlocked({ kind: "elsewhere", message: "The live stream is playing in another tab or device." })
+                }
+                // room closed or network lost — fetch a fresh token and rejoin
+                retryIn(RETRY_MS)
             }}
             className={cn("absolute inset-0", className)}
         >
-            <Stage fallback={fallback} />
+            <Stage
+                fallback={fallback}
+                onIdle={() => {
+                    // the auctioneer stopped publishing — don't pay for sitting in an empty room
+                    setAccess(null)
+                    retryIn(OFF_AIR_POLL_MS)
+                }}
+            />
         </LiveKitRoom>
     )
 }
 
-function Stage({ fallback }: { fallback: ReactNode }) {
+function Stage({ fallback, onIdle }: { fallback: ReactNode; onIdle: () => void }) {
     const boxRef = useRef<HTMLDivElement>(null)
     // browsers only autoplay muted — tap to unmute
     const [muted, setMuted] = useState(true)
@@ -119,6 +175,18 @@ function Stage({ fallback }: { fallback: ReactNode }) {
     const camera = videos.find((track) => track.source === Track.Source.Camera)
     const main = screen ?? camera
     const pip = screen && camera ? camera : undefined
+
+    // nothing published for a while → leave the room (the grace period also covers the first subscribe)
+    const onAir = videos.length > 0 || audios.length > 0
+    const onIdleRef = useRef(onIdle)
+    useEffect(() => {
+        onIdleRef.current = onIdle
+    })
+    useEffect(() => {
+        if (onAir) return
+        const timer = setTimeout(() => onIdleRef.current(), IDLE_DISCONNECT_MS)
+        return () => clearTimeout(timer)
+    }, [onAir])
 
     useEffect(() => {
         const onChange = () => setIsFull(document.fullscreenElement === boxRef.current)
@@ -155,7 +223,7 @@ function Stage({ fallback }: { fallback: ReactNode }) {
             {pip && (
                 <VideoTrack
                     trackRef={pip}
-                    className="absolute right-2.5 bottom-2.5 aspect-video w-1/4 border-2 border-white bg-black object-cover shadow-md"
+                    className="absolute bottom-3.5 left-3.5 z-2 aspect-video w-1/4 border-2 border-white bg-black object-cover shadow-md"
                 />
             )}
 
@@ -163,43 +231,29 @@ function Stage({ fallback }: { fallback: ReactNode }) {
                 <AudioTrack key={track.publication.trackSid} trackRef={track} muted={muted} />
             ))}
 
+            {/* boxed text buttons, bottom right: MUTE / UNMUTE (browsers only autoplay muted), then full screen */}
             {main && (
-                <div className={cn("absolute z-3 flex gap-1.5", isFull ? "right-5 bottom-5" : "right-3 bottom-3", pip && !isFull && "top-10 bottom-auto")}>
-                    <PlayerButton label={muted ? "Unmute" : "Mute"} large={isFull} onClick={() => setMuted((m) => !m)}>
-                        {muted ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src="/icons/volume-off.svg" alt="" width={15} height={15} />
-                        ) : (
-                            <Volume2 className="size-3.75 text-[#1c1b1f]" strokeWidth={1.75} />
-                        )}
+                <div className={cn("absolute z-3 flex gap-1.5", isFull ? "right-5 bottom-5" : "right-3.5 bottom-3.5")}>
+                    <PlayerButton label={muted ? "Unmute" : "Mute"} onClick={() => setMuted((m) => !m)}>
+                        {muted ? "Unmute" : "Mute"}
                     </PlayerButton>
-                    <PlayerButton label={isFull ? "Exit full screen" : "Full screen"} large={isFull} onClick={toggleFullscreen}>
-                        {isFull ? <Minimize2 className="size-3.5 text-[#1c1b1f]" /> : <Maximize2 className="size-3.5 text-[#1c1b1f]" />}
+                    <PlayerButton label={isFull ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>
+                        {isFull ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
                     </PlayerButton>
                 </div>
-            )}
-
-            {main && muted && (
-                <button
-                    type="button"
-                    onClick={() => setMuted(false)}
-                    className="absolute bottom-3 left-1/2 z-3 -translate-x-1/2 bg-black/70 px-2.5 py-1.25 text-[9px] tracking-[0.12em] whitespace-nowrap text-white uppercase"
-                >
-                    Tap to unmute
-                </button>
             )}
         </div>
     )
 }
 
-function PlayerButton({ label, large, onClick, children }: { label: string; large: boolean; onClick: () => void; children: ReactNode }) {
+function PlayerButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
     return (
         <button
             type="button"
             onClick={onClick}
             aria-label={label}
             title={label}
-            className={cn("flex items-center justify-center bg-white hover:bg-[#f3f3f3]", large ? "h-9 w-10" : "h-5.75 w-7.25")}
+            className="inline-flex h-7 min-w-7 cursor-pointer items-center justify-center border border-[#cecece] bg-white px-3 text-[12px] leading-4 tracking-[0.12em] text-[#0d0d0d] uppercase hover:bg-[#f3f3f3]"
         >
             {children}
         </button>

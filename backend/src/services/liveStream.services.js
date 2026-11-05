@@ -1,6 +1,7 @@
 import { AccessToken } from "livekit-server-sdk";
 
 import prisma from "../libs/prisma.js";
+import { isDashboardRole } from "../libs/dashboardMfa.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import {
     HOST_PREFIX,
@@ -17,10 +18,10 @@ const httpError = (message, statusCode = 400) => {
     return error;
 };
 
+const httpErrorWithCode = (message, statusCode, code) => Object.assign(httpError(message, statusCode), { code });
+
 // the stream is only open while the sale runs
 const STREAM_STATUSES = ["LIVE", "PAUSED"];
-// storefront viewers can't watch invite-only sales
-const PUBLIC_VISIBILITIES = ["PUBLIC", "REGISTERED_USERS_ONLY"];
 
 const VIEWER_TOKEN_TTL = "6h";
 const HOST_TOKEN_TTL = "8h";
@@ -50,31 +51,112 @@ const findStreamAuction = async (auctionUuid, where = {}) => {
 };
 
 // =====================================================================
-// VIEWER TOKEN — watch-only access to the auction's live room
-// Signed-in users join as "user-<uuid>" with their name; guests as "viewer-<id>"
-// (a stable id from the browser, so the studio can remove / ban them)
+// WHO MAY WATCH — the live room and its video are for bidders only:
+// a signed-in, active BIDDER account with verified KYC, verified to bid on
+// at least one lot of this auction (the same rule as bidding.services.js).
+// Staff (dashboard roles) can watch too. Guests can't — every viewer is a
+// LiveKit participant-minute, so the stream isn't open to the public.
 // =====================================================================
 
-export const createViewerTokenService = async ({ auctionUuid, viewerId, userId, userAgent }) => {
+const BLOCKED_PARTICIPANT_STATUSES = ["REJECTED", "BANNED"];
+
+/** null when the user may watch, else { code, message } saying why not */
+const watchDenial = async (auction, userId, role) => {
+    if (!userId) return { code: "SIGN_IN", message: "Sign in with your bidder account to join the live auction." };
+    if (isDashboardRole(role)) return null;
+
+    const id = BigInt(userId);
+    const [account, participant, verifiedLot] = await Promise.all([
+        prisma.user.findFirst({
+            where: { id, deletedAt: null },
+            select: { status: true, role: { select: { name: true } }, kyc: { select: { status: true } } },
+        }),
+        prisma.auctionParticipant.findUnique({
+            where: { auctionId_userId: { auctionId: auction.id, userId: id } },
+            select: { status: true },
+        }),
+        prisma.lotBidder.findFirst({
+            where: { userId: id, status: "VERIFIED", item: { auctionId: auction.id } },
+            select: { id: true },
+        }),
+    ]);
+
+    if (!account) return { code: "SIGN_IN", message: "Sign in with your bidder account to join the live auction." };
+    if (account.status !== "ACTIVE") {
+        return { code: "NOT_BIDDER", message: "Your account is awaiting activation by the auction house. You can join the live auction once it's active." };
+    }
+    if (account.role?.name !== "BIDDER") {
+        return { code: "NOT_BIDDER", message: "The live auction is open to registered bidders only. The auction house will make you a bidder once approved." };
+    }
+    if (account.kyc?.status !== "VERIFIED") {
+        return { code: "NOT_BIDDER", message: "Your KYC must be verified before you can join the live auction. Check your profile for documents to resubmit." };
+    }
+    if (participant && BLOCKED_PARTICIPANT_STATUSES.includes(participant.status)) {
+        return { code: "NOT_BIDDER", message: "Your registration for this auction isn't active, so you can't join its live room." };
+    }
+    if (!verifiedLot) {
+        return participant
+            ? { code: "PENDING", message: "Your registration for this auction is awaiting verification by the auction house." }
+            : { code: "REGISTER", message: "Register for this auction to join its live room." };
+    }
+    return null;
+};
+
+// =====================================================================
+// ACCESS — may this user open the live room page? (the page gate)
+// =====================================================================
+
+export const getWatchAccessService = async ({ auctionUuid, userId, role }) => {
+    const auction = await findStreamAuction(auctionUuid);
+    const denial = await watchDenial(auction, userId, role);
+    return denial ? { allowed: false, ...denial } : { allowed: true, code: "OK", message: null };
+};
+
+// is the auctioneer actually publishing? viewers aren't let into an empty room
+const hostOnAir = async (auctionUuid) => {
+    try {
+        const participants = await roomService().listParticipants(liveRoomName(auctionUuid));
+        return participants.some((p) => p.identity.startsWith(HOST_PREFIX) && (p.tracks?.length ?? 0) > 0);
+    } catch (error) {
+        // the room doesn't exist until the host joins
+        if (error?.status === 404 || /not.?found|does not exist/i.test(error?.message ?? "")) return false;
+        throw error;
+    }
+};
+
+// =====================================================================
+// VIEWER TOKEN — watch-only access to the auction's live room
+// Bidders join as "user-<uuid>" under their name. One identity per account,
+// so a second tab or device replaces the first rather than doubling minutes.
+// =====================================================================
+
+export const createViewerTokenService = async ({ auctionUuid, userId, role, userAgent }) => {
     const { url, apiKey, apiSecret } = livekitConfig();
 
-    const auction = await findStreamAuction(auctionUuid, { visibility: { in: PUBLIC_VISIBILITIES } });
-    if (!STREAM_STATUSES.includes(auction.status)) throw httpError("The live stream is not on right now", 409);
+    const auction = await findStreamAuction(auctionUuid);
+    const denial = await watchDenial(auction, userId, role);
+    if (denial) throw httpErrorWithCode(denial.message, denial.code === "SIGN_IN" ? 401 : 403, denial.code);
+
+    if (!STREAM_STATUSES.includes(auction.status)) throw httpErrorWithCode("The live stream is not on right now", 409, "OFF_AIR");
 
     const user = await findUser(userId);
-    const identity = user ? `user-${user.uuid}` : `viewer-${viewerId}`;
+    if (!user) throw httpErrorWithCode("Sign in with your bidder account to join the live auction.", 401, "SIGN_IN");
+    const identity = `user-${user.uuid}`;
 
     const banned = await prisma.liveStreamBan.findUnique({
         where: { auctionId_identity: { auctionId: auction.id, identity } },
         select: { id: true },
     });
-    if (banned) throw httpError("You have been removed from this live stream", 403);
+    if (banned) throw httpErrorWithCode("You have been removed from this live stream", 403, "REMOVED");
+
+    // checked last: it's a LiveKit API call, and the player polls this while waiting
+    if (!(await hostOnAir(auctionUuid))) throw httpErrorWithCode("The auctioneer hasn't gone live yet", 409, "OFF_AIR");
 
     const token = new AccessToken(apiKey, apiSecret, {
         identity,
-        name: displayName(user) ?? `Guest ${viewerId.slice(0, 4).toUpperCase()}`,
-        // the studio shows the viewer's browser / OS
-        metadata: JSON.stringify({ role: "viewer", ua: userAgent?.slice(0, 160) ?? "" }),
+        name: displayName(user) ?? "Bidder",
+        // the studio shows who's watching (bidder / staff) and their browser / OS
+        metadata: JSON.stringify({ role: "viewer", kind: isDashboardRole(role) ? "staff" : "bidder", ua: userAgent?.slice(0, 160) ?? "" }),
         ttl: VIEWER_TOKEN_TTL,
     });
     token.addGrant({

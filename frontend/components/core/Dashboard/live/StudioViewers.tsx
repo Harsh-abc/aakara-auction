@@ -23,7 +23,7 @@ import { getErrorMessage } from "@/lib/apiError"
 import { cn } from "@/lib/utils"
 import { getStreamBans, removeStreamViewer, unbanStreamViewer, type LiveStreamBan } from "@/services/operations/liveStream.api"
 
-import { ago, device, initials, QualityDot } from "./studioHelpers"
+import { ago, device, initials, QualityDot, viewerKind } from "./studioHelpers"
 
 const isHost = (participant: RemoteParticipant) => participant.identity.startsWith("host-")
 
@@ -144,7 +144,7 @@ export function StudioViewers({ auctionUuid }: { auctionUuid: string }) {
                                 <p className="truncate text-sm font-medium text-slate-900">{name}</p>
                                 <p className="flex items-center gap-1.5 truncate text-xs text-slate-500">
                                     <QualityDot quality={participant.connectionQuality} />
-                                    {participant.identity.startsWith("user-") ? "Signed in" : "Guest"} · {device(participant.metadata)} · {ago(participant.joinedAt)}
+                                    {viewerKind(participant.metadata)} · {device(participant.metadata)} · {ago(participant.joinedAt)}
                                 </p>
                             </div>
                             <div className="flex shrink-0 gap-1">

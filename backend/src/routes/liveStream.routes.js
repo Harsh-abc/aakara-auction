@@ -1,6 +1,6 @@
 import express from "express";
 
-import { getBans, getHostToken, getOnAir, getViewerToken, removeViewer, unbanViewer } from "../controllers/liveStream.controller.js";
+import { getBans, getHostToken, getOnAir, getViewerToken, getWatchAccess, removeViewer, unbanViewer } from "../controllers/liveStream.controller.js";
 import { authenticate, optionalAuthenticate } from "../middleware/auth.middleware.js";
 import { requireRole } from "../middleware/rbac.middleware.js";
 import { STAFF_ROLES } from "../libs/socket.js";
@@ -13,7 +13,9 @@ const HOST_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"];
 // DASHBOARD — navbar live indicator (before /:auctionUuid)
 liveStreamRouter.get("/on-air", authenticate, requireRole(...STAFF_ROLES), getOnAir);
 
-// VIEWERS — anyone can watch a live sale; signed-in users show up under their name
+// VIEWERS — the live room and its stream are for eligible bidders (and staff) only.
+// optionalAuthenticate so a guest gets a clear "sign in" answer rather than a bare 401
+liveStreamRouter.get("/:auctionUuid/access", optionalAuthenticate, getWatchAccess);
 liveStreamRouter.get("/:auctionUuid/token", optionalAuthenticate, getViewerToken);
 
 // STUDIO — go live, and remove / ban viewers

@@ -1,12 +1,19 @@
 import { apiConnector } from "../apiConnector"
 import { liveStreamEndPoints } from "../api"
 
-const { VIEWER_TOKEN_API, HOST_TOKEN_API, ON_AIR_API, REMOVE_VIEWER_API, BANS_API, UNBAN_API } = liveStreamEndPoints
+const { VIEWER_TOKEN_API, WATCH_ACCESS_API, HOST_TOKEN_API, ON_AIR_API, REMOVE_VIEWER_API, BANS_API, UNBAN_API } = liveStreamEndPoints
 
 export type LiveStreamAccess = {
     /** LiveKit server, wss://… */
     url: string
     token: string
+}
+
+/** why the live room is closed to this user — SIGN_IN, REGISTER, PENDING, NOT_BIDDER */
+export type WatchAccess = {
+    allowed: boolean
+    code: "OK" | "SIGN_IN" | "REGISTER" | "PENDING" | "NOT_BIDDER"
+    message: string | null
 }
 
 export type HostStreamAccess = LiveStreamAccess & {
@@ -28,12 +35,21 @@ export type LiveStreamBan = {
 
 const auth = (token: string | null) => ({ Authorization: `Bearer ${token}` })
 
-// watch-only access to the auction's stream; signed-in viewers pass their token so the auctioneer sees their name
-export async function getLiveStreamToken(auctionUuid: string, viewerId: string, accessToken?: string | null): Promise<LiveStreamAccess> {
+// may this user open the live room? (eligible bidders and staff only)
+export async function getWatchAccess(auctionUuid: string, accessToken?: string | null): Promise<WatchAccess> {
+    const response = await apiConnector({
+        method: "GET",
+        url: WATCH_ACCESS_API(auctionUuid),
+        header: accessToken ? auth(accessToken) : undefined,
+    })
+    return response.data.data
+}
+
+// watch-only access to the auction's stream — eligible bidders only, and only once the auctioneer is publishing
+export async function getLiveStreamToken(auctionUuid: string, accessToken?: string | null): Promise<LiveStreamAccess> {
     const response = await apiConnector({
         method: "GET",
         url: VIEWER_TOKEN_API(auctionUuid),
-        params: { viewerId },
         header: accessToken ? auth(accessToken) : undefined,
     })
     return response.data.data

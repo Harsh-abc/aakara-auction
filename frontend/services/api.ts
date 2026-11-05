@@ -98,6 +98,7 @@ export const biddingEndPoints = {
 // live video (LiveKit) — viewers watch (login optional); the dashboard studio goes live and moderates
 export const liveStreamEndPoints = {
     VIEWER_TOKEN_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/token`,
+    WATCH_ACCESS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/access`,
     HOST_TOKEN_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/host-token`,
     ON_AIR_API: `${BASE_URL}/api/live/on-air`,
     REMOVE_VIEWER_API: (auctionUuid: string, identity: string) =>

@@ -5,11 +5,12 @@ import {
     createViewerTokenService,
     getBansService,
     getOnAirService,
+    getWatchAccessService,
     removeViewerService,
     unbanViewerService,
 } from "../services/liveStream.services.js";
 import { auctionUuidParamSchema } from "../validations/auction.validation.js";
-import { removeViewerBodySchema, viewerIdentityParamSchema, viewerTokenQuerySchema } from "../validations/liveStream.validation.js";
+import { removeViewerBodySchema, viewerIdentityParamSchema } from "../validations/liveStream.validation.js";
 
 const handleError = (res, error, label, fallback) => {
     if (error instanceof ZodError) {
@@ -23,28 +24,44 @@ const handleError = (res, error, label, fallback) => {
     return res.status(status).json({
         success: false,
         message: status === 500 ? fallback : error.message,
+        ...(error.code && status !== 500 ? { code: error.code } : {}),
     });
 };
 
 // -----------------------------------------------------------------
-// GET /api/live/:auctionUuid/token?viewerId=<browser id>
-// Watch-only LiveKit token for the auction's stream (login optional)
+// GET /api/live/:auctionUuid/token
+// Watch-only LiveKit token for the auction's stream — eligible bidders (and staff) only
 // -----------------------------------------------------------------
 
 export const getViewerToken = async (req, res) => {
     try {
         const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
-        const { viewerId } = viewerTokenQuerySchema.parse(req.query);
         const data = await createViewerTokenService({
             auctionUuid,
-            viewerId,
             userId: req.user?.userId,
+            role: req.user?.role,
             userAgent: req.get("user-agent"),
         });
         res.set("Cache-Control", "no-store");
         return res.status(200).json({ success: true, message: "Live stream token created", data });
     } catch (error) {
         return handleError(res, error, "Get live stream token", "Failed to join the live stream");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/live/:auctionUuid/access
+// May the signed-in user open the live room page? { allowed, code, message }
+// -----------------------------------------------------------------
+
+export const getWatchAccess = async (req, res) => {
+    try {
+        const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
+        const data = await getWatchAccessService({ auctionUuid, userId: req.user?.userId, role: req.user?.role });
+        res.set("Cache-Control", "no-store");
+        return res.status(200).json({ success: true, message: "Live room access checked", data });
+    } catch (error) {
+        return handleError(res, error, "Get live room access", "Failed to check live room access");
     }
 };
 

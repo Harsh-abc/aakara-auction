@@ -60,6 +60,15 @@ export function ago(date?: Date) {
 }
 
 // "Chrome · Windows" from the user agent the viewer token carries
+// "Bidder" or "Staff" — only signed-in bidders and staff can watch
+export function viewerKind(metadata?: string) {
+    try {
+        return JSON.parse(metadata ?? "{}").kind === "staff" ? "Staff" : "Bidder"
+    } catch {
+        return "Bidder"
+    }
+}
+
 export function device(metadata?: string) {
     try {
         const ua: string = JSON.parse(metadata ?? "{}").ua ?? ""
