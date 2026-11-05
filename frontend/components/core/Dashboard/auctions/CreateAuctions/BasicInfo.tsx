@@ -427,7 +427,11 @@ export default function BasicInfo() {
                         <div className="input-wrapper">
                             <label className="block mb-2">Auction Location</label>
                             <Input
-                                {...register("basicInfo.auctionLocation")}
+                                {...register("basicInfo.auctionLocation", {
+                                    // same DB column as the Shipping step's venue — keep them in step so an
+                                    // edit here isn't overridden by the venue loaded with the auction
+                                    onChange: (e) => setValue("shipping.venue", e.target.value, { shouldDirty: true }),
+                                })}
                                 type="text"
                                 placeholder="Enter Location"
                                 className="w-full border rounded-md px-3 py-2 h-11"

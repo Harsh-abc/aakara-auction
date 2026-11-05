@@ -50,6 +50,7 @@ export default function ShippingInfo() {
     const {
         control,
         register,
+        setValue,
         watch,
         formState: { errors },
     } = useFormContext<AuctionFormData>();
@@ -166,6 +167,9 @@ export default function ShippingInfo() {
                                             formValues.shipping.isOnline ||
                                             Boolean(value?.trim()) ||
                                             "Venue is required for an offline auction",
+                                        // same DB column as Basic Info's auction location — keep them in step
+                                        onChange: (e) =>
+                                            setValue("basicInfo.auctionLocation", e.target.value, { shouldDirty: true }),
                                     })}
                                 />
 
