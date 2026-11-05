@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { BODY, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "../storefront";
-import { auctionHref, auctionMeta } from "./auctionDisplay";
+import { auctionHref, auctionMeta, isFinished } from "./auctionDisplay";
 import { lotHeading, lotHref } from "./detail/lotDisplay";
 import { useGallery } from "./detail/useGallery";
 import { BidDialog } from "./lot/BidDialog";
@@ -77,6 +77,8 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
 
     const { auction, lot, lots } = state.data;
     const saved = gallery.isSaved(lot.uuid);
+    // "Place bid" keeps leading to the live room (even from a closed lot) until the whole auction is over
+    const liveLot = isFinished(auction) ? null : roomLot(lots);
 
     return (
         <main className={PAGE_MAIN}>
@@ -131,7 +133,7 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                         lot={lot}
                         onBid={onBid}
                         bidRefreshKey={savedCount}
-                        bidHref={lotHref(auction.uuid, roomLot(lots) ?? lot)}
+                        bidHref={liveLot ? lotHref(auction.uuid, liveLot) : undefined}
                         className="self-start lg:sticky lg:top-25 lg:mt-10.75"
                     />
                 </div>

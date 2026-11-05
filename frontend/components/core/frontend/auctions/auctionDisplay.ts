@@ -15,7 +15,7 @@ export const STOREFRONT_STATUS_LABELS: Partial<Record<AuctionStatus, string>> = 
 
 export const isLive = (auction: PublicAuction) => auction.status === "LIVE" || auction.status === "PAUSED"
 
-const isFinished = (auction: PublicAuction) => auction.status === "ENDED" || auction.status === "SETTLED"
+export const isFinished =(auction: PublicAuction) => auction.status === "ENDED" || auction.status === "SETTLED"
 
 export const badgeTone = (auction: PublicAuction) =>
     isLive(auction) ? "live" : isFinished(auction) ? "closed" : "upcoming"

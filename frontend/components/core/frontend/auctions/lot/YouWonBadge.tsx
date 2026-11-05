@@ -59,7 +59,7 @@ export function WinnerLine({ lot }: { lot: PublicLotDetail }) {
     }
 
     return (
-        <div className="relative w-full overflow-hidden border border-[#d0a55d] bg-[#fdedd6] px-4 pt-5 pb-4 text-center" role="status">
+        <div className="relative w-full overflow-hidden border border-[#d0a55d] bg-white px-4 pt-5 pb-4 text-center" role="status">
             {/* looping confetti */}
             <div aria-hidden className="pointer-events-none absolute inset-0">
                 {CONFETTI.map((piece, i) => (
@@ -85,7 +85,7 @@ export function WinnerLine({ lot }: { lot: PublicLotDetail }) {
             </div>
 
             <div className="relative">
-                <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-white text-[28px] shadow-sm">🏆</div>
+                <div className="mx-auto flex size-14 items-center justify-center rounded-full border border-[#e8c88f] bg-white text-[28px] shadow-sm">🏆</div>
                 <p className="mt-3 text-[11px] leading-[13.2px] tracking-[0.16em] text-[#673364] uppercase">Congratulations</p>
                 <p className="mt-1 text-[20px] leading-7 font-medium text-[#0d0d0d]">You have won this lot!</p>
                 <p className="mt-0.5 text-[13px] leading-5 text-[#717171]">Paddle {winnerPaddle}</p>

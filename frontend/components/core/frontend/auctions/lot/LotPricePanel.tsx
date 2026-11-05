@@ -70,7 +70,8 @@ export function LotPricePanel({
                 ))}
             </dl>
 
-            <div className="mt-6 flex flex-col items-center gap-2 py-3.5">
+            {/* equal space above and below this block: my-8 here, no margin on the buttons */}
+            <div className="my-8 flex flex-col items-center gap-3">
                 {countdown ? (
                     <AuctionCountdown label={countdown.label} target={countdown.target} />
                 ) : (
@@ -81,7 +82,7 @@ export function LotPricePanel({
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} className="mt-6" />
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} />
         </aside>
     )
 }

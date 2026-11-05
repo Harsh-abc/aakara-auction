@@ -10,7 +10,7 @@ import { getMyLotStanding } from "@/services/operations/bidding.api"
 
 import { BUTTON, BUTTON_OUTLINE, BUTTON_SOLID } from "../../storefront"
 import { formatMoney } from "../detail/lotDisplay"
-import { isClosedLot, isUpcomingLot } from "./lotPageDisplay"
+import { isUpcomingLot } from "./lotPageDisplay"
 import type { BidKind } from "./useBidAction"
 
 export type OnBid = (kind: BidKind, lot: PublicLot) => void
@@ -44,7 +44,8 @@ function useMyProxyMax(lot: PublicLot, refreshKey: number) {
 }
 
 // "Place bid" only while the lot is on the block; proxy bids only before it opens.
-// bidHref: "Place bid" links there (the live room) instead of opening the bid dialog — open until the lot closes
+// bidHref: "Place bid" links there (the live room) instead of opening the bid dialog — even on a closed lot;
+// the caller drops it once the whole auction is over
 export function BidButtons({
     lot,
     onBid,
@@ -64,7 +65,7 @@ export function BidButtons({
 
     return (
         <div className={cn("flex flex-col gap-2", className)}>
-            {bidHref && !isClosedLot(lot) ? (
+            {bidHref ? (
                 <Link href={bidHref} className={cn(BUTTON, BUTTON_SOLID)}>
                     Place bid
                 </Link>
