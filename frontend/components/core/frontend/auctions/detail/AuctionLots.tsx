@@ -18,7 +18,7 @@ import { LotPagination } from "./LotPagination";
 import { useGallery } from "./useGallery";
 
 // Figma "All lots": two rows of three, then the pager
-const LOTS_PER_PAGE = 6;
+const LOTS_PER_PAGE = 9;
 
 const SORT_LABELS: Record<PublicLotSort, string> = {
     status: "Live / upcoming",

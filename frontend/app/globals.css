@@ -160,3 +160,26 @@
     font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   }
 }
+/* lot page "You have won" celebration — loops while shown */
+@keyframes won-confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(190px) rotate(540deg); opacity: 0; }
+}
+@keyframes won-trophy-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-6px) rotate(-8deg) scale(1.06); }
+  50% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-6px) rotate(8deg) scale(1.06); }
+}
+@keyframes won-sparkle-twinkle {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
+}
+.won-confetti { animation: won-confetti-fall 3s linear infinite; }
+.won-trophy { animation: won-trophy-bob 1.8s ease-in-out infinite; }
+.won-sparkle { animation: won-sparkle-twinkle 2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .won-confetti, .won-trophy, .won-sparkle { animation: none; }
+  .won-confetti { display: none; }
+}

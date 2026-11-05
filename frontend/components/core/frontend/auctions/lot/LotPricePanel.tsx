@@ -6,6 +6,7 @@ import { formatMoney, lotEstimate } from "../detail/lotDisplay"
 import { BidButtons, type OnBid } from "./BidButtons"
 import { lotCountdown } from "./lotCatalogue"
 import { bidCountLabel } from "./lotPageDisplay"
+import { WinnerLine } from "./YouWonBadge"
 
 const SMALL_CAPS = "text-[11px] leading-[13.2px] tracking-[0.16em] uppercase"
 
@@ -75,9 +76,7 @@ export function LotPricePanel({
                 ) : (
                     <>
                         <span className={cn(SMALL_CAPS, "text-[#717171]")}>Bidding closed</span>
-                        {winner?.paddle && (
-                            <p className="text-[20px] leading-7 font-medium text-[#0d0d0d]">Winner : Paddle {winner.paddle}</p>
-                        )}
+                        <WinnerLine lot={lot} />
                     </>
                 )}
             </div>
