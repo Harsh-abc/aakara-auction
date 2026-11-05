@@ -72,6 +72,15 @@ export interface PublicLotMedia {
     mediaType: "IMAGE" | "VIDEO";
 }
 
+export interface PublicLotWinner {
+    /** the winner's paddle number (never their name) */
+    paddle: string | null;
+    hammerPrice: string;
+    buyerPremium: string;
+    /** hammer price + buyer's premium */
+    totalPrice: string;
+}
+
 // shape of lot on GET /api/auction/public/:auctionUuid/lots/:lotUuid
 export interface PublicLotDetail extends PublicLot {
     description: string | null;
@@ -98,6 +107,8 @@ export interface PublicLotDetail extends PublicLot {
     leadingPaddle: string | null;
     /** smallest amount the next bid may be */
     nextBid: string;
+    /** set once the lot is hammered sold */
+    winner: PublicLotWinner | null;
     /** highest first — the first one is leading */
     bids: PublicBid[];
 }
@@ -121,6 +132,8 @@ export interface GetPublicLotsParams {
 
 export interface PublicLotsPage {
     lots: PublicLot[];
+    /** the next lot to open (after the live one, or the first when none is live) */
+    upNextUuid?: string | null;
     pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 

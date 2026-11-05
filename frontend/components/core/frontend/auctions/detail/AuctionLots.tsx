@@ -188,13 +188,13 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
                             {view === "grid" ? (
                                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                                     {result.lots.map((lot) => (
-                                        <LotCard key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
+                                        <LotCard key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} upNext={lot.uuid === result.upNextUuid} />
                                     ))}
                                 </div>
                             ) : (
                                 <div>
                                     {result.lots.map((lot) => (
-                                        <LotRow key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} />
+                                        <LotRow key={lot.uuid} lot={lot} auctionUuid={auctionUuid} gallery={gallery} upNext={lot.uuid === result.upNextUuid} />
                                     ))}
                                 </div>
                             )}

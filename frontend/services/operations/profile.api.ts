@@ -8,6 +8,7 @@ import {
     MyKyc,
     UpdateProfilePayload,
     UserProfile,
+    WonLot,
 } from "@/lib/types/profile.types"
 
 const {
@@ -18,6 +19,7 @@ const {
     MY_KYC_API,
     MY_GALLERY_API,
     MY_GALLERY_LOT_API,
+    MY_WINNINGS_API,
 } = profileEndpoints
 
 export async function getMyProfile(token: string | null): Promise<MyAccount> {
@@ -85,6 +87,15 @@ export async function getMyGallery(token: string | null): Promise<GalleryItem[]>
     const response = await apiConnector({
         method: "GET",
         url: MY_GALLERY_API,
+        header: { Authorization: `Bearer ${token}` },
+    })
+    return response.data.data
+}
+
+export async function getMyWinnings(token: string | null): Promise<WonLot[]> {
+    const response = await apiConnector({
+        method: "GET",
+        url: MY_WINNINGS_API,
         header: { Authorization: `Bearer ${token}` },
     })
     return response.data.data

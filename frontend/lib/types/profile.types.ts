@@ -128,3 +128,18 @@ export interface GalleryItem {
     }
     lot: PublicLot
 }
+
+export type WinnerPaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "REFUNDED" | "CANCELLED"
+
+// GET /users/me/winnings — a lot the user won, newest first
+export interface WonLot {
+    wonAt: string
+    finalHammerPrice: string
+    buyerPremiumAmount: string
+    totalAmountDue: string
+    paymentStatus: WinnerPaymentStatus
+    paymentDueAt: string | null
+    currency: PublicLot["currency"]
+    auction: GalleryItem["auction"]
+    lot: PublicLot
+}

@@ -51,6 +51,45 @@ export const getMyGalleryService = async ({ userId }) => {
     );
 };
 
+/**
+ * "My winnings" — lots the signed-in user won (an auction_winners row on a lot that's still SOLD),
+ * newest first, with what they owe. Listed even if the sale later leaves the storefront:
+ * it's still their purchase.
+ */
+export const getMyWinningsService = async ({ userId }) => {
+    const wins = await prisma.auctionWinner.findMany({
+        where: { winnerId: userId, item: { status: "SOLD" } },
+        orderBy: { wonAt: "desc" },
+        select: {
+            wonAt: true,
+            finalHammerPrice: true,
+            buyerPremiumAmount: true,
+            totalAmountDue: true,
+            paymentStatus: true,
+            paymentDueAt: true,
+            auction: {
+                select: {
+                    uuid: true,
+                    title: true,
+                    status: true,
+                    startTime: true,
+                    endTime: true,
+                    timezone: true,
+                    currency: { select: { code: true, symbol: true } },
+                },
+            },
+            item: { select: PUBLIC_LOT_SELECT },
+        },
+    });
+
+    return serializeBigInt(
+        wins.map(({ auction: { currency, ...auction }, item, ...win }) => {
+            const lot = toPublicLot(item, currency);
+            return { ...win, currency: lot.currency, auction, lot };
+        })
+    );
+};
+
 const findPublicLot = async (lotUuid) => {
     const lot = await prisma.auctionItem.findFirst({
         where: { uuid: lotUuid, auction: publicSaleWhere() },

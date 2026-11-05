@@ -1,6 +1,6 @@
 import { ZodError } from 'zod';
 
-import { addToGalleryService, getMyGalleryService, removeFromGalleryService } from '../services/gallery.services.js';
+import { addToGalleryService, getMyGalleryService, getMyWinningsService, removeFromGalleryService } from '../services/gallery.services.js';
 import { galleryLotSchema } from '../validations/user.validation.js';
 
 const handleError = (res, err) => {
@@ -20,6 +20,20 @@ export const getMyGallery = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: 'Gallery fetched successfully',
+            data: items,
+        });
+    } catch (err) {
+        return handleError(res, err);
+    }
+};
+
+export const getMyWinnings = async (req, res) => {
+    try {
+        const items = await getMyWinningsService({ userId: BigInt(req.user.userId) });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Winnings fetched successfully',
             data: items,
         });
     } catch (err) {

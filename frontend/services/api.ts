@@ -157,6 +157,8 @@ export const profileEndpoints = {
     // GET the saved lots; POST / DELETE one lot by uuid
     MY_GALLERY_API: `${BASE_URL}/api/users/me/gallery`,
     MY_GALLERY_LOT_API: (lotUuid: string) => `${BASE_URL}/api/users/me/gallery/${lotUuid}`,
+    // lots the user won
+    MY_WINNINGS_API: `${BASE_URL}/api/users/me/winnings`,
 }
 
 
