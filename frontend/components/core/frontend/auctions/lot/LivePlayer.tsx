@@ -8,6 +8,7 @@ import { Maximize2, Minimize2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useAppSelector } from "@/hooks/redux"
+import { getSocket, setSocketToken } from "@/lib/socket"
 import { getLiveStreamToken, type LiveStreamAccess } from "@/services/operations/liveStream.api"
 
 // LiveKit bills every connected viewer by the minute, so the player only stays connected while it's watched.
@@ -109,6 +110,40 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
             cancelled = true
         }
     }, [auctionUuid, userUuid, attempt, hidden, blocked])
+
+    // tell the studio who's in the live room while this page is open (the server checks eligibility);
+    // leaving the page, closing the tab or being removed takes them off its Viewers list
+    const listed = Boolean(userUuid) && blocked?.kind !== "removed" && blocked?.kind !== "denied"
+    useEffect(() => {
+        setSocketToken(accessToken)
+    }, [accessToken])
+    useEffect(() => {
+        if (!listed) return
+        const socket = getSocket()
+        // rejoin after a reconnect (a new token for another user reconnects the socket too)
+        const watch = () => socket.emit("live:watch", { auctionUuid })
+        socket.on("connect", watch)
+        if (socket.connected) watch()
+        return () => {
+            socket.off("connect", watch)
+            socket.emit("live:unwatch", { auctionUuid })
+        }
+    }, [auctionUuid, listed])
+
+    // the auctioneer removed this account from the stream — works off air too, when we aren't in LiveKit
+    useEffect(() => {
+        const socket = getSocket()
+        const onRemoved = (payload: { auctionUuid?: string; message?: string }) => {
+            if (payload?.auctionUuid !== auctionUuid) return
+            clearTimeout(retryRef.current)
+            setAccess(null)
+            setBlocked({ kind: "removed", message: payload.message || "You have been removed from this live stream." })
+        }
+        socket.on("live:removed", onRemoved)
+        return () => {
+            socket.off("live:removed", onRemoved)
+        }
+    }, [auctionUuid])
 
     if (blocked) {
         return (

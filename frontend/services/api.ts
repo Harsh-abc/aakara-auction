@@ -104,6 +104,7 @@ export const liveStreamEndPoints = {
     REMOVE_VIEWER_API: (auctionUuid: string, identity: string) =>
         `${BASE_URL}/api/live/${auctionUuid}/viewers/${encodeURIComponent(identity)}/remove`,
     BANS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/bans`,
+    WATCHERS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/watchers`,
     UNBAN_API: (auctionUuid: string, identity: string) =>
         `${BASE_URL}/api/live/${auctionUuid}/bans/${encodeURIComponent(identity)}`,
 };

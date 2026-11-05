@@ -1,6 +1,7 @@
 import { AccessToken } from "livekit-server-sdk";
 
 import prisma from "../libs/prisma.js";
+import { listWatcherTabs } from "../libs/liveWatchers.js";
 import { isDashboardRole } from "../libs/dashboardMfa.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import {
@@ -110,6 +111,21 @@ export const getWatchAccessService = async ({ auctionUuid, userId, role }) => {
     const auction = await findStreamAuction(auctionUuid);
     const denial = await watchDenial(auction, userId, role);
     return denial ? { allowed: false, ...denial } : { allowed: true, code: "OK", message: null };
+};
+
+/** May this signed-in socket be listed as watching the live room? (eligible, and not banned from the stream) */
+export const canWatchLiveRoom = async ({ auctionUuid, userId, role }) => {
+    if (!userId) return false;
+    const auction = await prisma.auction.findFirst({ where: { uuid: auctionUuid, deletedAt: null }, select: { id: true } });
+    if (!auction || (await watchDenial(auction, userId, role))) return false;
+
+    const user = await prisma.user.findFirst({ where: { id: BigInt(userId), deletedAt: null }, select: { uuid: true } });
+    if (!user) return false;
+    const banned = await prisma.liveStreamBan.findUnique({
+        where: { auctionId_identity: { auctionId: auction.id, identity: `user-${user.uuid}` } },
+        select: { id: true },
+    });
+    return !banned;
 };
 
 // is the auctioneer actually publishing? viewers aren't let into an empty room
@@ -258,7 +274,74 @@ export const removeViewerService = async ({ auctionUuid, identity, ban, name, us
     }
     await removeFromRoom(auctionUuid, identity);
 
-    return { message: ban ? `${name ?? "Viewer"} has been banned` : `${name ?? "Viewer"} has been removed` };
+    // the account behind "user-<uuid>", so the controller can close their live room page too
+    const userUuid = identity.startsWith("user-") ? identity.slice("user-".length) : null;
+    const viewer = userUuid ? await prisma.user.findFirst({ where: { uuid: userUuid }, select: { id: true } }).catch(() => null) : null;
+
+    return {
+        message: ban ? `${name ?? "Viewer"} has been banned` : `${name ?? "Viewer"} has been removed`,
+        viewerUserId: viewer ? viewer.id.toString() : null,
+    };
+};
+
+// =====================================================================
+// WATCHERS — who has the live room page open right now (libs/liveWatchers.js),
+// by account: one row per person however many tabs. Banned people are left out.
+// =====================================================================
+
+export const getWatchersService = async ({ auctionUuid }) => {
+    const auction = await findStreamAuction(auctionUuid);
+    const tabs = await listWatcherTabs(auctionUuid);
+
+    // userId → { joinedAt: first tab, userAgent: newest tab, tabs }
+    const byUser = new Map();
+    for (const tab of tabs) {
+        const entry = byUser.get(tab.userId);
+        if (!entry) {
+            byUser.set(tab.userId, { joinedAt: tab.joinedAt, userAgent: tab.userAgent, newest: tab.joinedAt, tabs: 1 });
+            continue;
+        }
+        entry.tabs += 1;
+        entry.joinedAt = Math.min(entry.joinedAt, tab.joinedAt);
+        if (tab.joinedAt > entry.newest) Object.assign(entry, { newest: tab.joinedAt, userAgent: tab.userAgent });
+    }
+    if (byUser.size === 0) return [];
+
+    const ids = [...byUser.keys()].map((id) => BigInt(id));
+    const [users, participants] = await Promise.all([
+        prisma.user.findMany({
+            where: { id: { in: ids }, deletedAt: null },
+            select: { id: true, ...USER_NAME_SELECT, email: true, role: { select: { name: true } } },
+        }),
+        prisma.auctionParticipant.findMany({
+            where: { auctionId: auction.id, userId: { in: ids } },
+            select: { userId: true, paddleNumber: true },
+        }),
+    ]);
+    const bans = await prisma.liveStreamBan.findMany({
+        where: { auctionId: auction.id, identity: { in: users.map((user) => `user-${user.uuid}`) } },
+        select: { identity: true },
+    });
+    const banned = new Set(bans.map((ban) => ban.identity));
+    const paddles = new Map(participants.map((p) => [p.userId.toString(), p.paddleNumber]));
+
+    return users
+        .filter((user) => !banned.has(`user-${user.uuid}`))
+        .map((user) => {
+            const entry = byUser.get(user.id.toString());
+            return {
+                uuid: user.uuid,
+                identity: `user-${user.uuid}`,
+                name: displayName(user) ?? "Bidder",
+                email: user.email,
+                kind: isDashboardRole(user.role?.name) ? "staff" : "bidder",
+                paddleNumber: paddles.get(user.id.toString()) ?? null,
+                userAgent: entry.userAgent,
+                joinedAt: new Date(entry.joinedAt).toISOString(),
+                tabs: entry.tabs,
+            };
+        })
+        .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
 };
 
 export const getBansService = async ({ auctionUuid }) => {

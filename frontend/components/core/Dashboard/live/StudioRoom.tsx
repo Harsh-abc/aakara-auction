@@ -37,7 +37,7 @@ import {
     type Res,
 } from "./liveStudio.constants"
 import { StudioShare } from "./StudioShare"
-import { StudioViewers, useViewers } from "./StudioViewers"
+import { StudioViewers, useAudience } from "./StudioViewers"
 import { useActualFps, useLiveTimer } from "./studioHelpers"
 
 type StudioRoomProps = {
@@ -67,7 +67,8 @@ function readQuality(): { res: Res; fps: Fps } {
 export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: StudioRoomProps) {
     const connection = useConnectionState()
     const { localParticipant, isCameraEnabled, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant()
-    const viewers = useViewers()
+    const audience = useAudience(auctionUuid)
+    const viewers = audience.people
 
     // the studio only renders in the browser (after the studio token arrives)
     const [{ res, fps }, setQuality] = useState(readQuality)
@@ -325,7 +326,7 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave }: 
                         </TabsTrigger>
                     </TabsList>
                     <TabsContent value="viewers" className="flex min-h-0 flex-1 flex-col">
-                        <StudioViewers auctionUuid={auctionUuid} />
+                        <StudioViewers auctionUuid={auctionUuid} audience={audience} />
                     </TabsContent>
                     <TabsContent value="share" className="flex min-h-0 flex-1 flex-col">
                         <StudioShare auctionUuid={auctionUuid} liveLotUuid={liveLotUuid} />

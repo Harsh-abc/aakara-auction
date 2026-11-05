@@ -6,9 +6,11 @@ import {
     getBansService,
     getOnAirService,
     getWatchAccessService,
+    getWatchersService,
     removeViewerService,
     unbanViewerService,
 } from "../services/liveStream.services.js";
+import { emitTo, rooms } from "../libs/socket.js";
 import { auctionUuidParamSchema } from "../validations/auction.validation.js";
 import { removeViewerBodySchema, viewerIdentityParamSchema } from "../validations/liveStream.validation.js";
 
@@ -105,10 +107,34 @@ export const removeViewer = async (req, res) => {
         const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
         const { identity } = viewerIdentityParamSchema.parse(req.params);
         const { ban, name } = removeViewerBodySchema.parse(req.body ?? {});
-        const { message } = await removeViewerService({ auctionUuid, identity, ban, name, userId: req.user?.userId });
+        const { message, viewerUserId } = await removeViewerService({ auctionUuid, identity, ban, name, userId: req.user?.userId });
+        // close the stream on their open live room page(s) too — even while off air, when they aren't in LiveKit
+        if (viewerUserId) {
+            emitTo(rooms.user(viewerUserId), "live:removed", {
+                auctionUuid,
+                banned: ban,
+                message: ban ? "You have been removed from this live stream." : "You have been removed from this live stream. Reload the page to rejoin.",
+            });
+        }
         return res.status(200).json({ success: true, message });
     } catch (error) {
         return handleError(res, error, "Remove viewer", "Failed to remove the viewer");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/live/:auctionUuid/watchers
+// Signed-in bidders / staff with the live room page open right now, by name
+// -----------------------------------------------------------------
+
+export const getWatchers = async (req, res) => {
+    try {
+        const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
+        const data = await getWatchersService({ auctionUuid });
+        res.set("Cache-Control", "no-store");
+        return res.status(200).json({ success: true, message: "Live room watchers fetched", data });
+    } catch (error) {
+        return handleError(res, error, "Get live room watchers", "Failed to fetch who is watching");
     }
 };
 

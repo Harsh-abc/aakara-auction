@@ -1,7 +1,7 @@
 import { apiConnector } from "../apiConnector"
 import { liveStreamEndPoints } from "../api"
 
-const { VIEWER_TOKEN_API, WATCH_ACCESS_API, HOST_TOKEN_API, ON_AIR_API, REMOVE_VIEWER_API, BANS_API, UNBAN_API } = liveStreamEndPoints
+const { VIEWER_TOKEN_API, WATCH_ACCESS_API, HOST_TOKEN_API, ON_AIR_API, REMOVE_VIEWER_API, BANS_API, UNBAN_API, WATCHERS_API } = liveStreamEndPoints
 
 export type LiveStreamAccess = {
     /** LiveKit server, wss://… */
@@ -24,6 +24,21 @@ export type OnAirStreams = {
     /** false until LIVEKIT_* are set on the backend */
     configured: boolean
     auctions: { uuid: string; title: string; viewers: number }[]
+}
+
+export type LiveStreamWatcher = {
+    /** the user's uuid — /dashboard/users/{uuid} */
+    uuid: string
+    /** their LiveKit identity, "user-<uuid>" */
+    identity: string
+    name: string
+    email: string
+    kind: "bidder" | "staff"
+    paddleNumber: string | null
+    userAgent: string
+    /** when their first open tab joined (ISO) */
+    joinedAt: string
+    tabs: number
 }
 
 export type LiveStreamBan = {
@@ -85,6 +100,12 @@ export async function removeStreamViewer(
 
 export async function getStreamBans(auctionUuid: string, token: string | null): Promise<LiveStreamBan[]> {
     const response = await apiConnector({ method: "GET", url: BANS_API(auctionUuid), header: auth(token) })
+    return response.data.data
+}
+
+// signed-in bidders / staff with the live room page open right now (one row per account)
+export async function getStreamWatchers(auctionUuid: string, token: string | null): Promise<LiveStreamWatcher[]> {
+    const response = await apiConnector({ method: "GET", url: WATCHERS_API(auctionUuid), header: auth(token) })
     return response.data.data
 }
 
