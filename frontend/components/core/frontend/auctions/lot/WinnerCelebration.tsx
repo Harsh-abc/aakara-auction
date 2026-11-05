@@ -14,11 +14,12 @@ import { formatMoney, lotHref } from "../detail/lotDisplay"
 
 // the storefront palette: gold, plum, sale red, ink, cream
 const COLOURS = ["#d0a55d", "#e8c88f", "#673364", "#e42a00", "#0d0d0d", "#fdedd6"]
-const CONFETTI_MS = 4500
+// a fresh pair of bursts this often, for as long as the popup is open
+const BURST_EVERY_MS = 2200
 
 type Piece = { x: number; y: number; vx: number; vy: number; size: number; spin: number; angle: number; colour: string; round: boolean }
 
-// two bursts from the lower corners, then a slow fall — drawn on one canvas, gone after a few seconds
+// bursts from the lower corners on a loop, each with a slow fall — drawn on one canvas, stops when unmounted
 function Confetti() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -29,18 +30,20 @@ function Confetti() {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
 
         const dpr = window.devicePixelRatio || 1
+        let w = window.innerWidth
+        let h = window.innerHeight
         const resize = () => {
-            canvas.width = window.innerWidth * dpr
-            canvas.height = window.innerHeight * dpr
+            w = window.innerWidth
+            h = window.innerHeight
+            canvas.width = w * dpr
+            canvas.height = h * dpr
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         }
         resize()
         window.addEventListener("resize", resize)
 
-        const w = window.innerWidth
-        const h = window.innerHeight
         const burst = (fromLeft: boolean): Piece[] =>
-            Array.from({ length: 90 }, () => {
+            Array.from({ length: 70 }, () => {
                 const angle = (fromLeft ? -60 : -120) * (Math.PI / 180) + (Math.random() - 0.5) * 0.9
                 const speed = 9 + Math.random() * 9
                 return {
@@ -55,15 +58,20 @@ function Confetti() {
                     round: Math.random() < 0.3,
                 }
             })
-        const pieces = [...burst(true), ...burst(false)]
+        let pieces = [...burst(true), ...burst(false)]
 
-        const start = performance.now()
+        let lastBurst = performance.now()
         let frame = 0
         const draw = (now: number) => {
-            const elapsed = now - start
+            // keep firing from both corners until the popup closes (unmount)
+            if (now - lastBurst >= BURST_EVERY_MS) {
+                lastBurst = now
+                pieces.push(...burst(true), ...burst(false))
+            }
+            // drop pieces that have fallen off screen
+            pieces = pieces.filter((p) => p.y < h + 40)
+
             ctx.clearRect(0, 0, w, h)
-            // fade out over the last second
-            ctx.globalAlpha = Math.max(0, Math.min(1, (CONFETTI_MS - elapsed) / 1000))
             for (const p of pieces) {
                 p.vy += 0.25
                 p.vx *= 0.985
@@ -85,8 +93,7 @@ function Confetti() {
                 }
                 ctx.restore()
             }
-            if (elapsed < CONFETTI_MS) frame = requestAnimationFrame(draw)
-            else ctx.clearRect(0, 0, w, h)
+            frame = requestAnimationFrame(draw)
         }
         frame = requestAnimationFrame(draw)
 
@@ -139,7 +146,7 @@ export function WinnerCelebration() {
                     className="gap-0 rounded-none bg-white p-0 ring-[#d0a55d] sm:max-w-md data-open:zoom-in-90 data-open:duration-300"
                 >
                     <div className="border-b border-[#d0a55d] bg-[#fdedd6] px-6 pt-8 pb-6 text-center">
-                        <div className="mx-auto mb-4 flex size-16 animate-bounce items-center justify-center rounded-full bg-white text-[32px] shadow-sm [animation-iteration-count:3]">
+                        <div className="mx-auto mb-4 flex size-16 animate-bounce items-center justify-center rounded-full bg-white text-[32px] shadow-sm motion-reduce:animate-none">
                             🏆
                         </div>
                         <p className={cn(EYEBROW, "text-[#673364]")}>{win.auctionTitle ?? "Live auction"}</p>
