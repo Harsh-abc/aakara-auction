@@ -18,12 +18,6 @@ export const DIMENSION_UNITS: { value: DimensionUnit; label: string }[] = [
 
 const SHORT_LABELS: Record<DimensionUnit, string> = { CM: "cm", MM: "mm", INCH: "in", METER: "m", FEET: "ft" };
 
-const CM_PER_UNIT: Record<DimensionUnit, number> = { CM: 1, MM: 0.1, INCH: 2.54, METER: 100, FEET: 30.48 };
-
-/** 2 decimals, the precision the columns keep */
-export const convertMeasure = (value: number, from: DimensionUnit, to: DimensionUnit) =>
-    Math.round(((value * CM_PER_UNIT[from]) / CM_PER_UNIT[to]) * 100) / 100;
-
 type Measure = number | string | null | undefined;
 
 /** One unit's height / width / depth */

@@ -84,9 +84,6 @@ const toNum = (value, label) => {
     return n;
 };
 
-const CM_PER_UNIT = { CM: 1, MM: 0.1, INCH: 2.54, METER: 100, FEET: 30.48 };
-
-const round2 = (n) => Math.round(n * 100) / 100;
 
 /** Returns a valid Date or null. Throws on an unparsable value. */
 const toDate = (value, label) => {
@@ -188,21 +185,18 @@ const normalizeLot = (lot, index, { isDraft }) => {
 
     const reservePrice = toNum(lot.reservePrice, label("reserve price"));
 
-    // ---- dimension (optional) — the size in two units; a side left blank in one is converted from the other ----
+    // ---- dimension (optional) — the size in two units, each entered by hand (nothing is converted) ----
     let dimension = null;
     const d = lot.dimension;
     if (d && typeof d === "object") {
         const unit = pickEnum(d.dimensionUnit, ENUMS.dimensionUnit, "CM", label("dimension unit"));
         const secondaryUnit = pickEnum(d.secondaryDimensionUnit, ENUMS.dimensionUnit, "INCH", label("second dimension unit"));
-        const convert = (value, from, to) => round2((value * CM_PER_UNIT[from]) / CM_PER_UNIT[to]);
 
         const size = { dimensionUnit: unit, secondaryDimensionUnit: secondaryUnit };
         for (const side of ["height", "width", "depth"]) {
             const Side = side[0].toUpperCase() + side.slice(1);
-            const primary = toNum(d[side], label(side));
-            const secondary = toNum(d[`secondary${Side}`], label(`${side} (second unit)`));
-            size[side] = primary ?? (secondary !== null ? convert(secondary, secondaryUnit, unit) : null);
-            size[`secondary${Side}`] = secondary ?? (primary !== null ? convert(primary, unit, secondaryUnit) : null);
+            size[side] = toNum(d[side], label(side));
+            size[`secondary${Side}`] = toNum(d[`secondary${Side}`], label(`${side} (second unit)`));
         }
         const weight = toNum(d.weight, label("weight"));
 
