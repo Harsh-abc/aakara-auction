@@ -62,6 +62,7 @@ export const notifyLotWinner = async (lotUuid) => {
                 currency: { select: { code: true, symbol: true } },
                 auction: {
                     select: {
+                        uuid: true,
                         title: true,
                         startTime: true,
                         currency: { select: { code: true, symbol: true } },
@@ -107,7 +108,6 @@ export const notifyLotWinner = async (lotUuid) => {
 
         if (!winner.winner?.email) return;
         const auctionDate = formatDate(auction.startTime);
-        const currency = lot.currency ?? auction.currency;
         const mail = {
             userName: personName(winner.winner),
             siteUrl: process.env.FRONTEND_URL,
