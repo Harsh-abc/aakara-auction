@@ -331,10 +331,10 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
 
                 {/* last look before the bid is sent */}
                 <Dialog open={confirming !== null} onOpenChange={handleConfirmOpenChange}>
-                    {/* same size as the bid dialog behind it, so it sits squarely on top; the buttons stay at the bottom */}
+                    {/* at least the bid dialog's size, so it covers it (growing if its own content needs more); the buttons stay at the bottom */}
                     <DialogContent
                         showCloseButton={false}
-                        style={bidPanelHeight ? { height: bidPanelHeight } : undefined}
+                        style={bidPanelHeight ? { minHeight: bidPanelHeight } : undefined}
                         className="flex max-h-[90dvh] flex-col gap-0 overflow-y-auto rounded-none p-0 sm:max-w-md"
                     >
                         <DialogHeader className="border-b border-neutral-200 p-6">
