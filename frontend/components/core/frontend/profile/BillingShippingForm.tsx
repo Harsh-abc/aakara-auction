@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ChevronDown } from "lucide-react"
 import toast from "react-hot-toast"
 
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useAppSelector } from "@/hooks/redux"
 import { updateMyProfile } from "@/services/operations/profile.api"
 import type { MyAccount, UpdateProfilePayload } from "@/lib/types/profile.types"
@@ -21,8 +22,9 @@ import { ProfileButton, ProfileSection } from "./ProfileUI"
 
 /*
  * Figma "Billing and shipping": saved addresses, which one bills and which one ships, and tax details.
- * The API keeps a single address on the profile, so for now only the billing address is saved (to the profile);
- * the address book, shipping choice and tax details live in this form until their endpoints exist.
+ * The API keeps a single address on the profile, so for now only the billing address is saved (to the profile),
+ * straight away whenever it's added, edited, removed or swapped; the address book, shipping choice and tax details
+ * live in this form until their endpoints exist.
  */
 
 type Address = {
@@ -145,11 +147,13 @@ function AddressEditor({
     onCancel,
 }: {
     initial: AddressDraft
-    onSave: (draft: AddressDraft) => void
+    // resolves false when saving failed, so the editor stays open with the user's input
+    onSave: (draft: AddressDraft) => Promise<boolean>
     onCancel: () => void
 }) {
     const [draft, setDraft] = useState(initial)
     const [errors, setErrors] = useState<AddressErrors>({})
+    const [saving, setSaving] = useState(false)
 
     const fieldId = (key: AddressKey) => `address-${key}`
 
@@ -160,7 +164,7 @@ function AddressEditor({
         setErrors((prev) => ({ ...prev, [key]: undefined }))
     }
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const validationErrors = validateAddress(draft)
         const firstInvalid = ADDRESS_ORDER.find((key) => validationErrors[key])
         if (firstInvalid) {
@@ -168,7 +172,8 @@ function AddressEditor({
             document.getElementById(fieldId(firstInvalid))?.focus()
             return
         }
-        onSave({
+        setSaving(true)
+        const saved = await onSave({
             label: draft.label.trim(),
             address: draft.address.trim(),
             city: draft.city.trim(),
@@ -176,6 +181,8 @@ function AddressEditor({
             country: draft.country.trim(),
             pincode: draft.pincode,
         })
+        // on success the editor unmounts
+        if (!saved) setSaving(false)
     }
 
     const field = (key: AddressKey, label: string, props: React.ComponentProps<"input"> = {}) => (
@@ -203,10 +210,10 @@ function AddressEditor({
                 {field("pincode", "Pincode", { placeholder: "6 digits", inputMode: "numeric", autoComplete: "postal-code" })}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-                <button type="button" onClick={handleSave} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
-                    Save address
+                <button type="button" onClick={handleSave} disabled={saving} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
+                    {saving ? "Saving..." : "Save address"}
                 </button>
-                <button type="button" onClick={onCancel} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
+                <button type="button" onClick={onCancel} disabled={saving} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
                     Cancel
                 </button>
             </div>
@@ -240,29 +247,77 @@ export function BillingShippingForm({ account, onSaved }: BillingShippingFormPro
     const effectiveShippingId = shipToBilling ? billingId : shippingId
     const tax = TAX_TYPES[taxType]
 
-    const saveAddress = (draft: AddressDraft) => {
-        if (editing === "new") {
-            const id = crypto.randomUUID()
+    // the address waiting on "are you sure?" before it's removed
+    const [confirmRemove, setConfirmRemove] = useState<Address | null>(null)
+    const [removing, setRemoving] = useState(false)
+
+    /*
+     * Writes the billing address to the profile straight away (null clears it), sending only what changed.
+     * Resolves false if the API refused it, after telling the user why.
+     */
+    const persistBilling = async (billing: AddressDraft | null): Promise<boolean> => {
+        const payload: UpdateProfilePayload = {}
+        PROFILE_FIELDS.forEach((key) => {
+            const next = billing?.[key] ?? ""
+            if (next !== (account.profile?.[key] ?? "")) payload[key] = next
+        })
+        if (Object.keys(payload).length === 0) return true
+
+        try {
+            const profile = await updateMyProfile(payload, token)
+            onSaved({ ...account, profile })
+            return true
+        } catch (error) {
+            toast.error(getErrorMessage(error))
+            return false
+        }
+    }
+
+    const saveAddress = async (draft: AddressDraft): Promise<boolean> => {
+        const isNew = editing === "new"
+        const id = isNew ? crypto.randomUUID() : (editing as string)
+        // the first address does both jobs until the user says otherwise
+        const becomesBilling = id === billingId || !billingId
+
+        if (becomesBilling && !(await persistBilling(draft))) return false
+
+        if (isNew) {
             setAddresses((prev) => [...prev, { id, ...draft }])
-            // the first address does both jobs until the user says otherwise
             if (!billingId) setBillingId(id)
             if (!shippingId) setShippingId(id)
             setErrors((prev) => ({ ...prev, billing: undefined, shipping: undefined }))
         } else {
-            setAddresses((prev) => prev.map((item) => (item.id === editing ? { ...item, ...draft } : item)))
+            setAddresses((prev) => prev.map((item) => (item.id === id ? { ...item, ...draft } : item)))
         }
         setEditing(null)
+        toast.success(isNew ? "Address added" : "Address updated")
+        return true
     }
 
-    const removeAddress = (id: string) => {
-        setAddresses((prev) => prev.filter((item) => item.id !== id))
-        if (billingId === id) setBillingId("")
-        if (shippingId === id) setShippingId("")
+    const removeAddress = async (id: string) => {
+        const remaining = addresses.filter((item) => item.id !== id)
+
+        // removing the billing address moves billing to the next saved one, or clears it from the profile
+        const nextBillingId = billingId === id ? (remaining[0]?.id ?? "") : billingId
+        if (billingId === id) {
+            setRemoving(true)
+            const saved = await persistBilling(remaining[0] ?? null)
+            setRemoving(false)
+            if (!saved) return
+        }
+
+        setAddresses(remaining)
+        setBillingId(nextBillingId)
+        if (shippingId === id) setShippingId(shipToBilling ? nextBillingId : "")
         if (editing === id) setEditing(null)
+        setConfirmRemove(null)
+        toast.success("Address removed")
     }
 
     // while "Ship to my billing address" is ticked, shipping follows billing
-    const chooseBilling = (id: string) => {
+    const chooseBilling = async (id: string) => {
+        const address = addresses.find((item) => item.id === id)
+        if (!address || !(await persistBilling(address))) return
         setBillingId(id)
         setErrors((prev) => ({ ...prev, billing: undefined }))
     }
@@ -384,7 +439,7 @@ export function BillingShippingForm({ account, onSaved }: BillingShippingFormPro
                                     >
                                         Edit
                                     </button>
-                                    <button type="button" onClick={() => removeAddress(item.id)} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
+                                    <button type="button" onClick={() => setConfirmRemove(item)} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>
                                         Remove
                                     </button>
                                 </div>
@@ -395,6 +450,42 @@ export function BillingShippingForm({ account, onSaved }: BillingShippingFormPro
                     {editing === "new" && <AddressEditor initial={EMPTY_DRAFT} onSave={saveAddress} onCancel={() => setEditing(null)} />}
                 </div>
             </ProfileSection>
+
+            <Dialog
+                open={confirmRemove !== null}
+                onOpenChange={(open) => {
+                    if (!open && !removing) setConfirmRemove(null)
+                }}
+            >
+                <DialogContent className="gap-0 rounded-none p-0 sm:max-w-md">
+                    <DialogHeader className="p-6 pr-12">
+                        <DialogTitle className="text-xl leading-snug font-light text-[#0d0d0d]">Remove this address?</DialogTitle>
+                        <DialogDescription className="text-[14px] leading-5 text-[#717171]">
+                            Are you sure you want to remove{" "}
+                            <span className="font-medium text-[#0d0d0d]">{confirmRemove?.label}</span>?
+                            {confirmRemove?.id === billingId && " It's your billing address, so it will be removed from your profile too."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col-reverse gap-2 border-t border-[#cecece] p-6 sm:flex-row sm:justify-end">
+                        <button
+                            type="button"
+                            onClick={() => setConfirmRemove(null)}
+                            disabled={removing}
+                            className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => confirmRemove && removeAddress(confirmRemove.id)}
+                            disabled={removing}
+                            className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}
+                        >
+                            {removing ? "Removing..." : "Remove"}
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-12" noValidate>
                 <ProfileSection title="Billing & shipping">
