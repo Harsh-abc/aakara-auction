@@ -39,12 +39,6 @@ const formatMoney = (amount, currency) => {
     }
 };
 
-// "25%" / "20% + ₹5,000" — the sale's active buyer's premium fees, as charged in recordWinner
-const premiumRate = (fees = [], currency) =>
-    fees
-        .map((fee) => (fee.calculationType === "PERCENTAGE" ? `${Number(fee.value)}%` : formatMoney(fee.value, currency)))
-        .join(" + ");
-
 /**
  * "Winning Bid Confirmation" to the buyer of a sold lot. Call only after the transaction that
  * sold the lot has committed (hammer, stopping a lot over its reserve, or the auction ending),
@@ -66,17 +60,12 @@ export const notifyLotWinner = async (lotUuid) => {
                         title: true,
                         startTime: true,
                         currency: { select: { code: true, symbol: true } },
-                        auctionFees: {
-                            where: { feeType: "BUYER_PREMIUM", isActive: true },
-                            select: { calculationType: true, value: true },
-                        },
                     },
                 },
                 winner: {
                     select: {
                         winnerId: true,
                         finalHammerPrice: true,
-                        buyerPremiumAmount: true,
                         totalAmountDue: true,
                         winner: {
                             select: {
@@ -114,10 +103,8 @@ export const notifyLotWinner = async (lotUuid) => {
             auctionName: [auction.title, auctionDate].filter(Boolean).join(" — "),
             lotNumber: String(lot.itemNumber),
             lotName: lot.title,
-            winningBidAmount: formatMoney(winner.finalHammerPrice, currency),
-            buyerPremiumRate: premiumRate(auction.auctionFees, currency),
-            buyerPremiumAmount: formatMoney(winner.buyerPremiumAmount, currency),
-            totalAmountDue: formatMoney(winner.totalAmountDue, currency),
+            // hammer price + buyer's premium, as saved by recordWinner
+            winningBidAmount: formatMoney(winner.totalAmountDue, currency),
         };
 
         // to the buyer alone (null = no MAILGUN_CC)
