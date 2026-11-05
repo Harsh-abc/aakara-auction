@@ -128,11 +128,13 @@ export const canWatchLiveRoom = async ({ auctionUuid, userId, role }) => {
     return !banned;
 };
 
-// is the auctioneer actually publishing? viewers aren't let into an empty room
+// is the stream on? The studio only joins the room on "Go live" and leaves on "End live", so the
+// auctioneer being in the room is the stream — even with their camera / mic switched off.
+// Before that viewers aren't let in: every connected viewer is billed by the minute.
 const hostOnAir = async (auctionUuid) => {
     try {
         const participants = await roomService().listParticipants(liveRoomName(auctionUuid));
-        return participants.some((p) => p.identity.startsWith(HOST_PREFIX) && (p.tracks?.length ?? 0) > 0);
+        return participants.some((p) => p.identity.startsWith(HOST_PREFIX));
     } catch (error) {
         // the room doesn't exist until the host joins
         if (error?.status === 404 || /not.?found|does not exist/i.test(error?.message ?? "")) return false;

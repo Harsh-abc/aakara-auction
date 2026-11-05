@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import axios from "axios"
-import { AudioTrack, LiveKitRoom, VideoTrack, useTracks } from "@livekit/components-react"
+import { AudioTrack, LiveKitRoom, VideoTrack, useRemoteParticipants, useTracks } from "@livekit/components-react"
 import { DisconnectReason, Track } from "livekit-client"
 import { Maximize2, Minimize2 } from "lucide-react"
 
@@ -18,8 +18,8 @@ const RETRY_MS = 8_000
 const OFF_AIR_POLL_MS = 15_000
 // a tab in the background this long leaves the room; it rejoins when shown again
 const HIDDEN_DISCONNECT_MS = 2 * 60_000
-// connected, but the auctioneer stopped publishing this long — leave and go back to waiting
-const IDLE_DISCONNECT_MS = 60_000
+// the auctioneer left the room (ended the stream) — leave almost at once; the grace covers the first moments after joining
+const HOST_GONE_DISCONNECT_MS = 4_000
 
 type LivePlayerProps = {
     auctionUuid: string
@@ -203,25 +203,33 @@ function Stage({ fallback, onIdle }: { fallback: ReactNode; onIdle: () => void }
     const [muted, setMuted] = useState(true)
     const [isFull, setIsFull] = useState(false)
 
-    const videos = useTracks([Track.Source.ScreenShare, Track.Source.Camera], { onlySubscribed: true })
-    const audios = useTracks([Track.Source.Microphone, Track.Source.ScreenShareAudio], { onlySubscribed: true })
+    // a camera / mic the auctioneer switched off stays published but muted — a muted camera would only show black,
+    // so the lot image shows instead (staying in the room is decided by the host being here, below)
+    const videos = useTracks([Track.Source.ScreenShare, Track.Source.Camera], { onlySubscribed: true }).filter(
+        (track) => !track.publication.isMuted
+    )
+    const audios = useTracks([Track.Source.Microphone, Track.Source.ScreenShareAudio], { onlySubscribed: true }).filter(
+        (track) => !track.publication.isMuted
+    )
 
     const screen = videos.find((track) => track.source === Track.Source.ScreenShare)
     const camera = videos.find((track) => track.source === Track.Source.Camera)
     const main = screen ?? camera
     const pip = screen && camera ? camera : undefined
 
-    // nothing published for a while → leave the room (the grace period also covers the first subscribe)
-    const onAir = videos.length > 0 || audios.length > 0
+    // the stream lasts as long as the auctioneer is in the room (camera / mic off included — the lot image shows);
+    // once they've left ("End live") leave too, so nobody is billed for an empty room.
+    // The grace also covers the first moments after joining, before the host shows up in the list.
+    const hostHere = useRemoteParticipants().some((participant) => participant.identity.startsWith("host-"))
     const onIdleRef = useRef(onIdle)
     useEffect(() => {
         onIdleRef.current = onIdle
     })
     useEffect(() => {
-        if (onAir) return
-        const timer = setTimeout(() => onIdleRef.current(), IDLE_DISCONNECT_MS)
+        if (hostHere) return
+        const timer = setTimeout(() => onIdleRef.current(), HOST_GONE_DISCONNECT_MS)
         return () => clearTimeout(timer)
-    }, [onAir])
+    }, [hostHere])
 
     useEffect(() => {
         const onChange = () => setIsFull(document.fullscreenElement === boxRef.current)
