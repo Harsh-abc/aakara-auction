@@ -8,7 +8,7 @@ import { BUTTON, BUTTON_SOLID, EYEBROW } from "../../storefront";
 import { LotBadge } from "./LotBadge";
 // View used to open the live room (lotHref) — now it opens the lot details page; switch back if needed
 // import { lotBidLine, lotDetails, lotEstimate, lotHeading, lotHref, lotNumber } from "./lotDisplay";
-import { lotBidLine, lotDetails, lotDetailsHref, lotEstimate, lotHeading, lotNumber } from "./lotDisplay";
+import { lotBidLine, lotDetails, lotDetailsHref, lotEstimate, lotHeading, lotNumber, lotSoldPrice } from "./lotDisplay";
 import type { GalleryControls } from "./useGallery";
 
 // Figma "All lots" card: 16px inset, 251px image well, 44px actions
@@ -48,6 +48,7 @@ function LotText({ lot }: { lot: PublicLot }) {
             <div className="mt-4 flex flex-col gap-1 border-t border-[#cecece] pt-3.25">
                 {estimate && <p className={EYEBROW}>Estimate · {estimate}</p>}
                 <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{lotBidLine(lot)}</p>
+                {lotSoldPrice(lot) && <p className="text-[11px] leading-4 text-[#717171] italic">*Price including buyer&apos;s premium</p>}
             </div>
         </>
     );

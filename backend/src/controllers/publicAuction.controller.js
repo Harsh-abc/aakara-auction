@@ -82,7 +82,7 @@ export const getPublicAuction = async (req, res) => {
 };
 
 // -----------------------------------------------------------------
-// GET /api/auction/public/:auctionUuid/lots?page&limit&search&sort=lot|estimate-asc|estimate-desc|bid-desc
+// GET /api/auction/public/:auctionUuid/lots?page&limit&search&sort=status|lot|estimate-asc|estimate-desc|bid-desc
 // -----------------------------------------------------------------
 
 export const getPublicLots = async (req, res) => {

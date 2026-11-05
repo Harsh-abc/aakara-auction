@@ -176,6 +176,34 @@ const DIMENSION_SELECT = {
     secondaryDimensionUnit: true,
 };
 
+// "Live / upcoming": the lot on the block, then those yet to open, then the closed ones — each run in lot order.
+// The ItemStatus enum sorts in declaration order (DRAFT before ACTIVE), so the runs are queried one after another.
+const LOT_STATUS_BUCKETS = [["ACTIVE"], ["DRAFT", "SCHEDULED"], ["SOLD", "UNSOLD", "PASSED", "WITHDRAWN"]];
+
+const findLotsByStatus = async (where, skip, take) => {
+    const counts = await Promise.all(LOT_STATUS_BUCKETS.map((statuses) => prisma.auctionItem.count({ where: { AND: [where, { status: { in: statuses } }] } })));
+    const lots = [];
+    for (const [index, statuses] of LOT_STATUS_BUCKETS.entries()) {
+        const remaining = take - lots.length;
+        if (remaining <= 0) break;
+        if (skip >= counts[index]) {
+            skip -= counts[index];
+            continue;
+        }
+        lots.push(
+            ...(await prisma.auctionItem.findMany({
+                where: { AND: [where, { status: { in: statuses } }] },
+                orderBy: [{ itemNumber: "asc" }],
+                skip,
+                take: remaining,
+                select: PUBLIC_LOT_SELECT,
+            })),
+        );
+        skip = 0;
+    }
+    return lots;
+};
+
 const LOT_ORDER = {
     lot: [{ itemNumber: "asc" }],
     "estimate-asc": [{ estimateLow: { sort: "asc", nulls: "last" } }, { itemNumber: "asc" }],
@@ -210,6 +238,8 @@ export const PUBLIC_LOT_SELECT = {
         take: 1,
         select: { url: true, thumbnailUrl: true },
     },
+    // sold lots show their price including the buyer's premium
+    winner: { select: { totalAmountDue: true } },
 };
 
 // the next lot to come up: the first not yet opened after the live one (or from the start when none is live)
@@ -246,13 +276,15 @@ export const getPublicLotsService = async ({ auctionUuid, search, sort, page, li
 
     const [total, lots, upNextUuid] = await Promise.all([
         prisma.auctionItem.count({ where }),
-        prisma.auctionItem.findMany({
-            where,
-            orderBy: LOT_ORDER[sort],
-            skip: (page - 1) * limit,
-            take: limit,
-            select: PUBLIC_LOT_SELECT,
-        }),
+        sort === "status"
+            ? findLotsByStatus(where, (page - 1) * limit, limit)
+            : prisma.auctionItem.findMany({
+                  where,
+                  orderBy: LOT_ORDER[sort],
+                  skip: (page - 1) * limit,
+                  take: limit,
+                  select: PUBLIC_LOT_SELECT,
+              }),
         findUpNextLotUuid(auction.id),
     ]);
 
@@ -265,11 +297,13 @@ export const getPublicLotsService = async ({ auctionUuid, search, sort, page, li
 };
 
 // a PUBLIC_LOT_SELECT row → the storefront lot shape
-export const toPublicLot = ({ images, currency, ...lot }, saleCurrency) => ({
+export const toPublicLot = ({ images, currency, winner, ...lot }, saleCurrency) => ({
     ...lot,
     // lots without their own currency are priced in the sale's
     currency: currency ?? saleCurrency,
     image: images[0] ? images[0].thumbnailUrl ?? images[0].url : null,
+    // hammer price + buyer's premium, once the lot is sold
+    soldPrice: lot.status === "SOLD" && winner ? String(winner.totalAmountDue) : null,
 });
 
 // =====================================================================
@@ -414,10 +448,6 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
             // highest first; the top one is the leading bid
             bids,
         },
-        lots: lots.map(({ images: covers, currency: lotCurrency, ...summary }) => ({
-            ...summary,
-            currency: lotCurrency ?? auction.currency,
-            image: covers[0] ? covers[0].thumbnailUrl ?? covers[0].url : null,
-        })),
+        lots: lots.map((summary) => toPublicLot(summary, auction.currency)),
     });
 };

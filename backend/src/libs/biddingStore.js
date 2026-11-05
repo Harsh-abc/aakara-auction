@@ -236,6 +236,25 @@ local function isOneOf(value, list)
     return false
 end
 
+-- proxies that can still win at the current standing bid (a proxy whose max equals a
+-- standing bid beats it, so "still in" is max >= the standing bid, or >= start with none)
+local function proxiesStillIn(standing)
+    local list = {}
+    for uid, p in pairs(proxies) do
+        if (standing == nil and p.max >= start) or (standing ~= nil and p.max >= standing) then
+            list[#list + 1] = uid
+        end
+    end
+    return list
+end
+
+-- proxy holders whose maximum this run put out of play (told by "proxy:outbid")
+local proxyOutbid = {}
+local inBefore = {}
+if mode == 'BID' or mode == 'FLOOR' or mode == 'EXECUTE' or mode == 'CLOSE' then
+    inBefore = proxiesStillIn(current)
+end
+
 if mode == 'BID' or mode == 'FLOOR' then
     if status ~= 'ACTIVE' then return fail('LOT_NOT_LIVE') end
     if auctionStatus ~= 'LIVE' then return fail('AUCTION_NOT_LIVE', { auctionStatus = auctionStatus }) end
@@ -297,6 +316,18 @@ else
     return fail('BAD_MODE')
 end
 
+if #out > 0 or mode == 'EXECUTE' or mode == 'CLOSE' then
+    local hammered = mode == 'EXECUTE' or mode == 'CLOSE'
+    for _, uid in ipairs(inBefore) do
+        local p = proxies[uid]
+        -- a live bid went past the max, or the hammer gave the lot to someone else
+        local out_ = (current ~= nil and p.max < current) or (hammered and current ~= nil and uid ~= leader)
+        if out_ and uid ~= leader and uid ~= userId then
+            proxyOutbid[#proxyOutbid + 1] = { u = uid, max = p.max }
+        end
+    end
+end
+
 local nextBid = nextMin(current)
 redis.call('HSET', lotKey, 'nextBid', tostring(nextBid))
 if #out > 0 then
@@ -310,6 +341,7 @@ return cjson.encode({
     ok = true,
     bids = out,
     prevLeader = prevLeader,
+    proxyOutbid = proxyOutbid,
     proxyMax = mine and mine.max or nil,
     proxyAt = mine and mine.at or nil,
     prevProxy = prevProxy,
@@ -359,7 +391,10 @@ export const runBidEngine = async ({ mode, lotUuid, auctionUuid, userId = "", am
     );
     const result = JSON.parse(raw);
     // cjson writes an empty table as {}
-    if (result.ok) result.bids = Array.isArray(result.bids) ? result.bids : [];
+    if (result.ok) {
+        result.bids = Array.isArray(result.bids) ? result.bids : [];
+        result.proxyOutbid = Array.isArray(result.proxyOutbid) ? result.proxyOutbid : [];
+    }
     return result;
 };
 

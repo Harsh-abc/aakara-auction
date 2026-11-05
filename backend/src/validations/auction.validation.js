@@ -91,13 +91,13 @@ export const getPublicAuctionsQuerySchema = z.object({
 });
 
 // storefront auction page — lots of one sale
-export const PUBLIC_LOT_SORTS = ["lot", "estimate-asc", "estimate-desc", "bid-desc"];
+export const PUBLIC_LOT_SORTS = ["status", "lot", "estimate-asc", "estimate-desc", "bid-desc"];
 
 export const getPublicLotsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(60).default(12),
     search: z.string().trim().max(100).optional(),
-    sort: z.enum(PUBLIC_LOT_SORTS, { message: "Invalid sort" }).default("lot"),
+    sort: z.enum(PUBLIC_LOT_SORTS, { message: "Invalid sort" }).default("status"),
 });
 
 export const setLotLiveSchema = z.object({

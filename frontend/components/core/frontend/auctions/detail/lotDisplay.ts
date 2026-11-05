@@ -47,11 +47,16 @@ export function lotEstimate(lot: PublicLot) {
 
 const bids = (count: number) => `${count} ${count === 1 ? "bid" : "bids"}`
 
-// the bid line under the estimate
+// a sold lot's price including the buyer's premium (null until it's sold)
+export const lotSoldPrice = (lot: PublicLot) => (lot.status === "SOLD" ? formatMoney(lot.soldPrice ?? null, lot.currency) : null)
+
+// the bid line under the estimate — a sold price carries a "*" for the premium note
 export function lotBidLine(lot: PublicLot) {
     const count = Number(lot.bidCount) || 0
     const current = formatMoney(lot.currentBid, lot.currency)
+    const sold = lotSoldPrice(lot)
 
+    if (sold) return `Sold for ${sold}*`
     if (lot.status === "SOLD" && current) return `Sold for ${current}`
     if (lot.status === "WITHDRAWN") return "Withdrawn from sale"
     if ((lot.status === "UNSOLD" || lot.status === "PASSED") && count === 0) return "Unsold"

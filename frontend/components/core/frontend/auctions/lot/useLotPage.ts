@@ -79,6 +79,10 @@ export function useLotPage(auctionUuid: string, lotUuid: string) {
             const bid = formatMoney(notice.currentBid, notice.currency)
             toast(`You've been outbid on Lot ${notice.itemNumber.padStart(2, "0")}${bid ? ` — the bid is now ${bid}` : ""}`, { icon: "🔔" })
         },
+        onProxyOutbid: (notice) => {
+            const bid = formatMoney(notice.currentBid, notice.currency)
+            toast(`Your proxy bid on Lot ${notice.itemNumber.padStart(2, "0")} has been outbid${bid ? ` — the bid is now ${bid}` : ""}`, { icon: "🔔" })
+        },
     })
 
     // skip refreshes while the tab is hidden

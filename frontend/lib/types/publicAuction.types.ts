@@ -50,6 +50,8 @@ export interface PublicLot {
     currency: { code: string; symbol: string | null };
     dimension: StoredLotSize | null;
     image: string | null;
+    /** sold lots in lot lists: hammer price + buyer's premium */
+    soldPrice?: string | null;
 }
 
 /** MANUAL = placed online, FLOOR = entered by the auctioneer for a paddle in the room */
@@ -120,7 +122,7 @@ export interface PublicLotPage {
     lots: PublicLot[];
 }
 
-export type PublicLotSort = "lot" | "estimate-asc" | "estimate-desc" | "bid-desc";
+export type PublicLotSort = "status" | "lot" | "estimate-asc" | "estimate-desc" | "bid-desc";
 
 export interface GetPublicLotsParams {
     auctionUuid: string;

@@ -467,6 +467,7 @@ const readStats = async (auctionUuid) => {
  *   storefront  lot:update  (bidders by paddle only)
  *   dashboard   bid:new     (every new bid with the bidder's name, plus sale totals)
  *   outbid user bid:outbid
+ *   proxy users proxy:outbid (their maximum was passed, or the hammer went to someone else)
  * `state` is the lot hash merged with the engine's result; `result` is the engine run (or null).
  */
 const broadcastLot = async (lotUuid, state, result = null) => {
@@ -506,6 +507,22 @@ const broadcastLot = async (lotUuid, state, result = null) => {
                 title: state.title,
                 currentBid: view.currentBid,
                 nextBid: view.nextBid,
+                currency: update.currency,
+            });
+        }
+
+        // proxy holders whose maximum is now out of play (the previous leader already got bid:outbid)
+        for (const { u, max } of result?.proxyOutbid ?? []) {
+            const uid = String(u);
+            if (uid === leaderId || uid === prevLeader) continue;
+            emitTo(rooms.user(uid), "proxy:outbid", {
+                auctionUuid,
+                lotUuid,
+                itemNumber: view.itemNumber,
+                title: state.title,
+                currentBid: view.currentBid,
+                nextBid: view.nextBid,
+                maxBid: String(max),
                 currency: update.currency,
             });
         }
@@ -732,7 +749,7 @@ export const executeProxiesService = async ({ lotUuid }) => {
     }
 
     const merged = { ...lot, ...result.state };
-    if (result.bids.length > 0) await broadcastLot(lotUuid, merged, result);
+    if (result.bids.length > 0 || result.proxyOutbid.length > 0) await broadcastLot(lotUuid, merged, result);
 
     const view = liveView(lotUuid, merged);
     const bidders = await biddersById(lot.auctionUuid, lot.auctionId, [view.leaderId]);
@@ -1319,7 +1336,7 @@ export const freezeLotBidding = async (lotUuid) => {
         const result = await runBidEngine({ mode: "CLOSE", lotUuid, auctionUuid: before.auctionUuid });
         if (result.ok) {
             closed = true;
-            if (result.bids.length > 0) await broadcastLot(lotUuid, { ...before, ...result.state }, result);
+            if (result.bids.length > 0 || result.proxyOutbid.length > 0) await broadcastLot(lotUuid, { ...before, ...result.state }, result);
         }
     } catch (error) {
         console.error(`[bidding] could not place proxies on lot ${lotUuid} before closing:`, error);

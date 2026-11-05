@@ -4,13 +4,15 @@ import { useEffect, useRef, useSyncExternalStore } from "react"
 
 import { useAppSelector } from "@/hooks/redux"
 import { getSocket, setSocketToken } from "@/lib/socket"
-import type { LiveAuctionStatus, LiveLotUpdate, OutbidNotice, StaffBidEvent } from "@/lib/types/bidding.types"
+import type { LiveAuctionStatus, LiveLotUpdate, OutbidNotice, ProxyOutbidNotice, StaffBidEvent } from "@/lib/types/bidding.types"
 
 type ChannelHandlers = {
     onLotUpdate?: (update: LiveLotUpdate) => void
     onAuctionStatus?: (update: LiveAuctionStatus) => void
     /** this user lost the lead on a lot (any sale) */
     onOutbid?: (notice: OutbidNotice) => void
+    /** this user's proxy bid on a lot is now out of play (any sale) */
+    onProxyOutbid?: (notice: ProxyOutbidNotice) => void
     /** staff channel only: every new bid with the bidder's name */
     onStaffBid?: (event: StaffBidEvent) => void
     /** after a reconnect — anything missed while offline should be refetched */
@@ -70,11 +72,13 @@ export function useAuctionChannel(auctionUuid: string | null | undefined, handle
         const onStatus = ours<LiveAuctionStatus>((update) => handlersRef.current.onAuctionStatus?.(update))
         const onStaff = ours<StaffBidEvent>((event) => handlersRef.current.onStaffBid?.(event))
         const onOutbid = (notice: OutbidNotice) => handlersRef.current.onOutbid?.(notice)
+        const onProxyOutbid = (notice: ProxyOutbidNotice) => handlersRef.current.onProxyOutbid?.(notice)
 
         socket.on("connect", join)
         socket.on("lot:update", onLot)
         socket.on("auction:status", onStatus)
         socket.on("bid:outbid", onOutbid)
+        socket.on("proxy:outbid", onProxyOutbid)
         if (staff) socket.on("bid:new", onStaff)
         if (socket.connected) join()
 
@@ -84,6 +88,7 @@ export function useAuctionChannel(auctionUuid: string | null | undefined, handle
             socket.off("lot:update", onLot)
             socket.off("auction:status", onStatus)
             socket.off("bid:outbid", onOutbid)
+            socket.off("proxy:outbid", onProxyOutbid)
             socket.off("bid:new", onStaff)
         }
     }, [auctionUuid, staff])

@@ -41,7 +41,7 @@ export async function getPublicAuction(auctionUuid: string): Promise<PublicAucti
     return response.data.data
 }
 
-export async function getPublicLots({ auctionUuid, search, sort = "lot", page = 1, limit = 12 }: GetPublicLotsParams): Promise<PublicLotsPage> {
+export async function getPublicLots({ auctionUuid, search, sort = "status", page = 1, limit = 12 }: GetPublicLotsParams): Promise<PublicLotsPage> {
     const response = await apiConnector({
         method: "GET",
         url: GET_PUBLIC_LOTS_API(auctionUuid),

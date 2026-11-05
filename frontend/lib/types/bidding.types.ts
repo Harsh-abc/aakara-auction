@@ -108,6 +108,12 @@ export interface OutbidNotice {
     currency: Currency
 }
 
+/** "proxy:outbid" — sent only to a proxy holder whose maximum is now out of play */
+export interface ProxyOutbidNotice extends OutbidNotice {
+    /** the proxy's maximum */
+    maxBid: string
+}
+
 /** "lot:won" — sent to the buyer alone once their lot is sold */
 export interface LotWonNotice {
     auctionUuid: string
