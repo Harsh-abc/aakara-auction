@@ -146,7 +146,7 @@ export function WinnerCelebration() {
                     className="gap-0 rounded-none bg-white p-0 ring-[#d0a55d] sm:max-w-md data-open:zoom-in-90 data-open:duration-300"
                 >
                     <div className="border-b border-[#d0a55d] bg-[#fdedd6] px-6 pt-8 pb-6 text-center">
-                        <div className="mx-auto mb-4 flex size-16 animate-bounce items-center justify-center rounded-full bg-white text-[32px] shadow-sm motion-reduce:animate-none">
+                        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-white text-[32px] shadow-sm">
                             🏆
                         </div>
                         <p className={cn(EYEBROW, "text-[#673364]")}>{win.auctionTitle ?? "Live auction"}</p>
