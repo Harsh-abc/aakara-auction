@@ -179,6 +179,9 @@ export interface LotDetailsForm {
     medium: string;
     yearCreated: string;
 
+    /** Free text shown under Lot details › Description on the lot page */
+    catalogueNote: string;
+
     /** The size in two units — typing in one set fills the other until it's edited by hand */
     dimensions: {
         primary: LotSizeForm;
@@ -237,6 +240,8 @@ export interface LotProvenanceForm {
     previousOwner: string;
     acquisitionMethod: string;
     acquisitionDate: string; // "yyyy-MM-dd"
+    /** Saved to AuctionItem.provenance — one entry per line */
+    provenanceText: string;
     exhibitionHistory: string;
 }
 

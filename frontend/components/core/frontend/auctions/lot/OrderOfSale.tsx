@@ -21,7 +21,8 @@ export function OrderOfSale({ lots, saleClosed, className }: OrderOfSaleProps) {
     const stillToCome = remaining.filter((lot) => lot.status !== "ACTIVE").length;
 
     return (
-        <aside className={cn("self-start border border-[#cecece] bg-white", className)}>
+        // pinned under the sticky site header (h-19 + border) while the lot and its ladder scroll by
+        <aside className={cn("self-start border border-[#cecece] bg-white lg:sticky lg:top-25", className)}>
             <div className="flex h-11.25 items-center justify-between border-b border-[#cecece] px-4">
                 <h2 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">Order of sale</h2>
                 <span className="text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">{stillToCome} still to come</span>
@@ -30,7 +31,8 @@ export function OrderOfSale({ lots, saleClosed, className }: OrderOfSaleProps) {
             {remaining.length === 0 ? (
                 <p className="px-4 py-3 text-[14px] leading-5 text-[#717171]">{saleClosed ? "This sale has closed." : "Every lot has been hammered."}</p>
             ) : (
-                <ol className="relative max-h-152 overflow-y-auto">
+                // ten rows show (live 47px + up next 43px + 8 × 40px), the rest scroll inside the panel
+                <ol className="relative max-h-[410px] overflow-y-auto overscroll-contain">
                     {remaining.map((lot) => {
                         const live = lot.status === "ACTIVE";
                         const next = lot.uuid === upNext?.uuid;

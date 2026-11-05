@@ -134,6 +134,7 @@ export interface CreateAuctionLot {
     artistName?: string | null;
     medium?: string | null;
     yearCreated?: string | null;
+    catalogueNote?: string | null;
 
     dimension?: AuctionDimension | null;
 
@@ -469,6 +470,8 @@ export interface AuctionLot {
     artistName?: string | null;
     medium?: string | null;
     yearCreated?: string | null;
+    catalogueNote?: string | null;
+    provenance?: string | null;
     editionType: EditionType;
     status: LotStatus;
 

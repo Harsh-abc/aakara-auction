@@ -264,6 +264,7 @@ const PUBLIC_LOT_DETAIL_SELECT = {
     artistName: true,
     medium: true,
     yearCreated: true,
+    catalogueNote: true,
     editionType: true,
     provenance: true,
     previousOwner: true,

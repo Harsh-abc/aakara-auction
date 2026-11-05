@@ -253,15 +253,6 @@ export const buildAuctionFormData = (
         const weight = num(details.weight);
         const hasDimension = [...Object.values(measures), weight].some((v) => v !== null);
 
-        const provenanceSummary =
-            [
-                str(provenance.previousOwner) && `Previous owner: ${provenance.previousOwner}`,
-                str(provenance.acquisitionMethod) && `Acquired via: ${provenance.acquisitionMethod}`,
-                str(provenance.acquisitionDate) && `Acquired on: ${provenance.acquisitionDate}`,
-            ]
-                .filter(Boolean)
-                .join(" | ") || null;
-
         const media = (lot.images ?? []).filter((m) => m?.file instanceof File);
         const docs = (lot.documents ?? []).filter((d) => d?.file instanceof File);
 
@@ -295,6 +286,7 @@ export const buildAuctionFormData = (
             artistName: str(details.artist),
             medium: str(details.medium),
             yearCreated: str(details.yearCreated),
+            catalogueNote: str(details.catalogueNote),
 
             dimension: hasDimension
                 ? {
@@ -306,7 +298,7 @@ export const buildAuctionFormData = (
                 }
                 : null,
 
-            provenance: provenanceSummary,
+            provenance: str(provenance.provenanceText),
             previousOwner: str(provenance.previousOwner),
             acquisitionMethod: str(provenance.acquisitionMethod),
             acquisitionDate: str(provenance.acquisitionDate), // stays "YYYY-MM-DD" (String column)

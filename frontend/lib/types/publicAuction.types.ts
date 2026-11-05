@@ -75,6 +75,7 @@ export interface PublicLotMedia {
 // shape of lot on GET /api/auction/public/:auctionUuid/lots/:lotUuid
 export interface PublicLotDetail extends PublicLot {
     description: string | null;
+    catalogueNote: string | null;
     editionType: "UNIQUE" | "LIMITED" | "OPEN";
     /** sub-category / category name, e.g. "Painting" */
     artworkType: string | null;

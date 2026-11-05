@@ -34,6 +34,9 @@ const lines = (value: string | null) =>
               .filter(Boolean)
         : [];
 
+// free text in blocks: a blank line starts a new block, each other line is its own row
+const blocks = (value: string | null) => (value ? value.split(/\r?\n\s*\r?\n/).map(lines) : []);
+
 const compact = (values: (string | null | undefined | false)[]) => values.filter((v): v is string => !!v);
 
 export type CatalogueSection = {
@@ -57,7 +60,7 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
         {
             title: "Description",
             defaultOpen: true,
-            paragraphs: [compact([lot.artistName, compact([lot.title, lot.yearCreated]).join(", ")]), compact([lot.medium, lotDimensions(lot), EDITION_LABELS[lot.editionType]])],
+            paragraphs: [compact([lot.artistName, compact([lot.title, lot.yearCreated]).join(", ")]), compact([lot.medium, lotDimensions(lot), EDITION_LABELS[lot.editionType]]), ...blocks(lot.catalogueNote)],
         },
         {
             title: "Condition report",
