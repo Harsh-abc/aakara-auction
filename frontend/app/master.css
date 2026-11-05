@@ -554,3 +554,13 @@ select option:checked {
         padding-inline: calc(var(--spacing) * 3);
     }
 }
+/* image-save deterrent on the public site (see components/core/frontend/ContentProtection.tsx).
+   body:has() also covers portaled lightboxes/dialogs that render outside .site-frontend */
+body:has(.site-frontend) img,
+body:has(.site-frontend) picture,
+body:has(.site-frontend) video {
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none; /* iOS long-press "Save Image" sheet */
+}
