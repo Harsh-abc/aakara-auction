@@ -16,10 +16,15 @@ export default function Bidders() {
 
     const dispatch = useDispatch<AppDispatch>();
     const { users, loading, error } = useSelector((state: RootState) => state.user);
+    // the slice's pagination may belong to another page until our own request lands
+    const [total, setTotal] = useState<number | null>(null);
 
     // only accounts with the Bidder role — website users without bidder access are on the Users page
     useEffect(() => {
-        dispatch(getAllUsers({ page: 1, limit: 100, role: "BIDDER" }));
+        dispatch(getAllUsers({ page: 1, limit: 100, role: "BIDDER" }))
+            .unwrap()
+            .then((res) => setTotal(res.data.pagination.total))
+            .catch(() => setTotal(null));
     }, [dispatch]);
 
     // the users slice is shared with other pages, so guard against stale unfiltered data
@@ -32,7 +37,14 @@ export default function Bidders() {
         <div className="px-8 py-8">
 
             <div className="">
-                <h1 className="text-[24px] font-bold">Bidders</h1>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-[24px] font-bold">Bidders</h1>
+                    {total !== null && (
+                        <span className="rounded-full bg-muted px-2.5 py-0.5 text-sm font-medium text-muted-foreground">
+                            {total.toLocaleString("en-IN")} total
+                        </span>
+                    )}
+                </div>
                 <p className="text-sm text-muted-foreground">Everyone with bidder access</p>
             </div>
 
