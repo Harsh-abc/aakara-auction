@@ -28,6 +28,8 @@ export function ContentProtection() {
         }
 
         const onKeyDown = (e: KeyboardEvent) => {
+            // autofill (and some IMEs) fire keydown with no key — nothing to block there
+            if (typeof e.key !== "string") return
             const key = e.key.toLowerCase()
             const mod = e.ctrlKey || e.metaKey // Ctrl on Windows/Linux, Cmd on macOS
 
