@@ -65,28 +65,37 @@ const toRow = (user: User) => [
     formatDate(user.lastLoginAt),
 ]
 
+type ExportUsersButtonProps = {
+    // only export users with this role (e.g. "BIDDER"); omit for everyone
+    role?: RoleName
+    // file name prefix and toast noun, e.g. "bidders"
+    label?: string
+}
+
 // downloads every user (not just the loaded page) as a CSV
-export default function ExportUsersButton() {
+export default function ExportUsersButton({ role, label = "users" }: ExportUsersButtonProps) {
     const token = useAppSelector((state) => state.auth.accessToken)
     const [exporting, setExporting] = useState(false)
 
     const handleExport = async () => {
         setExporting(true)
         try {
-            const users = await fetchAllUsers(token)
+            const fetched = await fetchAllUsers(token, role)
+            // guard in case the API ignores the role filter
+            const users = role ? fetched.filter((u) => u.role?.name === role) : fetched
             const csv = [HEADER, ...users.map(toRow)].map((row) => row.map(csvCell).join(",")).join("\r\n")
 
             // BOM so Excel reads names in UTF-8
             const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }))
             const link = document.createElement("a")
             link.href = url
-            link.download = `akara-users-${new Date().toISOString().slice(0, 10)}.csv`
+            link.download = `akara-${label}-${new Date().toISOString().slice(0, 10)}.csv`
             link.click()
             URL.revokeObjectURL(url)
 
-            toast.success(`Exported ${users.length} user${users.length === 1 ? "" : "s"}`)
+            toast.success(`Exported ${users.length} ${users.length === 1 ? label.replace(/s$/, "") : label}`)
         } catch (error) {
-            toast.error(getErrorMessage(error, "Could not export users. Try again."))
+            toast.error(getErrorMessage(error, `Could not export ${label}. Try again.`))
         } finally {
             setExporting(false)
         }

@@ -1,6 +1,7 @@
 'use client'
 import { bidderColumns } from "@/components/core/Dashboard/users/users-columns";
 import { UsersTable } from "@/components/core/Dashboard/users/users-table";
+import ExportUsersButton from "@/components/core/Dashboard/users/ExportUsersButton";
 import { Field } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { SearchIcon } from "lucide-react";
@@ -48,6 +49,7 @@ export default function Bidders() {
                             </InputGroup>
                         </Field>
                     </div>
+                    <ExportUsersButton role="BIDDER" label="bidders" />
                 </div>
 
                 {loading ? (
