@@ -1,6 +1,6 @@
 import express from "express";
 
-import { getBans, getHostToken, getOnAir, getViewerToken, getWatchAccess, getWatchers, removeViewer, unbanViewer } from "../controllers/liveStream.controller.js";
+import { getBans, getHostToken, getOnAir, getViewerToken, getWatchAccess, getWatchers, livekitWebhook, removeViewer, unbanViewer } from "../controllers/liveStream.controller.js";
 import { authenticate, optionalAuthenticate } from "../middleware/auth.middleware.js";
 import { requireRole } from "../middleware/rbac.middleware.js";
 import { STAFF_ROLES } from "../libs/socket.js";
@@ -9,6 +9,10 @@ const liveStreamRouter = express.Router();
 
 // who can go live and moderate viewers (mirrors who can start / stop lots)
 const HOST_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"];
+
+// LIVEKIT — room events (signed by LiveKit, no user auth). It sends "application/webhook+json",
+// which express.json() skips, so the signature is checked against the raw text
+liveStreamRouter.post("/webhook", express.text({ type: () => true, limit: "1mb" }), livekitWebhook);
 
 // DASHBOARD — navbar live indicator (before /:auctionUuid)
 liveStreamRouter.get("/on-air", authenticate, requireRole(...STAFF_ROLES), getOnAir);

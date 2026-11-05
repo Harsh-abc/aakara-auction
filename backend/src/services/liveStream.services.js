@@ -11,6 +11,7 @@ import {
     liveRoomName,
     livekitConfig,
     roomService,
+    webhookReceiver,
 } from "../libs/livekit.js";
 
 const httpError = (message, statusCode = 400) => {
@@ -243,6 +244,36 @@ export const getOnAirService = async () => {
         configured: true,
         auctions: auctions.map((auction) => ({ ...auction, viewers: live.find((room) => room.uuid === auction.uuid)?.viewers ?? 0 })),
     };
+};
+
+// =====================================================================
+// WEBHOOK — LiveKit tells us when the auctioneer joins / leaves the room,
+// so waiting players are pushed "on air" over the socket instead of polling.
+// =====================================================================
+
+/** Verifies a LiveKit webhook; returns { auctionUuid, onAir } when it changes whether a stream is on, else null */
+export const handleLivekitWebhookService = async ({ body, authHeader }) => {
+    if (typeof body !== "string" || !body) throw httpError("Invalid webhook body", 400);
+
+    let event;
+    try {
+        event = await webhookReceiver().receive(body, authHeader);
+    } catch (error) {
+        if (error?.statusCode) throw error; // not configured (503)
+        throw httpError("Invalid webhook signature", 401);
+    }
+
+    const auctionUuid = auctionUuidFromRoom(event.room?.name);
+    if (!auctionUuid) return null;
+
+    const isHost = event.participant?.identity?.startsWith(HOST_PREFIX);
+    if (event.event === "participant_joined" && isHost) return { auctionUuid, onAir: true };
+    if (event.event === "participant_left" && isHost) {
+        // another staff member may still be hosting
+        return { auctionUuid, onAir: await hostOnAir(auctionUuid).catch(() => false) };
+    }
+    if (event.event === "room_finished") return { auctionUuid, onAir: false };
+    return null;
 };
 
 // =====================================================================

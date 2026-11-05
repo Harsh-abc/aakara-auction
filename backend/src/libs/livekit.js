@@ -1,4 +1,4 @@
-import { RoomServiceClient } from "livekit-server-sdk";
+import { RoomServiceClient, WebhookReceiver } from "livekit-server-sdk";
 
 /**
  * LiveKit Cloud (live video of the auction floor).
@@ -33,4 +33,10 @@ export const HOST_PREFIX = "host-";
 export const roomService = () => {
     const { url, apiKey, apiSecret } = livekitConfig();
     return new RoomServiceClient(url.replace(/^ws/, "http"), apiKey, apiSecret);
+};
+
+// checks the signed Authorization header LiveKit sends with each webhook (same API key / secret)
+export const webhookReceiver = () => {
+    const { apiKey, apiSecret } = livekitConfig();
+    return new WebhookReceiver(apiKey, apiSecret);
 };

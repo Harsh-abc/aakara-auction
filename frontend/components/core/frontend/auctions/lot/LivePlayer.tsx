@@ -14,8 +14,9 @@ import { getLiveStreamToken, type LiveStreamAccess } from "@/services/operations
 // LiveKit bills every connected viewer by the minute, so the player only stays connected while it's watched.
 // after a dropped connection or a failed token request
 const RETRY_MS = 8_000
-// waiting for the auctioneer to go live — the backend won't hand out a token for an empty room
-const OFF_AIR_POLL_MS = 15_000
+// waiting for the auctioneer to go live — the backend won't hand out a token for an empty room.
+// The socket says "live:on-air" the moment they do (LiveKit webhook); this slow check only covers a missed event
+const OFF_AIR_POLL_MS = 3 * 60_000
 // a tab in the background this long leaves the room; it rejoins when shown again
 const HIDDEN_DISCONNECT_MS = 2 * 60_000
 // the auctioneer left the room (ended the stream) — leave almost at once; the grace covers the first moments after joining
@@ -57,6 +58,23 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
     }
     useEffect(() => () => clearTimeout(retryRef.current), [])
 
+    // off air: waiting for the auctioneer — an "on air" nudge fetches a token right away
+    const offAirRef = useRef(false)
+    const waitOffAir = () => {
+        offAirRef.current = true
+        retryIn(OFF_AIR_POLL_MS)
+    }
+    const wakeIfOffAir = () => {
+        if (!offAirRef.current) return
+        offAirRef.current = false
+        clearTimeout(retryRef.current)
+        setAttempt((n) => n + 1)
+    }
+    const wakeRef = useRef(wakeIfOffAir)
+    useEffect(() => {
+        wakeRef.current = wakeIfOffAir
+    })
+
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout> | undefined
         const onVisibility = () => {
@@ -91,7 +109,11 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
         let cancelled = false
 
         getLiveStreamToken(auctionUuid, accessTokenRef.current)
-            .then((data) => !cancelled && setAccess(data))
+            .then((data) => {
+                if (cancelled) return
+                offAirRef.current = false
+                setAccess(data)
+            })
             .catch((error) => {
                 if (cancelled) return
                 const response = axios.isAxiosError(error) ? error.response : undefined
@@ -102,7 +124,8 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
                 if (status === 401 || status === 403) return setBlocked({ kind: "denied", message })
                 // not configured / no such sale — stay on the lot image
                 if (status === 503 || status === 404) return
-                // the sale or the auctioneer isn't live yet — check back now and then
+                // the sale or the auctioneer isn't live yet — wait for the socket to say so
+                if (status === 409) offAirRef.current = true
                 retryIn(status === 409 ? OFF_AIR_POLL_MS : RETRY_MS)
             })
 
@@ -120,12 +143,22 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
     useEffect(() => {
         if (!listed) return
         const socket = getSocket()
-        // rejoin after a reconnect (a new token for another user reconnects the socket too)
-        const watch = () => socket.emit("live:watch", { auctionUuid })
+        // rejoin after a reconnect (a new token for another user reconnects the socket too).
+        // Once in, check again if off air — the auctioneer may have gone live while we weren't listening
+        const watch = () =>
+            socket.emit("live:watch", { auctionUuid }, (result?: { ok?: boolean }) => {
+                if (result?.ok) wakeRef.current()
+            })
+        // the auctioneer went live (the server only tells eligible tabs in this auction's live room)
+        const onAir = (payload: { auctionUuid?: string; onAir?: boolean }) => {
+            if (payload?.auctionUuid === auctionUuid && payload.onAir) wakeRef.current()
+        }
         socket.on("connect", watch)
+        socket.on("live:on-air", onAir)
         if (socket.connected) watch()
         return () => {
             socket.off("connect", watch)
+            socket.off("live:on-air", onAir)
             socket.emit("live:unwatch", { auctionUuid })
         }
     }, [auctionUuid, listed])
@@ -190,7 +223,7 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
                 onIdle={() => {
                     // the auctioneer stopped publishing — don't pay for sitting in an empty room
                     setAccess(null)
-                    retryIn(OFF_AIR_POLL_MS)
+                    waitOffAir()
                 }}
             />
         </LiveKitRoom>

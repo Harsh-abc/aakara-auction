@@ -18,6 +18,7 @@ import { canWatchLiveRoom } from "../services/liveStream.services.js";
 //   auction:{uuid}  storefront lot pages — public lot updates (bidders by paddle only)
 //   staff:{uuid}    dashboard bidding floor — every bid with the bidder's name
 //   user:{userId}   joined automatically when the socket carries a valid token
+//   live:{uuid}     eligible live room tabs ("live:watch") — told "live:on-air" when the auctioneer goes live / ends
 //
 // Storefront tabs in auction:{uuid} are counted as viewers (libs/viewers.js) — once
 // per account or browser — and the count is sent to the room as "auction:viewers".
@@ -35,6 +36,7 @@ export const rooms = {
     auction: (auctionUuid) => `auction:${auctionUuid}`,
     staff: (auctionUuid) => `staff:${auctionUuid}`,
     user: (userId) => `user:${userId}`,
+    live: (auctionUuid) => `live:${auctionUuid}`,
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -133,6 +135,7 @@ export const initSocket = (server) => {
                 }
                 // the tab may have closed while the check ran
                 if (!socket.connected) return;
+                socket.join(rooms.live(auctionUuid));
                 await watchers.join(socket, auctionUuid);
                 reply(ack, { ok: true });
             } catch (error) {
@@ -143,6 +146,7 @@ export const initSocket = (server) => {
 
         socket.on("live:unwatch", ({ auctionUuid } = {}) => {
             if (!UUID_RE.test(auctionUuid ?? "")) return;
+            socket.leave(rooms.live(auctionUuid));
             watchers.leave(socket, auctionUuid).catch((error) => console.error("[socket] live:unwatch failed:", error));
         });
 

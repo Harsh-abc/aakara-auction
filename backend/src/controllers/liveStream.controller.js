@@ -7,6 +7,7 @@ import {
     getOnAirService,
     getWatchAccessService,
     getWatchersService,
+    handleLivekitWebhookService,
     removeViewerService,
     unbanViewerService,
 } from "../services/liveStream.services.js";
@@ -80,6 +81,21 @@ export const getHostToken = async (req, res) => {
         return res.status(200).json({ success: true, message: "Studio token created", data });
     } catch (error) {
         return handleError(res, error, "Get studio token", "Failed to open the studio");
+    }
+};
+
+// -----------------------------------------------------------------
+// POST /api/live/webhook   (LiveKit → us, signed with the API key / secret)
+// The auctioneer joined / left a room → tell that auction's waiting players
+// -----------------------------------------------------------------
+
+export const livekitWebhook = async (req, res) => {
+    try {
+        const change = await handleLivekitWebhookService({ body: req.body, authHeader: req.get("authorization") });
+        if (change) emitTo(rooms.live(change.auctionUuid), "live:on-air", change);
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        return handleError(res, error, "LiveKit webhook", "Failed to handle the webhook");
     }
 };
 
