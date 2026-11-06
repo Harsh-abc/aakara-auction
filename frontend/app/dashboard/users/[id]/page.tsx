@@ -15,6 +15,7 @@ import UserProfile from "@/components/core/Dashboard/users/UserProfiile"
 import { BidderAccess } from "@/components/core/Dashboard/users/BidderAccess"
 import { LotsVerified } from "@/components/core/Dashboard/users/LotsVerified"
 import { BiddingLimit } from "@/components/core/Dashboard/users/BiddingLimit"
+import { UserProxyBids } from "@/components/core/Dashboard/users/UserProxyBids"
 
 const getFullName = (user: User) => {
     const fullName = `${user.profile?.firstName ?? ""} ${user.profile?.lastName ?? ""}`.trim()
@@ -131,6 +132,8 @@ export default function UserPage() {
             </div>
 
             <UserProfile user={user} />
+
+            <UserProxyBids user={user} />
 
             {/* Submitted Documents (KYC upload / review) — hidden for now; uncomment the imports above too to bring it back.
                 Nothing on file yet → staff can upload or request it; otherwise review what's on file, then the profile.

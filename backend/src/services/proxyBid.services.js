@@ -499,6 +499,17 @@ export const exportProxyBidsService = async (filters) => {
         if (batch.length < EXPORT_BATCH) break;
     }
 
+    // one bidder's export (user page): grouped by auction, lots in catalogue order
+    if (filters.userUuid) {
+        rows.sort(
+            (a, b) =>
+                a.auction.title.localeCompare(b.auction.title) ||
+                a.auction.uuid.localeCompare(b.auction.uuid) ||
+                Number(a.lot.itemNumber) - Number(b.lot.itemNumber) ||
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+    }
+
     const header = [
         "Set at (UTC)", "Auction", "Lot", "Lot title", "Lot status", "Bidder", "Username", "Email", "Phone", "Paddle",
         "KYC", "Account status", "Location", "Currency", "Maximum bid", "Starting price", "Reserve", "Current bid",

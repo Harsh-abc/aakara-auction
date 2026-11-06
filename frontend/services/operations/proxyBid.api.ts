@@ -53,7 +53,11 @@ export async function getLotProxies(lotUuid: string, token: string | null): Prom
 }
 
 // CSV of the filtered proxy bids (newest 10,000), saved by the browser
-export async function downloadProxyBids(token: string | null, filters: ProxyBidFilters): Promise<void> {
+export async function downloadProxyBids(
+    token: string | null,
+    filters: ProxyBidFilters,
+    fileName = `proxy-bids-${new Date().toISOString().slice(0, 10)}.csv`
+): Promise<void> {
     const response = await apiConnector<Blob>({
         method: "GET",
         url: PROXY_BIDS_EXPORT_API,
@@ -64,7 +68,7 @@ export async function downloadProxyBids(token: string | null, filters: ProxyBidF
     const url = URL.createObjectURL(response.data)
     const link = document.createElement("a")
     link.href = url
-    link.download = `proxy-bids-${new Date().toISOString().slice(0, 10)}.csv`
+    link.download = fileName
     link.click()
     URL.revokeObjectURL(url)
 }
