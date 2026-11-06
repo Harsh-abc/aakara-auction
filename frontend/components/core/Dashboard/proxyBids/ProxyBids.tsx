@@ -255,6 +255,12 @@ export function ProxyBids() {
     const [stage, setStage] = useState<ProxyStage>("all")
     // set from a row's "All proxies by this bidder"
     const [user, setUser] = useState<{ uuid: string; label: string } | null>(null)
+    // ...or from the Bidders page link (?user=<uuid>&name=<label>)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const uuid = params.get("user")
+        if (uuid) setUser({ uuid, label: params.get("name") || "this bidder" })
+    }, [])
     const [page, setPage] = useState(1)
     const [limit, setLimit] = useState(PAGE_SIZES[0])
     const [refresh, setRefresh] = useState(0)

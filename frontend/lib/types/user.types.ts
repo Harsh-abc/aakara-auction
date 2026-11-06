@@ -81,7 +81,7 @@ export interface User {
     biddingLimitSetBy?: RoleChangedBy | null;
     profile: UserProfile | null;
     kyc: UserKyc | null;
-    _count: { bids: number; auctionsWon: number; auctionParticipations: number };
+    _count: { bids: number; auctionsWon: number; auctionParticipations: number; autoBids?: number };
 }
 
 export interface RoleChangedBy {

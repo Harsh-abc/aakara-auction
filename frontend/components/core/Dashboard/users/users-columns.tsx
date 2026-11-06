@@ -3,6 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import type { AppTableFeatures } from "@/lib/table-features"
 import { BadgeCheck, BadgeX } from "lucide-react"
+import Link from "next/link"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
@@ -221,4 +222,33 @@ const bidderColumn: ColumnDef<AppTableFeatures, User> = {
 // Users & Bidders pages: same columns with "Bidder" placed before the account status
 export const bidderColumns: ColumnDef<AppTableFeatures, User>[] = columns.flatMap((column) =>
     column.id === "status" ? [bidderColumn, column] : [column]
+)
+
+// How many proxy (maximum) bids the user has left; links to them on the Proxy Bids page
+const proxyBidsColumn: ColumnDef<AppTableFeatures, User> = {
+    id: "proxyBids",
+    accessorFn: (user) => user._count?.autoBids ?? 0,
+
+    header: "Proxy bids",
+
+    cell: ({ row }) => {
+        const count = row.original._count?.autoBids ?? 0
+        if (count === 0) return <span className="text-muted-foreground">0</span>
+
+        const params = new URLSearchParams({ user: row.original.uuid, name: getFullName(row.original) })
+        return (
+            <Link
+                href={`/dashboard/proxy-bids?${params}`}
+                className="font-medium text-blue-600 hover:underline"
+                title="View this bidder's proxy bids"
+            >
+                {count.toLocaleString("en-IN")}
+            </Link>
+        )
+    },
+}
+
+// Bidders page: the bidder columns plus each bidder's proxy bids, after the contact number
+export const bidderListColumns: ColumnDef<AppTableFeatures, User>[] = bidderColumns.flatMap((column) =>
+    "accessorKey" in column && column.accessorKey === "phone" ? [column, proxyBidsColumn] : [column]
 )

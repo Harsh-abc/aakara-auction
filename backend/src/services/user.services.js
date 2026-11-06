@@ -121,6 +121,8 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
                         bids: true,
                         auctionsWon: true,
                         auctionParticipations: true,
+                        // proxy (maximum) bids left on lots, for the Bidders page
+                        autoBids: true,
                     },
                 },
             },
