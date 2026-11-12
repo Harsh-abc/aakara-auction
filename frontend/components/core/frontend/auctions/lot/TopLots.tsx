@@ -100,9 +100,11 @@ type TopLotsProps = {
     /** the sale's countdown; null once it has closed */
     countdown: { label: string; target: string; doneText?: string } | null;
     onBid: OnBid;
+    /** the sale's proxy bidding switch — off hides "Proxy bid" */
+    proxyEnabled?: boolean;
 };
 
-export function TopLots({ auctionUuid, lots, saleStatus, countdown, onBid }: TopLotsProps) {
+export function TopLots({ auctionUuid, lots, saleStatus, countdown, onBid, proxyEnabled = true }: TopLotsProps) {
     const { controls: gallery } = useGallery();
     const [search, setSearch] = useState("");
     const [order, setOrder] = useState<LotOrder>("value-desc");
@@ -147,7 +149,7 @@ export function TopLots({ auctionUuid, lots, saleStatus, countdown, onBid }: Top
                             {shown.map((lot) => {
                                 const estimate = lotEstimate(lot);
                                 const bid = Number(lot.bidCount) > 0 ? formatMoney(lot.currentBid, lot.currency) : null;
-                                const action = lot.status === "ACTIVE" ? "bid" : isUpcomingLot(lot) ? "proxy" : null;
+                                const action = lot.status === "ACTIVE" ? "bid" : proxyEnabled && isUpcomingLot(lot) ? "proxy" : null;
                                 const saved = gallery.isSaved(lot.uuid);
 
                                 return (

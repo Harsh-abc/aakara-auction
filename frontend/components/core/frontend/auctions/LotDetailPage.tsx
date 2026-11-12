@@ -141,7 +141,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                                         </span>
                                     )}
                                 </div>
-                                <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} />
+                                <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} proxyEnabled={auction.proxyBiddingEnabled} />
                             </div>
 
                             {/* the auctioneer's callout, between the lot and its ladder */}
@@ -167,14 +167,14 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                 </div>
             </section>
 
-            <TopLots auctionUuid={auction.uuid} lots={lots} saleStatus={saleStatus} countdown={countdown} onBid={onBid} />
+            <TopLots auctionUuid={auction.uuid} lots={lots} saleStatus={saleStatus} countdown={countdown} onBid={onBid} proxyEnabled={auction.proxyBiddingEnabled} />
 
             <section>
                 <div className="page-container">
                     <div className="flex flex-col gap-4 bg-white px-5 py-5 md:flex-row md:items-center md:justify-between">
                         <p className={BODY}>Ready to bid on one of these lots? Register once, then bid live or leave a proxy bid.</p>
                         <div className="flex shrink-0 gap-2">
-                            <button type="button" onClick={() => onBid(lot.status === "ACTIVE" ? "bid" : "proxy", lot)} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
+                            <button type="button" onClick={() => onBid(lot.status === "ACTIVE" || !auction.proxyBiddingEnabled ? "bid" : "proxy", lot)} className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE)}>
                                 Place bid
                             </button>
                             <Link href={auctionHref(auction)} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE)}>

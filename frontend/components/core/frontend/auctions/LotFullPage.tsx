@@ -79,6 +79,8 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
     const saved = gallery.isSaved(lot.uuid);
     // "Place bid" keeps leading to the live room (even from a closed lot) until the whole auction is over
     const liveLot = isFinished(auction) ? null : roomLot(lots);
+    // "Place bid" only on the lot that is on the block; every other lot points to the live (or next upcoming) lot
+    const bidLabel = !liveLot ? undefined : liveLot.status !== "ACTIVE" ? "View upcoming lot" : liveLot.uuid === lot.uuid ? "Place bid" : "View live lot";
 
     return (
         <main className={PAGE_MAIN}>
@@ -133,7 +135,9 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                         lot={lot}
                         onBid={onBid}
                         bidRefreshKey={savedCount}
+                        proxyEnabled={auction.proxyBiddingEnabled}
                         bidHref={liveLot ? lotHref(auction.uuid, liveLot) : undefined}
+                        bidLabel={bidLabel}
                         className="self-start lg:sticky lg:top-25 lg:mt-10.75"
                     />
                 </div>

@@ -16,6 +16,8 @@ export function LotPricePanel({
     onBid,
     bidRefreshKey,
     bidHref,
+    bidLabel,
+    proxyEnabled,
     className,
 }: {
     lot: PublicLotDetail
@@ -24,6 +26,10 @@ export function LotPricePanel({
     bidRefreshKey?: number
     /** where "Place bid" goes instead of the bid dialog — see BidButtons */
     bidHref?: string
+    /** the text of the bidHref link — see BidButtons */
+    bidLabel?: string
+    /** the sale's proxy bidding switch — off hides "Proxy bid" */
+    proxyEnabled?: boolean
     className?: string
 }) {
     const count = Number(lot.bidCount) || 0
@@ -82,7 +88,7 @@ export function LotPricePanel({
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} />
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} bidLabel={bidLabel} proxyEnabled={proxyEnabled} />
         </aside>
     )
 }

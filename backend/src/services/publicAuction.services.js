@@ -74,6 +74,8 @@ const PUBLIC_AUCTION_SELECT = {
     registrationRequired: true,
     registrationStarts: true,
     registrationDeadline: true,
+    // off = the storefront hides every "Proxy bid" button
+    proxyBiddingEnabled: true,
     category: { select: { name: true } },
     currency: { select: { code: true, symbol: true } },
     _count: { select: { items: true } },

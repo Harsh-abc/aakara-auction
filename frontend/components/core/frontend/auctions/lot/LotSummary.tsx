@@ -16,6 +16,8 @@ function bidHeading(lot: PublicLotDetail, count: number) {
 }
 
 type LotSummaryProps = {
+    /** the sale's proxy bidding switch — off hides "Proxy bid" */
+    proxyEnabled?: boolean
     auctionUuid: string
     lot: PublicLotDetail
     onBid: OnBid
@@ -25,7 +27,7 @@ type LotSummaryProps = {
 }
 
 // artist, title, catalogue facts and the bid buttons, beside the lot image
-export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, className }: LotSummaryProps) {
+export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, proxyEnabled, className }: LotSummaryProps) {
     const count = Number(lot.bidCount) || 0
     const amount = formatMoney(count > 0 ? lot.currentBid : lot.startingPrice, lot.currency) ?? "—"
     const leader = count > 0 ? (lot.leadingPaddle ? `Paddle ${lot.leadingPaddle}` : "Another bidder") : null
@@ -67,9 +69,12 @@ export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, className }
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} className="mt-5" />
+            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} proxyEnabled={proxyEnabled} swapLiveProxy className="mt-5" />
             <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(BUTTON, BUTTON_OUTLINE, "mt-3")}>
-                View full lot
+                View Lot Detail
+            </Link>
+            <Link href={`/auctions/${auctionUuid}`} className={cn(BUTTON, BUTTON_OUTLINE, "mt-3")}>
+                Browse All Lots
             </Link>
         </div>
     )
