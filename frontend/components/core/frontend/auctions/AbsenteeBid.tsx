@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, X } from "lucide-react";
 
+import { CooldownLink } from "@/components/common/CooldownLink";
 import { AuthField, AuthFieldError, authInputClass, authInputErrorClass, authLabelClass } from "@/components/core/auth/registration/AuthField";
 import { useAppSelector } from "@/hooks/redux";
 import { AUCTION_EMAIL } from "@/lib/constants/site-text";
@@ -370,9 +371,9 @@ export function AbsenteeBid() {
                         </p>
                         <p className={cn(BODY, "mt-3")}>
                             Questions?{" "}
-                            <a href={`mailto:${AUCTION_EMAIL}`} className="text-[#0d0d0d] underline underline-offset-2 hover:text-[#673364]">
+                            <CooldownLink href={`mailto:${AUCTION_EMAIL}`} className="text-[#0d0d0d] underline underline-offset-2 hover:text-[#673364]">
                                 {AUCTION_EMAIL}
-                            </a>
+                            </CooldownLink>
                         </p>
                     </aside>
                 </div>

@@ -9,6 +9,7 @@
  *    • app/not-found.tsx
  * ════════════════════════════════════════════════════════════════════
  */
+import { CooldownLink } from "@/components/common/CooldownLink";
 import { FOOTER_CONTENT } from "@/lib/constants/site-text";
 import { AkaraLogo } from "@/components/core/frontend/akaraLogo";
 import { FooterLinks } from "./footer-links";
@@ -19,9 +20,9 @@ const FOOTER_LINK = "text-sm text-[#717171] transition-colors duration-200 hover
 function ContactLine({ text }: { text: string }) {
     if (text.includes("@"))
         return (
-            <a href={`mailto:${text}`} className={FOOTER_LINK}>
+            <CooldownLink href={`mailto:${text}`} className={FOOTER_LINK}>
                 {text}
-            </a>
+            </CooldownLink>
         );
     if (text.startsWith("+"))
         return (

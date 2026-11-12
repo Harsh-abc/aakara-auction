@@ -21,8 +21,8 @@ import { useGallery } from "./useGallery";
 const LOTS_PER_PAGE = 9;
 
 const SORT_LABELS: Record<PublicLotSort, string> = {
-    status: "Live / upcoming",
     lot: "Lot no.",
+    status: "Live / upcoming",
     "estimate-asc": "Estimate: low to high",
     "estimate-desc": "Estimate: high to low",
     "bid-desc": "Current bid: highest",
@@ -41,7 +41,7 @@ type AuctionLotsProps = {
 export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
     const [searchInput, setSearchInput] = useState("");
     const search = useDebouncedValue(searchInput.trim());
-    const [sort, setSort] = useState<PublicLotSort>("status");
+    const [sort, setSort] = useState<PublicLotSort>("lot");
     const [view, setView] = useState<ViewMode>("grid");
 
     // a page only belongs to the search + sort it was picked under, so changing either starts at page 1

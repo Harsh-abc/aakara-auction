@@ -1,3 +1,4 @@
+import { CooldownLink } from "@/components/common/CooldownLink";
 import { AUCTION_EMAIL } from "@/lib/constants/site-text";
 import { cn } from "@/lib/utils";
 
@@ -34,9 +35,9 @@ export function FaqPage() {
                                 <p className="text-[18px] leading-7 font-medium tracking-tight text-[#0d0d0d]">Still have a question?</p>
                                 <p className={cn(BODY, "mt-1")}>Our team is happy to help with bidding, payment, shipping or consigning a work.</p>
                             </div>
-                            <a href={`mailto:${AUCTION_EMAIL}`} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE, "shrink-0")}>
+                            <CooldownLink href={`mailto:${AUCTION_EMAIL}`} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE, "shrink-0")}>
                                 Contact us
-                            </a>
+                            </CooldownLink>
                         </div>
                     </div>
                 </div>

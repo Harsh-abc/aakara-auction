@@ -1,5 +1,6 @@
 import { Download, Mail } from "lucide-react";
 
+import { CooldownLink } from "@/components/common/CooldownLink";
 import { AUCTION_EMAIL } from "@/lib/constants/site-text";
 import { cn } from "@/lib/utils";
 
@@ -45,22 +46,22 @@ export function BiddingIncrements() {
                         <h3 className="mt-3 text-[14px] leading-5 font-medium text-[#0d0d0d]">Registration / Absentee bids form</h3>
                         <p className={cn(BODY, "mt-3")}>
                             If you cannot follow the sale, we can bid on your behalf. Download the form, fill in your details and the maximum bid (hammer price) for each lot, sign it and email it to{" "}
-                            <a href={`mailto:${AUCTION_EMAIL}`} className={LINK}>
+                            <CooldownLink href={`mailto:${AUCTION_EMAIL}`} className={LINK}>
                                 {AUCTION_EMAIL}
-                            </a>{" "}
+                            </CooldownLink>{" "}
                             before the sale.
                         </p>
                         <p className={cn(BODY, "mt-3")}>We bid for you only as far as needed to win the lot, never above your maximum, and will confirm your bids by email.</p>
 
                         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                            <a href={ABSENTEE_FORM_URL} download className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "gap-2.5")}>
+                            <CooldownLink href={ABSENTEE_FORM_URL} download className={cn(BUTTON, BUTTON_SOLID, BUTTON_INLINE, "gap-2.5")}>
                                 <Download className="size-4" strokeWidth={1.5} aria-hidden />
                                 Download form
-                            </a>
-                            <a href={`mailto:${AUCTION_EMAIL}?subject=${encodeURIComponent("Absentee bids form")}`} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE, "gap-2.5")}>
+                            </CooldownLink>
+                            <CooldownLink href={`mailto:${AUCTION_EMAIL}?subject=${encodeURIComponent("Absentee bids form")}`} className={cn(BUTTON, BUTTON_OUTLINE, BUTTON_INLINE, "gap-2.5")}>
                                 <Mail className="size-4" strokeWidth={1.5} aria-hidden />
                                 Email us
-                            </a>
+                            </CooldownLink>
                         </div>
                     </div>
 
