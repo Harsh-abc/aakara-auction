@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../libs/prisma.js";
 import redis from "../libs/redis.js";
 import { bidKeys } from "../libs/biddingStore.js";
-import { PROXY_LOT_STATUSES, readLiveLotBids } from "./bidding.services.js";
+import { PROXY_LOT_STATUSES, pastProxyCutoff, proxyCutoffAt, readLiveLotBids } from "./bidding.services.js";
 import { toCsv } from "../utils/csv.js";
 
 // =====================================================================
@@ -454,8 +454,19 @@ export const getProxySettingsService = async () => {
             _count: { select: { items: { where: { status: { in: PROXY_LOT_STATUSES } } } } },
         },
     });
+    const now = new Date();
     return {
-        auctions: auctions.map(({ _count, ...auction }) => ({ ...auction, upcomingLots: _count.items })),
+        auctions: auctions.map(({ _count, ...auction }) => {
+            const closed = pastProxyCutoff(auction.startTime, now);
+            return {
+                ...auction,
+                // inside the 8h window it reads off even before the scheduler flips the flag
+                proxyBiddingEnabled: auction.proxyBiddingEnabled && !closed,
+                proxyCutoffAt: proxyCutoffAt(auction.startTime),
+                proxyCutoffPassed: closed,
+                upcomingLots: _count.items,
+            };
+        }),
     };
 };
 
@@ -465,10 +476,17 @@ export const getProxySettingsService = async () => {
  * opens. Lots already open never take proxies, whatever the switch says.
  */
 export const setProxyBiddingService = async ({ auctionUuid, enabled }) => {
-    const auction = await prisma.auction.findUnique({ where: { uuid: auctionUuid }, select: { id: true, status: true, deletedAt: true } });
+    const auction = await prisma.auction.findUnique({
+        where: { uuid: auctionUuid },
+        select: { id: true, status: true, startTime: true, deletedAt: true },
+    });
     if (!auction || auction.deletedAt) throw httpError("Auction not found", 404);
     if (!SWITCHABLE_AUCTION_STATUSES.includes(auction.status)) {
         throw httpError(`Proxy bidding can't be changed once the auction is ${auction.status}`, 409);
+    }
+    // the scheduler switches proxies off 8h before the start — they can't be turned back on after that
+    if (enabled && pastProxyCutoff(auction.startTime)) {
+        throw httpError("Proxy bidding closes 8 hours before the auction starts and can't be turned back on", 409);
     }
 
     const updated = await prisma.auction.update({

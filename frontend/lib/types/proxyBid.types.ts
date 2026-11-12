@@ -101,6 +101,10 @@ export interface ProxySettingsAuction {
     status: AuctionStatus
     startTime: string
     proxyBiddingEnabled: boolean
+    /** proxy bids close (and switch off automatically) 8 hours before the start */
+    proxyCutoffAt: string
+    /** inside the 8h window — the switch can't be turned back on */
+    proxyCutoffPassed: boolean
     /** lots that haven't opened yet — the only ones that can take a proxy */
     upcomingLots: number
 }

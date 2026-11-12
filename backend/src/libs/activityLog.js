@@ -20,6 +20,8 @@ export const SYSTEM_ACTIONS = [
     { module: "SYSTEM", action: "AUCTION_AUTO_END", label: "Auction ended automatically" },
     { module: "SYSTEM", action: "AUCTION_AUTO_START_FAILED", label: "Auction failed to start automatically" },
     { module: "SYSTEM", action: "AUCTION_AUTO_END_FAILED", label: "Auction failed to end automatically" },
+    { module: "SYSTEM", action: "AUCTION_PROXY_AUTO_OFF", label: "Proxy bidding switched off automatically" },
+    { module: "SYSTEM", action: "AUCTION_PROXY_AUTO_OFF_FAILED", label: "Proxy bidding failed to switch off automatically" },
 ];
 
 // never stored — swapped for "[REDACTED]"

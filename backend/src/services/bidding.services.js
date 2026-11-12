@@ -42,6 +42,13 @@ const FINISHED_AUCTION_STATUSES = ["ENDED", "SETTLED", "CANCELLED"];
 /** Lots that can still take a proxy bid: only before they open (mirrors the PROXY check in biddingStore.js) */
 export const PROXY_LOT_STATUSES = ["DRAFT", "SCHEDULED"];
 
+/** Proxy bids close this long before the auction starts — the scheduler then switches them off */
+export const PROXY_CUTOFF_MS = 8 * 60 * 60 * 1000;
+/** Start of the proxy cutoff window for an auction starting at `startTime` */
+export const proxyCutoffAt = (startTime) => new Date(new Date(startTime).getTime() - PROXY_CUTOFF_MS);
+/** True once an auction is inside its proxy cutoff window (8h before start, or later) */
+export const pastProxyCutoff = (startTime, now = new Date()) => now >= proxyCutoffAt(startTime);
+
 const MAX_USER_AGENT = 500;
 
 /** Verified lot bidders who may actually bid: a bidder moved back to USER, made inactive, or whose KYC approval was taken back, keeps their lot rows but can't bid */
@@ -542,7 +549,7 @@ const ENGINE_ERRORS = {
     ALREADY_LEADING: () => ["You're already the highest bidder", 409],
     BID_TOO_LOW: (lot, r) => [`The next bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
     LOT_STARTED: (lot) => [`Lot #${lot.itemNumber} has opened — proxy bids can only be left or changed before a lot opens`, 409],
-    PROXY_DISABLED: () => ["Proxy bids are turned off for this auction", 409],
+    PROXY_DISABLED: () => ["Proxy bids are closed for this auction", 409],
     PROXY_TOO_LOW: (lot, r) => [`Your maximum bid must be at least ${formatMoney(r.nextBid, lot.currencyCode)}`, 400],
     LOT_CLOSED: (lot) => [`Lot #${lot.itemNumber} has closed`, 409],
     AUCTION_CLOSED: () => ["Bidding is closed for this auction", 409],
@@ -633,11 +640,12 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
 
     const item = await prisma.auctionItem.findUnique({
         where: { uuid: lotUuid },
-        select: { id: true, itemNumber: true, status: true, auction: { select: { proxyBiddingEnabled: true } } },
+        select: { id: true, itemNumber: true, status: true, auction: { select: { proxyBiddingEnabled: true, startTime: true } } },
     });
     if (!item) throw httpError("Lot not found", 404);
     if (item.status === "ACTIVE") throw httpError(...ENGINE_ERRORS.LOT_STARTED({ itemNumber: item.itemNumber }));
-    if (!item.auction.proxyBiddingEnabled) throw httpError(...ENGINE_ERRORS.PROXY_DISABLED());
+    // the 8h cutoff applies straight away, without waiting for the scheduler to flip the switch
+    if (!item.auction.proxyBiddingEnabled || pastProxyCutoff(item.auction.startTime)) throw httpError(...ENGINE_ERRORS.PROXY_DISABLED());
 
     const { lot, result, prevProxy } = await runForUser({ mode: "PROXY", lotUuid, userId, amount: maxAmount, ip, userAgent });
 
@@ -839,6 +847,7 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
                     status: true,
                     deletedAt: true,
                     proxyBiddingEnabled: true,
+                    startTime: true,
                     currency: { select: { code: true, symbol: true } },
                     participants: { where: { userId: user }, select: { paddleNumber: true } },
                 },
@@ -890,6 +899,7 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
 
     const bidder = lot.bidders[0]?.user;
     const verified = registration === "VERIFIED" && bidder?.status === "ACTIVE" && bidder?.role.name === "BIDDER" && bidder?.kyc?.status === "VERIFIED";
+    const proxyOpen = lot.auction.proxyBiddingEnabled && !pastProxyCutoff(lot.auction.startTime);
     return serializeBigInt({
         lotUuid,
         itemNumber: lot.itemNumber,
@@ -901,10 +911,10 @@ export const getMyLotStandingService = async ({ lotUuid, userId }) => {
         paddleNumber: participant?.paddleNumber ?? null,
         ...position,
         canBid: verified && lot.status === "ACTIVE" && auctionStatus === "LIVE",
-        // staff can switch proxy bids off per auction
-        proxyEnabled: lot.auction.proxyBiddingEnabled,
+        // staff can switch proxy bids off per auction; they close 8h before the auction starts
+        proxyEnabled: proxyOpen,
         // left or changed until the lot opens
-        canProxy: verified && biddingOpen && lot.auction.proxyBiddingEnabled && PROXY_LOT_STATUSES.includes(lot.status),
+        canProxy: verified && biddingOpen && proxyOpen && PROXY_LOT_STATUSES.includes(lot.status),
     });
 };
 

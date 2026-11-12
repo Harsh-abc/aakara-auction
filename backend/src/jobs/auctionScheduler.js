@@ -1,7 +1,7 @@
 import prisma from "../libs/prisma.js";
 import { logActivity, SYSTEM_ACTOR } from "../libs/activityLog.js";
 import { closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
-import { flushPendingAuctions, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
+import { flushPendingAuctions, PROXY_CUTOFF_MS, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
 import { notifyLotWinner } from "../services/auctionMail.services.js";
 
 /**
@@ -10,6 +10,7 @@ import { notifyLotWinner } from "../services/auctionMail.services.js";
  *     and saving their bids from Redis to the database (see syncAuctionBidding)
  *   - puts SCHEDULED / PREVIEW auctions live once their start time passes, and starts
  *     the opening lot (see startOpeningLot)
+ *   - switches proxy bidding off for auctions starting within 8 hours
  *   - copies live lots' current bids to the database, and retries any bid saves that failed
  * Scheduled auctions already past their end time are left as they are — staff decide
  * what to do with a sale that never ran.
@@ -162,6 +163,41 @@ const startDueAuctions = () =>
         ({ title, lot }) => `"${title}" is now LIVE` + (lot ? ` — opened lot #${lot.itemNumber}` : " — no lot to open")
     );
 
+// Proxy bids close 8h before an auction starts: switch them off once that window opens.
+// Proxies already left stay and still bid when their lot opens.
+const PROXY_SWITCHABLE_STATUSES = ["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAUSED"];
+
+const closeDueProxyBidding = async () => {
+    const now = new Date();
+    const due = await prisma.auction.findMany({
+        where: {
+            deletedAt: null,
+            proxyBiddingEnabled: true,
+            status: { in: PROXY_SWITCHABLE_STATUSES },
+            startTime: { lte: new Date(now.getTime() + PROXY_CUTOFF_MS) },
+        },
+        select: { id: true, uuid: true, title: true },
+    });
+
+    for (const { id, uuid, title } of due) {
+        try {
+            // only flip it if nobody changed it meanwhile
+            const { count } = await prisma.auction.updateMany({
+                where: { id, proxyBiddingEnabled: true },
+                data: { proxyBiddingEnabled: false },
+            });
+            if (count) {
+                const description = `Proxy bidding for "${title}" switched off automatically 8 hours before the start`;
+                console.info(`[scheduler] ${description}`);
+                await logSystem("AUCTION_PROXY_AUTO_OFF", uuid, title, description);
+            }
+        } catch (err) {
+            console.error(`[scheduler] failed to switch off proxy bidding for auction ${id}:`, err);
+            await logSystem("AUCTION_PROXY_AUTO_OFF", uuid, title, `Could not switch off proxy bidding for "${title}": ${err.message}`, false);
+        }
+    }
+};
+
 let running = false;
 
 const tick = async () => {
@@ -171,6 +207,7 @@ const tick = async () => {
         // End first, so a sale finishing as the next one opens is cleared off the floor
         await endDueAuctions();
         await startDueAuctions();
+        await closeDueProxyBidding();
         await syncDirtyLots();
         await flushPendingAuctions();
     } catch (err) {
