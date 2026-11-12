@@ -138,6 +138,7 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                         proxyEnabled={auction.proxyBiddingEnabled}
                         bidHref={liveLot ? lotHref(auction.uuid, liveLot) : undefined}
                         bidLabel={bidLabel}
+                        browseHref={auctionHref(auction)}
                         className="self-start lg:sticky lg:top-25 lg:mt-10.75"
                     />
                 </div>

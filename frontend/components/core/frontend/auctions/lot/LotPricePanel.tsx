@@ -1,6 +1,9 @@
+import Link from "next/link"
+
 import { cn } from "@/lib/utils"
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
 
+import { BUTTON, BUTTON_OUTLINE } from "../../storefront"
 import { AuctionCountdown } from "../AuctionCountdown"
 import { formatMoney, lotEstimate } from "../detail/lotDisplay"
 import { BidButtons, type OnBid } from "./BidButtons"
@@ -18,6 +21,7 @@ export function LotPricePanel({
     bidHref,
     bidLabel,
     proxyEnabled,
+    browseHref,
     className,
 }: {
     lot: PublicLotDetail
@@ -30,6 +34,8 @@ export function LotPricePanel({
     bidLabel?: string
     /** the sale's proxy bidding switch — off hides "Proxy bid" */
     proxyEnabled?: boolean
+    /** the sale's lot list — shows a "Browse all lots" button under the bid buttons */
+    browseHref?: string
     className?: string
 }) {
     const count = Number(lot.bidCount) || 0
@@ -89,6 +95,12 @@ export function LotPricePanel({
             </div>
 
             <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} bidLabel={bidLabel} proxyEnabled={proxyEnabled} />
+
+            {browseHref && (
+                <Link href={browseHref} className={cn(BUTTON, BUTTON_OUTLINE, "mt-2")}>
+                    Browse all lots
+                </Link>
+            )}
         </aside>
     )
 }

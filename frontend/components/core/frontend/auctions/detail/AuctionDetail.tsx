@@ -113,6 +113,7 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
 
             <AuctionLots
                 auctionUuid={auction.uuid}
+                live={isLive(auction)}
                 aside={countdown ? <AuctionCountdown label={countdown.label} target={countdown.target} doneText={countdown.doneText} className="shrink-0" /> : <span className={EYEBROW}>Sale closed</span>}
             />
         </main>

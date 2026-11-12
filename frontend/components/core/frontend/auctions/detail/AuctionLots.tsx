@@ -14,6 +14,7 @@ import { getErrorMessage } from "@/lib/apiError";
 import { BODY, EYEBROW } from "../../storefront";
 import { SearchInput } from "../SearchInput";
 import { LotCard, LotRow } from "./LotCard";
+import { LiveRoomButton } from "./LiveRoomButton";
 import { LotPagination } from "./LotPagination";
 import { useGallery } from "./useGallery";
 
@@ -36,9 +37,11 @@ type AuctionLotsProps = {
     auctionUuid: string;
     /** sits opposite the search box (the sale countdown) */
     aside?: React.ReactNode;
+    /** the sale is live — offers a way straight into the live room */
+    live?: boolean;
 };
 
-export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
+export function AuctionLots({ auctionUuid, aside, live }: AuctionLotsProps) {
     const [searchInput, setSearchInput] = useState("");
     const search = useDebouncedValue(searchInput.trim());
     const [sort, setSort] = useState<PublicLotSort>("lot");
@@ -100,10 +103,13 @@ export function AuctionLots({ auctionUuid, aside }: AuctionLotsProps) {
             <section ref={topRef} aria-labelledby="all-lots-heading" className="scroll-mt-24">
                 <div className="page-container">
                     <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[#cecece] pb-3.25">
-                        <h2 id="all-lots-heading" className="flex items-baseline gap-2.5 text-[18px] leading-7 font-medium tracking-tight text-[#0d0d0d]">
-                            All lots
-                            <span className={EYEBROW}>{result ? `${total} ${total === 1 ? "lot" : "lots"}` : "—"}</span>
-                        </h2>
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+                            <h2 id="all-lots-heading" className="flex items-baseline gap-2.5 text-[18px] leading-7 font-medium tracking-tight text-[#0d0d0d]">
+                                All lots
+                                <span className={EYEBROW}>{result ? `${total} ${total === 1 ? "lot" : "lots"}` : "—"}</span>
+                            </h2>
+                            {live && <LiveRoomButton auctionUuid={auctionUuid} />}
+                        </div>
 
                         <div className="flex items-center gap-3">
                             {/* Base UI select rather than a native one, so the open list can be styled */}
