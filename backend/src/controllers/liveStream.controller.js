@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 
 import {
+    announceOnAirService,
     createHostTokenService,
     createViewerTokenService,
     getBansService,
@@ -96,6 +97,22 @@ export const livekitWebhook = async (req, res) => {
         return res.status(200).json({ success: true });
     } catch (error) {
         return handleError(res, error, "LiveKit webhook", "Failed to handle the webhook");
+    }
+};
+
+// -----------------------------------------------------------------
+// POST /api/live/:auctionUuid/announce
+// Studio went on air → tell that auction's waiting players right away
+// -----------------------------------------------------------------
+
+export const announceOnAir = async (req, res) => {
+    try {
+        const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
+        const change = await announceOnAirService({ auctionUuid });
+        emitTo(rooms.live(change.auctionUuid), "live:on-air", change);
+        return res.status(200).json({ success: true, message: "On-air status announced", data: change });
+    } catch (error) {
+        return handleError(res, error, "Announce on air", "Failed to announce the stream");
     }
 };
 

@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { useAppSelector } from "@/hooks/redux"
+import { announceOnAir } from "@/services/operations/liveStream.api"
 
 import { GoLiveIcon } from "./GoLiveButton"
 import {
@@ -75,6 +77,11 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave, ro
     const connection = useConnectionState()
     const { localParticipant, isCameraEnabled, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant()
     const audience = useAudience(auctionUuid)
+    const accessToken = useAppSelector((state) => state.auth.accessToken)
+    const accessTokenRef = useRef(accessToken)
+    useEffect(() => {
+        accessTokenRef.current = accessToken
+    })
     const viewers = audience.people
 
     // the studio only renders in the browser (after the studio token arrives)
@@ -100,10 +107,12 @@ export function StudioRoom({ auctionUuid, liveLotUuid, onLiveChange, onLeave, ro
     })
     useEffect(() => {
         onLiveChangeRef.current(live)
+        // tell the auction's waiting players right away (the LiveKit webhook may not reach the backend)
+        if (live) announceOnAir(auctionUuid, accessTokenRef.current).catch(() => {})
         // LiveKit's room listing catches up a moment after publishing
         const timer = setTimeout(() => window.dispatchEvent(new Event(ON_AIR_CHANGED_EVENT)), 2000)
         return () => clearTimeout(timer)
-    }, [live])
+    }, [live, auctionUuid])
 
     // closing the tab ends the stream — confirm first
     useEffect(() => {

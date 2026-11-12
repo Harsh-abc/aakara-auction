@@ -277,6 +277,25 @@ export const handleLivekitWebhookService = async ({ body, authHeader }) => {
 };
 
 // =====================================================================
+// ANNOUNCE — the studio says it went on / off air, so waiting players are told
+// at once without relying on the LiveKit webhook (which can't reach a local backend).
+// LiveKit's participant list can lag the join by a moment, so on-air is re-checked briefly.
+// =====================================================================
+
+const ANNOUNCE_CHECKS = 6;
+const ANNOUNCE_INTERVAL_MS = 750;
+
+/** { auctionUuid, onAir } as LiveKit sees it now — the studio's word alone isn't trusted */
+export const announceOnAirService = async ({ auctionUuid }) => {
+    await findStreamAuction(auctionUuid);
+    for (let check = 0; check < ANNOUNCE_CHECKS; check += 1) {
+        if (await hostOnAir(auctionUuid)) return { auctionUuid, onAir: true };
+        if (check < ANNOUNCE_CHECKS - 1) await new Promise((resolve) => setTimeout(resolve, ANNOUNCE_INTERVAL_MS));
+    }
+    return { auctionUuid, onAir: false };
+};
+
+// =====================================================================
 // MODERATION — remove a viewer now, or ban them from rejoining the stream
 // =====================================================================
 
