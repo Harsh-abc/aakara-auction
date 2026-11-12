@@ -13,6 +13,13 @@ import { getProxySettings, setProxyBidding } from "@/services/operations/proxyBi
 import { DASHBOARD_TIME_ZONE, PanelMessage, StatusPill } from "../home/dashboardUi"
 
 const dateFmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: DASHBOARD_TIME_ZONE })
+const dateTimeFmt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: DASHBOARD_TIME_ZONE,
+})
 
 /**
  * Per-auction on / off switch for proxy bids. Off stops bidders leaving or
@@ -58,7 +65,8 @@ export function ProxySwitches({ token, canEdit }: { token: string | null; canEdi
                 <h2 className="text-[15px] font-semibold text-slate-900">Proxy bidding by auction</h2>
                 <p className="text-[12px] text-[#62666F]">
                     When on, verified bidders can leave a proxy bid on any lot that hasn&apos;t opened yet. Once a lot is live it never takes proxy
-                    bids. Turning it off stops new and changed proxies; ones already left still bid when their lot opens.
+                    bids. Turning it off stops new and changed proxies; ones already left still bid when their lot opens. Proxy bidding switches
+                    off automatically 8 hours before an auction starts and can&apos;t be turned back on after that.
                 </p>
             </div>
 
@@ -85,7 +93,10 @@ export function ProxySwitches({ token, canEdit }: { token: string | null; canEdi
                                     </label>
                                     <p className="text-[11px] text-[#8A8D94]">
                                         {AUCTION_STATUS_LABELS[auction.status] ?? auction.status} · starts {dateFmt.format(new Date(auction.startTime))} ·{" "}
-                                        {auction.upcomingLots} lot{auction.upcomingLots === 1 ? "" : "s"} not yet open
+                                        {auction.upcomingLots} lot{auction.upcomingLots === 1 ? "" : "s"} not yet open ·{" "}
+                                        {auction.proxyCutoffPassed
+                                            ? "proxy bids closed (8h before start)"
+                                            : `proxy bids close ${dateTimeFmt.format(new Date(auction.proxyCutoffAt))}`}
                                     </p>
                                 </div>
                                 <StatusPill tone={auction.proxyBiddingEnabled ? "green" : "slate"}>
@@ -97,7 +108,7 @@ export function ProxySwitches({ token, canEdit }: { token: string | null; canEdi
                                     <Switch
                                         id={id}
                                         checked={auction.proxyBiddingEnabled}
-                                        disabled={!canEdit || saving !== null}
+                                        disabled={!canEdit || saving !== null || auction.proxyCutoffPassed}
                                         onCheckedChange={(checked) => toggle(auction, checked)}
                                         aria-label={`Proxy bidding for ${auction.title}`}
                                         className="data-checked:bg-[#7B2D52]"
