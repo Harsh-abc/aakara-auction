@@ -43,7 +43,9 @@ function useMyProxyMax(lot: PublicLot, refreshKey: number) {
     return token && proxy?.lotUuid === lotUuid ? proxy.max : null
 }
 
-// "Place bid" only while the lot is on the block; proxy bids only before it opens.
+// "Place bid" only while the lot is on the block; "Proxy bid" can be used only before it opens (and only if the sale allows proxies).
+// Once the lot is live, a bidder who left a proxy keeps seeing it (outline, under "Place bid") — except in the live room
+// (swapLiveProxy), where the proxy takes the black "Place bid" slot until a live bid goes past it.
 // bidHref: "Place bid" links there (the live room) instead of opening the bid dialog — even on a closed lot;
 // the caller drops it once the whole auction is over
 export function BidButtons({
@@ -51,38 +53,65 @@ export function BidButtons({
     onBid,
     refreshKey = 0,
     bidHref,
+    bidLabel = "Place bid",
+    proxyEnabled = true,
+    swapLiveProxy = false,
     className,
 }: {
     lot: PublicLot
     onBid: OnBid
     refreshKey?: number
     bidHref?: string
+    /** the text of the bidHref link — "Place bid" / "View live lot" / "View upcoming lot" */
+    bidLabel?: string
+    /** the sale's proxy bidding switch (auction.proxyBiddingEnabled) */
+    proxyEnabled?: boolean
+    /** live room: while the bidder's proxy is in play it replaces the black "Place bid" button */
+    swapLiveProxy?: boolean
     className?: string
 }) {
-    const proxyOpen = isUpcomingLot(lot)
+    // proxies can be left / changed only before the lot opens, and only if the sale allows them
+    const proxyOpen = proxyEnabled && isUpcomingLot(lot)
     const proxyMax = useMyProxyMax(lot, refreshKey)
     const proxyAmount = proxyMax ? formatMoney(proxyMax, lot.currency) : null
+    // the lot is on the block and the bidder left a proxy on it
+    const liveProxy = proxyEnabled && lot.status === "ACTIVE" && proxyMax !== null
+    // still in play — same rule as the engine's "proxy:outbid" (out once a live bid goes past the maximum),
+    // so the outbid toast and the buttons switching happen together (currentBid updates over the socket)
+    const proxyInPlay = liveProxy && (lot.currentBid === null || Number(lot.currentBid) <= Number(proxyMax))
+
+    if (swapLiveProxy && proxyInPlay) {
+        return (
+            <div className={cn("flex flex-col gap-2", className)}>
+                <button type="button" onClick={() => onBid("proxy", lot)} className={cn(BUTTON, BUTTON_SOLID)}>
+                    Your proxy bid · {proxyAmount}
+                </button>
+            </div>
+        )
+    }
 
     return (
         <div className={cn("flex flex-col gap-2", className)}>
             {bidHref ? (
                 <Link href={bidHref} className={cn(BUTTON, BUTTON_SOLID)}>
-                    Place bid
+                    {bidLabel}
                 </Link>
             ) : (
                 <button type="button" onClick={() => onBid("bid", lot)} disabled={lot.status !== "ACTIVE"} className={cn(BUTTON, BUTTON_SOLID)}>
                     Place bid
                 </button>
             )}
-            <button
-                type="button"
-                onClick={() => onBid("proxy", lot)}
-                disabled={!proxyOpen}
-                title={proxyOpen ? undefined : "Proxy bids close when the lot opens"}
-                className={cn(BUTTON, BUTTON_OUTLINE)}
-            >
-                {proxyAmount ? `Your proxy bid · ${proxyAmount}` : "Proxy bid"}
-            </button>
+            {(proxyOpen || liveProxy) && (
+                <button
+                    type="button"
+                    onClick={() => onBid("proxy", lot)}
+                    disabled={!proxyOpen}
+                    title={proxyOpen ? undefined : proxyInPlay ? "Proxy bids can't be changed once the lot opens" : "Your proxy bid has been outbid"}
+                    className={cn(BUTTON, BUTTON_OUTLINE)}
+                >
+                    {proxyAmount ? `Your proxy bid · ${proxyAmount}` : "Proxy bid"}
+                </button>
+            )}
         </div>
     )
 }

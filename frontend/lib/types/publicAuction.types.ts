@@ -20,6 +20,8 @@ export interface PublicAuction {
     registrationRequired: boolean;
     registrationStarts: string | null;
     registrationDeadline: string | null;
+    /** false = proxy bidding is switched off for the sale (no "Proxy bid" buttons) */
+    proxyBiddingEnabled: boolean;
     category: { name: string } | null;
     currency: { code: string; symbol: string | null };
     lotCount: number;

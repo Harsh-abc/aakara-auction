@@ -46,7 +46,7 @@ function useMyPaddle(lotUuid: string, status: string) {
     return token && mine?.lotUuid === lotUuid ? mine.paddle : null
 }
 
-/** "You've won this lot" with a looping celebration — only for the buyer; everyone else sees the paddle line. */
+/** "You've won this lot" with a looping celebration — only for the buyer; everyone else sees nothing here (the winning paddle stays private). */
 export function WinnerLine({ lot }: { lot: PublicLotDetail }) {
     const winnerPaddle = lot.status === "SOLD" ? lot.winner?.paddle : null
     const myPaddle = useMyPaddle(lot.uuid, lot.status)
@@ -54,9 +54,8 @@ export function WinnerLine({ lot }: { lot: PublicLotDetail }) {
     if (!winnerPaddle) return null
 
     const isMe = !!myPaddle && String(myPaddle) === String(winnerPaddle)
-    if (!isMe) {
-        return <p className="text-[20px] leading-7 font-medium text-[#0d0d0d]">Winner : Paddle {winnerPaddle}</p>
-    }
+    // the winning paddle is private — everyone else just sees "Bidding closed"
+    if (!isMe) return null
 
     return (
         <div className="relative w-full overflow-hidden border border-[#d0a55d] bg-white px-4 pt-5 pb-4 text-center" role="status">
