@@ -118,7 +118,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                             saleClosed={!countdown}
                             className="order-2 lg:order-1"
                             media={
-                                // the auctioneer's live video (bidders only); the lot on the block / up next until it plays.
+                                // the auctioneer's live video (signed-in users only); the lot on the block / up next until it plays.
                                 // LOT 06 top left, LIVE top right, mute / full screen bottom right
                                 <div className="relative aspect-video overflow-hidden bg-[#ebebeb]">
                                     {isLive(auction) ? <LivePlayer auctionUuid={auction.uuid} fallback={lotPoster} /> : lotPoster}

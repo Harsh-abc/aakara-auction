@@ -32,7 +32,7 @@ export default async function LotPage({ params }: LotPageProps) {
 
     return (
         <div className="min-h-svh bg-white">
-            {/* the live room is for bidders only (and staff) */}
+            {/* the live room is for signed-in users (and staff) */}
             <LiveRoomGate auctionUuid={auctionUuid}>
                 {/* keyed so moving between lots starts from a clean state */}
                 <LotDetailPage key={lotUuid} auctionUuid={auctionUuid} lotUuid={lotUuid} />

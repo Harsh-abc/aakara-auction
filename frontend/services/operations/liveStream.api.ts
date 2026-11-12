@@ -60,7 +60,7 @@ export async function getWatchAccess(auctionUuid: string, accessToken?: string |
     return response.data.data
 }
 
-// watch-only access to the auction's stream — eligible bidders only, and only once the auctioneer is publishing
+// watch-only access to the auction's stream — signed-in users only, and only once the auctioneer is publishing
 export async function getLiveStreamToken(auctionUuid: string, accessToken?: string | null): Promise<LiveStreamAccess> {
     const response = await apiConnector({
         method: "GET",

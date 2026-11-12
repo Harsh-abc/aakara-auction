@@ -15,8 +15,11 @@ import { getLiveStreamToken, type LiveStreamAccess } from "@/services/operations
 // after a dropped connection or a failed token request
 const RETRY_MS = 8_000
 // waiting for the auctioneer to go live — the backend won't hand out a token for an empty room.
-// The socket says "live:on-air" the moment they do (LiveKit webhook); this slow check only covers a missed event
-const OFF_AIR_POLL_MS = 3 * 60_000
+// The socket says "live:on-air" the moment they do (studio / LiveKit webhook); this check only covers a missed event
+const OFF_AIR_POLL_MS = 30_000
+// after an "on air" nudge LiveKit may not list the auctioneer yet — check again quickly a few times
+const NUDGE_RETRY_MS = 2_000
+const NUDGE_RETRIES = 4
 // a tab in the background this long leaves the room; it rejoins when shown again
 const HIDDEN_DISCONNECT_MS = 2 * 60_000
 // the auctioneer left the room (ended the stream) — leave almost at once; the grace covers the first moments after joining
@@ -33,7 +36,7 @@ type LivePlayerProps = {
 type Blocked = { kind: "denied" | "removed" | "elsewhere"; message: string }
 
 /**
- * Watch-only WebRTC player (LiveKit, ~0.3 s behind the room). Eligible bidders (and staff) only.
+ * Watch-only WebRTC player (LiveKit, ~0.3 s behind the room). Signed-in users (and staff) only.
  * Screen share fills the frame with the camera as picture-in-picture; otherwise the camera alone.
  */
 export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps) {
@@ -60,11 +63,14 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
 
     // off air: waiting for the auctioneer — an "on air" nudge fetches a token right away
     const offAirRef = useRef(false)
+    // quick re-checks left after a nudge (a nudge during a token request isn't lost either)
+    const nudgeRetriesRef = useRef(0)
     const waitOffAir = () => {
         offAirRef.current = true
         retryIn(OFF_AIR_POLL_MS)
     }
     const wakeIfOffAir = () => {
+        nudgeRetriesRef.current = NUDGE_RETRIES
         if (!offAirRef.current) return
         offAirRef.current = false
         clearTimeout(retryRef.current)
@@ -103,7 +109,7 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
     useEffect(() => {
         if (hidden || blocked) return
         if (!userUuid || !accessTokenRef.current) {
-            setBlocked({ kind: "denied", message: "Sign in with your bidder account to watch the live auction." })
+            setBlocked({ kind: "denied", message: "Sign in to watch the live auction." })
             return
         }
         let cancelled = false
@@ -112,6 +118,7 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
             .then((data) => {
                 if (cancelled) return
                 offAirRef.current = false
+                nudgeRetriesRef.current = 0
                 setAccess(data)
             })
             .catch((error) => {
@@ -125,8 +132,15 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
                 // not configured / no such sale — stay on the lot image
                 if (status === 503 || status === 404) return
                 // the sale or the auctioneer isn't live yet — wait for the socket to say so
-                if (status === 409) offAirRef.current = true
-                retryIn(status === 409 ? OFF_AIR_POLL_MS : RETRY_MS)
+                if (status === 409) {
+                    offAirRef.current = true
+                    if (nudgeRetriesRef.current > 0) {
+                        nudgeRetriesRef.current -= 1
+                        return retryIn(NUDGE_RETRY_MS)
+                    }
+                    return retryIn(OFF_AIR_POLL_MS)
+                }
+                retryIn(RETRY_MS)
             })
 
         return () => {

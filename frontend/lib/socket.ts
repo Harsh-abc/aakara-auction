@@ -59,6 +59,11 @@ export function getSocket(): Socket {
                 send({ token, visitor: visitorId() })
             },
         })
+        // the token can change while a connection is being made (e.g. it's restored after the socket
+        // started as a guest) — setSocketToken only reconnects an open socket, so catch it here
+        socket.on("connect", () => {
+            if (subjectOf(token) !== connectedAs) socket?.disconnect().connect()
+        })
     }
     return socket
 }
