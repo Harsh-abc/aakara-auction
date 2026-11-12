@@ -64,11 +64,19 @@ export default function FloorBidDialog({
     const exact = floorBidders.find((bidder) => bidder.paddle.toLowerCase() === query) ?? null;
     const proxyCount = floorBidders.filter((bidder) => bidder.proxyMax !== null).length;
     // the whole list once a paddle is picked, otherwise narrowed by what's typed
-    const shown = floorBidders.filter(
-        (bidder) =>
-            (filter === "all" || bidder.proxyMax !== null) &&
-            (exact || !query || bidder.paddle.toLowerCase().startsWith(query) || bidder.name?.toLowerCase().includes(query))
-    );
+    // a proxy whose max is below the amount being bid (or the minimum, whichever is higher) is outbid —
+    // it drops to the end of the list, and re-sorts live as the amount is typed
+    const typed = Number(amount);
+    const bar = Math.max(Number(nextBid) || 0, Number.isFinite(typed) ? typed : 0);
+    const isOutbid = (bidder: (typeof floorBidders)[number]) =>
+        bidder.proxyMax !== null && Number(bidder.proxyMax) < bar;
+    const shown = floorBidders
+        .filter(
+            (bidder) =>
+                (filter === "all" || bidder.proxyMax !== null) &&
+                (exact || !query || bidder.paddle.toLowerCase().startsWith(query) || bidder.name?.toLowerCase().includes(query))
+        )
+        .sort((a, b) => Number(isOutbid(a)) - Number(isOutbid(b)));
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
@@ -140,7 +148,8 @@ export default function FloorBidDialog({
                             <div className="grid max-h-60 grid-cols-2 gap-2 overflow-y-auto pr-1">
                                 {shown.map((bidder) => {
                                     const selected = exact?.paddle === bidder.paddle;
-                                    const proxy = bidder.proxyMax !== null;
+                                    const outbid = isOutbid(bidder);
+                                    const proxy = bidder.proxyMax !== null && !outbid;
                                     const leading = Boolean(leaderUuid && bidder.uuid === leaderUuid);
                                     return (
                                         <button
@@ -173,6 +182,11 @@ export default function FloorBidDialog({
                                             {proxy && (
                                                 <span className="mt-0.5 truncate text-[10px] font-medium text-[#7b365d]">
                                                     Proxy up to {money(bidder.proxyMax, currency)}
+                                                </span>
+                                            )}
+                                            {outbid && (
+                                                <span className="mt-0.5 truncate text-[10px] font-medium text-slate-400">
+                                                    Proxy {money(bidder.proxyMax, currency)} · outbid
                                                 </span>
                                             )}
                                         </button>

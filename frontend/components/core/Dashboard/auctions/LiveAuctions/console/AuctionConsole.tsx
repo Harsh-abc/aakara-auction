@@ -110,6 +110,28 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
     const lot = data?.lot ?? null;
     const position = data?.position ?? null;
 
+    // Tell the auctioneer once the bidding passes every proxy on the lot — none of them will bid at the hammer.
+    // Fires on the change (a bid takes the ask past the top proxy), not for a lot that opened that way.
+    const proxyCount = data?.proxyBook.count ?? 0;
+    const topProxy = data?.proxyBook.topMax ?? null;
+    const allProxiesOutbid = Boolean(
+        lot && position && proxyCount > 0 && topProxy !== null && Number(topProxy) < Number(position.nextBid)
+    );
+    const proxyWatch = useRef<{ lotUuid: string | null; outbid: boolean }>({ lotUuid: null, outbid: false });
+    useEffect(() => {
+        const lotUuid = lot?.uuid ?? null;
+        const prev = proxyWatch.current;
+        proxyWatch.current = { lotUuid, outbid: allProxiesOutbid };
+        if (!lot || prev.lotUuid !== lotUuid || prev.outbid || !allProxiesOutbid) return;
+        toast(
+            (proxyCount === 1
+                ? `The proxy bid on Lot #${lot.itemNumber} is outbid`
+                : `All ${proxyCount} proxy bids on Lot #${lot.itemNumber} are outbid`) +
+                (topProxy ? ` — the top proxy was ${money(topProxy, lot.currency.code)}` : ""),
+            { icon: "🤖", id: `proxies-outbid-${lotUuid}`, duration: 6000 }
+        );
+    }, [lot, allProxiesOutbid, proxyCount, topProxy]);
+
     const submitFloorBid = async (paddleNumber: string, amount: number) => {
         if (!lot) return;
         setBusy("floor");
