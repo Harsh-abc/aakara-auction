@@ -413,7 +413,8 @@ function Stage({
     return (
         <div
             ref={boxRef}
-            onDoubleClick={main && !inPipWindow ? toggleFullscreen : undefined}
+            // double-click the video for full screen — not quick clicks on the buttons (mute, unmute…)
+            onDoubleClick={main && !inPipWindow ? (event) => !(event.target as HTMLElement).closest("button") && toggleFullscreen() : undefined}
             className={cn("absolute inset-0", isFull || inPipWindow ? "bg-black" : "bg-[#ebebeb]")}
         >
             {main ? (
