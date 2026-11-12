@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ImageOff, Megaphone } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuctionViewers } from "@/hooks/useAuctionViewers";
 import { useLotCallout } from "@/hooks/useLotCallout";
 import { cn } from "@/lib/utils";
 
@@ -30,16 +29,12 @@ import { useLotPage } from "./lot/useLotPage";
 const ROOM_GRID = "mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-8";
 const LOT_GRID = "grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_320px] md:gap-9";
 
-// "1,121 watching"
-const VIEWER_COUNT = new Intl.NumberFormat("en-IN");
-
-// white boxed labels over the live video: "LOT 06", "1,164 WATCHING"
+// white boxed label over the live video: "LOT 06"
 const OVERLAY_TAG = "inline-flex h-5 items-center border border-[#cecece] bg-white px-2 text-[10px] leading-3 tracking-[0.12em] text-[#0d0d0d] uppercase";
 
 // the live auction room, focused on one lot
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid);
-    const viewers = useAuctionViewers(auctionUuid);
     const callout = useLotCallout(auctionUuid);
     const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
     const router = useRouter();
@@ -124,7 +119,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                             className="order-2 lg:order-1"
                             media={
                                 // the auctioneer's live video (bidders only); the lot on the block / up next until it plays.
-                                // LOT 06 · watching top left, LIVE top right, mute / full screen bottom right
+                                // LOT 06 top left, LIVE top right, mute / full screen bottom right
                                 <div className="relative aspect-video overflow-hidden bg-[#ebebeb]">
                                     {isLive(auction) ? <LivePlayer auctionUuid={auction.uuid} fallback={lotPoster} /> : lotPoster}
 
