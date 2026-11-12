@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 import type { PublicLot } from "@/lib/types/publicAuction.types";
 
@@ -10,12 +12,14 @@ import { isClosedLot, lotNo, upNextLot } from "./lotPageDisplay";
 type OrderOfSaleProps = {
   lots: PublicLot[];
   saleClosed: boolean;
+  /** shown above the list, inside the panel (the live video) — stays put while the list scrolls */
+  media?: ReactNode;
   className?: string;
 };
 
 // the lots still to sell, in order — hammered lots drop off, so the lot on the block rises to the top.
 // a running order to follow, not a menu: the rows don't link anywhere
-export function OrderOfSale({ lots, saleClosed, className }: OrderOfSaleProps) {
+export function OrderOfSale({ lots, saleClosed, media, className }: OrderOfSaleProps) {
   const upNext = upNextLot(lots);
   const remaining = lots.filter((lot) => !isClosedLot(lot));
   const stillToCome = remaining.filter((lot) => lot.status !== "ACTIVE").length;
@@ -27,6 +31,8 @@ export function OrderOfSale({ lots, saleClosed, className }: OrderOfSaleProps) {
     <div className={cn("lg:relative", className)}>
       <div className="lg:absolute lg:inset-0">
         <aside className="flex flex-col border border-[#cecece] bg-white lg:sticky lg:top-25 lg:max-h-[min(100%,calc(100dvh-124px))]">
+          {media && <div className="shrink-0 border-b border-[#cecece] p-2.5">{media}</div>}
+
           <div className="flex h-11.25 shrink-0 items-center justify-between border-b border-[#cecece] px-4">
             <h2 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">
               Order of sale
