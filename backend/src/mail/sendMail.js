@@ -1,4 +1,5 @@
 import mailer from "../config/mail.js";
+import { LOGO_FILENAME, LOGO_INLINE_IMAGE } from "./logo.js";
 
 // "Name <addr>" with the address from MAILGUN_FROM (which may be "Akara <addr>" or just "addr")
 const withSenderName = (from, name) => {
@@ -19,7 +20,12 @@ const sendEmail = async (to, subject, html, cc = process.env.MAILGUN_CC, options
         if (cc) mailOptions.cc = cc;
         if (options.replyTo) mailOptions.replyTo = options.replyTo;
         if (options.text) mailOptions.text = options.text;
-        if (options.inline) mailOptions.inline = options.inline;
+        const inline = [...(options.inline ?? [])];
+        // every template shows the logo as cid:aakara_white.png — attach it once if the html uses it
+        if (html?.includes(`cid:${LOGO_FILENAME}`) && !inline.some((image) => image.filename === LOGO_FILENAME)) {
+            inline.push(LOGO_INLINE_IMAGE);
+        }
+        if (inline.length) mailOptions.inline = inline;
         const info = await mailer.sendMail(mailOptions);
         console.log("Email sent:", info.messageId);
         return info;
