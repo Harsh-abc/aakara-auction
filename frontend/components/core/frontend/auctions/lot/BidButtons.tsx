@@ -74,8 +74,9 @@ export function BidButtons({
     const proxyOpen = proxyEnabled && isUpcomingLot(lot)
     const proxyMax = useMyProxyMax(lot, refreshKey)
     const proxyAmount = proxyMax ? formatMoney(proxyMax, lot.currency) : null
-    // the lot is on the block and the bidder left a proxy on it
-    const liveProxy = proxyEnabled && lot.status === "ACTIVE" && proxyMax !== null
+    // the lot is on the block and the bidder left a proxy on it — shown even if the sale's proxy switch
+    // was turned off since: proxies already left still bid (see the Proxy Bids page)
+    const liveProxy = lot.status === "ACTIVE" && proxyMax !== null
     // still in play — same rule as the engine's "proxy:outbid" (out once a live bid goes past the maximum),
     // so the outbid toast and the buttons switching happen together (currentBid updates over the socket)
     const proxyInPlay = liveProxy && (lot.currentBid === null || Number(lot.currentBid) <= Number(proxyMax))
