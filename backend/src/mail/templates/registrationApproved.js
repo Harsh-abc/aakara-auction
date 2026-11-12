@@ -32,7 +32,7 @@ export const registrationApprovedTemplate = ({ userName = "", siteUrl = "" }) =>
                                     your bidding access is now enabled.
                                 </p>
                                 <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    You can now log in to your Akara Auctions account and participate in the sale.
+                                    You can now log in to your AKARA AUCTIONS account and participate in the sale.
                                 </p>
                             </td>
                         </tr>
@@ -87,7 +87,7 @@ export const registrationApprovedText = ({ userName = "", siteUrl = "" }) => {
         "",
         "We are pleased to confirm that your KYC documents have been successfully verified and your bidding access is now enabled.",
         "",
-        `You can now log in to your Akara Auctions account and participate in the sale: ${loginUrl(site)}`,
+        `You can now log in to your AKARA AUCTIONS account and participate in the sale: ${loginUrl(site)}`,
         "",
         `Before placing your bids, please review the auction details, Terms and Conditions of Sale (${site}/terms) and bidding guidelines.`,
         "",

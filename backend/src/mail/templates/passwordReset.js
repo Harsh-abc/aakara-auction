@@ -45,7 +45,7 @@ export const passwordResetTemplate = ({ userName = "", otp, expiresInMinutes }) 
                             <td align="center" style="padding: 16px 48px 0 48px;">
                                 <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
                                     ${userName ? `Hello ${escapeHtml(userName)},` : "Hello,"}<br/>
-                                    We received a request to reset the password for your Akara account.
+                                    We received a request to reset the password for your AKARA account.
                                     Enter this code on the reset password page to choose a new one.
                                 </p>
                             </td>
@@ -85,10 +85,10 @@ export const passwordResetTemplate = ({ userName = "", otp, expiresInMinutes }) 
                         <tr>
                             <td align="center" style="padding: 24px 40px 40px 40px;">
                                 <p style="margin:0 0 6px 0; font-size: 11px; letter-spacing: 1.5px; color:#999999; text-transform: uppercase;">
-                                    Akara
+                                    AKARA
                                 </p>
                                 <p style="margin:0; font-size: 11px; color:#bbbbbb;">
-                                    © ${new Date().getFullYear()} Akara. All rights reserved.
+                                    © ${new Date().getFullYear()} AKARA. All rights reserved.
                                 </p>
                             </td>
                         </tr>

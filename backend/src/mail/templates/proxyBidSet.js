@@ -73,7 +73,7 @@ export const proxyBidSetTemplate = ({ siteUrl = "", ...details }) => {
                                     How Proxy Bidding Works
                                 </p>
                                 ${paragraph("The system will automatically increase your bid when required to maintain your position, following the applicable bidding increments and without exceeding your maximum proxy bid.")}
-                                ${paragraph(`You can ${link(`${site}/registration`, "log in to your Akara Auction account")} to view your proxy bid details and monitor bidding activity.`)}
+                                ${paragraph(`You can ${link(`${site}/registration`, "log in to your AKARA AUCTIONS account")} to view your proxy bid details and monitor bidding activity.`)}
                                 ${paragraph("Please note that your maximum proxy bid is confidential and will not be disclosed to other bidders.")}
                                 ${paragraph(`<span style="color:#1a1a1a;">Proxy bidding will close at 12 PM IST (Indian Standard Time) on the day of the sale.</span>`)}
                                 ${paragraph(`Thank you for your participation. For any assistance, please contact us at ${link(`mailto:${BIDS_EMAIL}`, BIDS_EMAIL)}.`, "0")}
@@ -99,7 +99,7 @@ export const proxyBidSetText = ({ siteUrl = "", ...details }) => {
         "How Proxy Bidding Works",
         "The system will automatically increase your bid when required to maintain your position, following the applicable bidding increments and without exceeding your maximum proxy bid.",
         "",
-        `You can log in to your Akara Auction account to view your proxy bid details and monitor bidding activity: ${site}/registration`,
+        `You can log in to your AKARA AUCTIONS account to view your proxy bid details and monitor bidding activity: ${site}/registration`,
         "",
         "Please note that your maximum proxy bid is confidential and will not be disclosed to other bidders.",
         "",

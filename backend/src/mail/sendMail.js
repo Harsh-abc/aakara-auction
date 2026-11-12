@@ -8,11 +8,14 @@ const withSenderName = (from, name) => {
     return `${name} <${address}>`;
 };
 
+// every email goes out as "AKARA AUCTIONS" unless a caller overrides fromName
+const DEFAULT_FROM_NAME = "AKARA AUCTIONS";
+
 // options: { fromName, fromAddress (instead of MAILGUN_FROM), replyTo, text, inline }
 const sendEmail = async (to, subject, html, cc = process.env.MAILGUN_CC, options = {}) => {
     try {
         const mailOptions = {
-            from: withSenderName(options.fromAddress || process.env.MAILGUN_FROM, options.fromName),
+            from: withSenderName(options.fromAddress || process.env.MAILGUN_FROM, options.fromName || DEFAULT_FROM_NAME),
             to,
             subject,
             html,

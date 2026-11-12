@@ -31,7 +31,7 @@ const PRIVACY_POLICY_URL = process.env.AKARA_PRIVACY_POLICY_URL ?? `${WEBSITE_UR
 const KYC_DOCUMENTS = ["Aadhaar Card (only for Indian Citizens)", "PAN Card", "Passport"];
 
 export const REGISTRATION_RECEIVED_SUBJECT = "The Fine Art Sale: December 2026 | Registration Received";
-const PREHEADER = "Thank you for registering with Akara. Our team will review your application and be in touch shortly.";
+const PREHEADER = "Thank you for registering with AKARA. Our team will review your application and be in touch shortly.";
 
 export const siteBase = (siteUrl) => (siteUrl || WEBSITE_URL).replace(/\/+$/, "");
 
@@ -85,7 +85,7 @@ export const emailLayout = ({
                         <tr>
                             <td style="padding:0; background-color:#2a1d17;">
                                 <a href="${escapeHtml(site)}" style="text-decoration:none;">
-                                    <img src="${escapeHtml(bannerUrl)}" width="600" alt="Akara — Inaugural Fine Art Auction. Registrations now open." style="display:block; width:100%; max-width:600px; height:auto; border:0; color:#ffffff; font-size:16px;" />
+                                    <img src="${escapeHtml(bannerUrl)}" width="600" alt="AKARA — Inaugural Fine Art Auction. Registrations now open." style="display:block; width:100%; max-width:600px; height:auto; border:0; color:#ffffff; font-size:16px;" />
                                 </a>
                             </td>
                         </tr>` : ""}
@@ -130,7 +130,7 @@ export const emailLayout = ({
                         <tr>
                             <td align="center" style="padding: 8px 40px 40px 40px;">
                                 <p style="margin:0 0 6px 0; font-size: 11px; letter-spacing: 1.5px; color:#999999; text-transform: uppercase;">
-                                    Akara Auctions
+                                    AKARA AUCTIONS
                                 </p>
                                 <p style="margin:0 0 4px 0; font-size: 11px; line-height: 18px; color:#999999;">
                                     <a href="${escapeHtml(GALLERY_MAP_URL)}" style="color:#999999; text-decoration:none;">${GALLERY_ADDRESS}</a>
@@ -142,14 +142,14 @@ export const emailLayout = ({
                                     ${socialLinks}
                                 </p>
                                 ${registrantNotice ? `<p style="margin:0 0 12px 0; font-size: 11px; line-height: 18px; color:#bbbbbb;">
-                                    You are receiving this email because you registered on the Akara Auction portal.
+                                    You are receiving this email because you registered on the AKARA AUCTIONS portal.
                                     If you did not initiate this registration, please contact us at ${link(`mailto:${AUCTION_EMAIL}`, AUCTION_EMAIL)}.
                                 </p>` : ""}
                                 <p style="margin:0 0 6px 0; font-size: 11px; line-height: 18px; color:#bbbbbb;">
                                     ${legalLinks}
                                 </p>
                                 <p style="margin:0; font-size: 11px; color:#bbbbbb;">
-                                    © ${new Date().getFullYear()} Akara. All rights reserved.
+                                    © ${new Date().getFullYear()} AKARA. All rights reserved.
                                 </p>
                             </td>
                         </tr>
@@ -170,9 +170,9 @@ export const textFooter = (site, registrantNotice = true) => [
     `${PHONE} | ${AUCTION_EMAIL}`,
     [WEBSITE_URL, INSTAGRAM_URL].filter(Boolean).join(" | "),
     "",
-    ...(registrantNotice ? [`You are receiving this email because you registered on the Akara Auction portal. If you did not initiate this registration, please contact us at ${AUCTION_EMAIL}.`] : []),
+    ...(registrantNotice ? [`You are receiving this email because you registered on the AKARA AUCTIONS portal. If you did not initiate this registration, please contact us at ${AUCTION_EMAIL}.`] : []),
     [`Terms of Sale: ${site}/terms`, PRIVACY_POLICY_URL && `Privacy Policy: ${PRIVACY_POLICY_URL}`].filter(Boolean).join(" | "),
-    `© ${new Date().getFullYear()} Akara. All rights reserved.`,
+    `© ${new Date().getFullYear()} AKARA. All rights reserved.`,
 ];
 
 // ── To the user ──────────────────────────────────────
@@ -284,10 +284,10 @@ export const registrationAdminTemplate = ({ siteUrl = "", ...registrant }) => {
                         <tr>
                             <td style="padding: 32px 48px 0 48px;">
                                 <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">
-                                    Dear Akara Team,
+                                    Dear AKARA Team,
                                 </p>
                                 <p style="margin:0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    A new collector has registered on the Akara Auction portal for our upcoming auction.
+                                    A new collector has registered on the AKARA AUCTIONS portal for our upcoming auction.
                                     Their details are below.
                                 </p>
                             </td>
@@ -321,9 +321,9 @@ export const registrationAdminTemplate = ({ siteUrl = "", ...registrant }) => {
 };
 
 export const registrationAdminText = ({ siteUrl = "", ...registrant }) => [
-    "Dear Akara Team,",
+    "Dear AKARA Team,",
     "",
-    "A new collector has registered on the Akara Auction portal for our upcoming auction. Their details are below.",
+    "A new collector has registered on the AKARA AUCTIONS portal for our upcoming auction. Their details are below.",
     "",
     ...registrantRows(registrant).map(([label, value]) => `${label}: ${value}`),
     "",

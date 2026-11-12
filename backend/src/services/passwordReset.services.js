@@ -104,7 +104,7 @@ export const requestPasswordResetService = async ({ email, ip }) => {
         // cc: null — the default MAILGUN_CC must never receive someone's reset code
         await sendEmail(
             user.email,
-            'Your Akara password reset code',
+            'Your AKARA password reset code',
             passwordResetTemplate({
                 userName: user.profile?.firstName || user.username,
                 otp,

@@ -7,8 +7,8 @@ import {
     textFooter,
 } from "./registrationReceived.js";
 
-export const TEAM_MEMBER_ADDED_SUBJECT = "Welcome to the Akara Team | Your Dashboard Access";
-const PREHEADER = "You have been added to the Akara Auctions team. Your login details are inside.";
+export const TEAM_MEMBER_ADDED_SUBJECT = "Welcome to the AKARA Team | Your Dashboard Access";
+const PREHEADER = "You have been added to the AKARA AUCTIONS team. Your login details are inside.";
 
 // what each dashboard role is for, in the words the team uses (frontend/lib/constants/roles.ts)
 const ROLE_DETAILS = {
@@ -90,7 +90,7 @@ export const teamMemberAddedTemplate = ({ userName = "", email, password, roleNa
                                     ${greeting}
                                 </p>
                                 <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    You have been added to the AKARA Auctions team as
+                                    You have been added to the AKARA AUCTIONS team as
                                     <span style="color:#1a1a1a;">${escapeHtml(label)}</span>.
                                     ${summary ? escapeHtml(summary) : ""}
                                 </p>
@@ -124,7 +124,7 @@ export const teamMemberAddedTemplate = ({ userName = "", email, password, roleNa
     return emailLayout({
         site,
         heading: "Welcome to the Team",
-        eyebrow: "Akara Auctions &middot; Dashboard Access",
+        eyebrow: "AKARA AUCTIONS &middot; Dashboard Access",
         preheader: PREHEADER,
         content,
         registrantNotice: false,
@@ -139,7 +139,7 @@ export const teamMemberAddedText = ({ userName = "", email, password, roleName, 
     return [
         userName ? `Dear ${userName},` : "Hello,",
         "",
-        `You have been added to the AKARA Auctions team as ${label}.${summary ? ` ${summary}` : ""}`,
+        `You have been added to the AKARA AUCTIONS team as ${label}.${summary ? ` ${summary}` : ""}`,
         "",
         "Your account is ready. Use the details below to log in to the dashboard.",
         "",

@@ -78,10 +78,10 @@ export const kycDocumentsRequestedTemplate = ({ userName = "", documents, note, 
                         <tr>
                             <td align="center" style="padding: 24px 40px 40px 40px;">
                                 <p style="margin:0 0 6px 0; font-size: 11px; letter-spacing: 1.5px; color:#999999; text-transform: uppercase;">
-                                    Akara
+                                    AKARA
                                 </p>
                                 <p style="margin:0; font-size: 11px; color:#bbbbbb;">
-                                    © ${new Date().getFullYear()} Akara. All rights reserved.
+                                    © ${new Date().getFullYear()} AKARA. All rights reserved.
                                 </p>
                             </td>
                         </tr>
