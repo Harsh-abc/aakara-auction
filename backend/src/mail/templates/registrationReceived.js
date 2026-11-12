@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { logoHeaderRow } from "../logo.js";
 
 // the banner travels inside the email (cid:), so it shows without being hosted anywhere —
 // a URL on FRONTEND_URL breaks on localhost and before the frontend is deployed
@@ -41,7 +42,7 @@ const formatIst = (date) =>
     new Date(date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }) + " IST";
 
 // banner, heading and footer shared by the Akara emails (also teamMemberAdded.js); `content` is the body rows.
-// banner: false swaps the auction banner for a plain AKARA wordmark (no inline image to attach)
+// every email opens with the white logo (logo.js); banner: false leaves out the auction banner below it
 export const emailLayout = ({
     site,
     heading,
@@ -78,6 +79,8 @@ export const emailLayout = ({
                 <td align="center">
                     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%; max-width:600px; background-color:#ffffff; border: 1px solid #e5e4e0;">
 
+                        ${logoHeaderRow(site)}
+
                         ${banner ? `<!-- Banner -->
                         <tr>
                             <td style="padding:0; background-color:#2a1d17;">
@@ -85,12 +88,7 @@ export const emailLayout = ({
                                     <img src="${escapeHtml(bannerUrl)}" width="600" alt="Akara — Inaugural Fine Art Auction. Registrations now open." style="display:block; width:100%; max-width:600px; height:auto; border:0; color:#ffffff; font-size:16px;" />
                                 </a>
                             </td>
-                        </tr>` : `<!-- Wordmark -->
-                        <tr>
-                            <td align="center" style="padding: 40px 40px 0 40px;">
-                                <a href="${escapeHtml(site)}" style="text-decoration:none; font-size: 26px; letter-spacing: 8px; color:#1a1a1a;">AKARA</a>
-                            </td>
-                        </tr>`}
+                        </tr>` : ""}
 
                         <!-- Heading -->
                         <tr>

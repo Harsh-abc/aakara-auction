@@ -1,3 +1,5 @@
+import { logoHeaderRow } from "../logo.js";
+
 const escapeHtml = (value = "") =>
     String(value)
         .replace(/&/g, "&amp;")
@@ -24,16 +26,11 @@ export const kycDocumentsRequestedTemplate = ({ userName = "", documents, note, 
                 <td align="center">
                     <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border: 1px solid #e5e4e0;">
 
-                        <!-- Logo -->
-                        <tr>
-                            <td align="center" style="padding: 48px 40px 24px 40px;">
-                                <img src="https://akaraart.com/img/logo.png" width="180" height="48" alt="Akara" style="display:block;" />
-                            </td>
-                        </tr>
+                        ${logoHeaderRow()}
 
                         <!-- Thin gold divider -->
                         <tr>
-                            <td style="padding: 0 60px;">
+                            <td style="padding: 40px 60px 0 60px;">
                                 <div style="border-top: 1px solid #c9a44c; width: 40px; margin: 0 auto;"></div>
                             </td>
                         </tr>
