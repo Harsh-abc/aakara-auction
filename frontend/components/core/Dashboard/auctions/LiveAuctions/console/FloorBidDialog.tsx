@@ -50,7 +50,9 @@ export default function FloorBidDialog({
 }: FloorBidDialogProps) {
     const [paddle, setPaddle] = useState("");
     const [amount, setAmount] = useState(pickedAmount);
-    const [filter, setFilter] = useState<Filter>("all");
+    // open on the proxy holders, unless nobody holds one on this lot
+    const defaultFilter = (): Filter => (floorBidders.some((bidder) => bidder.proxyMax !== null) ? "proxy" : "all");
+    const [filter, setFilter] = useState<Filter>(defaultFilter);
     const [error, setError] = useState<string | null>(null);
 
     // fresh form each time it opens, at the amount picked on the console
@@ -60,7 +62,7 @@ export default function FloorBidDialog({
         if (open) {
             setPaddle("");
             setAmount(pickedAmount);
-            setFilter("all");
+            setFilter(defaultFilter());
             setError(null);
         }
     }
@@ -220,7 +222,9 @@ export default function FloorBidDialog({
                             </div>
                         ) : (
                             <p className="rounded-md bg-slate-50 px-3 py-4 text-center text-[12px] text-slate-500">
-                                {query
+                                {query && filter === "proxy"
+                                    ? "No proxy holder matches that paddle or name — check the All tab"
+                                    : query
                                     ? "No verified bidder on this lot matches that paddle or name"
                                     : filter === "proxy"
                                       ? "No bidder holds a proxy on this lot"
