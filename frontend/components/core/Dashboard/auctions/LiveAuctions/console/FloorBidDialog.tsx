@@ -6,10 +6,10 @@ import { Bot, Check, Hand, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { AuctionConsole } from "@/lib/types/bidding.types";
+import type { AuctionConsole, ConsolePosition } from "@/lib/types/bidding.types";
 import { cn } from "@/lib/utils";
 
-import { money } from "./consoleDisplay";
+import { money, paddleLabel, sourceBadge } from "./consoleDisplay";
 
 interface FloorBidDialogProps {
     open: boolean;
@@ -21,6 +21,9 @@ interface FloorBidDialogProps {
     /** smallest valid bid right now */
     nextBid: string;
     floorBidders: AuctionConsole["floorBidders"];
+    /** the highest bid on the lot right now, null before the first bid */
+    currentBid: ConsolePosition["currentBid"];
+    leader: ConsolePosition["leader"];
     /** the bidder leading the lot, marked in the list */
     leaderUuid: string | null;
     busy: boolean;
@@ -39,13 +42,17 @@ export default function FloorBidDialog({
     amount: pickedAmount,
     nextBid,
     floorBidders,
+    currentBid,
+    leader,
     leaderUuid,
     busy,
     onSubmit,
 }: FloorBidDialogProps) {
     const [paddle, setPaddle] = useState("");
     const [amount, setAmount] = useState(pickedAmount);
-    const [filter, setFilter] = useState<Filter>("all");
+    // open on the proxy holders, unless nobody holds one on this lot
+    const defaultFilter = (): Filter => (floorBidders.some((bidder) => bidder.proxyMax !== null) ? "proxy" : "all");
+    const [filter, setFilter] = useState<Filter>(defaultFilter);
     const [error, setError] = useState<string | null>(null);
 
     // fresh form each time it opens, at the amount picked on the console
@@ -55,7 +62,7 @@ export default function FloorBidDialog({
         if (open) {
             setPaddle("");
             setAmount(pickedAmount);
-            setFilter("all");
+            setFilter(defaultFilter());
             setError(null);
         }
     }
@@ -101,6 +108,26 @@ export default function FloorBidDialog({
                             Pick the paddle you&apos;re bidding for — in the room, on the phone or online. The bid goes on the lot at once.
                         </DialogDescription>
                     </DialogHeader>
+
+                    <div className="flex items-center justify-between gap-3 rounded-[8px] bg-[#F4F4F4] px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-medium text-slate-500">
+                                {currentBid !== null ? "Current bid" : "Opening ask"}
+                            </p>
+                            <p className="text-[20px] leading-tight font-bold text-[#414141] tabular-nums">
+                                {money(currentBid ?? nextBid, currency)}
+                            </p>
+                        </div>
+                        {leader ? (
+                            <span className="truncate rounded-full border border-[#22C55E] bg-white px-3 py-0.5 text-[12px] font-medium text-[#16A34A]">
+                                Leading: {paddleLabel(leader)} ({sourceBadge(leader.source).label})
+                            </span>
+                        ) : (
+                            <span className="rounded-full border border-slate-300 bg-white px-3 py-0.5 text-[12px] text-slate-500">
+                                No bids yet
+                            </span>
+                        )}
+                    </div>
 
                     <div className="grid gap-2">
                         <div className="flex items-center justify-between gap-2">
@@ -195,7 +222,9 @@ export default function FloorBidDialog({
                             </div>
                         ) : (
                             <p className="rounded-md bg-slate-50 px-3 py-4 text-center text-[12px] text-slate-500">
-                                {query
+                                {query && filter === "proxy"
+                                    ? "No proxy holder matches that paddle or name — check the All tab"
+                                    : query
                                     ? "No verified bidder on this lot matches that paddle or name"
                                     : filter === "proxy"
                                       ? "No bidder holds a proxy on this lot"
