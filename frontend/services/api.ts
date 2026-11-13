@@ -101,6 +101,7 @@ export const liveStreamEndPoints = {
     WATCH_ACCESS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/access`,
     HOST_TOKEN_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/host-token`,
     ON_AIR_API: `${BASE_URL}/api/live/on-air`,
+    ANNOUNCE_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/announce`,
     REMOVE_VIEWER_API: (auctionUuid: string, identity: string) =>
         `${BASE_URL}/api/live/${auctionUuid}/viewers/${encodeURIComponent(identity)}/remove`,
     BANS_API: (auctionUuid: string) => `${BASE_URL}/api/live/${auctionUuid}/bans`,

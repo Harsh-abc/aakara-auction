@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ImageOff, Megaphone } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuctionViewers } from "@/hooks/useAuctionViewers";
 import { useLotCallout } from "@/hooks/useLotCallout";
 import { cn } from "@/lib/utils";
 
@@ -26,20 +25,16 @@ import { lotRange, lotTag, roomLot } from "./lot/lotPageDisplay";
 import { useBidAction } from "./lot/useBidAction";
 import { useLotPage } from "./lot/useLotPage";
 
-// Figma "Live Auction": 300px order of sale | lot image + 320px summary, bid ladder under them
+// Figma "Live Auction": 300px live video over the order of sale | lot image + 320px summary, bid ladder under them
 const ROOM_GRID = "mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-8";
 const LOT_GRID = "grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_320px] md:gap-9";
 
-// "1,121 watching"
-const VIEWER_COUNT = new Intl.NumberFormat("en-IN");
-
-// white boxed labels over the live video: "LOT 06", "1,164 WATCHING"
-const OVERLAY_TAG = "inline-flex h-7 items-center border border-[#cecece] bg-white px-3 text-[12px] leading-4 tracking-[0.12em] text-[#0d0d0d] uppercase";
+// white boxed label over the live video: "LOT 06"
+const OVERLAY_TAG = "inline-flex h-5 items-center border border-[#cecece] bg-white px-2 text-[10px] leading-3 tracking-[0.12em] text-[#0d0d0d] uppercase";
 
 // the live auction room, focused on one lot
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
     const state = useLotPage(auctionUuid, lotUuid);
-    const viewers = useAuctionViewers(auctionUuid);
     const callout = useLotCallout(auctionUuid);
     const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
     const router = useRouter();
@@ -118,29 +113,34 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                     </header>
 
                     <div className={ROOM_GRID}>
-                        <OrderOfSale lots={lots} saleClosed={!countdown} className="order-2 lg:order-1" />
+                        <OrderOfSale
+                            lots={lots}
+                            saleClosed={!countdown}
+                            className="order-2 lg:order-1"
+                            media={
+                                // the auctioneer's live video (signed-in users only); the lot on the block / up next until it plays.
+                                // LOT 06 top left, LIVE top right, mute / full screen bottom right
+                                <div className="relative aspect-video overflow-hidden bg-[#ebebeb]">
+                                    {isLive(auction) ? <LivePlayer auctionUuid={auction.uuid} fallback={lotPoster} /> : lotPoster}
+
+                                    <div className="pointer-events-none absolute top-2 left-2 z-2 flex items-center gap-1.5">
+                                        <span className={OVERLAY_TAG}>{lotTag(lot)}</span>
+                                    </div>
+                                    <div className="pointer-events-none absolute top-2 right-2 z-2">
+                                        {lot.status === "ACTIVE" ? (
+                                            <Tag tone="live" label="Live" className="h-5 gap-1 px-2 text-[10px] tracking-[0.12em]" />
+                                        ) : (
+                                            <LotStatusTag lot={lot} className="h-5 gap-1 bg-white px-2 text-[10px] tracking-[0.12em]" />
+                                        )}
+                                    </div>
+                                </div>
+                            }
+                        />
 
                         <div className="order-1 min-w-0 lg:order-2">
                             <div className={LOT_GRID}>
-                                {/* the auctioneer's live video (bidders only); the lot on the block / up next until it plays.
-                                    LIVE · LOT 06 top left, how many are watching top right, mute bottom right */}
-                                <div className="relative aspect-square overflow-hidden border border-[#cecece] bg-[#ebebeb]">
-                                    {isLive(auction) ? <LivePlayer auctionUuid={auction.uuid} fallback={lotPoster} /> : lotPoster}
-
-                                    <div className="pointer-events-none absolute top-3.5 left-3.5 z-2 flex items-center gap-2.5">
-                                        {lot.status === "ACTIVE" ? (
-                                            <Tag tone="live" label="Live" className="h-7 gap-1.5 px-3 text-[12px] tracking-[0.12em]" />
-                                        ) : (
-                                            <LotStatusTag lot={lot} className="h-7 gap-1.5 bg-white px-3 text-[12px] tracking-[0.12em]" />
-                                        )}
-                                        <span className={OVERLAY_TAG}>{lotTag(lot)}</span>
-                                    </div>
-                                    {viewers !== null && (
-                                        <span className={cn(OVERLAY_TAG, "pointer-events-none absolute top-3.5 right-3.5 z-2 tabular-nums")}>
-                                            {VIEWER_COUNT.format(viewers)} watching
-                                        </span>
-                                    )}
-                                </div>
+                                {/* the lot on view */}
+                                <div className="relative aspect-square overflow-hidden bg-white">{lotPoster}</div>
                                 <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} proxyEnabled={auction.proxyBiddingEnabled} />
                             </div>
 

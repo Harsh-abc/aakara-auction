@@ -1,7 +1,7 @@
 import { apiConnector } from "../apiConnector"
 import { liveStreamEndPoints } from "../api"
 
-const { VIEWER_TOKEN_API, WATCH_ACCESS_API, HOST_TOKEN_API, ON_AIR_API, REMOVE_VIEWER_API, BANS_API, UNBAN_API, WATCHERS_API } = liveStreamEndPoints
+const { VIEWER_TOKEN_API, WATCH_ACCESS_API, HOST_TOKEN_API, ON_AIR_API, ANNOUNCE_API, REMOVE_VIEWER_API, BANS_API, UNBAN_API, WATCHERS_API } = liveStreamEndPoints
 
 export type LiveStreamAccess = {
     /** LiveKit server, wss://… */
@@ -60,7 +60,7 @@ export async function getWatchAccess(auctionUuid: string, accessToken?: string |
     return response.data.data
 }
 
-// watch-only access to the auction's stream — eligible bidders only, and only once the auctioneer is publishing
+// watch-only access to the auction's stream — signed-in users only, and only once the auctioneer is publishing
 export async function getLiveStreamToken(auctionUuid: string, accessToken?: string | null): Promise<LiveStreamAccess> {
     const response = await apiConnector({
         method: "GET",
@@ -75,6 +75,11 @@ export async function getLiveStreamToken(auctionUuid: string, accessToken?: stri
 export async function getHostStreamToken(auctionUuid: string, token: string | null): Promise<HostStreamAccess> {
     const response = await apiConnector({ method: "POST", url: HOST_TOKEN_API(auctionUuid), header: auth(token) })
     return response.data.data
+}
+
+// the studio went on air — the backend checks LiveKit and pushes "live:on-air" to waiting players
+export async function announceOnAir(auctionUuid: string, token: string | null): Promise<void> {
+    await apiConnector({ method: "POST", url: ANNOUNCE_API(auctionUuid), header: auth(token) })
 }
 
 export async function getOnAirStreams(token: string | null): Promise<OnAirStreams> {

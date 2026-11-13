@@ -1,6 +1,6 @@
 import express from "express";
 
-import { getBans, getHostToken, getOnAir, getViewerToken, getWatchAccess, getWatchers, livekitWebhook, removeViewer, unbanViewer } from "../controllers/liveStream.controller.js";
+import { announceOnAir, getBans, getHostToken, getOnAir, getViewerToken, getWatchAccess, getWatchers, livekitWebhook, removeViewer, unbanViewer } from "../controllers/liveStream.controller.js";
 import { authenticate, optionalAuthenticate } from "../middleware/auth.middleware.js";
 import { requireRole } from "../middleware/rbac.middleware.js";
 import { STAFF_ROLES } from "../libs/socket.js";
@@ -24,6 +24,7 @@ liveStreamRouter.get("/:auctionUuid/token", optionalAuthenticate, getViewerToken
 
 // STUDIO — go live, and remove / ban viewers
 liveStreamRouter.post("/:auctionUuid/host-token", authenticate, requireRole(...HOST_ROLES), getHostToken);
+liveStreamRouter.post("/:auctionUuid/announce", authenticate, requireRole(...HOST_ROLES), announceOnAir);
 liveStreamRouter.get("/:auctionUuid/watchers", authenticate, requireRole(...HOST_ROLES), getWatchers);
 liveStreamRouter.post("/:auctionUuid/viewers/:identity/remove", authenticate, requireRole(...HOST_ROLES), removeViewer);
 liveStreamRouter.get("/:auctionUuid/bans", authenticate, requireRole(...HOST_ROLES), getBans);

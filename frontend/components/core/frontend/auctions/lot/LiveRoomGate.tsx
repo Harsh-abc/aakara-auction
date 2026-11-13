@@ -15,12 +15,12 @@ type GateState = { status: "checking" } | { status: "allowed" } | { status: "den
 
 const SIGN_IN: GateState = {
     status: "denied",
-    access: { code: "SIGN_IN", message: "Sign in with your bidder account to join the live auction." },
+    access: { code: "SIGN_IN", message: "Sign in to join the live auction." },
 };
 
 /**
- * The live auction room (and its video) is for bidders only: signed-in bidder accounts verified
- * to bid in this sale, plus staff. Everyone else sees why, with a way to sign in or register.
+ * The live auction room (and its video) is for signed-in users (bidder access or not) and staff.
+ * Guests and blocked accounts see why, with a way to sign in.
  * The stream itself is enforced by the backend too — this gate only keeps the page honest.
  */
 export function LiveRoomGate({ auctionUuid, children }: { auctionUuid: string; children: ReactNode }) {
@@ -74,7 +74,7 @@ export function LiveRoomGate({ auctionUuid, children }: { auctionUuid: string; c
                 <div className="page-container">
                     <Breadcrumb crumbs={[{ label: "Live auction" }]} />
                     <div className="py-24 text-center">
-                        <h1 className="text-[24px] leading-8 font-medium text-[#0d0d0d]">The live auction is for registered bidders</h1>
+                        <h1 className="text-[24px] leading-8 font-medium text-[#0d0d0d]">The live auction is for signed-in members</h1>
                         <p className={cn(BODY, "mx-auto mt-3 max-w-md")}>{message}</p>
                         <div className="mt-6 flex flex-wrap justify-center gap-2">
                             {code === "SIGN_IN" && (
