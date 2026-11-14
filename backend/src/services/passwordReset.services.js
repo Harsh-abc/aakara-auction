@@ -9,6 +9,7 @@ import { canSignIn } from '../libs/userStatus.js';
 import sendEmail from '../mail/sendMail.js';
 import { passwordResetTemplate } from '../mail/templates/passwordReset.js';
 import { generateOtp } from '../utils/otp.utils.js';
+import { sendOtpSms } from './sms.services.js';
 
 // =====================================================================
 // Forgot password → 6-digit code by email → enter the code → choose a new password.
@@ -65,7 +66,7 @@ const underLimit = async (key, max, windowSeconds) => {
 
 const LINK_DEAD = 'This reset has expired or has already been used. Please start again.';
 const CODE_DEAD = 'This code has expired or was entered wrong too many times. Request a new code.';
-const CODE_WRONG = 'That code is incorrect. Check the email and try again.';
+const CODE_WRONG = 'That code is incorrect. Check the email or SMS and try again.';
 
 /** Email a reset code if the address belongs to an active account; silent either way. */
 export const requestPasswordResetService = async ({ email, ip }) => {
@@ -84,6 +85,8 @@ export const requestPasswordResetService = async ({ email, ip }) => {
             email: true,
             status: true,
             username: true,
+            phone: true,
+            phoneVerified: true,
             profile: { select: { firstName: true } },
         },
     });
@@ -100,22 +103,42 @@ export const requestPasswordResetService = async ({ email, ip }) => {
     );
     await redis.del(otpAttemptsKey(email));
 
-    try {
-        // cc: null — the default MAILGUN_CC must never receive someone's reset code
-        await sendEmail(
-            user.email,
-            'Your AKARA password reset code',
-            passwordResetTemplate({
-                userName: user.profile?.firstName || user.username,
+    // the same code goes by email and, when the account has a verified phone, by SMS.
+    // Either failing is only logged — the reply stays the same, so an outage can't reveal which emails exist
+    const sendByEmail = async () => {
+        try {
+            // cc: null — the default MAILGUN_CC must never receive someone's reset code
+            await sendEmail(
+                user.email,
+                'Your AKARA password reset code',
+                passwordResetTemplate({
+                    userName: user.profile?.firstName || user.username,
+                    otp,
+                    expiresInMinutes: OTP_TTL_MINUTES,
+                }),
+                null
+            );
+        } catch (error) {
+            console.error(`[auth] could not send the password reset email to ${user.email}:`, error);
+        }
+    };
+
+    // only a verified phone: an unverified number may not belong to this person
+    const sendBySms = async () => {
+        if (!user.phone || !user.phoneVerified) return;
+        try {
+            await sendOtpSms({
+                phone: user.phone,
                 otp,
-                expiresInMinutes: OTP_TTL_MINUTES,
-            }),
-            null
-        );
-    } catch (error) {
-        // the reply stays the same, so a mail outage can't reveal which emails exist
-        console.error(`[auth] could not send the password reset email to ${user.email}:`, error);
-    }
+                validForMinutes: OTP_TTL_MINUTES,
+                templateId: process.env.MSG91_RESET_TEMPLATE_ID,
+            });
+        } catch (error) {
+            console.error(`[auth] could not send the password reset SMS to …${user.phone.slice(-3)}:`, error.message);
+        }
+    };
+
+    await Promise.all([sendByEmail(), sendBySms()]);
 };
 
 /** Check an emailed code; a right one is used up and swapped for a short-lived reset token. */

@@ -7,6 +7,7 @@
  * (MSG91 still answers "success").
  *
  * env: MSG91_AUTH_KEY, MSG91_TEMPLATE_ID (MSG91's 24-character template id, not the DLT one)
+ *      MSG91_RESET_TEMPLATE_ID — the password-reset template (same var1 = code, var2 = minutes)
  *      MSG91_DRY_RUN=true — log the code instead of sending (local dev, no SMS cost)
  */
 import https from "node:https";
@@ -61,16 +62,16 @@ const toMsg91Mobile = (e164) => e164.replace(/^\+/, "");
 
 // `phone` is E.164 (validated at signup); works for international numbers too
 // when the international route is enabled on the MSG91 account
-export const sendOtpSms = async ({ phone, otp, validForMinutes }) => {
+// `templateId` defaults to the signup template; other flows (password reset) pass their own
+export const sendOtpSms = async ({ phone, otp, validForMinutes, templateId = process.env.MSG91_TEMPLATE_ID }) => {
     if (process.env.MSG91_DRY_RUN === "true") {
         console.warn(`[sms] MSG91_DRY_RUN — OTP for ${phone}: ${otp}`);
         return { requestId: null };
     }
 
     const authKey = process.env.MSG91_AUTH_KEY;
-    const templateId = process.env.MSG91_TEMPLATE_ID;
     if (!authKey || !templateId) {
-        console.error("[sms] MSG91_AUTH_KEY / MSG91_TEMPLATE_ID are not set");
+        console.error("[sms] MSG91_AUTH_KEY or the SMS template id is not set");
         throw httpError(SEND_FAILED, 503);
     }
 

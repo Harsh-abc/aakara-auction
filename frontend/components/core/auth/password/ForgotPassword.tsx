@@ -149,7 +149,7 @@ export function ForgotPassword() {
             <PasswordPageShell
                 crumb="Forgot password"
                 title="Enter the code"
-                intro="Check your email for a 6-digit code and type it in below."
+                intro="Check your email (and SMS, if your phone number is verified) for a 6-digit code and type it in below."
             >
                 <form
                     onSubmit={(event) => {
