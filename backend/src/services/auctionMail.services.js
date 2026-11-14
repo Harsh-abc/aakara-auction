@@ -4,6 +4,7 @@ import sendEmail from "../mail/sendMail.js";
 import { AUCTION_EMAIL, REGISTRATION_INLINE_IMAGES } from "../mail/templates/registrationReceived.js";
 import { WINNING_BID_SUBJECT, winningBidTemplate, winningBidText } from "../mail/templates/winningBid.js";
 import { BIDS_EMAIL, PROXY_BID_SET_SUBJECT, proxyBidSetTemplate, proxyBidSetText } from "../mail/templates/proxyBidSet.js";
+import { sendProxyBidSetSms } from "./sms.services.js";
 
 // same sender as the registration emails
 const WINNER_MAIL_OPTIONS = { fromName: "AKARA AUCTIONS", replyTo: AUCTION_EMAIL, inline: REGISTRATION_INLINE_IMAGES };
@@ -138,12 +139,22 @@ export const sendProxyBidSetEmail = async ({ lotUuid, userId, maxAmount, setAt }
                 where: { id: BigInt(userId) },
                 select: {
                     email: true,
+                    phone: true,
+                    phoneVerified: true,
                     username: true,
                     profile: { select: { firstName: true, lastName: true, displayName: true } },
                 },
             }),
         ]);
-        if (!lot || !user?.email) return;
+        if (!lot || !user) return;
+
+        // the SMS doesn't wait for the email, and neither one's failure stops the other
+        if (user.phone && user.phoneVerified) {
+            sendProxyBidSetSms({ phone: user.phone, name: personName(user), lotNumber: String(lot.itemNumber) }).catch(
+                (error) => console.error(`Proxy bid SMS for lot ${lotUuid}, user ${userId} failed:`, error?.message)
+            );
+        }
+        if (!user.email) return;
 
         // the bidder ID is their paddle number for this sale
         const participant = await prisma.auctionParticipant.findUnique({

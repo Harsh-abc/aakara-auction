@@ -8,6 +8,7 @@
  *
  * env: MSG91_AUTH_KEY, MSG91_TEMPLATE_ID (MSG91's 24-character template id, not the DLT one)
  *      MSG91_RESET_TEMPLATE_ID — the password-reset template (same var1 = code, var2 = minutes)
+ *      MSG91_PROXY_TEMPLATE_ID — "proxy bid set" (var1 = name, var2 = lot number)
  *      MSG91_DRY_RUN=true — log the code instead of sending (local dev, no SMS cost)
  */
 import https from "node:https";
@@ -60,12 +61,17 @@ const SEND_FAILED = "We couldn't send the SMS code. Please try again in a moment
 // "+919876543210" → "919876543210": MSG91 wants the country code without the "+"
 const toMsg91Mobile = (e164) => e164.replace(/^\+/, "");
 
+// DLT caps each variable at 30 characters; a longer value no longer matches the template
+const DLT_VAR_MAX = 30;
+
 // `phone` is E.164 (validated at signup); works for international numbers too
-// when the international route is enabled on the MSG91 account
-// `templateId` defaults to the signup template; other flows (password reset) pass their own
-export const sendOtpSms = async ({ phone, otp, validForMinutes, templateId = process.env.MSG91_TEMPLATE_ID }) => {
+// when the international route is enabled on the MSG91 account.
+// `vars` are the template's ##var1##, ##var2##, … in order — every one must be filled.
+const sendFlowSms = async ({ phone, templateId, vars, label }) => {
+    const filled = Object.fromEntries(vars.map((value, i) => [`var${i + 1}`, String(value ?? "").slice(0, DLT_VAR_MAX)]));
+
     if (process.env.MSG91_DRY_RUN === "true") {
-        console.warn(`[sms] MSG91_DRY_RUN — OTP for ${phone}: ${otp}`);
+        console.warn(`[sms] MSG91_DRY_RUN — ${label} SMS for ${phone}:`, filled);
         return { requestId: null };
     }
 
@@ -83,8 +89,7 @@ export const sendOtpSms = async ({ phone, otp, validForMinutes, templateId = pro
             {
                 template_id: templateId,
                 short_url: "0",
-                // the template's variables: var1 = the code, var2 = minutes it's valid for
-                recipients: [{ mobiles: toMsg91Mobile(phone), var1: otp, var2: String(validForMinutes) }],
+                recipients: [{ mobiles: toMsg91Mobile(phone), ...filled }],
             }
         );
     } catch (err) {
@@ -102,6 +107,20 @@ export const sendOtpSms = async ({ phone, otp, validForMinutes, templateId = pro
     // on success the Flow API puts the request id in `message`. "success" only means queued —
     // MSG91 accepts even unknown template ids — so delivery is checked in MSG91 → Reports → Logs
     const requestId = body.request_id ?? body.message ?? null;
-    console.info(`[sms] MSG91 queued OTP SMS for …${phone.slice(-3)} — request id ${requestId}`);
+    console.info(`[sms] MSG91 queued ${label} SMS for …${phone.slice(-3)} — request id ${requestId}`);
     return { requestId };
 };
+
+// var1 = the code, var2 = minutes it's valid for (signup "Akara-Reg" and reset "res_psw" templates).
+// `templateId` defaults to the signup template; password reset passes MSG91_RESET_TEMPLATE_ID
+export const sendOtpSms = ({ phone, otp, validForMinutes, templateId = process.env.MSG91_TEMPLATE_ID }) =>
+    sendFlowSms({ phone, templateId, vars: [otp, validForMinutes], label: "OTP" });
+
+// "P_SET2": "Dear ##var1##, your proxy bid for Lot ##var2## is now active. …"
+export const sendProxyBidSetSms = ({ phone, name, lotNumber }) =>
+    sendFlowSms({
+        phone,
+        templateId: process.env.MSG91_PROXY_TEMPLATE_ID,
+        vars: [name || "Collector", lotNumber],
+        label: "proxy bid",
+    });
