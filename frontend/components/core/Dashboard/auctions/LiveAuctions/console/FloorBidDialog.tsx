@@ -54,6 +54,8 @@ export default function FloorBidDialog({
     const defaultFilter = (): Filter => (floorBidders.some((bidder) => bidder.proxyMax !== null) ? "proxy" : "all");
     const [filter, setFilter] = useState<Filter>(defaultFilter);
     const [error, setError] = useState<string | null>(null);
+    // the auctioneer typed their own amount
+    const [edited, setEdited] = useState(false);
 
     // fresh form each time it opens, at the amount picked on the console
     const [wasOpen, setWasOpen] = useState(open);
@@ -63,6 +65,23 @@ export default function FloorBidDialog({
             setPaddle("");
             setAmount(pickedAmount);
             setFilter(defaultFilter());
+            setError(null);
+            setEdited(false);
+        }
+    }
+
+    // keep the amount live while bids land with the dialog open: follow the picked/next bid until the
+    // auctioneer types their own figure, and lift a typed figure that a new bid has left below the minimum
+    const [synced, setSynced] = useState({ pickedAmount, nextBid });
+    if (synced.pickedAmount !== pickedAmount || synced.nextBid !== nextBid) {
+        setSynced({ pickedAmount, nextBid });
+        if (open) {
+            if (!edited) {
+                setAmount(pickedAmount);
+            } else if (!(Number(amount) >= Number(nextBid))) {
+                setAmount(nextBid);
+                setEdited(false);
+            }
             setError(null);
         }
     }
@@ -254,7 +273,10 @@ export default function FloorBidDialog({
                             min={nextBid}
                             step="any"
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={(e) => {
+                                setAmount(e.target.value);
+                                setEdited(true);
+                            }}
                             className="h-11 text-[16px] font-semibold tabular-nums"
                         />
                         <p className="text-[11px] text-slate-500">
