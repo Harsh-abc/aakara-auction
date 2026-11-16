@@ -278,6 +278,7 @@ const normalizeLot = (lot, index, { isDraft }) => {
         scheduledEndAt: toDate(lot.scheduledEndAt, label("scheduled end")),
         shippingInfo: toStr(lot.shippingInfo),
         isFeatured: toBool(lot.isFeatured, false),
+        isSpecial: toBool(lot.isSpecial, false),
         // ✅ NEW — lot's currency code; turned into a currencyId inside the transaction
         currencyCode: toStr(lot.currency)?.toUpperCase() ?? null,
         dimension,

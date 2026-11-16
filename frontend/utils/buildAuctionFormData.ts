@@ -331,6 +331,7 @@ export const buildAuctionFormData = (
 
             shippingInfo: str(lot.shippingInfo) ?? str(shipping.shippingInfo),
             isFeatured: Boolean(lot.isFeatured),
+            isSpecial: Boolean(details.isSpecial),
 
             // Index-aligned with the files appended under lotMedia_{i} / lotDocuments_{i}
             mediaMeta: media.map((m) => ({ isPrimary: Boolean(m.isPrimary) })),

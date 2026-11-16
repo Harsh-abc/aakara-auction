@@ -13,6 +13,7 @@ import { AuctionCountdown } from "../AuctionCountdown";
 import { SearchInput } from "../SearchInput";
 import { formatMoney, lotDetailsHref, lotEstimate, lotHeading } from "../detail/lotDisplay";
 import { useGallery } from "../detail/useGallery";
+import { SpecialLotIcon } from "../detail/SpecialLotIcon";
 import { LotStatusTag } from "./LotTag";
 import { isClosedLot, isUpcomingLot, lotTag } from "./lotPageDisplay";
 import type { OnBid } from "./BidButtons";
@@ -154,7 +155,10 @@ export function TopLots({ auctionUuid, lots, saleStatus, countdown, onBid, proxy
 
                                 return (
                                     <li key={lot.uuid} className={cn(ROW_GRID, "flex flex-col gap-3 p-4 md:min-h-17.5 md:gap-0 md:py-4")}>
-                                        <span className="text-[11px] leading-[13.2px] font-semibold tracking-[0.16em] text-[#0d0d0d] uppercase">{lotTag(lot)}</span>
+                                        <span className="inline-flex items-center gap-1.5 text-[11px] leading-[13.2px] font-semibold tracking-[0.16em] text-[#0d0d0d] uppercase">
+                                            {lotTag(lot)}
+                                            <SpecialLotIcon lot={lot} />
+                                        </span>
                                         <div className="min-w-0 md:pr-6">
                                             <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{lotHeading(lot)}</p>
                                             {estimate && <p className={cn(EYEBROW, "mt-1")}>Estimate · {estimate}</p>}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useFormContext, Controller, useWatch } from "react-hook-form";
 import { Lock } from "lucide-react";
+import { PiCommandLight } from "react-icons/pi";
 import { useAppSelector } from "@/hooks/redux";
 
 import DashboardFormText from "@/components/common/DashboardFormText";
@@ -163,6 +164,20 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
         <div className="px-6 pb-5 mb-20">
 
             <DashboardFormText text="Primary Artwork Information" />
+
+            {/* Special lot — the storefront shows the special-lot icon next to "Lot N" */}
+            <div className="mb-4 flex items-center gap-3">
+                <input
+                    type="checkbox"
+                    id={`special-${lotIndex}`}
+                    className="h-4 w-4 cursor-pointer accent-[#7b3b5e]"
+                    {...register(`lots.${lotIndex}.details.isSpecial`)}
+                />
+                <Label htmlFor={`special-${lotIndex}`} className="flex cursor-pointer items-center gap-1.5">
+                    <PiCommandLight className="h-4 w-4" />
+                    Mark as special lot
+                </Label>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="input-wrapper">

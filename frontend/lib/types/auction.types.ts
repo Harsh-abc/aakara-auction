@@ -173,6 +173,7 @@ export interface CreateAuctionLot {
 
     shippingInfo?: string | null;
     isFeatured?: boolean;
+    isSpecial?: boolean;
 
     /** Index-aligned with files sent as lotMedia_{i} */
     mediaMeta?: { isPrimary: boolean; caption?: string | null }[];
@@ -485,6 +486,7 @@ export interface AuctionLot {
     currentBid?: string | null;
     bidCount?: string | number;
     isFeatured: boolean;
+    isSpecial?: boolean;
 
     insureanceValue?: string | null; // spelling matches Prisma
     gstRate?: string | null;

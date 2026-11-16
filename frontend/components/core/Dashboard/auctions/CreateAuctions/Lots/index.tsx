@@ -79,6 +79,7 @@ export default function AddLots({
                 medium: "",
                 yearCreated: "",
                 catalogueNote: "",
+                isSpecial: false,
 
                 dimensions: {
                     primary: { height: null, width: null, depth: null, unit: "CM" },

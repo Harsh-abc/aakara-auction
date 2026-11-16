@@ -53,6 +53,7 @@ const toLotForm = (
             medium: text(lot.medium),
             yearCreated: text(lot.yearCreated),
             catalogueNote: text(lot.catalogueNote),
+            isSpecial: Boolean(lot.isSpecial),
             dimensions: {
                 primary: {
                     height: num(dimension?.height),

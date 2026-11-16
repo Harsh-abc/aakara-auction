@@ -182,6 +182,9 @@ export interface LotDetailsForm {
     /** Free text shown under Lot details › Description on the lot page */
     catalogueNote: string;
 
+    /** Special lot — shown with the special-lot icon next to "Lot N" on the storefront */
+    isSpecial: boolean;
+
     /** The size in two units — typing in one set fills the other until it's edited by hand */
     dimensions: {
         primary: LotSizeForm;

@@ -6,6 +6,7 @@ import type { PublicLot } from "@/lib/types/publicAuction.types";
 
 import { BUTTON, BUTTON_SOLID, EYEBROW } from "../../storefront";
 import { LotBadge } from "./LotBadge";
+import { SpecialLotIcon } from "./SpecialLotIcon";
 // View used to open the live room (lotHref) — now it opens the lot details page; switch back if needed
 // import { lotBidLine, lotDetails, lotEstimate, lotHeading, lotHref, lotNumber } from "./lotDisplay";
 import { lotBidLine, lotDetails, lotDetailsHref, lotEstimate, lotHeading, lotNumber, lotSoldPrice } from "./lotDisplay";
@@ -31,7 +32,10 @@ function LotNumberLine({ lot, upNext }: { lot: PublicLot; upNext?: boolean }) {
     return (
         // as tall as the status tag, so cards without one line up with those that have it
         <div className="flex min-h-5 items-center justify-between gap-2">
-            <span className="text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">{lotNumber(lot)}</span>
+            <span className="inline-flex items-center gap-1.5 text-[10px] leading-3.75 font-semibold tracking-[0.12em] text-[#0d0d0d] uppercase">
+                {lotNumber(lot)}
+                <SpecialLotIcon lot={lot} />
+            </span>
             <LotBadge lot={lot} upNext={upNext} />
         </div>
     );

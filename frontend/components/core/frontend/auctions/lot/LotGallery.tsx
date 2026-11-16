@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import type { PublicLot, PublicLotDetail } from "@/lib/types/publicAuction.types"
 
 import { lotDetailsHref, lotHeading } from "../detail/lotDisplay"
+import { SpecialLotIcon } from "../detail/SpecialLotIcon"
 import { LotImageZoom } from "./LotImageZoom"
 import { LotLightbox } from "./LotLightbox"
 import { lotTag } from "./lotPageDisplay"
@@ -48,7 +49,10 @@ export function LotGallery({ auctionUuid, lot, lots }: LotGalleryProps) {
     return (
         <div>
             <div className="flex items-center justify-between gap-4">
-                <span className="text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">{lotTag(lot)}</span>
+                <span className="inline-flex items-center gap-1.5 text-[11px] leading-[13.2px] tracking-[0.16em] text-[#717171] uppercase">
+                    {lotTag(lot)}
+                    <SpecialLotIcon lot={lot} />
+                </span>
                 <div className="flex">
                     <Pager auctionUuid={auctionUuid} lot={prev} label="Previous" />
                     <Pager auctionUuid={auctionUuid} lot={next} label="Next" className="-ml-px" />

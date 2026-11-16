@@ -52,6 +52,8 @@ export interface PublicLot {
     currency: { code: string; symbol: string | null };
     dimension: StoredLotSize | null;
     image: string | null;
+    /** special lot — shown with the special-lot icon next to "Lot N" */
+    isSpecial?: boolean;
     /** sold lots in lot lists: hammer price + buyer's premium */
     soldPrice?: string | null;
 }
