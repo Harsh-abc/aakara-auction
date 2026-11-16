@@ -19,6 +19,11 @@ export const setProxyBidSchema = z.object({
     maxAmount: money("Maximum bid"),
 });
 
+// dashboard: a super admin sets a bidder's proxy — the bidder in the path
+export const bidderUuidParamSchema = z.object({
+    bidderUuid: z.uuid({ message: "Invalid bidder id" }),
+});
+
 // dashboard: proxy bids — filters shared by the list, the summary and the CSV export
 const optionalText = (max) => z.preprocess((v) => (v === "" ? undefined : v), z.string().trim().max(max).optional());
 const optionalUuid = (label) => z.preprocess((v) => (v === "" ? undefined : v), z.uuid({ message: `Invalid ${label} id` }).optional());

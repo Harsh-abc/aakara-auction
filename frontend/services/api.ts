@@ -93,6 +93,10 @@ export const biddingEndPoints = {
     PROXY_BIDDING_API: (auctionUuid: string) => `${BASE_URL}/api/bidding/auctions/${auctionUuid}/proxy-bidding`,
     // one lot's proxy bids (bid history, console)
     LOT_PROXIES_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/proxies`,
+    // super admin: add / change a bidder's proxy before the auction goes live
+    STAFF_PROXY_OPTIONS_API: `${BASE_URL}/api/bidding/proxy-bids/staff-options`,
+    LOT_PROXY_BIDDERS_API: (lotUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/proxy-bidders`,
+    STAFF_SET_PROXY_API: (lotUuid: string, bidderUuid: string) => `${BASE_URL}/api/bidding/lots/${lotUuid}/proxy-bids/${bidderUuid}`,
 };
 
 // live video (LiveKit) — viewers watch (login optional); the dashboard studio goes live and moderates

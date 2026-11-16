@@ -33,6 +33,8 @@ export interface ProxyBidRow {
     ipSharedBy: number
     withdrawnAt: string | null
     withdrawnReason: string | null
+    /** the super admin who last set it for the bidder — null when the bidder set it */
+    setBy: { uuid: string; name: string | null } | null
     bidder: {
         uuid: string
         name: string | null
@@ -118,6 +120,27 @@ export interface ProxySettingsAuction {
     proxyCutoffPassed: boolean
     /** lots that haven't opened yet — the only ones that can take a proxy */
     upcomingLots: number
+}
+
+/** GET /api/bidding/proxy-bids/staff-options — auctions a super admin can still set proxies in (scheduled, not live) */
+export interface StaffProxyAuction {
+    uuid: string
+    title: string
+    status: AuctionStatus
+    startTime: string
+    /** lots that haven't opened, in catalogue order */
+    lots: { uuid: string; itemNumber: string; title: string; startingPrice: string; currencyCode: string }[]
+}
+
+/** GET /api/bidding/lots/:lotUuid/proxy-bidders — bidders verified on the lot */
+export interface LotProxyBidder {
+    uuid: string
+    name: string | null
+    username: string
+    email: string
+    paddle: string | null
+    /** their current proxy on the lot, if any */
+    proxyMax: string | null
 }
 
 export interface ProxyBidFilters {

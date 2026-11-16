@@ -7,8 +7,11 @@ import {
     getMyLotStanding,
     placeBid,
     placeFloorBid,
+    getLotProxyBidders,
+    getStaffProxyOptions,
     sendLotCallout,
     setProxyBid,
+    setProxyBidForBidder,
 } from "../controllers/bidding.controller.js";
 import {
     exportProxyBids,
@@ -42,6 +45,12 @@ biddingRouter.get("/proxy-bids/export", authenticate, requireRole(...PROXY_AUDIT
 const PROXY_SWITCH_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS"];
 biddingRouter.get("/proxy-bids/settings", authenticate, requireRole(...PROXY_SWITCH_ROLES, "AUCTIONEER"), getProxySettings);
 biddingRouter.patch("/auctions/:auctionUuid/proxy-bidding", authenticate, requireRole(...PROXY_SWITCH_ROLES), setProxyBidding);
+// super admins add or change a registered bidder's proxy, until the auction goes live
+// (mirror PROXY_EDIT_ROLES in frontend components/core/Dashboard/proxyBids/ProxyBids.tsx)
+const PROXY_EDIT_ROLES = ["SUPER_ADMIN"];
+biddingRouter.get("/proxy-bids/staff-options", authenticate, requireRole(...PROXY_EDIT_ROLES), getStaffProxyOptions);
+biddingRouter.get("/lots/:lotUuid/proxy-bidders", authenticate, requireRole(...PROXY_EDIT_ROLES), getLotProxyBidders);
+biddingRouter.put("/lots/:lotUuid/proxy-bids/:bidderUuid", authenticate, requireRole(...PROXY_EDIT_ROLES), setProxyBidForBidder);
 // one lot's proxies for bid history and the console (IP / device only for the roles above)
 biddingRouter.get("/lots/:lotUuid/proxies", authenticate, requireRole(...STAFF_ROLES), getLotProxies);
 

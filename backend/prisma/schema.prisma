@@ -34,6 +34,7 @@ model User {
   auctionsWon               AuctionWinner[]        @relation("AuctionItemWinner")
   auctionsCreated           Auction[]
   autoBids                  AutoBid[]
+  autoBidsSetForBidders     AutoBid[]              @relation("AutoBidSetBy")
   bids                      Bid[]
   loginAttempts             LoginAttempt[]
   kyc                       UserKyc?
@@ -777,9 +778,12 @@ model AutoBid {
   userAgent       String?     @db.VarChar(500)
   withdrawnAt     DateTime?
   withdrawnReason String?     @db.VarChar(200)
+  /// the super admin who last set it on the bidder's behalf (Proxy Bids page); null when the bidder set it
+  setById         BigInt?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   bidder          User        @relation(fields: [bidderId], references: [id])
+  setBy           User?       @relation("AutoBidSetBy", fields: [setById], references: [id], onDelete: SetNull)
   item            AuctionItem @relation(fields: [itemId], references: [id])
 
   @@unique([itemId, bidderId])

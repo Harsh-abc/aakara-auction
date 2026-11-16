@@ -1,9 +1,26 @@
 import { apiConnector } from "../apiConnector"
 import { biddingEndPoints } from "../api"
-import type { LotProxies, ProxyBidFilters, ProxyBidPage, ProxyBidSummary, ProxySettingsAuction } from "@/lib/types/proxyBid.types"
+import type {
+    LotProxies,
+    LotProxyBidder,
+    ProxyBidFilters,
+    ProxyBidPage,
+    ProxyBidSummary,
+    ProxySettingsAuction,
+    StaffProxyAuction,
+} from "@/lib/types/proxyBid.types"
 
-const { PROXY_BIDS_API, PROXY_BIDS_SUMMARY_API, PROXY_BIDS_EXPORT_API, LOT_PROXIES_API, PROXY_SETTINGS_API, PROXY_BIDDING_API } =
-    biddingEndPoints
+const {
+    PROXY_BIDS_API,
+    PROXY_BIDS_SUMMARY_API,
+    PROXY_BIDS_EXPORT_API,
+    LOT_PROXIES_API,
+    PROXY_SETTINGS_API,
+    PROXY_BIDDING_API,
+    STAFF_PROXY_OPTIONS_API,
+    LOT_PROXY_BIDDERS_API,
+    STAFF_SET_PROXY_API,
+} = biddingEndPoints
 
 const authHeader = (token: string | null) => ({ Authorization: `Bearer ${token}` })
 
@@ -50,6 +67,34 @@ export async function setProxyBidding(
 export async function getLotProxies(lotUuid: string, token: string | null): Promise<LotProxies> {
     const response = await apiConnector({ method: "GET", url: LOT_PROXIES_API(lotUuid), header: authHeader(token) })
     return response.data.data
+}
+
+// super admin: auctions (scheduled, not live) with their unopened lots, for "Add proxy bid"
+export async function getStaffProxyOptions(token: string | null): Promise<StaffProxyAuction[]> {
+    const response = await apiConnector({ method: "GET", url: STAFF_PROXY_OPTIONS_API, header: authHeader(token) })
+    return response.data.data.auctions
+}
+
+// super admin: bidders verified on a lot, with their paddle and any proxy they already hold
+export async function getLotProxyBidders(lotUuid: string, token: string | null): Promise<LotProxyBidder[]> {
+    const response = await apiConnector({ method: "GET", url: LOT_PROXY_BIDDERS_API(lotUuid), header: authHeader(token) })
+    return response.data.data.bidders
+}
+
+// super admin: set or change a bidder's proxy (maximum) bid on a lot
+export async function setProxyBidForBidder(
+    lotUuid: string,
+    bidderUuid: string,
+    maxAmount: number,
+    token: string | null
+): Promise<{ message: string }> {
+    const response = await apiConnector({
+        method: "PUT",
+        url: STAFF_SET_PROXY_API(lotUuid, bidderUuid),
+        body: { maxAmount },
+        header: authHeader(token),
+    })
+    return response.data
 }
 
 // CSV of the filtered proxy bids (newest 10,000), saved by the browser

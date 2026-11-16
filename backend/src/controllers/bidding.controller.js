@@ -4,14 +4,17 @@ import {
     executeProxiesService,
     getAuctionActivityService,
     getAuctionConsoleService,
+    getLotProxyBiddersService,
     getMyLotStandingService,
+    getStaffProxyOptionsService,
     placeBidService,
     placeFloorBidService,
     sendLotCalloutService,
+    setProxyBidForBidderService,
     setProxyBidService,
 } from "../services/bidding.services.js";
 import { auctionUuidParamSchema, lotUuidParamSchema } from "../validations/auction.validation.js";
-import { lotCalloutSchema, placeBidSchema, placeFloorBidSchema, setProxyBidSchema } from "../validations/bidding.validation.js";
+import { bidderUuidParamSchema, lotCalloutSchema, placeBidSchema, placeFloorBidSchema, setProxyBidSchema } from "../validations/bidding.validation.js";
 import { getClientIp } from "../utils/clientIp.js";
 
 const handleError = (res, error, label, fallback) => {
@@ -77,6 +80,52 @@ export const setProxyBid = async (req, res) => {
         return res.status(201).json({ success: true, message, data });
     } catch (error) {
         return handleError(res, error, "Set proxy bid", "Failed to set the proxy bid");
+    }
+};
+
+// -----------------------------------------------------------------
+// PUT /api/bidding/lots/:lotUuid/proxy-bids/:bidderUuid   Body: { maxAmount }
+// Super admin: set or change a registered bidder's proxy on a lot, until the auction goes live
+// -----------------------------------------------------------------
+
+export const setProxyBidForBidder = async (req, res) => {
+    try {
+        const { lotUuid } = lotUuidParamSchema.parse(req.params);
+        const { bidderUuid } = bidderUuidParamSchema.parse(req.params);
+        const { maxAmount } = setProxyBidSchema.parse(req.body);
+        const { message, data } = await setProxyBidForBidderService({ lotUuid, bidderUuid, maxAmount, staffUserId: req.user?.userId });
+        return res.status(200).json({ success: true, message, data });
+    } catch (error) {
+        return handleError(res, error, "Set proxy bid for bidder", "Failed to set the proxy bid");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/bidding/proxy-bids/staff-options
+// Super admin: auctions (scheduled, not live) and their unopened lots, for "Add proxy bid"
+// -----------------------------------------------------------------
+
+export const getStaffProxyOptions = async (req, res) => {
+    try {
+        const data = await getStaffProxyOptionsService();
+        return res.status(200).json({ success: true, message: "Proxy bid options fetched successfully", data });
+    } catch (error) {
+        return handleError(res, error, "Get staff proxy options", "Failed to fetch the auctions and lots");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/bidding/lots/:lotUuid/proxy-bidders
+// Super admin: bidders verified on the lot, with their paddle and current proxy
+// -----------------------------------------------------------------
+
+export const getLotProxyBidders = async (req, res) => {
+    try {
+        const { lotUuid } = lotUuidParamSchema.parse(req.params);
+        const data = await getLotProxyBiddersService({ lotUuid });
+        return res.status(200).json({ success: true, message: "Lot bidders fetched successfully", data });
+    } catch (error) {
+        return handleError(res, error, "Get lot proxy bidders", "Failed to fetch the lot's bidders");
     }
 };
 

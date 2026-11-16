@@ -649,24 +649,47 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
 
     const { lot, result, prevProxy } = await runForUser({ mode: "PROXY", lotUuid, userId, amount: maxAmount, ip, userAgent });
 
+    await saveProxy({
+        itemId: item.id,
+        lotUuid,
+        userId,
+        maxAmount,
+        result,
+        prevProxy,
+        origin: { ipAddress: ip || null, userAgent: userAgent ? userAgent.slice(0, MAX_USER_AGENT) : null },
+        setById: null,
+    });
+
+    const max = formatMoney(maxAmount, lot.currencyCode);
+    return {
+        message: `Your maximum bid of ${max} is ${prevProxy ? "updated" : "set"}. It's placed for you when the auctioneer calls the hammer on Lot #${result.itemNumber}. You can change it until the lot opens.`,
+        data: result,
+    };
+};
+
+/**
+ * Saves a proxy the engine just accepted to auto_bids and confirms it to the
+ * bidder (email + SMS). If the save fails, Redis goes back to the bidder's
+ * previous proxy (or none) — the lot hasn't opened, so the proxy hasn't bid.
+ */
+const saveProxy = async ({ itemId, lotUuid, userId, maxAmount, result, prevProxy, origin, setById }) => {
     const record = {
         maxAmount: String(maxAmount),
         isActive: true,
-        ipAddress: ip || null,
-        userAgent: userAgent ? userAgent.slice(0, MAX_USER_AGENT) : null,
+        ...origin,
         withdrawnAt: null,
         withdrawnReason: null,
+        setById,
         // the exact time the engine ranked it by, so a reload from here (restoreProxies) keeps who came first
         createdAt: result.proxySetAt ? new Date(result.proxySetAt) : new Date(),
     };
     try {
         await prisma.autoBid.upsert({
-            where: { itemId_bidderId: { itemId: item.id, bidderId: BigInt(userId) } },
-            create: { itemId: item.id, bidderId: BigInt(userId), ...record },
+            where: { itemId_bidderId: { itemId, bidderId: BigInt(userId) } },
+            create: { itemId, bidderId: BigInt(userId), ...record },
             update: record,
         });
     } catch (error) {
-        // the lot hasn't opened, so the proxy hasn't bid — safe to put back as it was
         const key = bidKeys.proxies(lotUuid);
         const restore = prevProxy ? redis.hset(key, String(userId), JSON.stringify({ max: prevProxy.max, at: prevProxy.at })) : redis.hdel(key, String(userId));
         await restore.catch(() => {});
@@ -675,12 +698,193 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
 
     // saved: confirm it to the bidder (not awaited — a failed email never undoes the proxy)
     sendProxyBidSetEmail({ lotUuid, userId, maxAmount, setAt: record.createdAt });
+};
+
+// =====================================================================
+// PROXY BIDS SET BY STAFF (dashboard → Proxy Bids, super admin)
+// A super admin leaves or changes a proxy for a bidder registered and verified
+// on the lot — e.g. an absentee bid taken by phone. Unlike the bidder, staff
+// aren't stopped by the auction's proxy switch or the 8h cutoff: they can do it
+// until the auction goes live, as long as the lot hasn't opened. Every other
+// rule (verified on the lot, bidding limit, minimum) is the same.
+// =====================================================================
+
+/** Auctions in which staff may set proxies: scheduled, not yet live (a draft's lots don't take bids yet) */
+export const STAFF_PROXY_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW"];
+
+/** Why a bidder can't hold a proxy on this lot, worded for staff */
+const staffNotVerifiedError = async (lotId, userId, who) => {
+    const [row, account] = await Promise.all([
+        prisma.lotBidder.findUnique({
+            where: { itemId_userId: { itemId: BigInt(lotId), userId: BigInt(userId) } },
+            select: { status: true },
+        }),
+        prisma.user.findUnique({
+            where: { id: BigInt(userId) },
+            select: { status: true, role: { select: { name: true } }, kyc: { select: { status: true } } },
+        }),
+    ]);
+    if (account?.status !== "ACTIVE") return httpError(`${who}'s account isn't active`, 403);
+    if (account.role.name !== "BIDDER") return httpError(`${who} doesn't have the Bidder role`, 403);
+    if (account.kyc?.status !== "VERIFIED") return httpError(`${who}'s KYC isn't verified`, 403);
+    return row
+        ? httpError(`${who} isn't verified on this lot yet — verify them under Manage Bidders first`, 403)
+        : httpError(`${who} isn't registered for this lot's auction`, 403);
+};
+
+export const setProxyBidForBidderService = async ({ lotUuid, bidderUuid, maxAmount, staffUserId }) => {
+    const item = await prisma.auctionItem.findUnique({
+        where: { uuid: lotUuid },
+        select: { id: true, itemNumber: true, status: true, auction: { select: { id: true, status: true, deletedAt: true } } },
+    });
+    if (!item || item.auction.deletedAt) throw httpError("Lot not found", 404);
+    if (!STAFF_PROXY_AUCTION_STATUSES.includes(item.auction.status)) {
+        throw httpError(
+            item.auction.status === "DRAFT"
+                ? "Schedule the auction before setting proxy bids on its lots"
+                : "Proxy bids can only be set or changed before the auction goes live",
+            409
+        );
+    }
+    if (!PROXY_LOT_STATUSES.includes(item.status)) throw httpError(`Lot #${item.itemNumber} has opened or closed — its proxy bids are locked`, 409);
+
+    const bidder = await prisma.user.findFirst({
+        where: { uuid: bidderUuid, deletedAt: null },
+        select: { id: true, username: true, profile: { select: { firstName: true, lastName: true, displayName: true } } },
+    });
+    if (!bidder) throw httpError("Bidder not found", 404);
+    const userId = bidder.id.toString();
+
+    const participant = await prisma.auctionParticipant.findUnique({
+        where: { auctionId_userId: { auctionId: item.auction.id, userId: bidder.id } },
+        select: { paddleNumber: true },
+    });
+    const who = participant ? `Paddle #${participant.paddleNumber}` : displayName(bidder);
+
+    const lot = await ensureLotState(lotUuid);
+    if (!(await isVerifiedBidder(lotUuid, lot.lotId, userId))) throw await staffNotVerifiedError(lot.lotId, userId, who);
+    await assertWithinBiddingLimit({ userId, amount: maxAmount, currencyCode: lot.currencyCode, who });
+
+    // keep the IP / device the bidder last set it from (the IP checks are about bidders, not staff)
+    const existing = await prisma.autoBid.findUnique({
+        where: { itemId_bidderId: { itemId: item.id, bidderId: bidder.id } },
+        select: { ipAddress: true, userAgent: true },
+    });
+
+    const { result, prevProxy } = await settleBid({
+        mode: "PROXY",
+        lot,
+        lotUuid,
+        userId,
+        amount: maxAmount,
+        ip: null,
+        userAgent: null,
+        errors: {
+            ...ENGINE_ERRORS,
+            PROXY_TOO_LOW: (l, r) => [`The maximum bid must be at least ${formatMoney(r.nextBid, l.currencyCode)}`, 400],
+        },
+    });
+
+    await saveProxy({
+        itemId: item.id,
+        lotUuid,
+        userId,
+        maxAmount,
+        result,
+        prevProxy,
+        origin: { ipAddress: existing?.ipAddress ?? null, userAgent: existing?.userAgent ?? null },
+        setById: BigInt(staffUserId),
+    });
 
     const max = formatMoney(maxAmount, lot.currencyCode);
     return {
-        message: `Your maximum bid of ${max} is ${prevProxy ? "updated" : "set"}. It's placed for you when the auctioneer calls the hammer on Lot #${result.itemNumber}. You can change it until the lot opens.`,
-        data: result,
+        message: `${prevProxy ? "Updated" : "Set"} ${who}'s maximum bid on Lot #${result.itemNumber} to ${max}`,
+        data: { ...result, bidderUuid },
     };
+};
+
+/**
+ * For the "Add proxy bid" form: auctions staff can still set proxies in, with
+ * their lots that haven't opened.
+ */
+export const getStaffProxyOptionsService = async () => {
+    const auctions = await prisma.auction.findMany({
+        where: { deletedAt: null, status: { in: STAFF_PROXY_AUCTION_STATUSES } },
+        orderBy: [{ startTime: "asc" }, { id: "asc" }],
+        select: {
+            uuid: true,
+            title: true,
+            status: true,
+            startTime: true,
+            currency: { select: { code: true } },
+            items: {
+                where: { status: { in: PROXY_LOT_STATUSES } },
+                orderBy: [{ itemNumber: "asc" }, { id: "asc" }],
+                select: { uuid: true, itemNumber: true, title: true, startingPrice: true, currency: { select: { code: true } } },
+            },
+        },
+    });
+    return {
+        auctions: auctions.map(({ items, currency, ...auction }) => ({
+            ...auction,
+            lots: items.map((lot) => ({
+                uuid: lot.uuid,
+                itemNumber: lot.itemNumber.toString(),
+                title: lot.title,
+                startingPrice: String(lot.startingPrice),
+                currencyCode: lot.currency?.code ?? currency.code,
+            })),
+        })),
+    };
+};
+
+/** Bidders who may hold a proxy on the lot (verified on it), with their paddle and any proxy they already have */
+export const getLotProxyBiddersService = async ({ lotUuid }) => {
+    const item = await prisma.auctionItem.findUnique({
+        where: { uuid: lotUuid },
+        select: { id: true, auctionId: true, auction: { select: { deletedAt: true } } },
+    });
+    if (!item || item.auction.deletedAt) throw httpError("Lot not found", 404);
+
+    const rows = await prisma.lotBidder.findMany({
+        where: { itemId: item.id, ...ELIGIBLE_LOT_BIDDER_WHERE },
+        select: {
+            user: {
+                select: {
+                    id: true,
+                    uuid: true,
+                    username: true,
+                    email: true,
+                    profile: { select: { firstName: true, lastName: true, displayName: true } },
+                },
+            },
+        },
+    });
+    const userIds = rows.map((row) => row.user.id);
+    const [participants, proxies] = await Promise.all([
+        prisma.auctionParticipant.findMany({
+            where: { auctionId: item.auctionId, userId: { in: userIds } },
+            select: { userId: true, paddleNumber: true },
+        }),
+        prisma.autoBid.findMany({
+            where: { itemId: item.id, bidderId: { in: userIds }, withdrawnAt: null },
+            select: { bidderId: true, maxAmount: true },
+        }),
+    ]);
+    const paddleOf = new Map(participants.map((p) => [p.userId.toString(), p.paddleNumber]));
+    const proxyOf = new Map(proxies.map((p) => [p.bidderId.toString(), String(p.maxAmount)]));
+
+    const bidders = rows
+        .map(({ user }) => ({
+            uuid: user.uuid,
+            name: displayName(user),
+            username: user.username,
+            email: user.email,
+            paddle: paddleOf.get(user.id.toString()) ?? null,
+            proxyMax: proxyOf.get(user.id.toString()) ?? null,
+        }))
+        .sort((a, b) => (Number(a.paddle) || Infinity) - (Number(b.paddle) || Infinity) || (a.name ?? "").localeCompare(b.name ?? ""));
+    return { bidders };
 };
 
 // =====================================================================

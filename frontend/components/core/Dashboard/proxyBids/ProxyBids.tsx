@@ -12,6 +12,8 @@ import {
     Download,
     Globe,
     Loader2,
+    Pencil,
+    Plus,
     Radio,
     RefreshCw,
     Search,
@@ -34,14 +36,21 @@ import { cn } from "@/lib/utils"
 import { downloadProxyBids, getProxyBids, getProxyBidSummary } from "@/services/operations/proxyBid.api"
 
 import { DASHBOARD_TIME_ZONE, describeDevice, money, PanelMessage, type PillTone, Segmented, StatTile, StatusPill } from "../home/dashboardUi"
+import { ProxyBidDialog } from "./ProxyBidDialog"
 import { PROXY_OUTCOMES } from "./proxyDisplay"
 import { ProxySwitches } from "./ProxySwitches"
 
 const PAGE_SIZES = [25, 50, 100]
 const ALL = "ALL"
-// mirror PROXY_AUDIT_ROLES / PROXY_SWITCH_ROLES in backend/src/routes/bidding.routes.js
+// mirror PROXY_AUDIT_ROLES / PROXY_SWITCH_ROLES / PROXY_EDIT_ROLES in backend/src/routes/bidding.routes.js
 const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"]
 const PROXY_SWITCH_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS"]
+const PROXY_EDIT_ROLES = ["SUPER_ADMIN"]
+/** mirrors STAFF_PROXY_AUCTION_STATUSES in backend/src/services/bidding.services.js — before the auction goes live */
+const STAFF_PROXY_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW"]
+
+/** A proxy staff can still change: waiting for its lot, in an auction that isn't live yet */
+const isEditable = (row: ProxyBidRow) => row.outcome === "WAITING" && STAFF_PROXY_AUCTION_STATUSES.includes(row.auction.status)
 
 const STAGE_OPTIONS: { value: ProxyStage; label: string }[] = [
     { value: "all", label: "All" },
@@ -115,10 +124,13 @@ function ProxyDetails({
     row,
     onFilterUser,
     onFilterIp,
+    onEdit,
 }: {
     row: ProxyBidRow
     onFilterUser: (row: ProxyBidRow) => void
     onFilterIp: (ip: string) => void
+    /** set when the viewer may still change this proxy */
+    onEdit?: (row: ProxyBidRow) => void
 }) {
     const { bidder, lot, auction } = row
     const code = row.currency.code
@@ -163,6 +175,7 @@ function ProxyDetails({
                 <DetailRow label="Set at">
                     {formatTime(row.createdAt)} <span className="text-[#8A8D94]">({row.createdAt})</span>
                 </DetailRow>
+                <DetailRow label="Set by">{row.setBy ? `${row.setBy.name ?? "Staff"} (staff, for the bidder)` : "The bidder"}</DetailRow>
                 <DetailRow label="Lot opens">{formatTime(lot.scheduledStartAt)}</DetailRow>
                 <DetailRow label="Starting price">{money(lot.startingPrice, code)}</DetailRow>
                 {estimate && <DetailRow label="Estimate">{estimate}</DetailRow>}
@@ -189,7 +202,13 @@ function ProxyDetails({
                         {row.withdrawnReason && <span className="block text-[11px] text-[#8A8D94]">{row.withdrawnReason}</span>}
                     </DetailRow>
                 )}
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {onEdit && (
+                        <Button type="button" variant="outline" className="h-8 gap-1 bg-white text-[11px]" onClick={() => onEdit(row)}>
+                            <Pencil className="h-3 w-3" />
+                            Edit maximum bid
+                        </Button>
+                    )}
                     <Link
                         href={`/dashboard/bid-history?auction=${auction.uuid}`}
                         className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-3 text-[11px] font-medium text-slate-900 hover:bg-slate-50"
@@ -246,6 +265,9 @@ export function ProxyBids() {
     const role = useAppSelector((state) => state.auth.role)
     const canView = !!role && PROXY_AUDIT_ROLES.includes(role)
     const canSwitch = !!role && PROXY_SWITCH_ROLES.includes(role)
+    const canEditProxies = !!role && PROXY_EDIT_ROLES.includes(role)
+    // add (editing null) or change a bidder's proxy
+    const [proxyDialog, setProxyDialog] = useState<{ open: boolean; editing: ProxyBidRow | null }>({ open: false, editing: null })
 
     const [searchInput, setSearchInput] = useState("")
     const search = useDebouncedValue(searchInput.trim())
@@ -488,6 +510,17 @@ export function ProxyBids() {
                     )}
 
                     <div className="ml-auto flex gap-2">
+                        {canEditProxies && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-10 gap-1.5 border-[#7B2D52] bg-white text-[12px] text-[#7B2D52]"
+                                onClick={() => setProxyDialog({ open: true, editing: null })}
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                                Add proxy bid
+                            </Button>
+                        )}
                         <Button
                             type="button"
                             variant="outline"
@@ -598,6 +631,11 @@ export function ProxyBids() {
                                                         <span title={outcome.hint}>
                                                             <StatusPill tone={outcome.tone}>{outcome.label}</StatusPill>
                                                         </span>
+                                                        {row.setBy && (
+                                                            <p className="mt-1 text-[11px] text-[#8A8D94]" title={`Set by ${row.setBy.name ?? "staff"}`}>
+                                                                Set by staff
+                                                            </p>
+                                                        )}
                                                     </td>
                                                     <td className="whitespace-nowrap px-4 py-3">
                                                         <p className="font-mono text-[11px] text-slate-900">{row.ipAddress ?? "—"}</p>
@@ -605,13 +643,38 @@ export function ProxyBids() {
                                                         <SharedIpPill bidders={row.ipSharedBy} />
                                                     </td>
                                                     <td className="px-2 py-3 text-slate-400">
-                                                        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                                                        <div className="flex items-center gap-1">
+                                                            {canEditProxies && isEditable(row) && (
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label="Edit maximum bid"
+                                                                    title="Edit maximum bid"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        setProxyDialog({ open: true, editing: row })
+                                                                    }}
+                                                                    className="cursor-pointer rounded p-1 hover:bg-slate-100 hover:text-[#7B2D52]"
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            )}
+                                                            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {isOpen && (
                                                     <tr className="border-b border-slate-100">
                                                         <td colSpan={7} className="p-0">
-                                                            <ProxyDetails row={row} onFilterUser={filterByUser} onFilterIp={filterByIp} />
+                                                            <ProxyDetails
+                                                                row={row}
+                                                                onFilterUser={filterByUser}
+                                                                onFilterIp={filterByIp}
+                                                                onEdit={
+                                                                    canEditProxies && isEditable(row)
+                                                                        ? (r) => setProxyDialog({ open: true, editing: r })
+                                                                        : undefined
+                                                                }
+                                                            />
                                                         </td>
                                                     </tr>
                                                 )}
@@ -681,6 +744,16 @@ export function ProxyBids() {
                     </div>
                 )}
             </section>
+
+            {canEditProxies && (
+                <ProxyBidDialog
+                    open={proxyDialog.open}
+                    onOpenChange={(open) => setProxyDialog((prev) => ({ ...prev, open }))}
+                    token={token}
+                    editing={proxyDialog.editing}
+                    onSaved={() => setRefresh((n) => n + 1)}
+                />
+            )}
         </div>
     )
 }

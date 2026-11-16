@@ -260,6 +260,12 @@ const ROUTES = [
         failAction: "PROXY_BID_REJECTED",
         describe: ({ body }) => `Set a maximum (proxy) bid of ${body.maxAmount ?? "?"}`,
     }),
+    route("PUT", "/api/bidding/lots/:lotUuid/proxy-bids/:bidderUuid", "BIDDING", "PROXY_BID_STAFF_SET", "Set a proxy bid for a bidder", {
+        target: LOT,
+        failAction: "PROXY_BID_STAFF_SET_FAILED",
+        describe: ({ ok, body, response }) =>
+            ok && response?.message ? response.message : `Tried to set a bidder's maximum (proxy) bid to ${body.maxAmount ?? "?"}`,
+    }),
     route("POST", "/api/bidding/lots/:lotUuid/execute-proxies", "BIDDING", "PROXY_EXECUTE", "Placed proxy bids at the hammer", {
         target: LOT,
         failAction: "PROXY_EXECUTE_FAILED",

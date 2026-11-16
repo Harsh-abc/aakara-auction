@@ -84,6 +84,8 @@ const PROXY_SELECT = {
     withdrawnReason: true,
     createdAt: true,
     updatedAt: true,
+    // the super admin who set it for the bidder (null: the bidder did)
+    setBy: { select: { uuid: true, username: true, profile: { select: { firstName: true, lastName: true, displayName: true } } } },
     bidder: {
         select: {
             id: true,
@@ -306,6 +308,7 @@ const enrich = async (rows) => {
             ipSharedBy: row.ipAddress ? ipSharing.get(row.ipAddress) ?? 1 : 0,
             withdrawnAt: row.withdrawnAt,
             withdrawnReason: row.withdrawnReason,
+            setBy: row.setBy ? { uuid: row.setBy.uuid, name: displayName(row.setBy) } : null,
             bidder: {
                 uuid: bidder.uuid,
                 name: displayName(bidder),
@@ -549,7 +552,7 @@ export const exportProxyBidsService = async (filters) => {
         "Set at (UTC)", "Auction", "Lot", "Lot title", "Lot status", "Bidder", "Username", "Email", "Phone", "Paddle",
         "KYC", "Account status", "Location", "Currency", "Maximum bid", "Starting price", "Reserve", "Current bid",
         "Proxy bids placed", "Highest proxy bid", "Hammer price", "Result", "IP address", "Bidders on this IP",
-        "User agent", "Withdrawn at (UTC)", "Withdrawn reason",
+        "User agent", "Withdrawn at (UTC)", "Withdrawn reason", "Set by staff",
     ];
     const lines = rows.map((row) => [
         new Date(row.createdAt).toISOString(),
@@ -579,6 +582,7 @@ export const exportProxyBidsService = async (filters) => {
         row.userAgent,
         row.withdrawnAt ? new Date(row.withdrawnAt).toISOString() : null,
         row.withdrawnReason,
+        row.setBy?.name ?? null,
     ]);
 
     return toCsv(header, lines);
