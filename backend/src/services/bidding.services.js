@@ -709,8 +709,22 @@ const saveProxy = async ({ itemId, lotUuid, userId, maxAmount, result, prevProxy
 // rule (verified on the lot, bidding limit, minimum) is the same.
 // =====================================================================
 
-/** Auctions in which staff may set proxies: scheduled, not yet live (a draft's lots don't take bids yet) */
-export const STAFF_PROXY_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW"];
+/** Auctions in which staff may always set proxies: not live yet */
+export const STAFF_PROXY_AUCTION_STATUSES = ["DRAFT", "SCHEDULED", "PREVIEW"];
+/** Auctions the proxy switch can still apply to (mirrors SWITCHABLE_AUCTION_STATUSES in proxyBid.services.js) */
+const PROXY_SWITCH_AUCTION_STATUSES = [...STAFF_PROXY_AUCTION_STATUSES, "LIVE", "PAUSED"];
+
+/** Proxy switch on and the 8h cutoff not reached — bidders can leave proxies themselves */
+const proxySwitchOpen = (auction) => auction.proxyBiddingEnabled && !pastProxyCutoff(auction.startTime);
+
+/**
+ * Staff may set a proxy in an auction that hasn't gone live, or in any auction
+ * whose proxy bidding is switched on (Proxy Bids → proxy switch). The lot must
+ * not have opened either way.
+ */
+export const staffCanSetProxy = (auction) =>
+    STAFF_PROXY_AUCTION_STATUSES.includes(auction.status) ||
+    (PROXY_SWITCH_AUCTION_STATUSES.includes(auction.status) && proxySwitchOpen(auction));
 
 /** Why a bidder can't hold a proxy on this lot, worded for staff */
 const staffNotVerifiedError = async (lotId, userId, who) => {
@@ -735,16 +749,27 @@ const staffNotVerifiedError = async (lotId, userId, who) => {
 export const setProxyBidForBidderService = async ({ lotUuid, bidderUuid, maxAmount, staffUserId }) => {
     const item = await prisma.auctionItem.findUnique({
         where: { uuid: lotUuid },
-        select: { id: true, itemNumber: true, status: true, auction: { select: { id: true, status: true, deletedAt: true } } },
+        select: {
+            id: true,
+            itemNumber: true,
+            status: true,
+            startingPrice: true,
+            currency: { select: { code: true } },
+            auction: {
+                select: {
+                    id: true,
+                    status: true,
+                    deletedAt: true,
+                    proxyBiddingEnabled: true,
+                    startTime: true,
+                    currency: { select: { code: true } },
+                },
+            },
+        },
     });
     if (!item || item.auction.deletedAt) throw httpError("Lot not found", 404);
-    if (!STAFF_PROXY_AUCTION_STATUSES.includes(item.auction.status)) {
-        throw httpError(
-            item.auction.status === "DRAFT"
-                ? "Schedule the auction before setting proxy bids on its lots"
-                : "Proxy bids can only be set or changed before the auction goes live",
-            409
-        );
+    if (!staffCanSetProxy(item.auction)) {
+        throw httpError("This auction is live and its proxy bidding is switched off — proxy bids can't be set or changed", 409);
     }
     if (!PROXY_LOT_STATUSES.includes(item.status)) throw httpError(`Lot #${item.itemNumber} has opened or closed — its proxy bids are locked`, 409);
 
@@ -760,6 +785,11 @@ export const setProxyBidForBidderService = async ({ lotUuid, bidderUuid, maxAmou
         select: { paddleNumber: true },
     });
     const who = participant ? `Paddle #${participant.paddleNumber}` : displayName(bidder);
+
+    // a draft auction's lots aren't in the bidding engine yet — save straight to the database
+    if (item.auction.status === "DRAFT") {
+        return setDraftProxy({ item, lotUuid, bidder, bidderUuid, userId, who, maxAmount, staffUserId });
+    }
 
     const lot = await ensureLotState(lotUuid);
     if (!(await isVerifiedBidder(lotUuid, lot.lotId, userId))) throw await staffNotVerifiedError(lot.lotId, userId, who);
@@ -804,18 +834,80 @@ export const setProxyBidForBidderService = async ({ lotUuid, bidderUuid, maxAmou
 };
 
 /**
- * For the "Add proxy bid" form: auctions staff can still set proxies in, with
- * their lots that haven't opened.
+ * A proxy in a draft auction: its lots aren't in the bidding engine (Redis) yet,
+ * so the proxy is checked here and saved to auto_bids only. The engine loads
+ * it from there (restoreProxies) the first time the lot is loaded once the
+ * auction is scheduled. The same rules apply: verified on the lot, within the
+ * bidding limit, at least the starting price.
+ */
+const setDraftProxy = async ({ item, lotUuid, bidder, bidderUuid, userId, who, maxAmount, staffUserId }) => {
+    const currencyCode = item.currency?.code ?? item.auction.currency.code;
+
+    const eligible = await prisma.lotBidder.findFirst({
+        where: { itemId: item.id, userId: bidder.id, ...ELIGIBLE_LOT_BIDDER_WHERE },
+        select: { userId: true },
+    });
+    if (!eligible) throw await staffNotVerifiedError(item.id, userId, who);
+    await assertWithinBiddingLimit({ userId, amount: maxAmount, currencyCode, who });
+
+    const startingPrice = Number(item.startingPrice);
+    if (maxAmount < startingPrice) throw httpError(`The maximum bid must be at least ${formatMoney(startingPrice, currencyCode)}`, 400);
+
+    const existing = await prisma.autoBid.findUnique({
+        where: { itemId_bidderId: { itemId: item.id, bidderId: bidder.id } },
+        select: { maxAmount: true, createdAt: true, withdrawnAt: true, ipAddress: true, userAgent: true },
+    });
+    const hadProxy = Boolean(existing && !existing.withdrawnAt);
+    // like the engine: the same maximum keeps its place among equal maximums (earliest wins)
+    const setAt = hadProxy && Number(existing.maxAmount) === maxAmount ? existing.createdAt : new Date();
+
+    const record = {
+        maxAmount: String(maxAmount),
+        isActive: true,
+        ipAddress: existing?.ipAddress ?? null,
+        userAgent: existing?.userAgent ?? null,
+        withdrawnAt: null,
+        withdrawnReason: null,
+        setById: BigInt(staffUserId),
+        createdAt: setAt,
+    };
+    await prisma.autoBid.upsert({
+        where: { itemId_bidderId: { itemId: item.id, bidderId: bidder.id } },
+        create: { itemId: item.id, bidderId: bidder.id, ...record },
+        update: record,
+    });
+
+    // if the lot was loaded into Redis before (e.g. the auction went back to draft), keep it in step
+    try {
+        if (await readLotState(lotUuid)) {
+            await redis.hset(bidKeys.proxies(lotUuid), userId, JSON.stringify({ max: maxAmount, at: setAt.getTime() }));
+        }
+    } catch (error) {
+        console.error(`[proxy] could not update the cached proxies of lot ${lotUuid}:`, error);
+    }
+
+    sendProxyBidSetEmail({ lotUuid, userId, maxAmount, setAt });
+
+    return {
+        message: `${hadProxy ? "Updated" : "Set"} ${who}'s maximum bid on Lot #${item.itemNumber} to ${formatMoney(maxAmount, currencyCode)}`,
+        data: { lotUuid, itemNumber: item.itemNumber.toString(), proxyMax: String(maxAmount), proxySetAt: setAt.toISOString(), bidderUuid },
+    };
+};
+
+/**
+ * For the "Add proxy bid" form: auctions staff can still set proxies in (not
+ * live yet, or proxy bidding switched on), with their lots that haven't opened.
  */
 export const getStaffProxyOptionsService = async () => {
-    const auctions = await prisma.auction.findMany({
-        where: { deletedAt: null, status: { in: STAFF_PROXY_AUCTION_STATUSES } },
+    const candidates = await prisma.auction.findMany({
+        where: { deletedAt: null, status: { in: PROXY_SWITCH_AUCTION_STATUSES } },
         orderBy: [{ startTime: "asc" }, { id: "asc" }],
         select: {
             uuid: true,
             title: true,
             status: true,
             startTime: true,
+            proxyBiddingEnabled: true,
             currency: { select: { code: true } },
             items: {
                 where: { status: { in: PROXY_LOT_STATUSES } },
@@ -824,9 +916,12 @@ export const getStaffProxyOptionsService = async () => {
             },
         },
     });
+    const auctions = candidates.filter(staffCanSetProxy);
     return {
-        auctions: auctions.map(({ items, currency, ...auction }) => ({
+        auctions: auctions.map(({ items, currency, proxyBiddingEnabled, ...auction }) => ({
             ...auction,
+            // what bidders see: switched on, and the 8h cutoff not reached
+            proxyBiddingOpen: proxySwitchOpen({ ...auction, proxyBiddingEnabled }),
             lots: items.map((lot) => ({
                 uuid: lot.uuid,
                 itemNumber: lot.itemNumber.toString(),

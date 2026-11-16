@@ -138,8 +138,9 @@ export function ProxyBidDialog({ open, onOpenChange, token, editing, onSaved }: 
                             {editing ? `Edit proxy bid · Lot #${editing.lot.itemNumber}` : "Add a proxy bid for a bidder"}
                         </DialogTitle>
                         <DialogDescription>
-                            Proxy bids can be set or changed for a registered bidder until the auction goes live, as long as the
-                            lot hasn&apos;t opened. The bidder gets the usual confirmation email and SMS.
+                            Proxy bids can be set or changed for a registered bidder until the auction goes live — or while its
+                            proxy bidding is switched on — as long as the lot hasn&apos;t opened. The bidder gets the usual
+                            confirmation email and SMS.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -186,6 +187,7 @@ export function ProxyBidDialog({ open, onOpenChange, token, editing, onSaved }: 
                                                             <span className="truncate">{a.title}</span>
                                                             <span className="ml-auto shrink-0 pl-2 text-[11px] text-[#8A8D94]">
                                                                 {AUCTION_STATUS_LABELS[a.status] ?? a.status} · {startDate.format(new Date(a.startTime))}
+                                                                {a.proxyBiddingOpen ? " · proxy on" : " · proxy off"}
                                                             </span>
                                                         </SelectItem>
                                                     ))}
@@ -193,7 +195,7 @@ export function ProxyBidDialog({ open, onOpenChange, token, editing, onSaved }: 
                                             </SelectContent>
                                         </Select>
                                         {auctions?.length === 0 && (
-                                            <p className="text-[11px] text-[#8A8D94]">No scheduled auction can take proxy bids right now.</p>
+                                            <p className="text-[11px] text-[#8A8D94]">No auction can take proxy bids right now.</p>
                                         )}
                                     </div>
 

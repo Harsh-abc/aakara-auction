@@ -46,11 +46,9 @@ const ALL = "ALL"
 const PROXY_AUDIT_ROLES = ["SUPER_ADMIN", "ADMIN", "AUCTIONEER"]
 const PROXY_SWITCH_ROLES = ["SUPER_ADMIN", "ADMIN", "OPERATIONS"]
 const PROXY_EDIT_ROLES = ["SUPER_ADMIN"]
-/** mirrors STAFF_PROXY_AUCTION_STATUSES in backend/src/services/bidding.services.js — before the auction goes live */
-const STAFF_PROXY_AUCTION_STATUSES = ["SCHEDULED", "PREVIEW"]
 
-/** A proxy staff can still change: waiting for its lot, in an auction that isn't live yet */
-const isEditable = (row: ProxyBidRow) => row.outcome === "WAITING" && STAFF_PROXY_AUCTION_STATUSES.includes(row.auction.status)
+/** A proxy staff can still change — decided by the API (staffCanSetProxy in backend/src/services/bidding.services.js) */
+const isEditable = (row: ProxyBidRow) => row.staffEditable
 
 const STAGE_OPTIONS: { value: ProxyStage; label: string }[] = [
     { value: "all", label: "All" },

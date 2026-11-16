@@ -35,6 +35,8 @@ export interface ProxyBidRow {
     withdrawnReason: string | null
     /** the super admin who last set it for the bidder — null when the bidder set it */
     setBy: { uuid: string; name: string | null } | null
+    /** a super admin can still change it — lot not opened, auction not live or its proxy bidding switched on */
+    staffEditable: boolean
     bidder: {
         uuid: string
         name: string | null
@@ -122,12 +124,14 @@ export interface ProxySettingsAuction {
     upcomingLots: number
 }
 
-/** GET /api/bidding/proxy-bids/staff-options — auctions a super admin can still set proxies in (scheduled, not live) */
+/** GET /api/bidding/proxy-bids/staff-options — auctions a super admin can still set proxies in (not live, or proxy bidding on) */
 export interface StaffProxyAuction {
     uuid: string
     title: string
     status: AuctionStatus
     startTime: string
+    /** proxy bidding is switched on for bidders (and the 8h cutoff not reached) */
+    proxyBiddingOpen: boolean
     /** lots that haven't opened, in catalogue order */
     lots: { uuid: string; itemNumber: string; title: string; startingPrice: string; currencyCode: string }[]
 }

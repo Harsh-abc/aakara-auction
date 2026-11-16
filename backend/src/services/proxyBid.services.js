@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../libs/prisma.js";
 import redis from "../libs/redis.js";
 import { bidKeys } from "../libs/biddingStore.js";
-import { PROXY_LOT_STATUSES, pastProxyCutoff, proxyCutoffAt, readLiveLotBids } from "./bidding.services.js";
+import { PROXY_LOT_STATUSES, pastProxyCutoff, proxyCutoffAt, readLiveLotBids, staffCanSetProxy } from "./bidding.services.js";
 import { toCsv } from "../utils/csv.js";
 
 // =====================================================================
@@ -123,6 +123,9 @@ const PROXY_SELECT = {
                     title: true,
                     status: true,
                     auctionType: true,
+                    // whether staff can still change the proxy (staffCanSetProxy)
+                    proxyBiddingEnabled: true,
+                    startTime: true,
                     currency: { select: { code: true, symbol: true } },
                 },
             },
@@ -309,6 +312,8 @@ const enrich = async (rows) => {
             withdrawnAt: row.withdrawnAt,
             withdrawnReason: row.withdrawnReason,
             setBy: row.setBy ? { uuid: row.setBy.uuid, name: displayName(row.setBy) } : null,
+            // a super admin can still change it: lot not opened, auction not live (or proxy bidding on)
+            staffEditable: !row.withdrawnAt && PROXY_LOT_STATUSES.includes(item.status) && staffCanSetProxy(auction),
             bidder: {
                 uuid: bidder.uuid,
                 name: displayName(bidder),
