@@ -26,6 +26,7 @@ const optionalUuid = (label) => z.preprocess((v) => (v === "" ? undefined : v), 
 export const proxyBidFiltersSchema = z.object({
     search: optionalText(200),
     auctionUuid: optionalUuid("auction"),
+    lotUuid: optionalUuid("lot"),
     stage: z.preprocess((v) => (v === "" || v === "all" ? undefined : v), z.enum(["waiting", "live", "closed", "withdrawn"]).optional()),
     ip: optionalText(64),
     userUuid: optionalUuid("user"),
@@ -36,7 +37,7 @@ export const getProxyBidsQuerySchema = proxyBidFiltersSchema.extend({
     limit: z.coerce.number().int().min(1).max(100).default(25),
 });
 
-export const proxyBidSummaryQuerySchema = z.object({ auctionUuid: optionalUuid("auction") });
+export const proxyBidSummaryQuerySchema = z.object({ auctionUuid: optionalUuid("auction"), lotUuid: optionalUuid("lot") });
 
 // dashboard: switch proxy bids on / off for an auction
 export const setProxyBiddingSchema = z.object({

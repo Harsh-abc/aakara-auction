@@ -38,8 +38,8 @@ const displayName = (user) => {
     return p?.displayName || full || user?.username || null;
 };
 
-const buildWhere = ({ search, auctionUuid, stage, ip, userUuid }) => {
-    const item = { auction: { deletedAt: null, ...(auctionUuid && { uuid: auctionUuid }) } };
+const buildWhere = ({ search, auctionUuid, lotUuid, stage, ip, userUuid }) => {
+    const item = { auction: { deletedAt: null, ...(auctionUuid && { uuid: auctionUuid }) }, ...(lotUuid && { uuid: lotUuid }) };
     const where = { item };
 
     if (stage === "withdrawn") where.withdrawnAt = { not: null };
@@ -391,11 +391,16 @@ export const getLotProxiesService = async ({ lotUuid, role }) => {
     };
 };
 
-/** Totals for the cards (whole platform, or one auction) and the auctions to filter by. */
-export const getProxyBidSummaryService = async ({ auctionUuid }) => {
-    const scope = auctionUuid ? Prisma.sql`AND a.uuid = ${auctionUuid}::uuid` : Prisma.empty;
+/**
+ * Totals for the cards (whole platform, one auction or one lot), the auctions to
+ * filter by and — with an auction picked — its lots that have proxy bids.
+ */
+export const getProxyBidSummaryService = async ({ auctionUuid, lotUuid }) => {
+    const scope = Prisma.sql`${auctionUuid ? Prisma.sql`AND a.uuid = ${auctionUuid}::uuid` : Prisma.empty} ${
+        lotUuid ? Prisma.sql`AND ai.uuid = ${lotUuid}::uuid` : Prisma.empty
+    }`;
 
-    const [[totals], [shared], auctions] = await Promise.all([
+    const [[totals], [shared], auctions, lots] = await Promise.all([
         prisma.$queryRaw`
             SELECT
                 COUNT(*)::int                                                                               AS "total",
@@ -428,9 +433,21 @@ export const getProxyBidSummaryService = async ({ auctionUuid }) => {
             orderBy: { startTime: "desc" },
             select: { uuid: true, title: true, status: true, startTime: true },
         }),
+        // the picked auction's lots with proxy bids, in catalogue order
+        auctionUuid
+            ? prisma.auctionItem.findMany({
+                  where: { auction: { uuid: auctionUuid, deletedAt: null }, autoBids: { some: {} } },
+                  orderBy: [{ itemNumber: "asc" }, { id: "asc" }],
+                  select: { uuid: true, itemNumber: true, title: true, status: true, _count: { select: { autoBids: true } } },
+              })
+            : [],
     ]);
 
-    return { totals: { ...totals, sharedIps: shared.sharedIps }, auctions };
+    return {
+        totals: { ...totals, sharedIps: shared.sharedIps },
+        auctions,
+        lots: lots.map(({ _count, itemNumber, ...lot }) => ({ ...lot, itemNumber: itemNumber.toString(), proxyCount: _count.autoBids })),
+    };
 };
 
 // ---------------------------------------------------------------------

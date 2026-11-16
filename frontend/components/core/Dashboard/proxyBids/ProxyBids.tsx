@@ -252,6 +252,8 @@ export function ProxyBids() {
     const [ipInput, setIpInput] = useState("")
     const ip = useDebouncedValue(ipInput.trim())
     const [auction, setAuction] = useState(ALL)
+    // a lot of the picked auction
+    const [lot, setLot] = useState(ALL)
     const [stage, setStage] = useState<ProxyStage>("all")
     // set from a row's "All proxies by this bidder"
     const [user, setUser] = useState<{ uuid: string; label: string } | null>(null)
@@ -268,9 +270,10 @@ export function ProxyBids() {
     const [exporting, setExporting] = useState(false)
 
     const auctionUuid = auction === ALL ? undefined : auction
+    const lotUuid = auctionUuid && lot !== ALL ? lot : undefined
     const filters: ProxyBidFilters = useMemo(
-        () => ({ search: search || undefined, auctionUuid, stage, ip: ip || undefined, userUuid: user?.uuid }),
-        [search, auctionUuid, stage, ip, user]
+        () => ({ search: search || undefined, auctionUuid, lotUuid, stage, ip: ip || undefined, userUuid: user?.uuid }),
+        [search, auctionUuid, lotUuid, stage, ip, user]
     )
 
     const listKey = JSON.stringify({ filters, page, limit, refresh })
@@ -296,7 +299,7 @@ export function ProxyBids() {
     useEffect(() => {
         if (!token || !canView) return
         let cancelled = false
-        getProxyBidSummary(token, auctionUuid)
+        getProxyBidSummary(token, auctionUuid, lotUuid)
             .then((data) => {
                 if (!cancelled) setSummary(data)
             })
@@ -304,7 +307,7 @@ export function ProxyBids() {
         return () => {
             cancelled = true
         }
-    }, [token, canView, auctionUuid, refresh])
+    }, [token, canView, auctionUuid, lotUuid, refresh])
 
     // operations switch proxy bidding on / off but don't see bidders' IPs and contacts
     if (!canView) {
@@ -323,6 +326,9 @@ export function ProxyBids() {
     const pagination = list?.data?.pagination
     const totals = summary?.totals ?? null
     const auctions = summary?.auctions ?? []
+    // the summary may still be the previous auction's until the new one lands
+    const lots = auctionUuid ? summary?.lots ?? [] : []
+    const selectedLot = lots.find((l) => l.uuid === lot)
     const hasFilters = !!searchInput || !!ipInput || auction !== ALL || stage !== "all" || !!user
 
     // any filter change starts again at page 1
@@ -337,6 +343,7 @@ export function ProxyBids() {
             setSearchInput("")
             setIpInput("")
             setAuction(ALL)
+            setLot(ALL)
             setStage("all")
             setUser(null)
         })
@@ -393,7 +400,17 @@ export function ProxyBids() {
                         />
                     </div>
 
-                    <Select value={auction} onValueChange={(value) => value !== null && change(() => setAuction(value))}>
+                    <Select
+                        value={auction}
+                        onValueChange={(value) =>
+                            value !== null &&
+                            change(() => {
+                                setAuction(value)
+                                // lots belong to one auction
+                                setLot(ALL)
+                            })
+                        }
+                    >
                         <SelectTrigger className="h-10 w-64 bg-white text-[13px]" aria-label="Filter by auction">
                             <SelectValue>
                                 <span className="truncate">
@@ -408,6 +425,45 @@ export function ProxyBids() {
                                     <SelectItem key={a.uuid} value={a.uuid}>
                                         {a.title}
                                         <span className="ml-1 text-[11px] text-[#8A8D94]">· {AUCTION_STATUS_LABELS[a.status] ?? a.status}</span>
+                                    </SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+
+                    <Select
+                        value={lot}
+                        disabled={!auctionUuid}
+                        onValueChange={(value) => value !== null && change(() => setLot(value))}
+                    >
+                        <SelectTrigger
+                            className="h-10 w-64 bg-white text-[13px]"
+                            aria-label="Filter by lot"
+                            title={auctionUuid ? undefined : "Pick an auction to filter by lot"}
+                        >
+                            <SelectValue>
+                                <span className="truncate">
+                                    {!auctionUuid
+                                        ? "All lots (pick an auction)"
+                                        : lot === ALL
+                                            ? "All lots"
+                                            : selectedLot
+                                                ? `Lot #${selectedLot.itemNumber} · ${selectedLot.title}`
+                                                : "Lot"}
+                                </span>
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80 bg-white">
+                            <SelectGroup>
+                                <SelectItem value={ALL}>All lots</SelectItem>
+                                {lots.map((l) => (
+                                    <SelectItem key={l.uuid} value={l.uuid}>
+                                        <span className="truncate">
+                                            Lot #{l.itemNumber} · {l.title}
+                                        </span>
+                                        <span className="ml-auto shrink-0 pl-2 text-[11px] text-[#8A8D94]">
+                                            {count(l.proxyCount)} {l.proxyCount === 1 ? "proxy" : "proxies"}
+                                        </span>
                                     </SelectItem>
                                 ))}
                             </SelectGroup>

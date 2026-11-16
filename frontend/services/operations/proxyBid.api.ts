@@ -16,11 +16,11 @@ export async function getProxyBids(token: string | null, filters: ProxyBidFilter
     return response.data.data
 }
 
-export async function getProxyBidSummary(token: string | null, auctionUuid?: string): Promise<ProxyBidSummary> {
+export async function getProxyBidSummary(token: string | null, auctionUuid?: string, lotUuid?: string): Promise<ProxyBidSummary> {
     const response = await apiConnector({
         method: "GET",
         url: PROXY_BIDS_SUMMARY_API,
-        params: toParams({ auctionUuid }),
+        params: toParams({ auctionUuid, lotUuid }),
         header: authHeader(token),
     })
     return response.data.data

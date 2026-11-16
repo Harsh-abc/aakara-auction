@@ -92,6 +92,17 @@ export interface ProxyBidSummary {
     }
     /** auctions with proxy bids, newest first */
     auctions: { uuid: string; title: string; status: AuctionStatus; startTime: string }[]
+    /** with an auction picked: its lots that have proxy bids, in catalogue order (empty otherwise) */
+    lots: ProxyBidLotOption[]
+}
+
+export interface ProxyBidLotOption {
+    uuid: string
+    itemNumber: string
+    title: string
+    status: string
+    /** proxy bids left on the lot */
+    proxyCount: number
 }
 
 /** GET /api/bidding/proxy-bids/settings — upcoming and running auctions, soonest first */
@@ -112,6 +123,7 @@ export interface ProxySettingsAuction {
 export interface ProxyBidFilters {
     search?: string
     auctionUuid?: string
+    lotUuid?: string
     stage?: ProxyStage
     ip?: string
     userUuid?: string
