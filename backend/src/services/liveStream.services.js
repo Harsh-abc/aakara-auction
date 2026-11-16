@@ -150,7 +150,7 @@ export const createViewerTokenService = async ({ auctionUuid, userId, role, user
         where: { auctionId_identity: { auctionId: auction.id, identity } },
         select: { id: true },
     });
-    if (banned) throw httpErrorWithCode("You have been removed from this live stream", 403, "REMOVED");
+    if (banned) throw httpErrorWithCode("Live stream is currently unavailable.", 403, "REMOVED");
 
     // checked last: it's a LiveKit API call, and the player polls this while waiting
     if (!(await hostOnAir(auctionUuid))) throw httpErrorWithCode("The auctioneer hasn't gone live yet", 409, "OFF_AIR");

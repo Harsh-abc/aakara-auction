@@ -146,7 +146,7 @@ export const removeViewer = async (req, res) => {
             emitTo(rooms.user(viewerUserId), "live:removed", {
                 auctionUuid,
                 banned: ban,
-                message: ban ? "You have been removed from this live stream." : "You have been removed from this live stream. Reload the page to rejoin.",
+                message: "Live stream is currently unavailable.",
             });
         }
         return res.status(200).json({ success: true, message });

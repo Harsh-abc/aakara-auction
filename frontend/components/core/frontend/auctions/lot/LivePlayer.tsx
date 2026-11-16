@@ -243,7 +243,7 @@ export function LiveConnection({ auctionUuid, fallback, className, ...stage }: L
             if (payload?.auctionUuid !== auctionUuid) return
             clearTimeout(retryRef.current)
             setAccess(null)
-            setBlocked({ kind: "removed", message: payload.message || "You have been removed from this live stream." })
+            setBlocked({ kind: "removed", message: payload.message || "Live stream is currently unavailable." })
         }
         socket.on("live:removed", onRemoved)
         return () => {
@@ -280,7 +280,7 @@ export function LiveConnection({ auctionUuid, fallback, className, ...stage }: L
                 if (reason === DisconnectReason.CLIENT_INITIATED) return
                 setAccess(null)
                 if (reason === DisconnectReason.PARTICIPANT_REMOVED) {
-                    return setBlocked({ kind: "removed", message: "You have been removed from this live stream." })
+                    return setBlocked({ kind: "removed", message: "Live stream is currently unavailable." })
                 }
                 // the same account joined from another tab or device — don't fight it for the seat
                 if (reason === DisconnectReason.DUPLICATE_IDENTITY) {
