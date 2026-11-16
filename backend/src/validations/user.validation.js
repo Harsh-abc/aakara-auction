@@ -8,6 +8,8 @@ export const getAllUsersSchema = z.object({
     emailVerified: z.enum(['true', 'false']).optional(),
     kycStatus: z.enum(['NOT_SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED']).optional(),
     role: z.string().trim().toUpperCase().optional(),
+    // only users registered for this auction (Bidders page filter / CSV export)
+    auction: z.string().uuid("Invalid auction id").optional(),
 });
 
 export const getUserByIdSchema = z.object({

@@ -252,3 +252,64 @@ const proxyBidsColumn: ColumnDef<AppTableFeatures, User> = {
 export const bidderListColumns: ColumnDef<AppTableFeatures, User>[] = bidderColumns.flatMap((column) =>
     "accessorKey" in column && column.accessorKey === "phone" ? [column, proxyBidsColumn] : [column]
 )
+
+// Bidders page filtered by auction: the bidder's paddle number for that auction
+const paddleColumn: ColumnDef<AppTableFeatures, User> = {
+    id: "paddle",
+    accessorFn: (user) => user.auctionParticipation?.paddleNumber ?? "",
+
+    header: "Paddle no.",
+
+    cell: ({ row }) => (
+        <span className="font-medium tabular-nums">
+            {row.original.auctionParticipation?.paddleNumber ?? "-"}
+        </span>
+    ),
+}
+
+const REGISTRATION_LABEL: Record<string, string> = {
+    PENDING: "Pending",
+    APPROVED: "Approved",
+    REJECTED: "Rejected",
+    BANNED: "Banned",
+}
+
+const REGISTRATION_CLASS: Record<string, string> = {
+    Approved: "bg-green-50 text-green-600 border-green-100",
+    Pending: "bg-orange-50 text-orange-500 border-orange-100",
+    Rejected: "bg-red-50 text-red-500 border-red-100",
+    Banned: "bg-red-50 text-red-500 border-red-100",
+}
+
+const getRegistrationStatus = (user: User) => {
+    const status = user.auctionParticipation?.status
+    return status ? REGISTRATION_LABEL[status] ?? status : ""
+}
+
+// Bidders page filtered by auction: the state of the bidder's registration for that auction
+const registrationColumn: ColumnDef<AppTableFeatures, User> = {
+    id: "registration",
+    accessorFn: (user) => getRegistrationStatus(user),
+
+    header: "Registration",
+
+    cell: ({ row }) => {
+        const label = getRegistrationStatus(row.original)
+        if (!label) return <span className="text-muted-foreground">-</span>
+        return (
+            <Badge
+                variant="outline"
+                className={`rounded-full px-3 py-1 text-xs font-normal ${REGISTRATION_CLASS[label] ?? ""}`}
+            >
+                {label}
+            </Badge>
+        )
+    },
+}
+
+// Bidders page filtered by auction: paddle no. before the name, registration before the bidder badge
+export const auctionBidderListColumns: ColumnDef<AppTableFeatures, User>[] = bidderListColumns.flatMap((column) =>
+    column.id === "fullName" ? [paddleColumn, column]
+        : column.id === "bidder" ? [registrationColumn, column]
+            : [column]
+)

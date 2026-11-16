@@ -81,6 +81,8 @@ export interface User {
     biddingLimitSetBy?: RoleChangedBy | null;
     profile: UserProfile | null;
     kyc: UserKyc | null;
+    // only when the list is filtered by auction — the user's registration for it
+    auctionParticipation?: UserAuctionParticipation | null;
     _count: { bids: number; auctionsWon: number; auctionParticipations: number; autoBids?: number };
 }
 
@@ -104,6 +106,16 @@ export interface GetAllUsersParams {
     emailVerified?: "true" | "false";
     kycStatus?: string;
     role?: string;
+    /** auction uuid — only users registered for that auction */
+    auction?: string;
+}
+
+export interface UserAuctionParticipation {
+    paddleNumber: string;
+    status: string;
+    source: string;
+    registeredAt: string;
+    approvedAt: string | null;
 }
 
 export interface GetAllUsersResponse {

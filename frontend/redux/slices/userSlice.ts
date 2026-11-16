@@ -7,6 +7,8 @@ interface UserState {
     pagination: Pagination | null;
     loading: boolean;
     error: string | null;
+    // the latest getAllUsers request — an older one that lands later (e.g. after a filter change) is ignored
+    usersRequestId: string | null;
     selectedUser: User | null;
     selectedUserLoading: boolean;
     selectedUserError: string | null;
@@ -42,6 +44,7 @@ const initialState: UserState = {
     pagination: null,
     loading: false,
     error: null,
+    usersRequestId: null,
     selectedUser: null,
     selectedUserLoading: false,
     selectedUserError: null,
@@ -73,16 +76,19 @@ const userSlice = createSlice({
     reducers: {},
     extraReducers: (builder) => {
         builder
-            .addCase(getAllUsers.pending, (state) => {
+            .addCase(getAllUsers.pending, (state, action) => {
                 state.loading = true;
                 state.error = null;
+                state.usersRequestId = action.meta.requestId;
             })
             .addCase(getAllUsers.fulfilled, (state, action) => {
+                if (action.meta.requestId !== state.usersRequestId) return;
                 state.loading = false;
                 state.users = action.payload.data.users;
                 state.pagination = action.payload.data.pagination;
             })
             .addCase(getAllUsers.rejected, (state, action) => {
+                if (action.meta.requestId !== state.usersRequestId) return;
                 state.loading = false;
                 state.error = action.payload || "Something went wrong";
             })

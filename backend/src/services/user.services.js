@@ -44,9 +44,10 @@ const withUploadedDocumentTypes = ({ documents, ...kyc }) => ({
     )],
 });
 
-export const getAllUsersService = async ({ page, limit, search, emailVerified, kycStatus, role }) => {
+export const getAllUsersService = async ({ page, limit, search, emailVerified, kycStatus, role, auction }) => {
     const where = {
         deletedAt: null,
+        ...(auction && { auctionParticipations: { some: { auction: { uuid: auction } } } }),
         ...(emailVerified && { emailVerified: emailVerified === 'true' }),
         ...(kycStatus && { kyc: { status: kycStatus } }),
         // one role, or several comma-separated ("USER,BIDDER")
@@ -115,6 +116,14 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
                     },
                 },
 
+                // with the auction filter: the user's registration for that auction
+                ...(auction && {
+                    auctionParticipations: {
+                        where: { auction: { uuid: auction } },
+                        select: { paddleNumber: true, status: true, source: true, registeredAt: true, approvedAt: true },
+                        take: 1,
+                    },
+                }),
 
                 _count: {
                     select: {
@@ -132,10 +141,11 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
         }),
     ]);
 
-    const formattedUsers = users.map(({ kyc, ...user }) => ({
+    const formattedUsers = users.map(({ kyc, auctionParticipations, ...user }) => ({
         ...user,
         failedLoginAttempts: Number(user.failedLoginAttempts),
         kyc: kyc && withUploadedDocumentTypes(kyc),
+        ...(auction && { auctionParticipation: auctionParticipations?.[0] ?? null }),
     }));
 
     return {

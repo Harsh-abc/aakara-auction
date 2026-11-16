@@ -65,31 +65,66 @@ const toRow = (user: User) => [
     formatDate(user.lastLoginAt),
 ]
 
+const PARTICIPANT_STATUS_LABELS: Record<string, string> = {
+    PENDING: "Pending",
+    APPROVED: "Approved",
+    REJECTED: "Rejected",
+    BANNED: "Banned",
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+    SELF_REGISTERED: "Self registered",
+    ADDED_BY_ADMIN: "Added by admin",
+}
+
+// extra columns when exporting one auction's registered bidders
+const AUCTION_HEADER = ["Auction", "Paddle no.", "Registration status", "Registered via", "Registered for auction on (IST)"]
+
+const toAuctionCells = (user: User, auctionTitle: string) => {
+    const p = user.auctionParticipation
+    return [
+        auctionTitle,
+        p?.paddleNumber,
+        p ? PARTICIPANT_STATUS_LABELS[p.status] ?? p.status : "",
+        p ? SOURCE_LABELS[p.source] ?? p.source : "",
+        formatDate(p?.registeredAt),
+    ]
+}
+
+// "Modern Masters: Nov 2026" -> "modern-masters-nov-2026"
+const slugify = (text: string) =>
+    text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60)
+
 type ExportUsersButtonProps = {
     // only export users with this role (e.g. "BIDDER"); omit for everyone
     role?: RoleName
     // file name prefix and toast noun, e.g. "bidders"
     label?: string
+    // only export users registered for this auction (adds paddle no. / registration columns)
+    auction?: { uuid: string; title: string } | null
 }
 
 // downloads every user (not just the loaded page) as a CSV
-export default function ExportUsersButton({ role, label = "users" }: ExportUsersButtonProps) {
+export default function ExportUsersButton({ role, label = "users", auction }: ExportUsersButtonProps) {
     const token = useAppSelector((state) => state.auth.accessToken)
     const [exporting, setExporting] = useState(false)
 
     const handleExport = async () => {
         setExporting(true)
         try {
-            const fetched = await fetchAllUsers(token, role)
+            const fetched = await fetchAllUsers(token, role, auction?.uuid)
             // guard in case the API ignores the role filter
             const users = role ? fetched.filter((u) => u.role?.name === role) : fetched
-            const csv = [HEADER, ...users.map(toRow)].map((row) => row.map(csvCell).join(",")).join("\r\n")
+            const header = auction ? [...AUCTION_HEADER, ...HEADER] : HEADER
+            const rows = users.map((u) => (auction ? [...toAuctionCells(u, auction.title), ...toRow(u)] : toRow(u)))
+            const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")
 
             // BOM so Excel reads names in UTF-8
             const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }))
             const link = document.createElement("a")
             link.href = url
-            link.download = `akara-${label}-${new Date().toISOString().slice(0, 10)}.csv`
+            const auctionPart = auction ? `-${slugify(auction.title) || "auction"}` : ""
+            link.download = `akara-${label}${auctionPart}-${new Date().toISOString().slice(0, 10)}.csv`
             link.click()
             URL.revokeObjectURL(url)
 
