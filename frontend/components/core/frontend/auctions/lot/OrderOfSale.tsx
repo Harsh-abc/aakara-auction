@@ -49,8 +49,10 @@ export function OrderOfSale({ lots, saleClosed, media, className }: OrderOfSaleP
                 : "Every lot has been hammered."}
             </p>
           ) : (
-            // the list takes whatever height the panel has left and scrolls past that
-            <ol className="relative max-h-152 min-h-0 flex-1 overflow-y-auto overscroll-contain lg:max-h-none">
+            // the list takes whatever height the panel has left and scrolls past that.
+            // overscroll-contain only on desktop: on touch it traps the swipe (even when the list has nothing to
+            // scroll), so the page under it never moves — there, scrolling must chain on to the page
+            <ol className="relative max-h-152 min-h-0 flex-1 overflow-y-auto lg:max-h-none lg:overscroll-contain">
               {remaining.map((lot) => {
                 const live = lot.status === "ACTIVE";
                 const next = lot.uuid === upNext?.uuid;

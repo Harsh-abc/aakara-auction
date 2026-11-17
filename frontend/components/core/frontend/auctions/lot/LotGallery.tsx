@@ -90,8 +90,9 @@ export function LotGallery({ auctionUuid, lot, lots }: LotGalleryProps) {
                     </div>
                 )}
 
-                {/* not overflow-hidden: the hover zoom's side view sits outside this box */}
-                <div className="relative flex aspect-598/600 min-w-0 flex-1 self-start items-center justify-center">
+                {/* not overflow-hidden: the hover zoom's side view sits outside this box.
+                    stacked (mobile) it must stretch to the column: self-start there would size it to the image's natural width */}
+                <div className="relative flex aspect-598/600 min-w-0 flex-1 self-stretch items-center justify-center sm:self-start">
                     {!current ? (
                         <div className="flex size-full items-center justify-center bg-[#ebebeb]">
                             <ImageOff className="size-8 text-neutral-400" />
