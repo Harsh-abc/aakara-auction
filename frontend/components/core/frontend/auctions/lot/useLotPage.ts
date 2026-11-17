@@ -6,9 +6,10 @@ import toast from "react-hot-toast"
 
 import type { PublicLotPage } from "@/lib/types/publicAuction.types"
 import type { LiveLotUpdate } from "@/lib/types/bidding.types"
-import { getPublicLot } from "@/services/operations/publicAuction.api"
+import { getLotPreview, getPublicLot } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "@/lib/apiError"
 import { useAuctionChannel } from "@/hooks/useAuctionChannel"
+import { useAppSelector } from "@/hooks/redux"
 
 import { isLive } from "../auctionDisplay"
 import { formatMoney } from "../detail/lotDisplay"
@@ -48,8 +49,12 @@ function applyLotUpdate(data: PublicLotPage, update: LiveLotUpdate): PublicLotPa
     }
 }
 
-// one lot plus its sale, kept live over the socket while the sale runs
-export function useLotPage(auctionUuid: string, lotUuid: string) {
+// one lot plus its sale, kept live over the socket while the sale runs.
+// `preview`: the dashboard's staff-only read, which also finds drafts and invite-only sales
+export function useLotPage(auctionUuid: string, lotUuid: string, { preview = false }: { preview?: boolean } = {}) {
+    const token = useAppSelector((state) => state.auth.accessToken)
+    // only the preview depends on the token; the storefront read stays anonymous
+    const previewToken = preview ? token : null
     const [state, setState] = useState<LotPageState>({ status: "loading" })
     const stateRef = useRef(state)
     useEffect(() => {
@@ -96,7 +101,9 @@ export function useLotPage(auctionUuid: string, lotUuid: string) {
 
     useEffect(() => {
         let cancelled = false
-        getPublicLot(auctionUuid, lotUuid)
+        // the preview waits for the signed-in session before asking
+        if (preview && !previewToken) return
+        ;(preview ? getLotPreview(auctionUuid, lotUuid, previewToken) : getPublicLot(auctionUuid, lotUuid))
             .then((data) => {
                 if (!cancelled) setState({ status: "ready", data })
             })
@@ -116,7 +123,7 @@ export function useLotPage(auctionUuid: string, lotUuid: string) {
         return () => {
             cancelled = true
         }
-    }, [auctionUuid, lotUuid, refresh])
+    }, [auctionUuid, lotUuid, refresh, preview, previewToken])
 
     return state
 }

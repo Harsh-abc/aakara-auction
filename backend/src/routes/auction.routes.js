@@ -21,7 +21,7 @@ import {
     removeAuctionParticipants,
     verifyAuctionParticipants,
 } from '../controllers/auctionParticipant.controller.js';
-import { getFeaturedAuction, getPublicAuction, getPublicAuctions, getPublicLot, getPublicLots } from '../controllers/publicAuction.controller.js';
+import { getFeaturedAuction, getLotPreview, getPublicAuction, getPublicAuctions, getPublicLot, getPublicLots } from '../controllers/publicAuction.controller.js';
 import { STAFF_ROLES } from '../libs/socket.js';
 import { getArtwork, getArtworks, getArtworkSummary } from '../controllers/artwork.controller.js';
 
@@ -50,6 +50,9 @@ auctionRouter.post(
 auctionRouter.get('/getAuction', authenticate, requireRole(...STAFF_ROLES), getAuction)
 
 auctionRouter.get('/getLots/:auctionUuid/lots', authenticate, requireRole(...STAFF_ROLES), getLotByAuctionIdController)
+
+// LOT PREVIEW — the storefront lot page for any sale (drafts, invite-only), as bidders will see it
+auctionRouter.get('/dashboard/preview/:auctionUuid/lots/:lotUuid', authenticate, requireRole(...STAFF_ROLES), getLotPreview)
 
 auctionRouter.delete('/delete-auction/:auctionUuid', authenticate, requireRole("SUPER_ADMIN", "ADMIN"), deleteAuction)
 

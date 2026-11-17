@@ -41,9 +41,13 @@ async function shareLot(title: string) {
     }
 }
 
-// the individual lot page — every image, the full catalogue entry and the essay
-export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
-    const state = useLotPage(auctionUuid, lotUuid);
+// the dashboard's copy of this page: /dashboard/auctions/:auctionUuid/lots/:lotUuid/details
+export const lotPreviewHref = (auctionUuid: string, lot: { uuid: string }) => `/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/details`;
+
+// the individual lot page — every image, the full catalogue entry and the essay.
+// `preview`: the dashboard's read-only copy (any sale, drafts too) — no bidding, saving or sharing
+export function LotFullPage({ auctionUuid, lotUuid, preview = false }: { auctionUuid: string; lotUuid: string; preview?: boolean }) {
+    const state = useLotPage(auctionUuid, lotUuid, { preview });
     const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
     const { controls: gallery } = useGallery();
 
@@ -81,15 +85,22 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
     const liveLot = isFinished(auction) ? null : roomLot(lots);
     // "Place bid" only on the lot that is on the block; every other lot points to the live (or next upcoming) lot
     const bidLabel = !liveLot ? undefined : liveLot.status !== "ACTIVE" ? "View upcoming lot" : liveLot.uuid === lot.uuid ? "Place bid" : "View live lot";
+    // the preview's breadcrumbs lead back to the dashboard, not the storefront
+    const saleHref = preview ? `/dashboard/auctions/${auction.uuid}` : auctionHref(auction);
 
     return (
         <main className={PAGE_MAIN}>
             <section>
                 <div className="page-container">
+                    {preview && (
+                        <p className="mb-4 border border-[#d0a55d] bg-[#fdedd6] px-4 py-2.5 text-[12px] leading-4 text-[#0d0d0d]">
+                            Preview — this is how the lot appears to bidders. Lot status: <b>{lot.status}</b> · Sale status: <b>{auction.status}</b>
+                        </p>
+                    )}
                     <Breadcrumb
                         crumbs={[
-                            { label: auction.title, href: auctionHref(auction) },
-                            { label: "Lots", href: auctionHref(auction) },
+                            { label: auction.title, href: saleHref },
+                            { label: "Lots", href: saleHref },
                             { label: lotTag(lot) },
                         ]}
                     />
@@ -101,31 +112,35 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
             <section>
                 <div className={cn("page-container", LOT_GRID)}>
                     <div className="min-w-0">
-                        <LotGallery auctionUuid={auction.uuid} lot={lot} lots={lots} />
+                        <LotGallery auctionUuid={auction.uuid} lot={lot} lots={lots} hrefFor={preview ? lotPreviewHref : undefined} />
 
-                        <button
-                            type="button"
-                            onClick={() => gallery.toggle(lot.uuid)}
-                            disabled={gallery.isPending(lot.uuid)}
-                            aria-pressed={saved}
-                            className={cn(
-                                "mt-6 inline-flex h-7.75 cursor-pointer items-center gap-1.5 border px-2.75 text-[11px] leading-[16.5px] tracking-[0.12em] text-[#0d0d0d] uppercase transition-colors duration-200 not-disabled:hover:border-[#d0a55d] not-disabled:hover:bg-[#fdedd6] disabled:cursor-wait disabled:opacity-60",
-                                saved ? "border-[#d0a55d] bg-[#fdedd6]" : "border-[#333] bg-white",
-                            )}
-                        >
-                            {saved ? <Check className="size-3" /> : <span aria-hidden>+</span>}
-                            {saved ? "In my auction gallery" : "Add to my auction gallery"}
-                        </button>
+                        {!preview && (
+                            <button
+                                type="button"
+                                onClick={() => gallery.toggle(lot.uuid)}
+                                disabled={gallery.isPending(lot.uuid)}
+                                aria-pressed={saved}
+                                className={cn(
+                                    "mt-6 inline-flex h-7.75 cursor-pointer items-center gap-1.5 border px-2.75 text-[11px] leading-[16.5px] tracking-[0.12em] text-[#0d0d0d] uppercase transition-colors duration-200 not-disabled:hover:border-[#d0a55d] not-disabled:hover:bg-[#fdedd6] disabled:cursor-wait disabled:opacity-60",
+                                    saved ? "border-[#d0a55d] bg-[#fdedd6]" : "border-[#333] bg-white",
+                                )}
+                            >
+                                {saved ? <Check className="size-3" /> : <span aria-hidden>+</span>}
+                                {saved ? "In my auction gallery" : "Add to my auction gallery"}
+                            </button>
+                        )}
 
                         <LotCatalogueDetails lot={lot} className="mt-6 border-t border-[#cecece]" />
 
-                        <button
-                            type="button"
-                            onClick={() => shareLot(`${lotHeading(lot)} | ${auction.title}`)}
-                            className="mt-6 cursor-pointer text-[12px] leading-4 tracking-[0.12em] text-[#0d0d0d] uppercase underline underline-offset-2"
-                        >
-                            Tell a friend
-                        </button>
+                        {!preview && (
+                            <button
+                                type="button"
+                                onClick={() => shareLot(`${lotHeading(lot)} | ${auction.title}`)}
+                                className="mt-6 cursor-pointer text-[12px] leading-4 tracking-[0.12em] text-[#0d0d0d] uppercase underline underline-offset-2"
+                            >
+                                Tell a friend
+                            </button>
+                        )}
                     </div>
 
                     {/* "Place bid" goes to the live room, on the lot on the block (not this lot).
@@ -138,7 +153,8 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
                         proxyEnabled={auction.proxyBiddingEnabled}
                         bidHref={liveLot ? lotHref(auction.uuid, liveLot) : undefined}
                         bidLabel={bidLabel}
-                        browseHref={auctionHref(auction)}
+                        browseHref={saleHref}
+                        hideActions={preview}
                         className="self-start lg:sticky lg:top-25 lg:mt-10.75"
                     />
                 </div>
@@ -147,16 +163,18 @@ export function LotFullPage({ auctionUuid, lotUuid }: { auctionUuid: string; lot
             {/* the lot's description from the editor, one paragraph after another */}
             <LotEssay description={lot.description} />
 
-            <LotFaqs />
+            {!preview && <LotFaqs />}
 
-            <BidDialog
-                auctionUuid={auction.uuid}
-                lot={target ? lot : null}
-                kind={target?.kind ?? "bid"}
-                onKindChange={(kind) => setTarget((prev) => (prev ? { ...prev, kind } : prev))}
-                onClose={() => setTarget(null)}
-                onSaved={onSaved}
-            />
+            {!preview && (
+                <BidDialog
+                    auctionUuid={auction.uuid}
+                    lot={target ? lot : null}
+                    kind={target?.kind ?? "bid"}
+                    onKindChange={(kind) => setTarget((prev) => (prev ? { ...prev, kind } : prev))}
+                    onClose={() => setTarget(null)}
+                    onSaved={onSaved}
+                />
+            )}
         </main>
     );
 }

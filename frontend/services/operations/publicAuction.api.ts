@@ -18,6 +18,7 @@ const {
     GET_PUBLIC_AUCTION_API,
     GET_PUBLIC_LOTS_API,
     GET_PUBLIC_LOT_API,
+    GET_LOT_PREVIEW_API,
     REGISTER_FOR_AUCTION_API,
 } = publicAuctionEndPoints
 
@@ -53,6 +54,16 @@ export async function getPublicLots({ auctionUuid, search, sort = "status", page
 // the lot page: lot + bid ladder, the sale, and its order of sale
 export async function getPublicLot(auctionUuid: string, lotUuid: string): Promise<PublicLotPage> {
     const response = await apiConnector({ method: "GET", url: GET_PUBLIC_LOT_API(auctionUuid, lotUuid) })
+    return response.data.data
+}
+
+// dashboard "Preview lot": the same payload, for any sale (staff token required)
+export async function getLotPreview(auctionUuid: string, lotUuid: string, token: string | null): Promise<PublicLotPage> {
+    const response = await apiConnector({
+        method: "GET",
+        url: GET_LOT_PREVIEW_API(auctionUuid, lotUuid),
+        header: { Authorization: `Bearer ${token}` },
+    })
     return response.data.data
 }
 

@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import Link from "next/link";
 import { Eye, FileText, ImageOff, Loader2, MoreVertical, Pencil, Star, Trash2, Users } from "lucide-react";
 
 import {
@@ -593,9 +594,19 @@ const LotsTable = ({
                                         <DateTime iso={lot.scheduledEndAt} />
                                     </TableCell>
                                     <TableCell className="px-3">
-                                        <Pill className={LOT_STATUS_STYLES[lot.status] ?? "bg-slate-100 text-slate-600"}>
-                                            {toTitle(lot.status)}
-                                        </Pill>
+                                        <div className="flex items-center gap-2">
+                                            <Pill className={LOT_STATUS_STYLES[lot.status] ?? "bg-slate-100 text-slate-600"}>
+                                                {toTitle(lot.status)}
+                                            </Pill>
+                                            {/* the storefront lot page, as bidders will see it (drafts too) */}
+                                            <Link
+                                                href={`${lotPath(lot)}/details`}
+                                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-slate-600 transition-colors hover:border-[#833b61] hover:text-[#833b61]"
+                                            >
+                                                <Eye className="h-3 w-3" />
+                                                Preview
+                                            </Link>
+                                        </div>
                                     </TableCell>
 
                                     {/* Actions */}
@@ -623,6 +634,14 @@ const LotsTable = ({
                                                 <DropdownMenuItem className="py-2 text-[13px]" onClick={() => setViewing(lot)}>
                                                     <Eye />
                                                     View lot
+                                                </DropdownMenuItem>
+
+                                                <DropdownMenuItem
+                                                    className="py-2 text-[13px]"
+                                                    onClick={() => router.push(`${lotPath(lot)}/details`)}
+                                                >
+                                                    <FileText />
+                                                    Preview lot page
                                                 </DropdownMenuItem>
 
                                                 <DropdownMenuItem

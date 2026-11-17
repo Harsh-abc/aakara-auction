@@ -16,9 +16,11 @@ import { lotTag } from "./lotPageDisplay"
 // prev / next sit edge to edge at one width (the second overlaps the shared border)
 const PAGER = "inline-flex h-6.5 w-18 items-center justify-center border border-[#333] bg-white text-[12px] leading-4 text-[#0d0d0d]"
 
-function Pager({ auctionUuid, lot, label, className }: { auctionUuid: string; lot: PublicLot | null; label: string; className?: string }) {
+type LotPageHref = (auctionUuid: string, lot: Pick<PublicLot, "uuid">) => string
+
+function Pager({ auctionUuid, lot, label, hrefFor, className }: { auctionUuid: string; lot: PublicLot | null; label: string; hrefFor: LotPageHref; className?: string }) {
     return lot ? (
-        <Link href={lotDetailsHref(auctionUuid, lot)} className={cn(PAGER, "hover:bg-[#fdedd6]", className)} aria-label={`${label} lot: ${lotHeading(lot)}`}>
+        <Link href={hrefFor(auctionUuid, lot)} className={cn(PAGER, "hover:bg-[#fdedd6]", className)} aria-label={`${label} lot: ${lotHeading(lot)}`}>
             {label === "Previous" ? "‹ Prev" : "Next ›"}
         </Link>
     ) : (
@@ -33,9 +35,11 @@ type LotGalleryProps = {
     lot: PublicLotDetail
     /** the sale's lots in order, for prev / next */
     lots: PublicLot[]
+    /** where prev / next go — the storefront lot page unless given (the dashboard preview passes its own) */
+    hrefFor?: LotPageHref
 }
 
-export function LotGallery({ auctionUuid, lot, lots }: LotGalleryProps) {
+export function LotGallery({ auctionUuid, lot, lots, hrefFor = lotDetailsHref }: LotGalleryProps) {
     const [selected, setSelected] = useState(0)
     // the full-screen viewer, opened on the selected image
     const [viewing, setViewing] = useState(false)
@@ -54,8 +58,8 @@ export function LotGallery({ auctionUuid, lot, lots }: LotGalleryProps) {
                     <SpecialLotIcon lot={lot} />
                 </span>
                 <div className="flex">
-                    <Pager auctionUuid={auctionUuid} lot={prev} label="Previous" />
-                    <Pager auctionUuid={auctionUuid} lot={next} label="Next" className="-ml-px" />
+                    <Pager auctionUuid={auctionUuid} lot={prev} label="Previous" hrefFor={hrefFor} />
+                    <Pager auctionUuid={auctionUuid} lot={next} label="Next" hrefFor={hrefFor} className="-ml-px" />
                 </div>
             </div>
 

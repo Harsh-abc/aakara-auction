@@ -152,9 +152,10 @@ export const getPublicAuctionsService = async ({ type, search, page, limit }) =>
 // =====================================================================
 
 // invite-only, draft or cancelled sales read as "not found" rather than leaking that they exist
-const findPublicAuction = async (auctionUuid, select) => {
+// `preview` (dashboard staff only) also finds drafts, cancelled and invite-only sales
+const findPublicAuction = async (auctionUuid, select, { preview = false } = {}) => {
     const auction = await prisma.auction.findFirst({
-        where: { uuid: auctionUuid, ...publicWhere(ALL_PUBLIC_STATUSES) },
+        where: { uuid: auctionUuid, ...(preview ? { deletedAt: null } : publicWhere(ALL_PUBLIC_STATUSES)) },
         select,
     });
     if (!auction) throw httpError("Auction not found", 404);
@@ -380,16 +381,21 @@ const displayName = (user) => {
     return p?.displayName || full || user?.username || null;
 };
 
-export const getPublicLotService = async ({ auctionUuid, lotUuid }) => {
-    const { id: auctionId, creator, rules, ...auction } = await findPublicAuction(auctionUuid, {
-        ...PUBLIC_AUCTION_SELECT,
-        id: true,
-        creator: { select: { username: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
-        rules: {
-            where: { ruleType: "BID_INCREMENT", isActive: true },
-            select: { valueType: true, rangeMin: true, rangeMax: true, value: true },
+// `preview`: the dashboard's "Preview lot" — the same page for a sale that isn't public (yet)
+export const getPublicLotService = async ({ auctionUuid, lotUuid, preview = false }) => {
+    const { id: auctionId, creator, rules, ...auction } = await findPublicAuction(
+        auctionUuid,
+        {
+            ...PUBLIC_AUCTION_SELECT,
+            id: true,
+            creator: { select: { username: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
+            rules: {
+                where: { ruleType: "BID_INCREMENT", isActive: true },
+                select: { valueType: true, rangeMin: true, rangeMax: true, value: true },
+            },
         },
-    });
+        { preview }
+    );
 
     // a lot from another sale reads as not found
     const lot = await prisma.auctionItem.findFirst({ where: { uuid: lotUuid, auctionId }, select: PUBLIC_LOT_DETAIL_SELECT });

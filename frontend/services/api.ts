@@ -69,6 +69,9 @@ export const publicAuctionEndPoints = {
     GET_PUBLIC_LOTS_API: (auctionUuid: string) => `${BASE_URL}/api/auction/public/${auctionUuid}/lots`,
     GET_PUBLIC_LOT_API: (auctionUuid: string, lotUuid: string) =>
         `${BASE_URL}/api/auction/public/${auctionUuid}/lots/${lotUuid}`,
+    // staff only: the same lot page for a sale that isn't public (drafts, invite-only)
+    GET_LOT_PREVIEW_API: (auctionUuid: string, lotUuid: string) =>
+        `${BASE_URL}/api/auction/dashboard/preview/${auctionUuid}/lots/${lotUuid}`,
     REGISTER_FOR_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/auction/${auctionUuid}/register`,
 };
 

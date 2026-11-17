@@ -22,6 +22,7 @@ export function LotPricePanel({
     bidLabel,
     proxyEnabled,
     browseHref,
+    hideActions = false,
     className,
 }: {
     lot: PublicLotDetail
@@ -36,6 +37,8 @@ export function LotPricePanel({
     proxyEnabled?: boolean
     /** the sale's lot list — shows a "Browse all lots" button under the bid buttons */
     browseHref?: string
+    /** no bid buttons (the dashboard preview) */
+    hideActions?: boolean
     className?: string
 }) {
     const count = Number(lot.bidCount) || 0
@@ -94,7 +97,9 @@ export function LotPricePanel({
                 )}
             </div>
 
-            <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} bidLabel={bidLabel} proxyEnabled={proxyEnabled} />
+            {!hideActions && (
+                <BidButtons lot={lot} onBid={onBid} refreshKey={bidRefreshKey} bidHref={bidHref} bidLabel={bidLabel} proxyEnabled={proxyEnabled} />
+            )}
 
             {browseHref && (
                 <Link href={browseHref} className={cn(BUTTON, BUTTON_OUTLINE, "mt-2")}>

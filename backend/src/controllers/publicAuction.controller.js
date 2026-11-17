@@ -110,3 +110,18 @@ export const getPublicLot = async (req, res) => {
         return handleError(res, error, "Get public lot", "Failed to fetch the lot");
     }
 };
+
+// -----------------------------------------------------------------
+// GET /api/auction/dashboard/preview/:auctionUuid/lots/:lotUuid  (staff only)
+// The storefront lot page's data for any sale — drafts and invite-only included
+// -----------------------------------------------------------------
+
+export const getLotPreview = async (req, res) => {
+    try {
+        const params = publicLotParamsSchema.parse(req.params);
+        const data = await getPublicLotService({ ...params, preview: true });
+        return res.status(200).json({ success: true, message: "Lot fetched successfully", data });
+    } catch (error) {
+        return handleError(res, error, "Get lot preview", "Failed to fetch the lot");
+    }
+};
