@@ -20,15 +20,6 @@ const CONDITION_OPTIONS = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
 
 const FRAME_CONDITION_OPTIONS = [...CONDITION_OPTIONS, "Not Applicable"];
 
-const ACQUISITION_METHODS = [
-    { value: "PURCHASE", label: "Purchase" },
-    { value: "INHERITANCE", label: "Inheritance" },
-    { value: "GIFT", label: "Gift" },
-    { value: "AUCTION", label: "Auction" },
-    { value: "COMMISSION", label: "Commission" },
-    { value: "OTHER", label: "Other" },
-];
-
 // =====================================================================
 // DATE HELPERS
 // Form stores plain "yyyy-MM-dd" strings. Parse/format in LOCAL time —
@@ -127,58 +118,8 @@ export default function ConditionProvenance({
             <div className="mt-10">
                 <DashboardFormText text="Provenance & History" />
 
-                <div className="grid grid-cols-3 gap-2 w-full">
-
-                    {/* Previous Owner */}
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Previous Owner / Collection</label>
-
-                        <Input
-                            type="text"
-                            placeholder="e.g. Private Collection, Mumbai"
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(`lots.${lotIndex}.provenance.previousOwner`)}
-                        />
-                    </div>
-
-                    {/* Acquisition Method */}
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Acquisition Method</label>
-
-                        <select
-                            className="w-full border rounded-md px-3 py-2 h-11"
-                            {...register(`lots.${lotIndex}.provenance.acquisitionMethod`)}
-                        >
-                            <option value="">Select Acquisition Method</option>
-                            {ACQUISITION_METHODS.map((method) => (
-                                <option key={method.value} value={method.value}>
-                                    {method.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Acquisition Date */}
-                    <div className="input-wrapper">
-                        <label className="block mb-2">Acquisition Date</label>
-
-                        <Controller
-                            name={`lots.${lotIndex}.provenance.acquisitionDate`}
-                            control={control}
-                            render={({ field }) => (
-                                <DatePicker
-                                    placeholder="Select acquisition date"
-                                    className="w-full"
-                                    value={toPickerDate(field.value)}
-                                    onChange={(date) => field.onChange(toFormDate(date))}
-                                />
-                            )}
-                        />
-                    </div>
-                </div>
-
                 {/* Provenance — shown under Lot details › Provenance */}
-                <div className="grid grid-cols-1 gap-2 w-full mt-4">
+                <div className="grid grid-cols-1 gap-2 w-full">
                     <div className="input-wrapper">
                         <label className="block mb-2">Provenance</label>
 

@@ -386,9 +386,11 @@ const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) =>
                         Provenance &amp; Authentication
                     </h5>
                     <FieldGrid>
-                        <Field label="Previous Owner" value={lot.previousOwner} />
-                        <Field label="Acquisition Method" value={lot.acquisitionMethod} />
-                        <Field label="Acquisition Date" value={formatDate(lot.acquisitionDate)} />
+                        <Field
+                            label="Provenance"
+                            value={lot.provenance}
+                            className="whitespace-pre-line sm:col-span-2 lg:col-span-3"
+                        />
                         <Field label="Authenticated By" value={lot.authenticateBy} />
                         <Field label="Authenticated On" value={formatDate(lot.auctheticateDate)} />
                         <Field
