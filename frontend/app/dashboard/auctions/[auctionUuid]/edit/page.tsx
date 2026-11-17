@@ -92,7 +92,11 @@ export default function EditAuction() {
     }, [auctionUuid, dispatch]);
 
     const handleSubmit = async (data: AuctionFormData, submitStatus: AuctionSubmitStatus) => {
-        const formData = buildAuctionFormData(data, submitStatus, { isEdit: true });
+        // initialLots: lets the server keep lots other admins added / edited meanwhile
+        const formData = buildAuctionFormData(data, submitStatus, {
+            isEdit: true,
+            initialLots: current?.defaults?.lots ?? [],
+        });
         await dispatch(updateAuction({ auctionUuid, formData })).unwrap();
         // "Edit lot" from the auction page -> back to that page
         router.push(lotUuid ? `/dashboard/auctions/${auctionUuid}` : "/dashboard/auctions");

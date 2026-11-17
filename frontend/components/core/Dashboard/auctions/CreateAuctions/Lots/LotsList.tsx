@@ -30,6 +30,8 @@ interface LotsListProps {
     onRemoveLot?: (index: number) => void;
     /** Opens the lot on its Review step */
     onViewLot?: (index: number) => void;
+    /** Drag-to-reorder: move the lot at `from` to `to` (lot numbers follow the order) */
+    onReorderLot?: (from: number, to: number) => void;
 }
 
 export default function LotsList(props: LotsListProps) {
@@ -51,6 +53,7 @@ function FormLotsList({
     onSelectLot,
     onRemoveLot,
     onViewLot,
+    onReorderLot,
 }: LotsListProps) {
     const { control } = useFormContext<AuctionFormData>();
 
@@ -107,6 +110,7 @@ function FormLotsList({
             data={rows}
             onAddLot={onAddLot}
             summary={summary}
+            onReorder={onReorderLot}
         />
     );
 }

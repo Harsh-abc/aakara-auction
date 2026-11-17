@@ -5,11 +5,30 @@ import * as React from "react"
 import {
     ColumnDef,
     flexRender,
+    Row,
     RowData,
     SortingState,
     ColumnFiltersState,
     useTable,
 } from "@tanstack/react-table"
+import {
+    closestCenter,
+    DndContext,
+    KeyboardSensor,
+    MouseSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from "@dnd-kit/core"
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers"
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 import { appTableFeatures, type AppTableFeatures } from "@/lib/table-features"
 
@@ -23,7 +42,7 @@ import {
 } from "@/components/ui/table"
 
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, SearchIcon, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, GripVertical, SearchIcon, X } from "lucide-react"
 
 import {
     Select,
@@ -55,6 +74,11 @@ interface DataTableProps<TData extends RowData> {
     statusItems?: StatusFilterItem[]
     /** Optional summary shown under the toolbar, e.g. "3 lots · 1 needs attention" */
     summary?: React.ReactNode
+    /**
+     * Drag-to-reorder. Receives positions in the source array (row.original.index),
+     * same semantics as useFieldArray's move(from, to). Rows need `key` + `index`.
+     */
+    onReorder?: (fromIndex: number, toIndex: number) => void
 }
 
 const DEFAULT_STATUS_ITEMS: StatusFilterItem[] = [
@@ -63,6 +87,56 @@ const DEFAULT_STATUS_ITEMS: StatusFilterItem[] = [
     { label: "Incomplete", value: "INCOMPLETE" },
 ]
 
+type ReorderableRow = { key?: string; index?: number }
+
+const rowKey = (row: unknown, i: number) => (row as ReorderableRow)?.key ?? String(i)
+const rowIndex = (row: unknown) => (row as ReorderableRow)?.index ?? -1
+
+/** One table row that can be dragged by its grip handle */
+function SortableLotRow<TData extends RowData>({
+    row,
+    dragEnabled,
+    dragHint,
+}: {
+    row: Row<AppTableFeatures, TData>
+    dragEnabled: boolean
+    dragHint: string
+}) {
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+        useSortable({ id: row.id, disabled: !dragEnabled })
+
+    return (
+        <TableRow
+            ref={setNodeRef}
+            data-state={row.getIsSelected() ? "selected" : undefined}
+            data-dragging={isDragging}
+            style={{ transform: CSS.Transform.toString(transform), transition }}
+            className={`relative h-[58px] border-b border-slate-100 hover:bg-slate-50 transition-colors data-[dragging=true]:z-10 data-[dragging=true]:bg-white data-[dragging=true]:shadow-md ${row.getIsSelected() ? "bg-blue-50 ring-2 ring-inset ring-blue-500" : ""
+                }`}
+        >
+            <TableCell className="w-8 px-1 py-2">
+                <button
+                    type="button"
+                    ref={setActivatorNodeRef}
+                    {...attributes}
+                    {...listeners}
+                    disabled={!dragEnabled}
+                    title={dragHint}
+                    className="flex h-7 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-grab active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30 touch-none"
+                >
+                    <GripVertical className="h-4 w-4" />
+                    <span className="sr-only">Drag to reorder</span>
+                </button>
+            </TableCell>
+            {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} className="px-3 py-2">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+            ))}
+        </TableRow>
+    )
+}
+
 export function AuctionLotsList<TData extends RowData>({
     columns,
     data,
@@ -70,6 +144,7 @@ export function AuctionLotsList<TData extends RowData>({
     loading = false,
     statusItems = DEFAULT_STATUS_ITEMS,
     summary,
+    onReorder,
 }: DataTableProps<TData>) {
 
     const [sorting, setSorting] = React.useState<SortingState>([{ id: "lotNumber", desc: false }])
@@ -87,6 +162,7 @@ export function AuctionLotsList<TData extends RowData>({
         data,
         columns,
         state: { sorting, columnFilters, rowSelection, globalFilter },
+        getRowId: (row, i) => rowKey(row, i),
         enableRowSelection: true,
         onSortingChange: setSorting,
         onRowSelectionChange: setRowSelection,
@@ -112,6 +188,38 @@ export function AuctionLotsList<TData extends RowData>({
 
     const hasFilters = Boolean(globalFilter) || statusFilter !== "all"
     const totalRows = table.getFilteredRowModel().rows.length
+
+    // ---------------- drag to reorder ----------------
+    // Only when the table shows the real lot order: sorted by Lot ascending, no search / filter
+    const sortedByLot = sorting.length === 0 || (sorting[0]?.id === "lotNumber" && !sorting[0]?.desc)
+    const dragEnabled = Boolean(onReorder) && !hasFilters && sortedByLot
+    const dragHint = dragEnabled
+        ? "Drag to change the lot order"
+        : "Clear search / filters and sort by Lot (ascending) to reorder"
+
+    const sortableId = React.useId()
+    const sensors = useSensors(
+        // small distance so a click on the handle isn't treated as a drag
+        useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    )
+
+    const pageRows = table.getRowModel().rows
+    const pageRowIds = React.useMemo(() => pageRows.map((r) => r.id), [pageRows])
+
+    const handleDragEnd = ({ active, over }: DragEndEvent) => {
+        if (!onReorder || !over || active.id === over.id) return
+        const from = pageRows.find((r) => r.id === active.id)
+        const to = pageRows.find((r) => r.id === over.id)
+        if (!from || !to) return
+        const fromIndex = rowIndex(from.original)
+        const toIndex = rowIndex(to.original)
+        if (fromIndex < 0 || toIndex < 0) return
+        onReorder(fromIndex, toIndex)
+    }
+
+    const extraCols = onReorder ? 1 : 0
 
     return (
         <div className="w-full bg-[#F4F4F4] px-3 rounded-[8px] min-h-[500px] flex flex-col">
@@ -191,10 +299,18 @@ export function AuctionLotsList<TData extends RowData>({
 
             {/* ================= TABLE ================= */}
             <div className="flex-1 overflow-auto rounded-t-md border border-slate-200 bg-white">
+                <DndContext
+                    id={sortableId}
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    modifiers={[restrictToVerticalAxis]}
+                    onDragEnd={handleDragEnd}
+                >
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id} className="hover:bg-transparent bg-slate-50">
+                                {onReorder && <TableHead className="h-9 w-8 px-1" aria-label="Reorder" />}
                                 {headerGroup.headers.map((header) => (
                                     <TableHead
                                         key={header.id}
@@ -213,6 +329,7 @@ export function AuctionLotsList<TData extends RowData>({
                         {loading ? (
                             Array.from({ length: 4 }).map((_, i) => (
                                 <TableRow key={`skeleton-${i}`} className="h-[58px]">
+                                    {onReorder && <TableCell className="w-8 px-1" />}
                                     {columns.map((_, j) => (
                                         <TableCell key={j} className="px-3 py-2">
                                             <div className="h-3 w-full max-w-[110px] animate-pulse rounded bg-slate-100" />
@@ -220,8 +337,19 @@ export function AuctionLotsList<TData extends RowData>({
                                     ))}
                                 </TableRow>
                             ))
-                        ) : table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
+                        ) : pageRows.length && onReorder ? (
+                            <SortableContext items={pageRowIds} strategy={verticalListSortingStrategy}>
+                                {pageRows.map((row) => (
+                                    <SortableLotRow
+                                        key={row.id}
+                                        row={row}
+                                        dragEnabled={dragEnabled}
+                                        dragHint={dragHint}
+                                    />
+                                ))}
+                            </SortableContext>
+                        ) : pageRows.length ? (
+                            pageRows.map((row) => (
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() ? "selected" : undefined}
@@ -237,13 +365,14 @@ export function AuctionLotsList<TData extends RowData>({
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center text-slate-500">
+                                <TableCell colSpan={columns.length + extraCols} className="h-24 text-center text-slate-500">
                                     {hasFilters ? "No lots match these filters." : "No lots found."}
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
+                </DndContext>
             </div>
 
             {/* ================= FOOTER ================= */}
@@ -303,6 +432,8 @@ export function AuctionLotsList<TData extends RowData>({
                             <SelectItem value="10">10</SelectItem>
                             <SelectItem value="25">25</SelectItem>
                             <SelectItem value="50">50</SelectItem>
+                            <SelectItem value="100">100</SelectItem>
+                            <SelectItem value="500">500</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

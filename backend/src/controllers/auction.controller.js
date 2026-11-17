@@ -400,11 +400,16 @@ export const updateAuction = async (req, res) => {
         body.tags = parseJsonField(body.tags, [], "tags");
         body.fees = parseJsonField(body.fees, [], "fees");
         body.lots = parseJsonField(body.lots, [], "lots");
+        // Lots the editor loaded (null = old client: treat every saved lot as known)
+        body.knownLotUuids = parseJsonField(body.knownLotUuids, null, "knownLotUuids");
 
         for (const key of ["tags", "fees", "lots"]) {
             if (!Array.isArray(body[key])) {
                 return res.status(400).json({ success: false, message: `${key} must be an array` });
             }
+        }
+        if (body.knownLotUuids !== null && !Array.isArray(body.knownLotUuids)) {
+            return res.status(400).json({ success: false, message: "knownLotUuids must be an array" });
         }
 
         // Cheap validation BEFORE uploading anything to S3

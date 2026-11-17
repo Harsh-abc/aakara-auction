@@ -1,5 +1,6 @@
 import type {
     AuctionFormData,
+    AuctionLotForm,
     AuctionScheduleForm,
     LotScheduleForm,
 } from "@/lib/types/AuctionsFormData";
@@ -118,12 +119,18 @@ const appendIfPresent = (formData: FormData, key: string, value: unknown) => {
 //   lots[i].uuid           saved lot -> update; missing -> new lot
 //   lots[i].keepMedia      saved media still on the lot
 //   lots[i].keepDocuments  saved documents still on the lot
+//   lots[i].changed        false = saved lot left untouched (server only renumbers it)
+//   knownLotUuids          saved lots this editor loaded — only these can be removed
+//   lotOrderChanged        true = lots were dragged into a new order
+//
+// `initialLots` (edit) = the lots as loaded; used to work out the three above so
+// several admins can edit one auction's lots at the same time.
 // ============================================================
 
 export const buildAuctionFormData = (
     data: AuctionFormData,
     status: Extract<AuctionStatus, "DRAFT" | "SCHEDULED"> = "DRAFT",
-    { isEdit = false }: { isEdit?: boolean } = {}
+    { isEdit = false, initialLots = [] }: { isEdit?: boolean; initialLots?: AuctionLotForm[] } = {}
 ): FormData => {
     const formData = new FormData();
     const { basicInfo, schedule, lots, fees, shipping, visibility } = data;
@@ -238,7 +245,7 @@ export const buildAuctionFormData = (
     // LOTS (JSON) — files are appended separately below
     // ========================================================
 
-    const lotsPayload = lots.map((lot, index) => {
+    const toLotPayload = (lot: AuctionLotForm, index: number) => {
         const { details, pricing, condition, provenance, authentication } = lot;
 
         const { primary, secondary } = details.dimensions ?? {};
@@ -340,9 +347,41 @@ export const buildAuctionFormData = (
                 description: str(d.description),
             })),
         };
+    };
+
+    // Lot content without its position, to compare against the lot as it was loaded
+    const contentOf = (payload: ReturnType<typeof toLotPayload>) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { itemNumber, ...rest } = payload;
+        return JSON.stringify(rest);
+    };
+    const initialByUuid = new Map(
+        initialLots.filter((lot) => lot.uuid).map((lot, i) => [lot.uuid as string, contentOf(toLotPayload(lot, i))])
+    );
+
+    const lotsPayload = lots.map((lot, index) => {
+        const payload = toLotPayload(lot, index);
+        const initial = isEdit && lot.uuid ? initialByUuid.get(lot.uuid) : undefined;
+        // new files always show up in mediaMeta / documentMeta, so they count as a change
+        const changed = initial === undefined || initial !== contentOf(payload);
+        return { ...payload, changed };
     });
 
     formData.append("lots", JSON.stringify(lotsPayload));
+
+    if (isEdit) {
+        const initialUuids = initialLots.map((lot) => lot.uuid).filter((u): u is string => Boolean(u));
+        formData.append("knownLotUuids", JSON.stringify(initialUuids));
+
+        // Untouched order = the saved lots still in their loaded order, then any new lots
+        const savedNow = lots.map((lot) => lot.uuid).filter((u): u is string => Boolean(u));
+        const stillThere = new Set(savedNow);
+        const loadedOrder = initialUuids.filter((u) => stillThere.has(u));
+        const firstNew = lots.findIndex((lot) => !lot.uuid);
+        const newOnlyAtEnd = firstNew === -1 || lots.slice(firstNew).every((lot) => !lot.uuid);
+        const sameOrder = newOnlyAtEnd && savedNow.join() === loadedOrder.join();
+        formData.append("lotOrderChanged", String(!sameOrder));
+    }
 
     // ========================================================
     // LOT FILES

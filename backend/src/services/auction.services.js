@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { syncParticipantsToLots } from "./auctionParticipant.services.js";
@@ -1053,6 +1054,11 @@ export const updateAuctionService = async (data) => {
         tags = [],
         fees = [],
         lots = [],
+        // Lots the editor had loaded. Only these can be deleted by leaving them
+        // out — lots someone else added meanwhile are kept. null = all saved lots.
+        knownLotUuids = null,
+        // true = the editor dragged lots into a new order; false = keep the saved order
+        lotOrderChanged,
     } = data;
 
     // ---------------- validation (same rules as create) ----------------
@@ -1107,10 +1113,8 @@ export const updateAuctionService = async (data) => {
         }
     });
 
-    const itemNumbers = normalizedLots.map((l) => l.itemNumber);
-    if (new Set(itemNumbers).size !== itemNumbers.length) {
-        throw httpError("Lot item numbers must be unique");
-    }
+    // Item numbers are assigned by the server (see "lots: order + number"), so the
+    // numbers the client sends are ignored — several admins can add lots at once.
 
     // existing lot uuids sent by the client (null = new lot)
     const lotUuids = lots.map((lot) => toStr(lot.uuid));
@@ -1119,9 +1123,21 @@ export const updateAuctionService = async (data) => {
         throw httpError("The same lot was sent more than once");
     }
 
+    // `changed: false` = a saved lot the editor didn't touch -> only its number may move,
+    // so a stale copy can't overwrite someone else's edits to it
+    const lotChanged = lots.map((lot) => lot.changed !== false && lot.changed !== "false");
+    const reorder = toBool(lotOrderChanged, knownLotUuids === null);
+    const knownSet = Array.isArray(knownLotUuids) ? new Set(knownLotUuids.map(toStr).filter(Boolean)) : null;
+
     // ---------------- transaction ----------------
     return prisma.$transaction(
         async (tx) => {
+            // One save per auction at a time: concurrent saves queue here instead of
+            // racing on lot numbers / deleting each other's new lots
+            const target = await tx.auction.findUnique({ where: { uuid: auctionUuid }, select: { id: true } });
+            if (!target) throw httpError("Auction not found", 404);
+            await tx.$queryRaw`SELECT id FROM "auctions" WHERE id = ${target.id} FOR UPDATE`;
+
             const existing = await tx.auction.findUnique({
                 where: { uuid: auctionUuid },
                 select: {
@@ -1134,6 +1150,7 @@ export const updateAuctionService = async (data) => {
                     coverImageUrl: true,
                     thumbnailImageUrl: true,
                     items: {
+                        orderBy: { itemNumber: "asc" },
                         select: {
                             id: true,
                             uuid: true,
@@ -1173,13 +1190,14 @@ export const updateAuctionService = async (data) => {
                 throw httpError("Auction start time cannot be in the past");
             }
 
-            // every lot uuid sent must belong to THIS auction
+            // A saved lot that isn't on this auction any more (another admin deleted it
+            // after this editor loaded the page) is skipped instead of failing the save
             const itemByUuid = new Map(existing.items.map((item) => [item.uuid, item]));
+            const clientIdx = []; // indexes into `lots`, in the editor's order
             lotUuids.forEach((uuid, i) => {
-                if (uuid && !itemByUuid.has(uuid)) {
-                    throw httpError(`Lot ${i + 1} does not belong to this auction`);
-                }
+                if (!uuid || itemByUuid.has(uuid)) clientIdx.push(i);
             });
+            const clientIdxByUuid = new Map(clientIdx.filter((i) => lotUuids[i]).map((i) => [lotUuids[i], i]));
 
             // ---- category ----
             const category = await tx.category.findUnique({ where: { uuid: categoryUuid } });
@@ -1311,10 +1329,14 @@ export const updateAuctionService = async (data) => {
             }
 
             // ---------------- lots: delete removed ----------------
-            const keptUuids = new Set(sentUuids);
+            // Only lots this editor loaded and then removed. Lots added by another
+            // admin after this page was opened aren't in `knownLotUuids` -> kept.
+            const sentSet = new Set(sentUuids);
             const removedIds = existing.items
-                .filter((item) => !keptUuids.has(item.uuid))
+                .filter((item) => !sentSet.has(item.uuid) && (knownSet === null || knownSet.has(item.uuid)))
                 .map((item) => item.id);
+            const removedSet = new Set(removedIds);
+            const remaining = existing.items.filter((item) => !removedSet.has(item.id));
 
             if (removedIds.length) {
                 await tx.auctionImage.deleteMany({ where: { itemId: { in: removedIds } } });
@@ -1323,24 +1345,61 @@ export const updateAuctionService = async (data) => {
                 await tx.auctionItem.deleteMany({ where: { id: { in: removedIds } } });
             }
 
-            // Park kept lots on temporary numbers so re-ordering
-            // (e.g. swapping lot 1 and 2) can't clash on itemNumber
-            let temp = -1;
-            for (const uuid of keptUuids) {
-                await tx.auctionItem.update({
-                    where: { id: itemByUuid.get(uuid).id },
-                    data: { itemNumber: temp-- },
-                });
+            // ---------------- lots: order + number ----------------
+            // Each entry: { i } = a lot from this request, { item } = a saved lot the
+            // editor never saw (added by someone else) — kept as it is.
+            const newLotIdx = clientIdx.filter((i) => !lotUuids[i]);
+            const unseen = remaining.filter((item) => !clientIdxByUuid.has(item.uuid)).map((item) => ({ item }));
+            const plan = reorder
+                ? // editor dragged lots: their order, then lots they never saw
+                  [...clientIdx.map((i) => ({ i })), ...unseen]
+                : // no drag: keep the saved order (someone else may have re-ordered), then the new lots
+                  [
+                      ...remaining.map((item) =>
+                          clientIdxByUuid.has(item.uuid) ? { i: clientIdxByUuid.get(item.uuid) } : { item }
+                      ),
+                      ...newLotIdx.map((i) => ({ i })),
+                  ];
+
+            // Park every saved lot on a negative number (-id is unique) so the
+            // renumbering below can't clash on @@unique([auctionId, itemNumber])
+            if (remaining.length) {
+                await tx.$executeRaw`UPDATE "auction_items" SET "itemNumber" = -id WHERE "auctionId" = ${existing.id}`;
+            }
+
+            // Lots whose data doesn't change only get their new number — in one statement
+            const renumberOnly = [];
+            const writes = [];
+            plan.forEach((entry, pos) => {
+                const itemNumber = pos + 1;
+                if (entry.item) {
+                    renumberOnly.push({ id: entry.item.id, itemNumber });
+                } else if (lotUuids[entry.i] && !lotChanged[entry.i]) {
+                    renumberOnly.push({ id: itemByUuid.get(lotUuids[entry.i]).id, itemNumber });
+                } else {
+                    writes.push({ i: entry.i, itemNumber });
+                }
+            });
+
+            if (renumberOnly.length) {
+                const values = Prisma.join(
+                    renumberOnly.map((r) => Prisma.sql`(${r.id}::bigint, ${r.itemNumber}::bigint)`)
+                );
+                await tx.$executeRaw`
+                    UPDATE "auction_items" AS a SET "itemNumber" = v.n
+                    FROM (VALUES ${values}) AS v(id, n)
+                    WHERE a.id = v.id`;
             }
 
             // ---------------- lots: create / update ----------------
-            for (let i = 0; i < normalizedLots.length; i++) {
+            for (const { i, itemNumber } of writes) {
                 const raw = lots[i];
                 const uuid = lotUuids[i];
                 const { dimension, images, documents, currencyCode, ...itemData } = normalizedLots[i];
 
                 const lotData = {
                     ...itemData,
+                    itemNumber,
                     categoryId: category.id,
                     subCategoryId: subCategory?.id ?? null,
                     currencyId: currencyByCode.get(currencyCode ?? primaryCode).id,

@@ -49,7 +49,7 @@ export default function AddLots({
 
     const { control, getValues } = useFormContext<AuctionFormData>();
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, move } = useFieldArray({
         control,
         name: "lots",
     });
@@ -166,6 +166,8 @@ export default function AddLots({
                     onAddLot={handleAddNewLot}
                     onSelectLot={handleEditLot}
                     onRemoveLot={handleRemoveLot}
+                    // Order only — lot numbers follow the position; titles are left as they are
+                    onReorderLot={move}
                 />
 
             </div>
