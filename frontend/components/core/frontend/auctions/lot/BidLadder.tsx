@@ -48,6 +48,16 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                     ) : (
                         lot.bids.slice(0, 2).map((bid, index) => {
                             const top = index === 0
+                            const paddle = bid.paddle ?? (top ? lot.leadingPaddle : null)
+                            // "Leading · Paddle 104" — under the price on small screens, in its own column from sm up
+                            const status = (placement: string) => (
+                                <span className={cn(SMALL_CAPS, placement)}>
+                                    {top ? topBidLabel(lot) : "Outbid"}
+                                    {paddle && (
+                                        <span className={cn("ml-2", top ? "text-white/60" : "text-[#717171]/70")}>· Paddle {paddle}</span>
+                                    )}
+                                </span>
+                            )
                             return (
                                 <li
                                     key={bid.uuid}
@@ -67,15 +77,9 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
                                                 Proxy
                                             </span>
                                         )} */}
+                                        {status("mt-1 block sm:hidden")}
                                     </span>
-                                    <span className={SMALL_CAPS}>
-                                        {top ? topBidLabel(lot) : "Outbid"}
-                                        {(bid.paddle ?? (top ? lot.leadingPaddle : null)) && (
-                                            <span className={cn("ml-2", top ? "text-white/60" : "text-[#717171]/70")}>
-                                                · Paddle {bid.paddle ?? lot.leadingPaddle}
-                                            </span>
-                                        )}
-                                    </span>
+                                    {status("hidden shrink-0 sm:inline")}
                                 </li>
                             )
                         })
