@@ -15,7 +15,6 @@ export type LivePip = {
     href: string
     /** shown until the auctioneer's video arrives (the lot image) */
     fallback: ReactNode
-    muted: boolean
 }
 
 let current: LivePip | null = null
@@ -49,9 +48,12 @@ export function openLivePip(pip: LivePip) {
     listeners.forEach((listener) => listener())
 }
 
-export function updateLivePip(patch: Partial<Pick<LivePip, "muted">>) {
-    // kept in place, no re-render needed — only read when a player mounts
-    if (current) Object.assign(current, patch)
+// the viewer's sound choice, shared by the page player and the picture-in-picture window so it survives the
+// hand-over both ways. Starts muted — browsers only autoplay muted. Read when a player mounts.
+let liveMuted = true
+export const getLiveMuted = () => liveMuted
+export function rememberLiveMuted(muted: boolean) {
+    liveMuted = muted
 }
 
 export function clearLivePip() {

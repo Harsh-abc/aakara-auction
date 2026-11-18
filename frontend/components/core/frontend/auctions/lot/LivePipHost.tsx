@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAppSelector } from "@/hooks/redux"
 
 import { LiveConnection } from "./LivePlayer"
-import { clearLivePip, registerPipHost, updateLivePip, useLivePip } from "./livePip"
+import { clearLivePip, registerPipHost, useLivePip } from "./livePip"
 
 /**
  * Runs the live video inside the picture-in-picture window from the storefront layout, so it keeps playing
@@ -51,8 +51,6 @@ export function LivePipHost() {
                 fallback={pip.fallback}
                 inPipWindow
                 onBack={back}
-                defaultMuted={pip.muted}
-                onMutedChange={(muted) => updateLivePip({ muted })}
             />
         </div>,
         pip.window.document.body

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import axios from "axios"
-import { AudioTrack, LiveKitRoom, VideoTrack, useRemoteParticipants, useTracks } from "@livekit/components-react"
+import { LiveKitRoom, VideoTrack, useRemoteParticipants, useRoomContext, useTracks } from "@livekit/components-react"
 import { DisconnectReason, Track } from "livekit-client"
 import { Maximize2, Minimize2, PictureInPicture2, Volume2, VolumeX } from "lucide-react"
 
@@ -11,7 +11,7 @@ import { useAppSelector } from "@/hooks/redux"
 import { getSocket, setSocketToken } from "@/lib/socket"
 import { getLiveStreamToken, type LiveStreamAccess } from "@/services/operations/liveStream.api"
 
-import { copyStyles, hasPipHost, openLivePip, useLivePip } from "./livePip"
+import { copyStyles, getLiveMuted, hasPipHost, openLivePip, rememberLiveMuted, useLivePip } from "./livePip"
 
 // LiveKit bills every connected viewer by the minute, so the player only stays connected while it's watched.
 // after a dropped connection or a failed token request
@@ -51,10 +51,8 @@ type StageOptions = {
     /** playing in our picture-in-picture window (LivePipHost): mute and "back to the room" only */
     inPipWindow?: boolean
     onBack?: () => void
-    defaultMuted?: boolean
-    onMutedChange?: (muted: boolean) => void
     /** Chrome / Edge: our picture-in-picture window opened — hand the stream over to it */
-    onPipWindow?: (win: Window, muted: boolean) => void
+    onPipWindow?: (win: Window) => void
 }
 
 // why the player isn't connecting: not allowed, removed, or playing in another tab / device
@@ -89,7 +87,7 @@ export function LivePlayer({ auctionUuid, fallback, className }: LivePlayerProps
             auctionUuid={auctionUuid}
             fallback={fallback}
             className={className}
-            onPipWindow={(win, muted) => openLivePip({ auctionUuid, window: win, href: window.location.pathname, fallback, muted })}
+            onPipWindow={(win) => openLivePip({ auctionUuid, window: win, href: window.location.pathname, fallback })}
         />
     )
 }
@@ -309,16 +307,24 @@ function Stage({
     onIdle,
     inPipWindow = false,
     onBack,
-    defaultMuted = true,
-    onMutedChange,
     onPipWindow,
 }: StageOptions & { fallback: ReactNode; onIdle: () => void }) {
     const boxRef = useRef<HTMLDivElement>(null)
-    // browsers only autoplay muted — tap to unmute
-    const [muted, setMuted] = useState(defaultMuted)
+    const room = useRoomContext()
+    // the viewer's last choice (kept across the page / picture-in-picture hand-over); muted at first —
+    // browsers only autoplay muted
+    const [muted, setMuted] = useState(getLiveMuted)
     const toggleMuted = () => {
-        setMuted(!muted)
-        onMutedChange?.(!muted)
+        const next = !muted
+        setMuted(next)
+        rememberLiveMuted(next)
+        // sound may only start inside a click — so unmute and play the audio right here, in the handler, not later
+        // in an effect (a play() the browser refused earlier is never retried by itself)
+        boxRef.current?.querySelectorAll("audio").forEach((el) => {
+            el.muted = next
+            if (!next) el.play().catch(() => {})
+        })
+        if (!next) room.startAudio().catch(() => {})
     }
     const [isFull, setIsFull] = useState(false)
     // picture in picture: Chrome / Edge get a window we draw ourselves (Document PiP — none of the browser's
@@ -334,9 +340,9 @@ function Stage({
     const videos = useTracks([Track.Source.ScreenShare, Track.Source.Camera], { onlySubscribed: true }).filter(
         (track) => !track.publication.isMuted
     )
-    const audios = useTracks([Track.Source.Microphone, Track.Source.ScreenShareAudio], { onlySubscribed: true }).filter(
-        (track) => !track.publication.isMuted
-    )
+    // audio stays attached while the auctioneer's mic is off (it's just silence) — tearing the element down and
+    // making a new one when the mic comes back means a new play() the browser may refuse
+    const audios = useTracks([Track.Source.Microphone, Track.Source.ScreenShareAudio], { onlySubscribed: true })
 
     const screen = videos.find((track) => track.source === Track.Source.ScreenShare)
     const camera = videos.find((track) => track.source === Track.Source.Camera)
@@ -402,7 +408,7 @@ function Stage({
             copyStyles(win.document)
             win.document.title = document.title
             win.document.body.style.margin = "0"
-            onPipWindow(win, muted)
+            onPipWindow(win)
             return
         }
         await mainVideo()?.requestPictureInPicture().catch(() => {})
@@ -430,14 +436,15 @@ function Stage({
             )}
 
             {audios.map((track) => (
-                <AudioTrack key={track.publication.trackSid} trackRef={track} muted={muted} />
+                <LiveAudio key={track.publication.trackSid} track={track.publication.track} muted={muted} onBlocked={() => setMuted(true)} />
             ))}
 
             {/* boxed icon buttons, bottom right: mute / unmute speaker (browsers only autoplay muted), picture in picture, then full screen.
                 In the picture-in-picture window: mute and "back to the room" */}
-            {(main || inPipWindow) && (
+            {(main || audios.length > 0 || inPipWindow) && (
                 <div className={cn("absolute z-3 flex gap-1.5", isFull ? "right-5 bottom-5" : inPipWindow ? "right-3 bottom-3" : "right-3.5 bottom-3.5")}>
-                    {main && (
+                    {/* the mic can be on while the camera is off (lot image showing) — the sound button still shows */}
+                    {(main || audios.length > 0) && (
                         <PlayerButton label={muted ? "Unmute" : "Mute"} onClick={toggleMuted}>
                             {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
                         </PlayerButton>
@@ -462,6 +469,43 @@ function Stage({
             )}
         </div>
     )
+}
+
+/**
+ * One of the auctioneer's audio tracks. Not LiveKit's <AudioTrack muted>: that one switches the track off at the
+ * server on mute, and its attach() un-mutes the element and calls play() — which the browser refuses before the
+ * viewer has clicked, leaving the element paused for good (pressing unmute then did nothing).
+ * Here we decide muted ourselves after each attach and call play() again; if the browser still refuses sound,
+ * play muted and show the muted icon, so the next tap on it starts the sound.
+ */
+function LiveAudio({ track, muted, onBlocked }: { track: Track | undefined; muted: boolean; onBlocked: () => void }) {
+    const ref = useRef<HTMLAudioElement>(null)
+    const onBlockedRef = useRef(onBlocked)
+    useEffect(() => {
+        onBlockedRef.current = onBlocked
+    })
+
+    useEffect(() => {
+        const el = ref.current
+        if (!track || !el) return
+        track.attach(el)
+        return () => void track.detach(el)
+    }, [track])
+
+    // runs after the attach above (same commit, declared after it) — and again for a new track
+    useEffect(() => {
+        const el = ref.current
+        if (!track || !el) return
+        el.muted = muted
+        el.play().catch((error: unknown) => {
+            if (muted || (error as { name?: string })?.name !== "NotAllowedError") return
+            el.muted = true
+            el.play().catch(() => {})
+            onBlockedRef.current()
+        })
+    }, [muted, track])
+
+    return <audio ref={ref} hidden />
 }
 
 function PlayerButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
