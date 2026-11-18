@@ -279,8 +279,9 @@ export const createUser = createAsyncThunk<
                 return rejectWithValue(response.data.message || "Could not create user");
             }
 
-            // refresh the users table with the new user
-            dispatch(getAllUsers({ page: 1, limit: 100 }));
+            // refresh the users table with the new user, keeping the list's filters
+            // (the team page asks only for team roles)
+            dispatch(getAllUsers(getState().user.usersParams ?? { page: 1, limit: 100 }));
 
             return response.data;
         } catch (error) {

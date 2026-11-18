@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setBiddingLimit, setKycStatus, setLotsVerified, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
-import { User, Pagination } from "@/lib/types/user.types";
+import { User, Pagination, GetAllUsersParams } from "@/lib/types/user.types";
 
 interface UserState {
     users: User[];
@@ -9,6 +9,8 @@ interface UserState {
     error: string | null;
     // the latest getAllUsers request — an older one that lands later (e.g. after a filter change) is ignored
     usersRequestId: string | null;
+    // filters of that request, so a refresh (e.g. after adding a user) asks for the same list
+    usersParams: GetAllUsersParams | null;
     selectedUser: User | null;
     selectedUserLoading: boolean;
     selectedUserError: string | null;
@@ -45,6 +47,7 @@ const initialState: UserState = {
     loading: false,
     error: null,
     usersRequestId: null,
+    usersParams: null,
     selectedUser: null,
     selectedUserLoading: false,
     selectedUserError: null,
@@ -80,6 +83,7 @@ const userSlice = createSlice({
                 state.loading = true;
                 state.error = null;
                 state.usersRequestId = action.meta.requestId;
+                state.usersParams = action.meta.arg;
             })
             .addCase(getAllUsers.fulfilled, (state, action) => {
                 if (action.meta.requestId !== state.usersRequestId) return;

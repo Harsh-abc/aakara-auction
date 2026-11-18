@@ -19,6 +19,13 @@ export type RoleName = (typeof ALL_ROLES)[number]
 // must match MAX_SUPER_ADMINS in backend/src/services/admin.services.js
 export const MAX_SUPER_ADMINS = 7
 
+// the only account that sees every user (bidders and website users too) on Settings → Team;
+// everyone else sees team members only
+export const ALL_USERS_VIEWER_EMAIL = "harshvardhan@abcdesigns.in"
+
+export const canSeeAllUsersOnTeam = (email: string | null | undefined) =>
+    !!email && email.trim().toLowerCase() === ALL_USERS_VIEWER_EMAIL
+
 export const ROLE_LABELS: Record<RoleName, string> = {
     SUPER_ADMIN: "Super Admin",
     ADMIN: "Admin",
