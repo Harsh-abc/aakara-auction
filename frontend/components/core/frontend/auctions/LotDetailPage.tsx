@@ -116,7 +116,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <OrderOfSale
                             lots={lots}
                             saleClosed={!countdown}
-                            className="order-2 lg:order-1"
+                            className="order-1"
                             media={
                                 // the auctioneer's live video (signed-in users only); the lot on the block / up next until it plays.
                                 // LOT 06 top left, LIVE top right, mute / full screen bottom right
@@ -137,10 +137,21 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                             }
                         />
 
-                        <div className="order-1 min-w-0 lg:order-2">
+                        <div className="order-2 min-w-0">
                             <div className={LOT_GRID}>
                                 {/* the lot on view */}
-                                <div className="relative aspect-square overflow-hidden bg-white">{lotPoster}</div>
+                                {/* mobile: the image sets its own height; desktop: square frame */}
+                                <div className="relative overflow-hidden bg-white lg:aspect-square">
+                                    {lot.image ? (
+                                        <>
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={lot.image} alt={lotHeading(lot)} className="block h-auto w-full object-contain lg:hidden" />
+                                            <div className="hidden lg:block">{lotPoster}</div>
+                                        </>
+                                    ) : (
+                                        <div className="aspect-square lg:aspect-auto">{lotPoster}</div>
+                                    )}
+                                </div>
                                 <LotSummary auctionUuid={auction.uuid} lot={lot} onBid={onBid} bidRefreshKey={savedCount} proxyEnabled={auction.proxyBiddingEnabled} />
                             </div>
 
