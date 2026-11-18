@@ -3,9 +3,9 @@
 // DashboardGuard (blocks the page) and in-page links all read.
 //
 //   SUPER_ADMIN  every page
-//   ADMIN        Auctions & Lots (create, live, past, upcoming) + Manage Bidders + Proxy Bids
+//   ADMIN        Auctions & Lots (create, live, past, upcoming, lot preview) + Manage Bidders + Proxy Bids
 //   AUCTIONEER   Live Auctions, Bidding Console, Manage Bidders, Bid History, Proxy Bids
-//   OPERATIONS   Create Auctions, Proxy Bids (the on / off switches only)
+//   OPERATIONS   Create Auctions, lot preview, Proxy Bids (the on / off switches only)
 //   (every role) the Dashboard home, and Settings → General (their own profile)
 //
 // Rules are checked top to bottom and the first match wins, so the more
@@ -32,6 +32,8 @@ const PAGE_RULES: { path: RegExp; roles: Role[] }[] = [
     { path: /^\/dashboard\/auctions\/(past|upcoming)-auctions(\/|$)/, roles: [SA, "ADMIN"] },
     { path: /^\/dashboard\/auctions\/(create-auctions|manage-lots)(\/|$)/, roles: [SA, "ADMIN", "OPERATIONS"] },
     { path: /^\/dashboard\/auctions\/[^/]+\/edit(\/|$)/, roles: [SA, "ADMIN"] }, // editing is super admin / admin in the API
+    // a lot's storefront preview — the "Preview" button on an auction's lots list (read-only)
+    { path: /^\/dashboard\/auctions\/[^/]+\/lots\/[^/]+\/details\/?$/, roles: [SA, "ADMIN", "OPERATIONS"] },
     { path: /^\/dashboard\/auctions\/?$/, roles: [SA, "ADMIN", "OPERATIONS"] }, // "Create Auctions"
     // one auction's page — linked from every auction list, the home page and the live floor
     { path: /^\/dashboard\/auctions\/[^/]+\/?$/, roles: [SA, "ADMIN", "AUCTIONEER", "OPERATIONS"] },

@@ -40,7 +40,7 @@ import type {
     ShippingStrategy,
 } from "@/lib/types/auction.types";
 import { cn } from "@/lib/utils";
-import { MANAGE_BIDDERS_HIDDEN } from "@/lib/constants/dashboardAccess";
+import { MANAGE_BIDDERS_HIDDEN, canAccessPage } from "@/lib/constants/dashboardAccess";
 import { isEmptyHtml, sanitizeHtml } from "@/utils/sanitizeHtml";
 import { formatLotSize } from "@/utils/dimensions";
 import RichTextContent from "@/components/common/RichTextContent";
@@ -502,6 +502,8 @@ const LotsTable = ({
     const canChangeLots = LOT_EDITABLE_AUCTION_STATUSES.includes(auction.status);
     const canDeleteLots = canChangeLots && canSeeRegistrations; // delete is admin-only on the API
     const lotPath = (lot: AuctionLot) => `/dashboard/auctions/${auction.uuid}/lots/${lot.uuid}`;
+    // lot preview page: super admin, admin, operations (see dashboardAccess.ts)
+    const canPreviewLots = canAccessPage(`/dashboard/auctions/${auction.uuid}/lots/_/details`, role);
 
     const handleDelete = async () => {
         if (!confirmDelete) return;
@@ -612,13 +614,15 @@ const LotsTable = ({
                                                 {toTitle(lot.status)}
                                             </Pill>
                                             {/* the storefront lot page, as bidders will see it (drafts too) */}
-                                            <Link
-                                                href={`${lotPath(lot)}/details`}
-                                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-slate-600 transition-colors hover:border-[#833b61] hover:text-[#833b61]"
-                                            >
-                                                <Eye className="h-3 w-3" />
-                                                Preview
-                                            </Link>
+                                            {canPreviewLots && (
+                                                <Link
+                                                    href={`${lotPath(lot)}/details`}
+                                                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-slate-600 transition-colors hover:border-[#833b61] hover:text-[#833b61]"
+                                                >
+                                                    <Eye className="h-3 w-3" />
+                                                    Preview
+                                                </Link>
+                                            )}
                                         </div>
                                     </TableCell>
 
@@ -649,13 +653,15 @@ const LotsTable = ({
                                                     View lot
                                                 </DropdownMenuItem>
 
-                                                <DropdownMenuItem
-                                                    className="py-2 text-[13px]"
-                                                    onClick={() => router.push(`${lotPath(lot)}/details`)}
-                                                >
-                                                    <FileText />
-                                                    Preview lot page
-                                                </DropdownMenuItem>
+                                                {canPreviewLots && (
+                                                    <DropdownMenuItem
+                                                        className="py-2 text-[13px]"
+                                                        onClick={() => router.push(`${lotPath(lot)}/details`)}
+                                                    >
+                                                        <FileText />
+                                                        Preview lot page
+                                                    </DropdownMenuItem>
+                                                )}
 
                                                 <DropdownMenuItem
                                                     className="py-2 text-[13px]"
