@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import axios from "axios"
 import { AudioTrack, LiveKitRoom, VideoTrack, useRemoteParticipants, useTracks } from "@livekit/components-react"
 import { DisconnectReason, Track } from "livekit-client"
-import { Maximize2, Minimize2, PictureInPicture2 } from "lucide-react"
+import { Maximize2, Minimize2, PictureInPicture2, Volume2, VolumeX } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useAppSelector } from "@/hooks/redux"
@@ -433,13 +433,13 @@ function Stage({
                 <AudioTrack key={track.publication.trackSid} trackRef={track} muted={muted} />
             ))}
 
-            {/* boxed text buttons, bottom right: MUTE / UNMUTE (browsers only autoplay muted), picture in picture, then full screen.
+            {/* boxed icon buttons, bottom right: mute / unmute speaker (browsers only autoplay muted), picture in picture, then full screen.
                 In the picture-in-picture window: mute and "back to the room" */}
             {(main || inPipWindow) && (
                 <div className={cn("absolute z-3 flex gap-1.5", isFull ? "right-5 bottom-5" : inPipWindow ? "right-3 bottom-3" : "right-3.5 bottom-3.5")}>
                     {main && (
                         <PlayerButton label={muted ? "Unmute" : "Mute"} onClick={toggleMuted}>
-                            {muted ? "Unmute" : "Mute"}
+                            {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
                         </PlayerButton>
                     )}
                     {inPipWindow ? (
