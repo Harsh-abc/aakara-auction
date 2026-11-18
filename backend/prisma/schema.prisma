@@ -468,6 +468,8 @@ model AuctionItem {
   acquisitionMethod      String?
   acquisitionDate        String?
   exhibitionHistory      String?
+  /// Books / catalogues the work appeared in — one per line
+  publicationHistory     String?
   authenticateBy         String?
   auctheticateDate       DateTime?
   editionType            EDITIONTYPE

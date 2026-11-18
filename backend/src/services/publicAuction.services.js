@@ -339,6 +339,7 @@ const PUBLIC_LOT_DETAIL_SELECT = {
     detailedConditionNotes: true,
     restorationHistory: true,
     exhibitionHistory: true,
+    publicationHistory: true,
     category: { select: { name: true } },
     subCategory: { select: { name: true } },
     status: true,

@@ -253,6 +253,8 @@ export interface LotProvenanceForm {
     /** Saved to AuctionItem.provenance — one entry per line */
     provenanceText: string;
     exhibitionHistory: string;
+    /** Saved to AuctionItem.publicationHistory — one entry per line */
+    publicationHistory: string;
 }
 
 // ============================================================

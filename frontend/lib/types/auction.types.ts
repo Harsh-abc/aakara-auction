@@ -151,6 +151,7 @@ export interface CreateAuctionLot {
     acquisitionDate?: string | null; // "yyyy-MM-dd"
 
     exhibitionHistory?: string | null;
+    publicationHistory?: string | null;
 
     authenticateBy?: string | null;
     auctheticateDate?: string | null; // ISO — spelling matches Prisma
@@ -507,6 +508,7 @@ export interface AuctionLot {
     acquisitionMethod?: string | null;
     acquisitionDate?: string | null; // "yyyy-MM-dd" (String column)
     exhibitionHistory?: string | null;
+    publicationHistory?: string | null;
 
     authenticateBy?: string | null;
     auctheticateDate?: string | null; // spelling matches Prisma

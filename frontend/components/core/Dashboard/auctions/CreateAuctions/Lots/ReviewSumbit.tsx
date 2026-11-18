@@ -405,6 +405,7 @@ const ConditionProvenanceCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
         ["Acquisition Date", formatDate(provenance?.acquisitionDate)],
         ["Provenance", text(provenance?.provenanceText)],
         ["Exhibition History", text(provenance?.exhibitionHistory)],
+        ["Publication History", text(provenance?.publicationHistory)],
         ["Authenticated By", text(authentication?.authenticatedBy)],
         ["Authentication Date", formatDate(authentication?.authenticatedDate)],
     ];

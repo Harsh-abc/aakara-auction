@@ -318,6 +318,7 @@ export const buildAuctionFormData = (
             acquisitionMethod: str(provenance.acquisitionMethod),
             acquisitionDate: str(provenance.acquisitionDate), // stays "YYYY-MM-DD" (String column)
             exhibitionHistory: str(provenance.exhibitionHistory),
+            publicationHistory: str(provenance.publicationHistory),
 
             conditionReport: str(condition.detailedConditionNotes),
             overallCondition: str(condition.overallCondition),

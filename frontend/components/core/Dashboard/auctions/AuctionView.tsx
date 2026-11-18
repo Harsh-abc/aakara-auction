@@ -407,6 +407,11 @@ const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) =>
                             value={lot.exhibitionHistory}
                             className="sm:col-span-2 lg:col-span-3"
                         />
+                        <Field
+                            label="Publication History"
+                            value={lot.publicationHistory}
+                            className="whitespace-pre-line sm:col-span-2 lg:col-span-3"
+                        />
                     </FieldGrid>
                 </div>
 

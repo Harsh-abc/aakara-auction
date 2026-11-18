@@ -115,6 +115,7 @@ const toLotForm = (
             acquisitionDate: text(lot.acquisitionDate),
             provenanceText: text(lot.provenance),
             exhibitionHistory: text(lot.exhibitionHistory),
+            publicationHistory: text(lot.publicationHistory),
         },
 
         authentication: {

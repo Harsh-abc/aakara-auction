@@ -78,6 +78,7 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
             paragraphs: [lines(lot.provenance), compact([lot.previousOwner, acquisition, authentication])],
         },
         { title: "Exhibited", defaultOpen: true, paragraphs: [lines(lot.exhibitionHistory)] },
+        { title: "Literature", defaultOpen: true, paragraphs: [lines(lot.publicationHistory)] },
     ];
 
     return sections.map((section) => ({ ...section, paragraphs: section.paragraphs.filter((p) => p.length > 0) })).filter((section) => section.paragraphs.length > 0);

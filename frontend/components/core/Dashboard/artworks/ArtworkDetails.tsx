@@ -269,6 +269,7 @@ function Body({ artwork, canManage }: { artwork: ArtworkDetail; canManage: boole
                         ["Previous owner", artwork.catalogue.previousOwner],
                         ["Acquired", [artwork.catalogue.acquisitionMethod, artwork.catalogue.acquisitionDate].filter(Boolean).join(" · ") || null],
                         ["Exhibited", artwork.catalogue.exhibitionHistory],
+                        ["Published", artwork.catalogue.publicationHistory],
                         ["Authenticated by", artwork.catalogue.authenticatedBy],
                         ["Authenticated on", formatDay(artwork.catalogue.authenticatedOn)],
                     ]}

@@ -341,6 +341,7 @@ const normalizeLot = (lot, index, { isDraft }) => {
         // NOTE: acquisitionDate is a String column in the schema — keep it as "YYYY-MM-DD"
         acquisitionDate: toStr(lot.acquisitionDate),
         exhibitionHistory: toStr(lot.exhibitionHistory),
+        publicationHistory: toStr(lot.publicationHistory),
         authenticateBy: toStr(lot.authenticateBy),
         auctheticateDate: toDate(lot.auctheticateDate, label("authentication date")),
         editionType: pickEnum(lot.editionType, ENUMS.editionType, "UNIQUE", label("edition type")),

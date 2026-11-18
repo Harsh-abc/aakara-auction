@@ -307,6 +307,7 @@ export const getArtworkService = async ({ lotUuid }) => {
             acquisitionMethod: true,
             acquisitionDate: true,
             exhibitionHistory: true,
+            publicationHistory: true,
             authenticateBy: true,
             auctheticateDate: true,
             insureanceValue: true,
@@ -378,6 +379,7 @@ export const getArtworkService = async ({ lotUuid }) => {
         catalogue: {
             provenance: lot.provenance,
             exhibitionHistory: lot.exhibitionHistory,
+            publicationHistory: lot.publicationHistory,
             previousOwner: lot.previousOwner,
             acquisitionMethod: lot.acquisitionMethod,
             acquisitionDate: lot.acquisitionDate,

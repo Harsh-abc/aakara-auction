@@ -108,6 +108,7 @@ export interface PublicLotDetail extends PublicLot {
     // detailedConditionNotes: string | null;
     restorationHistory: string | null;
     exhibitionHistory: string | null;
+    publicationHistory: string | null;
     media: PublicLotMedia[];
     /** paddle of the bidder holding the current bid */
     leadingPaddle: string | null;

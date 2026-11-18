@@ -124,6 +124,7 @@ export default function AddLots({
                 acquisitionDate: "",
                 provenanceText: "",
                 exhibitionHistory: "",
+                publicationHistory: "",
             },
 
             authentication: {

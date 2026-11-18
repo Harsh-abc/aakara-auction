@@ -102,6 +102,7 @@ export interface ArtworkDetail extends Omit<ArtworkRow, "auction"> {
     catalogue: {
         provenance: string | null
         exhibitionHistory: string | null
+        publicationHistory: string | null
         previousOwner: string | null
         acquisitionMethod: string | null
         acquisitionDate: string | null

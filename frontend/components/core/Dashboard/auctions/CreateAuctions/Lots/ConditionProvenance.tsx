@@ -145,6 +145,20 @@ export default function ConditionProvenance({
                         />
                     </div>
                 </div>
+
+                {/* Publication History — shown on the lot page under "Literature" */}
+                <div className="grid grid-cols-1 gap-2 w-full mt-4">
+                    <div className="input-wrapper">
+                        <label className="block mb-2">Publication History</label>
+
+                        <textarea
+                            rows={3}
+                            placeholder="List books, catalogues and articles the work appeared in, one per line"
+                            className="w-full border rounded-md px-3 py-2"
+                            {...register(`lots.${lotIndex}.provenance.publicationHistory`)}
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* ==================== AUTHENTICATION ==================== */}
