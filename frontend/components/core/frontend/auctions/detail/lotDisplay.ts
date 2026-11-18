@@ -48,13 +48,6 @@ export function artistLifeDates(lot: ArtistDates) {
     return born && died ? `${born} – ${died}` : born ? `b. ${born}` : `d. ${died}`
 }
 
-export function artistWithLifeDates(lot: ArtistDates) {
-    const name = lot.artistName?.trim()
-    if (!name) return null
-    const dates = artistLifeDates(lot)
-    return dates ? `${name} (${dates})` : name
-}
-
 // "122 × 91 × 3 cm (48 × 35.83 × 1.18 in)"
 export function lotDimensions(lot: PublicLot) {
     return formatLotSize(lot.dimension)

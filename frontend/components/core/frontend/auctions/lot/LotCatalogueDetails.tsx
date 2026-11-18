@@ -26,11 +26,18 @@ function Section({ section }: { section: CatalogueSection }) {
                 <div className="mt-2.5 flex flex-col gap-3 pb-0.5 text-[14px] leading-[22.75px] text-[#717171]">
                     {section.paragraphs.map((paragraph, index) => (
                         <p key={index}>
-                            {paragraph.map((line, i) => (
-                                <span key={i} className="block">
-                                    {line}
-                                </span>
-                            ))}
+                            {paragraph.map((line, i) =>
+                                typeof line === "string" ? (
+                                    <span key={i} className="block">
+                                        {line}
+                                    </span>
+                                ) : (
+                                    // e.g. the artist's life dates, under their name
+                                    <span key={i} className="block text-[12px] leading-4.5">
+                                        {line.text}
+                                    </span>
+                                )
+                            )}
                         </p>
                     ))}
                 </div>

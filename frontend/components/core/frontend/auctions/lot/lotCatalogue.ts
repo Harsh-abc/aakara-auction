@@ -1,6 +1,6 @@
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types";
 
-import { artistWithLifeDates, lotDimensions } from "../detail/lotDisplay";
+import { artistLifeDates, lotDimensions } from "../detail/lotDisplay";
 import { isClosedLot, isUpcomingLot } from "./lotPageDisplay";
 
 const EDITION_LABELS: Record<PublicLotDetail["editionType"], string> = {
@@ -39,10 +39,13 @@ const blocks = (value: string | null) => (value ? value.split(/\r?\n\s*\r?\n/).m
 
 const compact = (values: (string | null | undefined | false)[]) => values.filter((v): v is string => !!v);
 
+/** a row of text; `small` rows (e.g. the artist's life dates) are set in smaller type */
+export type CatalogueLine = string | { text: string; small: true };
+
 export type CatalogueSection = {
     title: string;
     /** paragraphs of lines; each paragraph is a block, each line its own row */
-    paragraphs: string[][];
+    paragraphs: CatalogueLine[][];
     defaultOpen: boolean;
 };
 
@@ -56,12 +59,15 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
         : lot.acquisitionDate && `Acquired on ${formatDay(lot.acquisitionDate)}`;
     const authentication = lot.authenticateBy && compact([`Authenticated by ${lot.authenticateBy}`, formatDay(lot.authenticatedAt)]).join(", ");
 
+    const lifeDates = artistLifeDates(lot);
+
     const sections: CatalogueSection[] = [
         {
             title: "Description",
             defaultOpen: true,
             // artist, title, then the year on its own line (when the lot has one)
-            paragraphs: [compact([artistWithLifeDates(lot), lot.title, lot.yearCreated]),compact([lot.medium, lotDimensions(lot), EDITION_LABELS[lot.editionType]]), ...blocks(lot.catalogueNote)],
+            // artist, their life dates (small) below, then the title and year on their own lines
+            paragraphs: [[...compact([lot.artistName]), ...(lifeDates ? [{ text: lifeDates, small: true as const }] : []), ...compact([lot.title, lot.yearCreated])],compact([lot.medium, lotDimensions(lot), EDITION_LABELS[lot.editionType]]), ...blocks(lot.catalogueNote)],
         },
         {
             title: "Condition report",
