@@ -67,7 +67,8 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
         {
             title: "Description",
             defaultOpen: true,
-            paragraphs: [compact([lot.artistName, compact([lot.title, lot.yearCreated]).join(", ")]), compact([lot.medium, lotDimensions(lot), EDITION_LABELS[lot.editionType]]), ...blocks(lot.catalogueNote)],
+            // artist, title, then the year on its own line (when the lot has one)
+            paragraphs: [compact([lot.artistName, lot.title, lot.yearCreated]),compact([lot.medium, lotDimensions(lot), EDITION_LABELS[lot.editionType]]), ...blocks(lot.catalogueNote)],
         },
         {
             title: "Condition report",
