@@ -276,6 +276,7 @@ model Category {
   items         AuctionItem[]
   subCategories SubCategory[]
   auctions      Auction[]
+  auctionLinks  AuctionCategory[]
 
   @@map("categories")
 }
@@ -331,8 +332,11 @@ model Auction {
   isOnline             Boolean                @default(true)
   venue                String?
   termsAndConditions   String?
+  /// Primary category — the first of `categories` (kept for listings / filters)
   categoryId           BigInt
   subCategoryId        BigInt?
+  /// Every category the auction covers; each lot picks one of these (+ its own subcategory)
+  categories           AuctionCategory[]
   createdBy            BigInt
   publishedAt          DateTime?
   createdAt            DateTime               @default(now())
@@ -741,8 +745,23 @@ model AuctionCurrency {
   @@map("auction_currencies")
 }
 
+model AuctionCategory {
+  auctionId  BigInt
+  categoryId BigInt
+  /// Order the admin picked them in; 0 = primary (= auctions.categoryId)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  auction  Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@id([auctionId, categoryId])
+  @@index([categoryId])
+  @@map("auction_categories")
+}
+
 model Bid {
-  id                  BigInt             @id @default(autoincrement())
+  id              BigInt             @id @default(autoincrement())
   uuid                String             @unique @default(uuid()) @db.Uuid
   itemId              BigInt
   bidderId            BigInt

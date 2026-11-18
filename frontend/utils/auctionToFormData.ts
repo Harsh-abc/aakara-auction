@@ -27,12 +27,18 @@ const toFormTime = (iso: string | null | undefined, timeZone: string): string =>
 
 const toLotForm = (
     lot: AuctionLot,
-    categoryUuid: string,
+    auctionCategoryUuids: string[],
     sharedShippingInfo: string,
     timeZone: string
 ): AuctionLotForm => {
     const dimension = lot.dimension;
     const shippingInfo = text(lot.shippingInfo);
+
+    // the lot's own category if it's one of the auction's, else the primary
+    const lotCategoryUuid = lot.category?.uuid ?? "";
+    const ownCategory = auctionCategoryUuids.includes(lotCategoryUuid);
+    const categoryUuid = ownCategory ? lotCategoryUuid : auctionCategoryUuids[0] ?? "";
+    const subCategoryUuid = ownCategory ? lot.subCategory?.uuid ?? "" : "";
 
     return {
         uuid: lot.uuid,
@@ -50,6 +56,7 @@ const toLotForm = (
             artist: text(lot.artistName),
             artworkId: "",
             categoryUuid,
+            subCategoryUuid,
             medium: text(lot.medium),
             yearCreated: text(lot.yearCreated),
             catalogueNote: text(lot.catalogueNote),
@@ -142,7 +149,12 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
     // buildAuctionFormData copies the auction-level shipping info to every lot
     const sharedShippingInfo = text(lots.find((lot) => lot.shippingInfo)?.shippingInfo);
 
-    const categoryUuid = auction.category?.uuid ?? "";
+    // Older auctions (before multi-category) only have the single primary category
+    const categoryUuids = auction.categories?.length
+        ? [...auction.categories].sort((a, b) => a.sortOrder - b.sortOrder).map((c) => c.category.uuid)
+        : auction.category?.uuid
+            ? [auction.category.uuid]
+            : [];
 
     // A rule exists only when extended bidding was switched on (LIVE auctions)
     const extensionMinutes = num(
@@ -161,8 +173,7 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
             auctionType: auction.auctionType,
             description: text(auction.description),
             shortDescription: text(auction.short_description),
-            categoryUuid,
-            subCategoryUuid: auction.subCategory?.uuid ?? "",
+            categoryUuids,
             auctionLocation: text(auction.venue),
             auctionTags: (auction.tags ?? []).map((t) => t.tag.name),
             currency: currencyCodes,
@@ -187,7 +198,7 @@ export const auctionToFormData = (auction: Auction, lots: AuctionLot[]): Auction
             auctionExtensionTime: hasExtension ? extensionMinutes : null,
         },
 
-        lots: lots.map((lot) => toLotForm(lot, categoryUuid, sharedShippingInfo, timeZone)),
+        lots: lots.map((lot) => toLotForm(lot, categoryUuids, sharedShippingInfo, timeZone)),
 
         fees: (auction.auctionFees ?? []).map((fee, index) => ({
             feeType: fee.feeType,

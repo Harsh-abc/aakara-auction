@@ -445,8 +445,11 @@ export interface Auction {
     termsAndConditions?: string | null;
     publishedAt?: string | null;
 
+    /** Primary category (= first of `categories`) */
     category?: { uuid: string; name: string; slug?: string };
     subCategory?: { uuid: string; name: string; slug?: string } | null;
+    /** Every category of the auction, primary first */
+    categories?: { sortOrder: number; category: { uuid: string; name: string; slug?: string } }[];
     currency?: { code: string; name: string; symbol?: string | null };
     /** Allowed currencies, primary first */
     auctionCurrencies?: { isPrimary: boolean; currency: { code: string; name?: string; symbol?: string | null } }[];
@@ -511,6 +514,8 @@ export interface AuctionLot {
     images: (AuctionImage & { id?: string })[];
     documents: (AuctionDocument & { id?: string })[];
     currency?: { code: string; symbol?: string | null } | null;
+    category?: { uuid: string; name: string } | null;
+    subCategory?: { uuid: string; name: string } | null;
 }
 
 // =====================================================================

@@ -149,8 +149,10 @@ export const buildAuctionFormData = (
     appendIfPresent(formData, "description", basicInfo.description);
     appendIfPresent(formData, "short_description", basicInfo.shortDescription);
     formData.append("auctionType", basicInfo.auctionType || "ONLINE");
-    formData.append("categoryUuid", basicInfo.categoryUuid);
-    appendIfPresent(formData, "subCategoryUuid", basicInfo.subCategoryUuid);
+    // Every category of the auction, first = primary (categoryUuid kept for older servers)
+    const categoryUuids = basicInfo.categoryUuids ?? [];
+    formData.append("categoryUuids", JSON.stringify(categoryUuids));
+    appendIfPresent(formData, "categoryUuid", categoryUuids[0]);
 
     // Auction model stores ONE currency — send the first selected as a plain string
     // formData.append("currency", basicInfo.currency?.[0] ?? "INR");
@@ -295,6 +297,10 @@ export const buildAuctionFormData = (
             yearCreated: str(details.yearCreated),
             catalogueNote: str(details.catalogueNote),
 
+            // one of the auction's categories (null -> the primary) + its own subcategory
+            categoryUuid: categoryUuids.includes(details.categoryUuid) ? details.categoryUuid : categoryUuids[0] ?? null,
+            subCategoryUuid: categoryUuids.includes(details.categoryUuid) ? str(details.subCategoryUuid) : null,
+
             dimension: hasDimension
                 ? {
                     ...measures,
@@ -423,7 +429,7 @@ export const validateAuctionForm = (
     const { basicInfo, schedule, lots } = data;
 
     if (!basicInfo.auctionName?.trim()) errors.push("Auction name is required");
-    if (!basicInfo.categoryUuid) errors.push("Category is required");
+    if (!basicInfo.categoryUuids?.length) errors.push("Select at least one category");
     if (!basicInfo.currency?.length) errors.push("Select at least one currency");
 
     if (basicInfo.currency?.length && !basicInfo.currency.includes(basicInfo.primaryCurrency)) {
