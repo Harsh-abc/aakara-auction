@@ -15,6 +15,7 @@ import { saleCountdown } from "./detail/AuctionDetail";
 import { lotHeading, lotHref } from "./detail/lotDisplay";
 import { BidDialog } from "./lot/BidDialog";
 import { BidLadder } from "./lot/BidLadder";
+import { announceLotClosed } from "./lot/LotClosedNotice";
 import { LivePlayer } from "./lot/LivePlayer";
 import { LotPageMessage } from "./lot/LotPageChrome";
 import { LotSummary } from "./lot/LotSummary";
@@ -34,7 +35,11 @@ const OVERLAY_TAG = "inline-flex h-5 items-center border border-[#cecece] bg-whi
 
 // the live auction room, focused on one lot
 export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; lotUuid: string }) {
-    const state = useLotPage(auctionUuid, lotUuid);
+    // the room moves on fast after the hammer — tell everyone the lot has closed
+    const state = useLotPage(auctionUuid, lotUuid, {
+        onLotClosed: ({ lot, auctionTitle, hasNext }) =>
+            announceLotClosed({ lotUuid: lot.uuid, itemNumber: lot.itemNumber, title: lot.title, artistName: lot.artistName, auctionTitle, hasNext }),
+    });
     const callout = useLotCallout(auctionUuid);
     const { onBid, target, setTarget, savedCount, onSaved } = useBidAction();
     const router = useRouter();
