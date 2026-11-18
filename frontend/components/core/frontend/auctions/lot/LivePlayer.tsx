@@ -400,6 +400,33 @@ function Stage({
         }
     }, [main?.publication.trackSid])
 
+    // phones (iOS Safari, Android Chrome) pause a muted, autoplaying video once the page is in the background —
+    // which is exactly where it is in the system picture-in-picture window, and the paused video then sits under the
+    // system's frosted play button. It's live: never stay paused (the pause / play buttons there just resume it)
+    useEffect(() => {
+        const video = mainVideo()
+        if (!video) return
+        const resume = () => {
+            if (video.paused && video.isConnected && video.srcObject) video.play().catch(() => {})
+        }
+        video.addEventListener("pause", resume)
+        const session = typeof navigator !== "undefined" ? navigator.mediaSession : undefined
+        const setHandlers = (handler: (() => void) | null) => {
+            for (const action of ["play", "pause"] as const) {
+                try {
+                    session?.setActionHandler(action, handler)
+                } catch {
+                    // action not supported by this browser
+                }
+            }
+        }
+        setHandlers(resume)
+        return () => {
+            video.removeEventListener("pause", resume)
+            setHandlers(null)
+        }
+    }, [main?.publication.trackSid])
+
     const togglePip = async () => {
         if (document.pictureInPictureElement) return void document.exitPictureInPicture().catch(() => {})
         if (docPip && onPipWindow && hasPipHost()) {
@@ -411,7 +438,12 @@ function Stage({
             onPipWindow(win)
             return
         }
-        await mainVideo()?.requestPictureInPicture().catch(() => {})
+        const video = mainVideo()
+        if (!video) return
+        // play() inside the tap makes it a user-started video, not an autoplaying one — phones then keep it playing
+        // in the background instead of pausing it (not awaited: requestPictureInPicture needs the same tap)
+        video.play().catch(() => {})
+        await video.requestPictureInPicture().catch(() => {})
     }
 
     const contain = inPipWindow || Boolean(screen) || isFull
