@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useFormContext, Controller, useWatch } from "react-hook-form";
-import { Lock } from "lucide-react";
 import { PiCommandLight } from "react-icons/pi";
 import { useAppSelector } from "@/hooks/redux";
+import { useCategories, useSubCategories } from "@/hooks/useCategories";
 
 import DashboardFormText from "@/components/common/DashboardFormText";
 import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
@@ -13,9 +13,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
-import { getCategories, getSubCategories } from "@/services/operations/category.api";
 import { uploadEditorImage } from "@/services/operations/upload.api";
-import type { Category, SubCategory } from "@/lib/types/category.types";
 import type { DimensionUnit } from "@/lib/types/auction.types";
 import { DIMENSION_SIDES, DIMENSION_UNITS } from "@/utils/dimensions";
 
@@ -27,53 +25,138 @@ interface LotsDetailProps {
 
 
 
+/** Names for a category (+ optional subcategory) uuid pair. */
 export function useAuctionCategoryName(categoryUuid?: string, subCategoryUuid?: string) {
-    const [categoryName, setCategoryName] = useState<string | null>(null);
-    const [subCategoryName, setSubCategoryName] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const { categories, loading: categoriesLoading } = useCategories();
+    const { subCategories, loading: subLoading } = useSubCategories(subCategoryUuid ? categoryUuid : undefined);
 
+    const categoryName = categoryUuid ? categories.find((c) => c.uuid === categoryUuid)?.name ?? null : null;
+    const subCategoryName = subCategoryUuid
+        ? subCategories.find((s) => s.uuid === subCategoryUuid)?.name ?? null
+        : null;
+
+    return { categoryName, subCategoryName, loading: !!categoryUuid && (categoriesLoading || subLoading) };
+}
+
+/** "Painting / Oil" style label for a lot's category, or "" if none. */
+export function useLotCategoryLabel(categoryUuid?: string, subCategoryUuid?: string) {
+    const { categoryName, subCategoryName, loading } = useAuctionCategoryName(categoryUuid, subCategoryUuid);
+    if (!categoryUuid) return "";
+    if (loading) return "Loading...";
+    if (!categoryName) return "Unknown category";
+    return subCategoryName ? `${categoryName} / ${subCategoryName}` : categoryName;
+}
+
+/**
+ * The lot's category (one of the auction's, picked in Basic Info) and its
+ * subcategory (any subcategory of that category).
+ */
+function LotCategoryFields({ lotIndex }: { lotIndex: number }) {
+    const { control, setValue, getValues } = useFormContext<AuctionFormData>();
+
+    const auctionCategoryUuids = useWatch({ control, name: "basicInfo.categoryUuids" });
+    const lotCategoryUuid = useWatch({ control, name: `lots.${lotIndex}.details.categoryUuid` });
+    const lotSubCategoryUuid = useWatch({ control, name: `lots.${lotIndex}.details.subCategoryUuid` });
+
+    const { categories, loading: categoriesLoading } = useCategories();
+    const { subCategories, loading: subLoading } = useSubCategories(lotCategoryUuid || undefined);
+
+    const allowed = useMemo(() => auctionCategoryUuids ?? [], [auctionCategoryUuids]);
+    const options = allowed.map((uuid) => ({
+        uuid,
+        name: categories.find((c) => c.uuid === uuid)?.name ?? (categoriesLoading ? "Loading..." : "Unknown category"),
+    }));
+
+    // Keep the lot on one of the auction's categories (e.g. a lot added before the
+    // categories were picked, or whose category was removed)
     useEffect(() => {
-        let cancelled = false;
-
-        if (!categoryUuid) {
-            setCategoryName(null);
-            setSubCategoryName(null);
-            return;
-        }
-
-        const load = async () => {
-            setLoading(true);
-            try {
-                const [catRes, subRes] = await Promise.all([
-                    getCategories(),
-                    subCategoryUuid ? getSubCategories(categoryUuid) : Promise.resolve(null),
-                ]);
-
-                if (cancelled) return;
-
-                const category = catRes?.success
-                    ? (catRes.data as Category[]).find((c) => c.uuid === categoryUuid)
-                    : undefined;
-                const subCategory = subRes?.success
-                    ? (subRes.data as SubCategory[]).find((s) => s.uuid === subCategoryUuid)
-                    : undefined;
-
-                setCategoryName(category?.name ?? null);
-                setSubCategoryName(subCategory?.name ?? null);
-            } catch (error) {
-                console.error("Failed to load auction category:", error);
-            } finally {
-                if (!cancelled) setLoading(false);
+        const path = `lots.${lotIndex}.details.categoryUuid` as const;
+        const current = getValues(path) ?? "";
+        if (!allowed.includes(current)) {
+            const fallback = allowed[0] ?? "";
+            if (current !== fallback) {
+                setValue(path, fallback, { shouldDirty: true });
+                setValue(`lots.${lotIndex}.details.subCategoryUuid`, "", { shouldDirty: true });
             }
-        };
+        }
+    }, [allowed, lotIndex, getValues, setValue]);
 
-        load();
-        return () => {
-            cancelled = true;
-        };
-    }, [categoryUuid, subCategoryUuid]);
+    // A saved subcategory that isn't under the chosen category is dropped
+    useEffect(() => {
+        if (subLoading || !lotCategoryUuid || !lotSubCategoryUuid) return;
+        if (!subCategories.some((s) => s.uuid === lotSubCategoryUuid)) {
+            setValue(`lots.${lotIndex}.details.subCategoryUuid`, "", { shouldDirty: true });
+        }
+    }, [subCategories, subLoading, lotCategoryUuid, lotSubCategoryUuid, lotIndex, setValue]);
 
-    return { categoryName, subCategoryName, loading };
+    return (
+        <div className="grid grid-cols-2 gap-4">
+            <div className="input-wrapper">
+                <label className="block mb-2">Category</label>
+                <Controller
+                    name={`lots.${lotIndex}.details.categoryUuid`}
+                    control={control}
+                    render={({ field }) => (
+                        <select
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                                field.onChange(e.target.value);
+                                // new category -> its subcategories start over
+                                setValue(`lots.${lotIndex}.details.subCategoryUuid`, "", { shouldDirty: true });
+                            }}
+                            onBlur={field.onBlur}
+                            disabled={allowed.length === 0}
+                            className="w-full border rounded-md px-3 py-2 h-11 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                        >
+                            {allowed.length === 0 && <option value="">Select categories in Basic Info</option>}
+                            {options.map((option) => (
+                                <option key={option.uuid} value={option.uuid}>
+                                    {option.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                />
+                <p className={`mt-1 text-xs ${allowed.length ? "text-slate-500" : "text-amber-600"}`}>
+                    {allowed.length
+                        ? "From the auction's categories (Step 1: Basic Info)."
+                        : "No category selected yet. Choose them in Step 1: Basic Info."}
+                </p>
+            </div>
+
+            <div className="input-wrapper">
+                <label className="block mb-2">SubCategory</label>
+                <Controller
+                    name={`lots.${lotIndex}.details.subCategoryUuid`}
+                    control={control}
+                    render={({ field }) => (
+                        <select
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            onBlur={field.onBlur}
+                            disabled={!lotCategoryUuid || subLoading}
+                            className="w-full border rounded-md px-3 py-2 h-11 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                        >
+                            <option value="">
+                                {!lotCategoryUuid
+                                    ? "Select category first"
+                                    : subLoading
+                                        ? "Loading subcategories..."
+                                        : subCategories.length
+                                            ? "Select subcategory"
+                                            : "No subcategories"}
+                            </option>
+                            {subCategories.map((sub) => (
+                                <option key={sub.uuid} value={sub.uuid}>
+                                    {sub.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                />
+            </div>
+        </div>
+    );
 }
 
 
@@ -128,37 +211,12 @@ function SizeRow({ lotIndex, set }: { lotIndex: number; set: "primary" | "second
 }
 
 export default function LotsDetail({ lotIndex }: LotsDetailProps) {
-    const { register, control, setValue, getValues } = useFormContext<AuctionFormData>();
+    const { register, control } = useFormContext<AuctionFormData>();
 
     const token = useAppSelector((state) => state.auth.accessToken);
 
     // images inside the artwork description go straight to S3; the HTML keeps their URLs
     const handleDescriptionImageUpload = useCallback((file: File) => uploadEditorImage(file, token), [token]);
-
-    const auctionCategoryUuid = useWatch({ control, name: "basicInfo.categoryUuid" });
-    const auctionSubCategoryUuid = useWatch({ control, name: "basicInfo.subCategoryUuid" });
-
-    const { categoryName, subCategoryName, loading: categoryLoading } = useAuctionCategoryName(
-        auctionCategoryUuid,
-        auctionSubCategoryUuid
-    );
-
-    useEffect(() => {
-        const path = `lots.${lotIndex}.details.categoryUuid` as const;
-        if (getValues(path) !== (auctionCategoryUuid ?? "")) {
-            setValue(path, auctionCategoryUuid ?? "", { shouldDirty: true });
-        }
-    }, [auctionCategoryUuid, lotIndex, getValues, setValue]);
-
-    const categoryLabel = !auctionCategoryUuid
-        ? ""
-        : categoryLoading
-            ? "Loading..."
-            : categoryName
-                ? subCategoryName
-                    ? `${categoryName} / ${subCategoryName}`
-                    : categoryName
-                : "Unknown category";
 
     return (
         <div className="px-6 pb-5 mb-20">
@@ -211,33 +269,10 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
                         {...register(`lots.${lotIndex}.details.artworkId`)}
                     />
                 </div>
-
-                {/* Category — inherited from the auction, read-only */}
-                <div className="input-wrapper">
-                    <label className="block mb-2">Category</label>
-
-                    <div className="relative">
-                        <Input
-                            type="text"
-                            readOnly
-                            tabIndex={-1}
-                            value={categoryLabel}
-                            placeholder="Select a category in Basic Info"
-                            className="w-full border rounded-md px-3 py-2 h-11 pr-9 bg-slate-50 text-slate-600 cursor-not-allowed"
-                        />
-                        <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    </div>
-
-                    <p className={`mt-1 text-xs ${auctionCategoryUuid ? "text-slate-500" : "text-amber-600"}`}>
-                        {auctionCategoryUuid
-                            ? "Inherited from the auction (Step 1: Basic Info)."
-                            : "No category selected yet. Choose one in Step 1: Basic Info."}
-                    </p>
-
-                    {/* keeps the value registered in the form */}
-                    <input type="hidden" {...register(`lots.${lotIndex}.details.categoryUuid`)} />
-                </div>
             </div>
+
+            {/* Category (one of the auction's) + its subcategory */}
+            <LotCategoryFields lotIndex={lotIndex} />
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="input-wrapper">

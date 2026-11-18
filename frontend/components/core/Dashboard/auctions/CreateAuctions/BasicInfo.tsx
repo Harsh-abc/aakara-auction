@@ -5,17 +5,15 @@ import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 
 import { Input } from "@/components/ui/input";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { Check, Upload, X } from "lucide-react";
 import { useAppSelector } from "@/hooks/redux";
+import { useCategories } from "@/hooks/useCategories";
 
 import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
 import TagsInput from "@/components/common/Tags/TagsInput";
 import DashboardFormText from "@/components/common/DashboardFormText";
 
-
-import { getCategories, getSubCategories } from "@/services/operations/category.api";
 import { uploadEditorImage } from "@/services/operations/upload.api";
-import { Category, SubCategory } from "@/lib/types/category.types";
 import CurrencySelector from "@/components/common/CurrencySelector";
 
 // must match slugify in backend/src/services/auction.services.js
@@ -146,13 +144,83 @@ function ImageDropzone({
     );
 }
 
+/**
+ * The auction's categories — pick as many as the sale covers. The first picked
+ * is the primary one; each lot then chooses one of these (and its subcategory).
+ */
+function CategoryMultiSelect() {
+    const { watch, setValue, getValues } = useFormContext<AuctionFormData>();
+    const { categories, loading } = useCategories();
+
+    const selected = watch("basicInfo.categoryUuids") ?? [];
+
+    const toggle = (uuid: string) => {
+        const current = getValues("basicInfo.categoryUuids") ?? [];
+        const next = current.includes(uuid) ? current.filter((u) => u !== uuid) : [...current, uuid];
+        setValue("basicInfo.categoryUuids", next, { shouldDirty: true, shouldTouch: true });
+
+        // Lots whose category was just removed move to the (new) primary one
+        const fallback = next[0] ?? "";
+        (getValues("lots") ?? []).forEach((lot, i) => {
+            const lotCategory = lot.details?.categoryUuid ?? "";
+            if (!next.includes(lotCategory)) {
+                setValue(`lots.${i}.details.categoryUuid`, fallback, { shouldDirty: true });
+                setValue(`lots.${i}.details.subCategoryUuid`, "", { shouldDirty: true });
+            }
+        });
+    };
+
+    const nameOf = (uuid: string) => categories.find((c) => c.uuid === uuid)?.name;
+
+    return (
+        <div className="input-wrapper">
+            <label className="block mb-2">Categories</label>
+
+            {loading && categories.length === 0 ? (
+                <p className="text-sm text-slate-400">Loading categories...</p>
+            ) : categories.length === 0 ? (
+                <p className="text-sm text-slate-400">No categories found.</p>
+            ) : (
+                <div className="flex flex-wrap gap-2">
+                    {categories.map((category) => {
+                        const isSelected = selected.includes(category.uuid);
+                        const isPrimary = selected[0] === category.uuid;
+                        return (
+                            <button
+                                key={category.uuid}
+                                type="button"
+                                onClick={() => toggle(category.uuid)}
+                                aria-pressed={isSelected}
+                                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition ${isSelected
+                                    ? "border-[#7A3D5E] bg-[#fce8f1] text-[#7A3D5E]"
+                                    : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+                                    }`}
+                            >
+                                {isSelected && <Check className="h-3.5 w-3.5" />}
+                                {category.name}
+                                {isPrimary && selected.length > 1 && (
+                                    <span className="rounded bg-[#7A3D5E] px-1.5 text-[10px] font-medium text-white">
+                                        Primary
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            <p className={`mt-2 text-xs ${selected.length ? "text-slate-500" : "text-amber-600"}`}>
+                {selected.length
+                    ? `${selected.length} selected: ${selected.map((u) => nameOf(u) ?? "…").join(", ")}. Each lot picks one of these and its subcategory.`
+                    : "Select at least one category. The first one you pick is the primary category."}
+            </p>
+        </div>
+    );
+}
+
 export default function BasicInfo() {
 
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-
-    const [categoriesLoading, setCategoriesLoading] = useState(false);
-    const [subCategoriesLoading, setSubCategoriesLoading] = useState(false);
+    const { categories } = useCategories();
 
     const {
         register,
@@ -192,13 +260,15 @@ export default function BasicInfo() {
 
     const auctionName = watch("basicInfo.auctionName");
     const auctionType = watch("basicInfo.auctionType");
-    const categoryUuid = watch("basicInfo.categoryUuid");
+    const categoryUuids = watch("basicInfo.categoryUuids") ?? [];
     const coverImage = watch("basicInfo.coverImage");
     const savedCoverUrl = watch("basicInfo.coverImageUrl"); // edit: cover already on the auction
     const primaryCurrency = watch("basicInfo.primaryCurrency"); // ✅ NEW (preview card)
 
-    // ✅ Show the category NAME in the preview card (was showing the UUID)
-    const categoryName = categories.find((c) => c.uuid === categoryUuid)?.name;
+    // Category NAMES for the preview card
+    const categoryNames = categoryUuids
+        .map((uuid) => categories.find((c) => c.uuid === uuid)?.name)
+        .filter((name): name is string => Boolean(name));
 
     /* =====================================================
        COVER + THUMBNAIL IMAGES
@@ -209,62 +279,6 @@ export default function BasicInfo() {
         watch("basicInfo.thumbnailImage"),
         watch("basicInfo.thumbnailImageUrl") // edit: thumbnail already on the auction
     );
-
-    /* =====================================================
-       CATEGORIES
-    ===================================================== */
-
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                setCategoriesLoading(true);
-                const response = await getCategories();
-                if (response.success) {
-                    setCategories(response.data);
-                    // The <select> mounted before its options existed — re-apply
-                    // the saved value (edit / revisiting this step)
-                    setTimeout(() => setValue("basicInfo.categoryUuid", getValues("basicInfo.categoryUuid")));
-                }
-            } catch (error) {
-                console.error("Failed to fetch categories:", error);
-            } finally {
-                setCategoriesLoading(false);
-            }
-        };
-
-        fetchCategories();
-    }, [getValues, setValue]);
-
-    useEffect(() => {
-        if (!categoryUuid) {
-            setSubCategories([]);
-            setValue("basicInfo.subCategoryUuid", "", { shouldDirty: true });
-            return;
-        }
-
-        const fetchSubCategories = async () => {
-            try {
-                setSubCategoriesLoading(true);
-                const response = await getSubCategories(categoryUuid);
-                if (response.success) {
-                    setSubCategories(response.data);
-                    // Keep the saved subcategory only if it belongs to this category
-                    const current = getValues("basicInfo.subCategoryUuid");
-                    const stillValid = (response.data as SubCategory[]).some((s) => s.uuid === current);
-                    setTimeout(() =>
-                        setValue("basicInfo.subCategoryUuid", stillValid ? current : "", { shouldDirty: !stillValid })
-                    );
-                }
-            } catch (error) {
-                console.error("Failed to fetch subcategories:", error);
-                setSubCategories([]);
-            } finally {
-                setSubCategoriesLoading(false);
-            }
-        };
-
-        fetchSubCategories();
-    }, [categoryUuid, setValue, getValues]);
 
     /* =====================================================
        RENDER
@@ -375,52 +389,8 @@ export default function BasicInfo() {
                         previewClassName="h-full w-full object-contain"
                     />
 
-                    {/* CATEGORY + SUBCATEGORY */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="input-wrapper">
-                            <label className="block mb-2">Category</label>
-                            <select
-                                {...register("basicInfo.categoryUuid", { required: "Category is required" })}
-                                className="w-full border rounded-md px-3 py-2 h-11"
-                            >
-                                <option value="">
-                                    {categoriesLoading ? "Loading categories..." : "Select category"}
-                                </option>
-                                {categories.map((category) => (
-                                    <option key={category.uuid} value={category.uuid}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.basicInfo?.categoryUuid && (
-                                <p className="text-red-500 text-sm mt-1">
-                                    {errors.basicInfo.categoryUuid.message || "Category is required"}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="input-wrapper">
-                            <label className="block mb-2">SubCategory</label>
-                            <select
-                                {...register("basicInfo.subCategoryUuid")}
-                                disabled={!categoryUuid || subCategoriesLoading}
-                                className="w-full border rounded-md px-3 py-2 h-11 disabled:bg-slate-100 disabled:cursor-not-allowed"
-                            >
-                                <option value="">
-                                    {!categoryUuid
-                                        ? "Select category first"
-                                        : subCategoriesLoading
-                                            ? "Loading subcategories..."
-                                            : "Select subcategory"}
-                                </option>
-                                {subCategories.map((subCategory) => (
-                                    <option key={subCategory.uuid} value={subCategory.uuid}>
-                                        {subCategory.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                    {/* CATEGORIES (multi) — subcategories are picked per lot */}
+                    <CategoryMultiSelect />
 
                     {/* AUCTION LOCATION */}
                     <div className="grid grid-cols-1 gap-4">
@@ -477,9 +447,20 @@ export default function BasicInfo() {
                                 <span className="rounded bg-[#fce8f1] px-2 py-1 text-[11px] font-medium text-[#833b61]">
                                     {auctionType || "Auction Type"}
                                 </span>
-                                <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
-                                    {categoryName || "Category"}
-                                </span>
+                                {categoryNames.length ? (
+                                    categoryNames.map((name) => (
+                                        <span
+                                            key={name}
+                                            className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600"
+                                        >
+                                            {name}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                                        Category
+                                    </span>
+                                )}
                                 {primaryCurrency && (
                                     <span className="rounded bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
                                         {primaryCurrency}

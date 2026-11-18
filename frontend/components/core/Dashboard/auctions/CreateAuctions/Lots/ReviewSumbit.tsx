@@ -16,7 +16,7 @@ import {
 } from "@/utils/lotMedia";
 import { formatSizeSets } from "@/utils/dimensions";
 
-import { useAuctionCategoryName } from "./LotsDetails";
+import { useLotCategoryLabel } from "./LotsDetails";
 
 interface ReviewSubmitProps {
     lotIndex: number;
@@ -186,23 +186,7 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
 
     const details = useWatch({ control, name: `lots.${lotIndex}.details` });
     const schedule = useWatch({ control, name: `lots.${lotIndex}.schedule` });
-    const categoryUuid = useWatch({ control, name: "basicInfo.categoryUuid" });
-    const subCategoryUuid = useWatch({ control, name: "basicInfo.subCategoryUuid" });
-
-    const { categoryName, subCategoryName, loading } = useAuctionCategoryName(
-        categoryUuid,
-        subCategoryUuid
-    );
-
-    const category = !categoryUuid
-        ? EMPTY
-        : loading
-            ? "Loading..."
-            : categoryName
-                ? subCategoryName
-                    ? `${categoryName} / ${subCategoryName}`
-                    : categoryName
-                : "Unknown category";
+    const category = useLotCategoryLabel(details?.categoryUuid, details?.subCategoryUuid) || EMPTY;
 
     const dimensions = formatSizeSets(details?.dimensions?.primary, details?.dimensions?.secondary) ?? EMPTY;
 

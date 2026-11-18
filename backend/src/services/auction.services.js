@@ -136,6 +136,81 @@ const resolveCurrencies = ({ currencies, primaryCurrency, currency }) => {
     return { codes, primary };
 };
 
+/**
+ * The auction's categories, in the order picked (first = primary).
+ *   categoryUuids: ["a","b"] | '["a","b"]'
+ * Falls back to the old single `categoryUuid` so older clients still work.
+ */
+const resolveCategoryUuids = ({ categoryUuids, categoryUuid }) => {
+    let list = categoryUuids;
+    if (typeof list === "string" && list.trim().startsWith("[")) {
+        try {
+            list = JSON.parse(list);
+        } catch {
+            throw httpError("Invalid categories list");
+        }
+    }
+    if (!Array.isArray(list)) list = list ? [list] : [];
+    if (list.length === 0 && toStr(categoryUuid)) list = [categoryUuid];
+
+    const uuids = [...new Set(list.map(toStr).filter(Boolean))];
+    if (uuids.length === 0) throw httpError("Select at least one category");
+    return uuids;
+};
+
+/**
+ * Inside the transaction: loads the auction's categories and works out each
+ * lot's category + subcategory.
+ *   - a lot's category must be one of the auction's (none -> the primary)
+ *   - a lot's subcategory must belong to the lot's category
+ * Returns { categories (in order), primary, lotCategory: [{ categoryId, subCategoryId }] }
+ */
+const resolveAuctionCategories = async (tx, categoryUuids, normalizedLots) => {
+    const records = await tx.category.findMany({ where: { uuid: { in: categoryUuids } } });
+    const byUuid = new Map(records.map((c) => [c.uuid, c]));
+    const categories = categoryUuids.map((uuid) => {
+        const category = byUuid.get(uuid);
+        if (!category || !category.isActive) throw httpError("Invalid category");
+        return category;
+    });
+    const primary = categories[0];
+
+    const subUuids = [...new Set(normalizedLots.map((lot) => lot.subCategoryUuid).filter(Boolean))];
+    const subs = subUuids.length
+        ? await tx.subCategory.findMany({ where: { uuid: { in: subUuids } } })
+        : [];
+    const subByUuid = new Map(subs.map((s) => [s.uuid, s]));
+
+    const lotCategory = normalizedLots.map((lot, i) => {
+        const label = (msg) => `Lot ${i + 1}: ${msg}`;
+
+        let category = primary;
+        if (lot.categoryUuid) {
+            category = byUuid.get(lot.categoryUuid);
+            if (!category) throw httpError(label("category must be one of the auction's categories"));
+        }
+
+        let subCategoryId = null;
+        if (lot.subCategoryUuid) {
+            const sub = subByUuid.get(lot.subCategoryUuid);
+            if (!sub || !sub.isActive) throw httpError(label("invalid subcategory"));
+            if (sub.categoryId !== category.id) {
+                throw httpError(label("subcategory does not belong to the lot's category"));
+            }
+            subCategoryId = sub.id;
+        }
+
+        return { categoryId: category.id, subCategoryId };
+    });
+
+    return { categories, primary, lotCategory };
+};
+
+const AUCTION_CATEGORIES_INCLUDE = {
+    include: { category: true },
+    orderBy: { sortOrder: "asc" },
+};
+
 /** HSN codes are digits; the column is Decimal, so strip spaces/dots. */
 const toHsn = (value) => {
     const s = toStr(value);
@@ -282,6 +357,9 @@ const normalizeLot = (lot, index, { isDraft }) => {
         isSpecial: toBool(lot.isSpecial, false),
         // ✅ NEW — lot's currency code; turned into a currencyId inside the transaction
         currencyCode: toStr(lot.currency)?.toUpperCase() ?? null,
+        // lot's category (one of the auction's) + subcategory; turned into ids inside the transaction
+        categoryUuid: toStr(lot.categoryUuid),
+        subCategoryUuid: toStr(lot.subCategoryUuid),
         dimension,
         images,
         documents,
@@ -411,8 +489,8 @@ export const createAuctionService = async (data) => {
         isOnline,
         venue,
         termsAndConditions,
-        categoryUuid,
-        subCategoryUuid,
+        categoryUuid,      // legacy single category (still accepted)
+        categoryUuids,     // every category of the auction, first = primary
         shippingStrategy,
         visibility,
         allowExtendedBidding,
@@ -431,7 +509,7 @@ export const createAuctionService = async (data) => {
 
     const title = toStr(rawTitle);
     if (!title) throw httpError("Auction title is required");
-    if (!toStr(categoryUuid)) throw httpError("Category is required");
+    const auctionCategoryUuids = resolveCategoryUuids({ categoryUuids, categoryUuid });
 
     const auctionStatus = pickEnum(status, ENUMS.auctionStatus, "DRAFT", "auction status");
     const isDraft = auctionStatus === "DRAFT";
@@ -493,17 +571,11 @@ export const createAuctionService = async (data) => {
     // ---------------- transaction ----------------
     return prisma.$transaction(
         async (tx) => {
-            const category = await tx.category.findUnique({ where: { uuid: categoryUuid } });
-            if (!category || !category.isActive) throw httpError("Invalid category");
-
-            let subCategory = null;
-            if (toStr(subCategoryUuid)) {
-                subCategory = await tx.subCategory.findUnique({ where: { uuid: subCategoryUuid } });
-                if (!subCategory || !subCategory.isActive) throw httpError("Invalid subcategory");
-                if (subCategory.categoryId !== category.id) {
-                    throw httpError("Subcategory does not belong to selected category");
-                }
-            }
+            const { categories, primary: category, lotCategory } = await resolveAuctionCategories(
+                tx,
+                auctionCategoryUuids,
+                normalizedLots
+            );
 
             // ✅ NEW — load every selected currency (must exist + be active in `currencies`)
             const currencyRecords = await tx.currency.findMany({
@@ -551,9 +623,13 @@ export const createAuctionService = async (data) => {
                     // ✅ CHANGED — auctions.currencyId = PRIMARY currency
                     currency: { connect: { id: primaryRecord.id } },
                     category: { connect: { id: category.id } },
-                    ...(subCategory && { subCategory: { connect: { id: subCategory.id } } }),
                     creator: { connect: { id: BigInt(createdBy) } },
                 },
+            });
+
+            // every category of the auction, in the order picked (0 = primary)
+            await tx.auctionCategory.createMany({
+                data: categories.map((c, i) => ({ auctionId: auction.id, categoryId: c.id, sortOrder: i })),
             });
 
             // ✅ NEW — every allowed currency, primary flagged
@@ -604,17 +680,17 @@ export const createAuctionService = async (data) => {
             }
 
             // ---------------- lots ----------------
-            for (const lot of normalizedLots) {
-                // ✅ CHANGED — pull out currencyCode (not a DB column)
-                const { dimension, images, documents, currencyCode, ...itemData } = lot;
+            for (const [lotIdx, lot] of normalizedLots.entries()) {
+                // ✅ CHANGED — pull out currencyCode / category uuids (not DB columns)
+                // eslint-disable-next-line no-unused-vars
+                const { dimension, images, documents, currencyCode, categoryUuid: _c, subCategoryUuid: _s, ...itemData } = lot;
                 const lotCurrency = currencyByCode.get(currencyCode ?? primaryCode);
 
                 const item = await tx.auctionItem.create({
                     data: {
                         ...itemData,
                         auctionId: auction.id,
-                        categoryId: category.id,
-                        subCategoryId: subCategory?.id ?? null,
+                        ...lotCategory[lotIdx],
                         currencyId: lotCurrency.id, // ✅ CHANGED — lot's own currency
                         ...(dimension && { dimension: { create: dimension } }),
                     },
@@ -638,6 +714,7 @@ export const createAuctionService = async (data) => {
                 include: {
                     category: true,
                     subCategory: true,
+                    categories: AUCTION_CATEGORIES_INCLUDE,
                     currency: true,
                     // ✅ NEW
                     auctionCurrencies: {
@@ -693,7 +770,8 @@ export const getAuctionService = async (data = {}) => {
             select: { id: true },
         });
         if (!category) throw httpError("Category not found", 404);
-        where.categoryId = category.id;
+        // any of the auction's categories, not just the primary
+        where.categories = { some: { categoryId: category.id } };
     }
 
     const auctions = await prisma.auction.findMany({
@@ -708,6 +786,7 @@ export const getAuctionService = async (data = {}) => {
             },
             category: true,
             subCategory: true,
+            categories: AUCTION_CATEGORIES_INCLUDE,
             creator: { select: { id: true, uuid: true, username: true, email: true } },
             tags: { include: { tag: true } },
             auctionFees: true,
@@ -1045,8 +1124,8 @@ export const updateAuctionService = async (data) => {
         isOnline,
         venue,
         termsAndConditions,
-        categoryUuid,
-        subCategoryUuid,
+        categoryUuid,      // legacy single category (still accepted)
+        categoryUuids,     // every category of the auction, first = primary
         shippingStrategy,
         visibility,
         allowExtendedBidding,
@@ -1070,7 +1149,7 @@ export const updateAuctionService = async (data) => {
 
     const title = toStr(rawTitle);
     if (!title) throw httpError("Auction title is required");
-    if (!toStr(categoryUuid)) throw httpError("Category is required");
+    const auctionCategoryUuids = resolveCategoryUuids({ categoryUuids, categoryUuid });
 
     const auctionStatus = pickEnum(status, ENUMS.auctionStatus, "DRAFT", "auction status");
     const isDraft = auctionStatus === "DRAFT";
@@ -1199,18 +1278,12 @@ export const updateAuctionService = async (data) => {
             });
             const clientIdxByUuid = new Map(clientIdx.filter((i) => lotUuids[i]).map((i) => [lotUuids[i], i]));
 
-            // ---- category ----
-            const category = await tx.category.findUnique({ where: { uuid: categoryUuid } });
-            if (!category || !category.isActive) throw httpError("Invalid category");
-
-            let subCategory = null;
-            if (toStr(subCategoryUuid)) {
-                subCategory = await tx.subCategory.findUnique({ where: { uuid: subCategoryUuid } });
-                if (!subCategory || !subCategory.isActive) throw httpError("Invalid subcategory");
-                if (subCategory.categoryId !== category.id) {
-                    throw httpError("Subcategory does not belong to selected category");
-                }
-            }
+            // ---- categories (auction) + each lot's category / subcategory ----
+            const { categories, primary: category, lotCategory } = await resolveAuctionCategories(
+                tx,
+                auctionCategoryUuids,
+                normalizedLots
+            );
 
             // ---- currencies ----
             const currencyRecords = await tx.currency.findMany({
@@ -1272,8 +1345,15 @@ export const updateAuctionService = async (data) => {
                     visibility: pickEnum(visibility, ENUMS.visibility, "REGISTERED_USERS_ONLY", "visibility"),
                     currency: { connect: { id: primaryRecord.id } },
                     category: { connect: { id: category.id } },
-                    subCategory: subCategory ? { connect: { id: subCategory.id } } : { disconnect: true },
+                    // subcategories are chosen per lot now
+                    subCategory: { disconnect: true },
                 },
+            });
+
+            // ---------------- categories: replace ----------------
+            await tx.auctionCategory.deleteMany({ where: { auctionId: existing.id } });
+            await tx.auctionCategory.createMany({
+                data: categories.map((c, i) => ({ auctionId: existing.id, categoryId: c.id, sortOrder: i })),
             });
 
             if (existing.status !== auctionStatus) {
@@ -1395,13 +1475,14 @@ export const updateAuctionService = async (data) => {
             for (const { i, itemNumber } of writes) {
                 const raw = lots[i];
                 const uuid = lotUuids[i];
-                const { dimension, images, documents, currencyCode, ...itemData } = normalizedLots[i];
+                // eslint-disable-next-line no-unused-vars
+                const { dimension, images, documents, currencyCode, categoryUuid: _c, subCategoryUuid: _s, ...itemData } =
+                    normalizedLots[i];
 
                 const lotData = {
                     ...itemData,
                     itemNumber,
-                    categoryId: category.id,
-                    subCategoryId: subCategory?.id ?? null,
+                    ...lotCategory[i],
                     currencyId: currencyByCode.get(currencyCode ?? primaryCode).id,
                 };
 
@@ -1510,6 +1591,7 @@ export const updateAuctionService = async (data) => {
                 include: {
                     category: true,
                     subCategory: true,
+                    categories: AUCTION_CATEGORIES_INCLUDE,
                     currency: true,
                     auctionCurrencies: {
                         include: { currency: true },

@@ -75,7 +75,9 @@ export default function AddLots({
                 title: "",
                 artist: "",
                 artworkId: "",
-                categoryUuid: "",
+                // first of the auction's categories; the admin can pick another in the lot
+                categoryUuid: getValues("basicInfo.categoryUuids")?.[0] ?? "",
+                subCategoryUuid: "",
                 medium: "",
                 yearCreated: "",
                 catalogueNote: "",

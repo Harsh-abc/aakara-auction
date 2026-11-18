@@ -26,8 +26,8 @@ export interface BasicInfoForm {
     description: string;
     shortDescription: string;
 
-    categoryUuid: string;
-    subCategoryUuid: string;
+    /** Every category the auction covers, in the order picked (first = primary). Lots pick one of these. */
+    categoryUuids: string[];
 
     /** Used as the venue if shipping.venue is empty. */
     auctionLocation: string;
@@ -173,8 +173,11 @@ export interface LotDetailsForm {
     /** UI-only. AuctionItem has no artworkId column. */
     artworkId: string;
 
-    /** UI-only for now. Backend uses the auction's category for every lot. */
+    /** One of the auction's categories ("" = the auction's primary category). */
     categoryUuid: string;
+
+    /** Optional — must belong to the lot's category. */
+    subCategoryUuid: string;
 
     medium: string;
     yearCreated: string;

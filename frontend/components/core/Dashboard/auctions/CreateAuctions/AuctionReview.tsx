@@ -10,7 +10,7 @@ import type { AuctionFormData, AuctionLotForm } from "@/lib/types/AuctionsFormDa
 import { normalizeTime } from "@/utils/buildAuctionFormData";
 import { isImageMedia, isVideoMedia } from "@/utils/lotMedia";
 
-import { useAuctionCategoryName } from "./Lots/LotsDetails";
+import { useCategories } from "@/hooks/useCategories";
 import {
     FEE_LABEL,
     Field,
@@ -92,10 +92,7 @@ export default function AuctionReview({ issues, publishLabel, onEditStep, onEdit
     const { control } = useFormContext<AuctionFormData>();
     const { basicInfo, schedule, lots, fees, shipping, visibility } = useWatch({ control }) as AuctionFormData;
 
-    const { categoryName, subCategoryName, loading: categoryLoading } = useAuctionCategoryName(
-        basicInfo.categoryUuid,
-        basicInfo.subCategoryUuid
-    );
+    const { categories, loading: categoryLoading } = useCategories();
 
     // A cover picked in this session wins over the saved one (edit)
     const coverFile =
@@ -109,13 +106,14 @@ export default function AuctionReview({ issues, publishLabel, onEditStep, onEdit
     const venue = shipping.venue?.trim() || basicInfo.auctionLocation?.trim();
     const isLiveType = basicInfo.auctionType === "LIVE";
 
-    const category = !basicInfo.categoryUuid
+    const categoryUuids = basicInfo.categoryUuids ?? [];
+    const category = !categoryUuids.length
         ? null
-        : categoryLoading
+        : categoryLoading && categories.length === 0
             ? "Loading..."
-            : categoryName
-                ? `${categoryName}${subCategoryName ? ` / ${subCategoryName}` : ""}`
-                : "Unknown category";
+            : categoryUuids
+                .map((uuid) => categories.find((c) => c.uuid === uuid)?.name ?? "Unknown category")
+                .join(", ");
 
     return (
         <div className="space-y-6">
@@ -180,7 +178,7 @@ export default function AuctionReview({ issues, publishLabel, onEditStep, onEdit
 
                         <FieldGrid>
                             <Field label="Auction ID / Slug" value={basicInfo.auctionId?.trim() || "From the title"} />
-                            <Field label="Category" value={category} />
+                            <Field label={categoryUuids.length > 1 ? "Categories" : "Category"} value={category} />
                             <Field label="Starts" value={formatFormDateTime(schedule.startDate, schedule.startTime)} />
                             <Field label="Ends" value={formatFormDateTime(schedule.endDate, schedule.endTime)} />
                             <Field label="Lots" value={String(lots.length)} />

@@ -98,7 +98,7 @@ export const createAuction = async (req, res) => {
         if (!body.title?.trim()) {
             return res.status(400).json({ success: false, message: "Auction title is required" });
         }
-        if (!body.categoryUuid) {
+        if (!body.categoryUuid && !body.categoryUuids) {
             return res.status(400).json({ success: false, message: "Category is required" });
         }
         if (!body.startTime || !body.endTime) {
@@ -416,7 +416,7 @@ export const updateAuction = async (req, res) => {
         if (!body.title?.trim()) {
             return res.status(400).json({ success: false, message: "Auction title is required" });
         }
-        if (!body.categoryUuid) {
+        if (!body.categoryUuid && !body.categoryUuids) {
             return res.status(400).json({ success: false, message: "Category is required" });
         }
         if (!body.startTime || !body.endTime) {
