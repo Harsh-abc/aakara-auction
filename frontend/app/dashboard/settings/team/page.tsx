@@ -8,7 +8,7 @@ import { Field } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { ALL_ROLES, DASHBOARD_ROLES, MAX_SUPER_ADMINS, ROLE_LABELS } from "@/lib/constants/roles";
+import { ALL_ROLES, DASHBOARD_ROLES, MAX_SUPER_ADMINS, ROLE_LABELS, canSeeAllUsersOnTeam } from "@/lib/constants/roles";
 import AddUserDialog, { type RoleOption } from "@/components/core/Dashboard/users/AddUserDialog";
 import { getAllUsers } from "@/services/operations/user.api";
 
@@ -16,18 +16,33 @@ import { getAllUsers } from "@/services/operations/user.api";
 const TEAM_ROLES = ALL_ROLES.filter((role) => DASHBOARD_ROLES.includes(role));
 
 // "TEAM" = every team member, whatever their role
-const roleFilters = [
+const teamRoleFilters = [
     { value: "TEAM", label: "All team members" },
     ...TEAM_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
 ];
 
-export default function TeamSettings() {
-    const [search, setSearch] = useState("");
-    const [roleFilter, setRoleFilter] = useState("TEAM");
+// for the all-users viewer: "ALL" = every user, plus bidders and website users as filters
+const allUserRoleFilters = [
+    { value: "ALL", label: "All users" },
+    { value: "TEAM", label: "All team members" },
+    ...ALL_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
+];
 
+export default function TeamSettings() {
     const dispatch = useAppDispatch();
     const { users, loading, error } = useAppSelector((state) => state.user);
     const isSuperAdmin = useAppSelector((state) => state.auth.role) === "SUPER_ADMIN";
+    const seesAllUsers = canSeeAllUsersOnTeam(useAppSelector((state) => state.auth.user?.email));
+
+    const roleFilters = seesAllUsers ? allUserRoleFilters : teamRoleFilters;
+    const [search, setSearch] = useState("");
+    // null until a filter is picked — the default follows the account
+    // (the all-users viewer starts on "All users"; auth can load after the first render)
+    const [pickedFilter, setRoleFilter] = useState<string | null>(null);
+    const roleFilter =
+        pickedFilter && roleFilters.some((f) => f.value === pickedFilter)
+            ? pickedFilter
+            : seesAllUsers ? "ALL" : "TEAM";
 
     // Super Admin is offered only while under the limit (the API enforces it too)
     const superAdminCount = users.filter((u) => u.role.name === "SUPER_ADMIN").length;
@@ -38,11 +53,19 @@ export default function TeamSettings() {
             superAdminCount >= MAX_SUPER_ADMINS && { disabled: true, hint: `limit of ${MAX_SUPER_ADMINS} reached` }),
     }));
 
+    // the role filter goes to the API, not just this page — the list is newest-first and capped
+    // at 100, so fetching everyone and filtering here would drop older accounts
+    // (team members only: one request for all team roles, the role dropdown filters it below)
+    const fetchRole = !seesAllUsers || roleFilter === "TEAM"
+        ? TEAM_ROLES.join(",")
+        : roleFilter === "ALL" ? undefined : roleFilter;
+
     useEffect(() => {
-        dispatch(getAllUsers({ page: 1, limit: 100 }));
-    }, [dispatch]);
+        dispatch(getAllUsers({ page: 1, limit: 100, ...(fetchRole && { role: fetchRole }) }));
+    }, [dispatch, fetchRole]);
 
     const filteredUsers = useMemo(() => {
+        if (roleFilter === "ALL") return users;
         if (roleFilter === "TEAM") return users.filter((u) => DASHBOARD_ROLES.includes(u.role.name));
         return users.filter((u) => u.role.name === roleFilter);
     }, [users, roleFilter]);
