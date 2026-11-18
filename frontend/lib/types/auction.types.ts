@@ -472,6 +472,8 @@ export interface AuctionLot {
     title: string;
     description?: string | null;
     artistName?: string | null;
+    artistBirthYear?: string | null;
+    artistDeathYear?: string | null;
     medium?: string | null;
     yearCreated?: string | null;
     catalogueNote?: string | null;

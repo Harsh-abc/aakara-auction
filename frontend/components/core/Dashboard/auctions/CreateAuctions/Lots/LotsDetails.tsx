@@ -259,6 +259,29 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
                 </div>
             </div>
 
+            {/* Artist's life dates — free text so "c. 1920" fits; leave death year blank for a living artist */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="input-wrapper">
+                    <label className="block mb-2">Artist Birth Year</label>
+                    <Input
+                        type="text"
+                        placeholder="YYYY"
+                        className="w-full border rounded-md px-3 py-2 h-11"
+                        {...register(`lots.${lotIndex}.details.artistBirthYear`)}
+                    />
+                </div>
+
+                <div className="input-wrapper">
+                    <label className="block mb-2">Artist Death Year</label>
+                    <Input
+                        type="text"
+                        placeholder="YYYY (leave blank if living)"
+                        className="w-full border rounded-md px-3 py-2 h-11"
+                        {...register(`lots.${lotIndex}.details.artistDeathYear`)}
+                    />
+                </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="input-wrapper">
                     <label className="block mb-2">Artwork ID</label>

@@ -327,6 +327,8 @@ const normalizeLot = (lot, index, { isDraft }) => {
         artistName: toStr(lot.artistName),
         medium: toStr(lot.medium),
         yearCreated: toStr(lot.yearCreated),
+        artistBirthYear: toStr(lot.artistBirthYear),
+        artistDeathYear: toStr(lot.artistDeathYear),
         catalogueNote: toStr(lot.catalogueNote),
         provenance: toStr(lot.provenance),
         conditionReport: toStr(lot.conditionReport),

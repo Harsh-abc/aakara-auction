@@ -451,6 +451,9 @@ model AuctionItem {
   title                  String
   description            String?
   artistName             String?
+  /// Free text so "c. 1920" / "b. 1955" style values fit
+  artistBirthYear        String?
+  artistDeathYear        String?
   medium                 String?
   dimension              AuctionItemDimension?
   yearCreated            String?

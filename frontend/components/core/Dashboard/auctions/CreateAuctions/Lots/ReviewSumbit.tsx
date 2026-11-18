@@ -193,6 +193,8 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
     const rows: [string, string][] = [
         ["Lot Title", text(details?.title)],
         ["Artist Name", text(details?.artist)],
+        ["Artist Birth Year", text(details?.artistBirthYear)],
+        ["Artist Death Year", text(details?.artistDeathYear)],
         ["Artwork ID", text(details?.artworkId)],
         ["Category", category],
         ["Lot Starts", formatDateTime(schedule?.startDate, schedule?.startTime)],

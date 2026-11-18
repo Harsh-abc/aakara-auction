@@ -74,6 +74,8 @@ export default function AddLots({
             details: {
                 title: "",
                 artist: "",
+                artistBirthYear: "",
+                artistDeathYear: "",
                 artworkId: "",
                 // first of the auction's categories; the admin can pick another in the lot
                 categoryUuid: getValues("basicInfo.categoryUuids")?.[0] ?? "",

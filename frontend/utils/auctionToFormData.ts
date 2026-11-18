@@ -54,6 +54,8 @@ const toLotForm = (
         details: {
             title: text(lot.title),
             artist: text(lot.artistName),
+            artistBirthYear: text(lot.artistBirthYear),
+            artistDeathYear: text(lot.artistDeathYear),
             artworkId: "",
             categoryUuid,
             subCategoryUuid,

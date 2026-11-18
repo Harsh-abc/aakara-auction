@@ -318,6 +318,14 @@ const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) =>
                     <h5 className="mb-3 text-[13px] font-semibold text-slate-700">Artwork Details</h5>
                     <FieldGrid>
                         <Field label="Artist" value={lot.artistName} />
+                        <Field
+                            label="Artist Born – Died"
+                            value={
+                                lot.artistBirthYear || lot.artistDeathYear
+                                    ? `${lot.artistBirthYear || "?"} – ${lot.artistDeathYear || ""}`.trim()
+                                    : null
+                            }
+                        />
                         <Field label="Medium" value={lot.medium} />
                         <Field label="Year Created" value={lot.yearCreated} />
                         <Field label="Edition" value={toTitle(lot.editionType)} />

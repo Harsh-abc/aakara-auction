@@ -170,6 +170,10 @@ export interface LotDetailsForm {
     title: string;
     artist: string;
 
+    /** Free text, e.g. "1913" or "c. 1920" */
+    artistBirthYear: string;
+    artistDeathYear: string;
+
     /** UI-only. AuctionItem has no artworkId column. */
     artworkId: string;
 

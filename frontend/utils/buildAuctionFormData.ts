@@ -293,6 +293,8 @@ export const buildAuctionFormData = (
             title: details.title,
             description: str(details.description),
             artistName: str(details.artist),
+            artistBirthYear: str(details.artistBirthYear),
+            artistDeathYear: str(details.artistDeathYear),
             medium: str(details.medium),
             yearCreated: str(details.yearCreated),
             catalogueNote: str(details.catalogueNote),
