@@ -56,6 +56,13 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
         : lot.acquisitionDate && `Acquired on ${formatDay(lot.acquisitionDate)}`;
     const authentication = lot.authenticateBy && compact([`Authenticated by ${lot.authenticateBy}`, formatDay(lot.authenticatedAt)]).join(", ");
 
+    // the previous owner is often typed into the provenance text too — show it once
+    const provenanceLines = lines(lot.provenance);
+    const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
+    const provenanceText = normalize(provenanceLines.join(" "));
+    const previousOwner =
+        lot.previousOwner && !provenanceText.includes(normalize(lot.previousOwner)) ? lot.previousOwner : null;
+
     const sections: CatalogueSection[] = [
         {
             title: "Description",
@@ -75,7 +82,7 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
         {
             title: "Provenance",
             defaultOpen: true,
-            paragraphs: [lines(lot.provenance), compact([lot.previousOwner, acquisition, authentication])],
+            paragraphs: [provenanceLines, compact([previousOwner, acquisition, authentication])],
         },
         { title: "Exhibited", defaultOpen: true, paragraphs: [lines(lot.exhibitionHistory)] },
         { title: "Literature", defaultOpen: true, paragraphs: [lines(lot.publicationHistory)] },
