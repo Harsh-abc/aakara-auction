@@ -32,21 +32,27 @@ export const lotHeading = (lot: PublicLot) => [lot.artistName, lot.title].filter
  * "Krishnaji Howlaji Ara (1914 – 1985)", "Artist (b. 1955)", "Artist (d. 1890)".
  * Left as typed when the name already carries its dates, e.g. "S. H. Raza (1922 - 2016)".
  */
-export function artistWithLifeDates(lot: {
+type ArtistDates = {
     artistName: string | null
     artistBirthYear?: string | null
     artistDeathYear?: string | null
-}) {
-    const name = lot.artistName?.trim()
-    if (!name) return null
+}
 
+/** "1914 – 1985", "b. 1955", "d. 1890" — null when there are none, or the name already carries them. */
+export function artistLifeDates(lot: ArtistDates) {
+    const name = lot.artistName?.trim()
     const born = lot.artistBirthYear?.trim()
     const died = lot.artistDeathYear?.trim()
-    if (!born && !died) return name
-    if (/\(\s*[^)]*\d{3,4}[^)]*\)/.test(name)) return name
+    if (!name || (!born && !died)) return null
+    if (/\(\s*[^)]*\d{3,4}[^)]*\)/.test(name)) return null
+    return born && died ? `${born} – ${died}` : born ? `b. ${born}` : `d. ${died}`
+}
 
-    const dates = born && died ? `${born} – ${died}` : born ? `b. ${born}` : `d. ${died}`
-    return `${name} (${dates})`
+export function artistWithLifeDates(lot: ArtistDates) {
+    const name = lot.artistName?.trim()
+    if (!name) return null
+    const dates = artistLifeDates(lot)
+    return dates ? `${name} (${dates})` : name
 }
 
 // "122 × 91 × 3 cm (48 × 35.83 × 1.18 in)"
