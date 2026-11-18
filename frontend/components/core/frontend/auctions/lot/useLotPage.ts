@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import axios from "axios"
 import toast from "react-hot-toast"
 
-import type { PublicLotPage } from "@/lib/types/publicAuction.types"
+import type { LotStatus, PublicLot, PublicLotPage } from "@/lib/types/publicAuction.types"
 import type { LiveLotUpdate } from "@/lib/types/bidding.types"
 import { getLotPreview, getPublicLot } from "@/services/operations/publicAuction.api"
 import { getErrorMessage } from "@/lib/apiError"
@@ -49,9 +49,19 @@ function applyLotUpdate(data: PublicLotPage, update: LiveLotUpdate): PublicLotPa
     }
 }
 
+// the hammer came down (or the lot was taken out) — bidding on it is over
+const CLOSED_STATUSES: LotStatus[] = ["SOLD", "UNSOLD", "PASSED", "WITHDRAWN"]
+
+export type LotClosedEvent = { lot: PublicLot; auctionTitle: string; hasNext: boolean }
+
 // one lot plus its sale, kept live over the socket while the sale runs.
-// `preview`: the dashboard's staff-only read, which also finds drafts and invite-only sales
-export function useLotPage(auctionUuid: string, lotUuid: string, { preview = false }: { preview?: boolean } = {}) {
+// `preview`: the dashboard's staff-only read, which also finds drafts and invite-only sales.
+// `onLotClosed`: the lot on the block just closed
+export function useLotPage(
+    auctionUuid: string,
+    lotUuid: string,
+    { preview = false, onLotClosed }: { preview?: boolean; onLotClosed?: (event: LotClosedEvent) => void } = {}
+) {
     const token = useAppSelector((state) => state.auth.accessToken)
     // only the preview depends on the token; the storefront read stays anonymous
     const previewToken = preview ? token : null
@@ -73,6 +83,10 @@ export function useLotPage(auctionUuid: string, lotUuid: string, { preview = fal
             const known = current.data.lots.find((lot) => lot.uuid === update.lotUuid)
             // a lot opening or closing changes more than its numbers (up next, the sale's progress)
             if (known && known.status !== update.status) {
+                if (known.status === "ACTIVE" && CLOSED_STATUSES.includes(update.status)) {
+                    const hasNext = current.data.lots.some((lot) => lot.uuid !== known.uuid && (lot.status === "SCHEDULED" || lot.status === "ACTIVE"))
+                    onLotClosed?.({ lot: known, auctionTitle: current.data.auction.title, hasNext })
+                }
                 refetch()
                 return
             }
