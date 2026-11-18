@@ -5,7 +5,7 @@ import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
 
 import { BUTTON, BUTTON_OUTLINE } from "../../storefront"
 import { AuctionCountdown } from "../AuctionCountdown"
-import { formatMoney, lotEstimate } from "../detail/lotDisplay"
+import { artistWithLifeDates, formatMoney, lotEstimate } from "../detail/lotDisplay"
 import { BidButtons, type OnBid } from "./BidButtons"
 import { lotCountdown } from "./lotCatalogue"
 import { bidCountLabel } from "./lotPageDisplay"
@@ -62,9 +62,8 @@ export function LotPricePanel({
 
     return (
         <aside className={className}>
-            <h2 className="text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">{lot.artistName ?? lot.title}</h2>
-            {lot.yearCreated && <p className="mt-1 text-[14px] leading-5 text-[#717171] italic">{lot.yearCreated}</p>}
-            {/* the lot's category / subcategory (lot.artworkType) is intentionally not shown here */}
+            {/* artist with their birth – death years; the year of creation and the category aren't shown here */}
+            <h2 className="text-[24px] leading-8 font-medium tracking-tight text-[#0d0d0d]">{artistWithLifeDates(lot) ?? lot.title}</h2>
 
             <dl className="mt-5 border-b border-[#cecece] bg-white">
                 {rows.map(({ term, value, note }, index) => (

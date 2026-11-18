@@ -89,13 +89,15 @@ export interface PublicLotWinner {
 
 // shape of lot on GET /api/auction/public/:auctionUuid/lots/:lotUuid
 export interface PublicLotDetail extends PublicLot {
+    /** free text, e.g. "1913" or "c. 1920" */
+    artistBirthYear: string | null;
+    artistDeathYear: string | null;
     description: string | null;
     catalogueNote: string | null;
     editionType: "UNIQUE" | "LIMITED" | "OPEN";
     /** sub-category / category name, e.g. "Painting" */
     artworkType: string | null;
     provenance: string | null;
-    previousOwner: string | null;
     /** PURCHASE | INHERITANCE | GIFT | AUCTION | COMMISSION | OTHER */
     acquisitionMethod: string | null;
     /** "YYYY-MM-DD" */

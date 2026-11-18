@@ -28,6 +28,27 @@ export const lotNumber = (lot: PublicLot) => `Lot ${lot.itemNumber.padStart(2, "
 // "Artist name · Work title"
 export const lotHeading = (lot: PublicLot) => [lot.artistName, lot.title].filter(Boolean).join(" · ")
 
+/**
+ * "Krishnaji Howlaji Ara (1914 – 1985)", "Artist (b. 1955)", "Artist (d. 1890)".
+ * Left as typed when the name already carries its dates, e.g. "S. H. Raza (1922 - 2016)".
+ */
+export function artistWithLifeDates(lot: {
+    artistName: string | null
+    artistBirthYear?: string | null
+    artistDeathYear?: string | null
+}) {
+    const name = lot.artistName?.trim()
+    if (!name) return null
+
+    const born = lot.artistBirthYear?.trim()
+    const died = lot.artistDeathYear?.trim()
+    if (!born && !died) return name
+    if (/\(\s*[^)]*\d{3,4}[^)]*\)/.test(name)) return name
+
+    const dates = born && died ? `${born} – ${died}` : born ? `b. ${born}` : `d. ${died}`
+    return `${name} (${dates})`
+}
+
 // "122 × 91 × 3 cm (48 × 35.83 × 1.18 in)"
 export function lotDimensions(lot: PublicLot) {
     return formatLotSize(lot.dimension)
