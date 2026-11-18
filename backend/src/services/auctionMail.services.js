@@ -4,7 +4,7 @@ import sendEmail from "../mail/sendMail.js";
 import { AUCTION_EMAIL, REGISTRATION_INLINE_IMAGES } from "../mail/templates/registrationReceived.js";
 import { WINNING_BID_SUBJECT, winningBidTemplate, winningBidText } from "../mail/templates/winningBid.js";
 import { BIDS_EMAIL, PROXY_BID_SET_SUBJECT, proxyBidSetTemplate, proxyBidSetText } from "../mail/templates/proxyBidSet.js";
-import { sendProxyBidSetSms } from "./sms.services.js";
+import { sendLotWonSms, sendProxyBidSetSms } from "./sms.services.js";
 
 // same sender as the registration emails
 const WINNER_MAIL_OPTIONS = { fromName: "AKARA AUCTIONS", replyTo: AUCTION_EMAIL, inline: REGISTRATION_INLINE_IMAGES };
@@ -71,6 +71,8 @@ export const notifyLotWinner = async (lotUuid) => {
                         winner: {
                             select: {
                                 email: true,
+                                phone: true,
+                                phoneVerified: true,
                                 username: true,
                                 profile: { select: { firstName: true, lastName: true, displayName: true } },
                             },
@@ -95,6 +97,22 @@ export const notifyLotWinner = async (lotUuid) => {
             hammerPrice: String(winner.finalHammerPrice),
             currency,
         });
+
+        // "You have won Lot N … Rs. X" SMS — the template is in rupees, so INR lots only.
+        // Same amount as the email: hammer price + buyer's premium. Not awaited; a failure is logged.
+        const buyer = winner.winner;
+        if (buyer?.phone && buyer.phoneVerified) {
+            if (currency?.code && currency.code !== "INR") {
+                console.info(`[sms] lot ${lotUuid} sold in ${currency.code} — skipped the lot-won SMS (template is in Rs.)`);
+            } else {
+                sendLotWonSms({
+                    phone: buyer.phone,
+                    name: personName(buyer),
+                    lotNumber: String(lot.itemNumber),
+                    amount: Number(winner.totalAmountDue).toLocaleString("en-IN", { maximumFractionDigits: 2 }),
+                }).catch((error) => console.error(`Lot-won SMS for lot ${lotUuid} failed:`, error?.message));
+            }
+        }
 
         if (!winner.winner?.email) return;
         const auctionDate = formatDate(auction.startTime);

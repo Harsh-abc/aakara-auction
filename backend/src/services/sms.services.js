@@ -9,6 +9,8 @@
  * env: MSG91_AUTH_KEY, MSG91_TEMPLATE_ID (MSG91's 24-character template id, not the DLT one)
  *      MSG91_RESET_TEMPLATE_ID — the password-reset template (same var1 = code, var2 = minutes)
  *      MSG91_PROXY_TEMPLATE_ID — "proxy bid set" (var1 = name, var2 = lot number)
+ *      MSG91_WON_TEMPLATE_ID — "lot won" (var1 = name, var2 = lot number, var3 = amount in Rs.);
+ *                              defaults to 6afabf11cf9124cde10a06bb
  *      MSG91_DRY_RUN=true — log the code instead of sending (local dev, no SMS cost)
  */
 import https from "node:https";
@@ -115,6 +117,21 @@ const sendFlowSms = async ({ phone, templateId, vars, label }) => {
 // `templateId` defaults to the signup template; password reset passes MSG91_RESET_TEMPLATE_ID
 export const sendOtpSms = ({ phone, otp, validForMinutes, templateId = process.env.MSG91_TEMPLATE_ID }) =>
     sendFlowSms({ phone, templateId, vars: [otp, validForMinutes], label: "OTP" });
+
+// Lot won (MSG91 template 6afabf11cf9124cde10a06bb):
+// "Congratulations ##var1##! You have won Lot ##var2## with a winning bid of Rs. ##var3## on the
+//  AKARA Auction platform. Please log in to your AKARA account to view your winning details and
+//  complete the next steps. -AKARA Z PRIVATE LIMITED"
+// var3 is the bare amount ("1,50,000") — the template already says "Rs."
+const LOT_WON_TEMPLATE_ID = process.env.MSG91_WON_TEMPLATE_ID || "6afabf11cf9124cde10a06bb";
+
+export const sendLotWonSms = ({ phone, name, lotNumber, amount }) =>
+    sendFlowSms({
+        phone,
+        templateId: LOT_WON_TEMPLATE_ID,
+        vars: [name || "Collector", lotNumber, amount],
+        label: "lot won",
+    });
 
 // "P_SET2": "Dear ##var1##, your proxy bid for Lot ##var2## is now active. …"
 export const sendProxyBidSetSms = ({ phone, name, lotNumber }) =>
