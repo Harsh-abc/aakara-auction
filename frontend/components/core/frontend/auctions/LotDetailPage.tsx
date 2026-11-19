@@ -128,14 +128,13 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                                 <div className="relative aspect-video overflow-hidden bg-[#ebebeb]">
                                     {isLive(auction) ? <LivePlayer auctionUuid={auction.uuid} fallback={lotPoster} /> : lotPoster}
 
-                                    <div className="pointer-events-none absolute top-2 left-2 z-2 flex items-center gap-1.5">
+                                    {/* one row so both tags share the same top edge and height */}
+                                    <div className="pointer-events-none absolute inset-x-2 top-2 z-2 flex items-center justify-between gap-1.5">
                                         <span className={OVERLAY_TAG}>{lotTag(lot)}</span>
-                                    </div>
-                                    <div className="pointer-events-none absolute top-2 right-2 z-2">
                                         {lot.status === "ACTIVE" ? (
-                                            <Tag tone="live" label="Live" className="h-5 gap-1 px-2 text-[10px] tracking-[0.12em]" />
+                                            <Tag tone="live" label="Live" className="h-5 gap-1 px-2 text-[10px] leading-3 tracking-[0.12em]" />
                                         ) : (
-                                            <LotStatusTag lot={lot} className="h-5 gap-1 bg-white px-2 text-[10px] tracking-[0.12em]" />
+                                            <LotStatusTag lot={lot} className="h-5 gap-1 bg-white px-2 text-[10px] leading-3 tracking-[0.12em]" />
                                         )}
                                     </div>
                                 </div>

@@ -29,7 +29,8 @@ export function BidLadder({ lot, className }: { lot: PublicLotDetail; className?
             />
 
             <div className="mt-6 border border-[#cecece] bg-white">
-                <div className="flex h-16.5 items-center border-b border-dashed border-[#333]">
+                {/* dashed divider only while there are no bids — once bids come in, the dark current-bid row sits flush */}
+                <div className={cn("flex h-16.5 items-center", lot.bids.length === 0 && "border-b border-dashed border-[#333]")}>
                     <span className={cn(SMALL_CAPS, "w-15 shrink-0 pl-4 text-[#717171]")} aria-hidden>
                         ▲
                     </span>
