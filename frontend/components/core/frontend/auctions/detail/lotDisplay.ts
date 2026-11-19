@@ -48,7 +48,7 @@ export function artistLifeDates(lot: ArtistDates) {
     return born && died ? `${born} – ${died}` : born ? `b. ${born}` : `d. ${died}`
 }
 
-// "122 × 91 × 3 cm (48 × 35.83 × 1.18 in)"
+// "15.5 × 10.5 in (39.5 × 26.5 cm)"
 export function lotDimensions(lot: PublicLot) {
     return formatLotSize(lot.dimension)
 }
