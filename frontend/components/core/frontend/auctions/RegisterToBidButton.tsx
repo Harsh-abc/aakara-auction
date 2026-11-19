@@ -41,7 +41,8 @@ export function RegisterToBidButton({ auction, paddleNumber, eligibility, onRegi
 
     if (paddleNumber) {
         return (
-            <span className={cn(base, BUTTON_OUTLINE, className)}>
+            // a status label, not an action — aria-disabled switches off the hover and pointer
+            <span aria-disabled="true" className={cn(base, BUTTON_OUTLINE, className)}>
                 Registered · Paddle {paddleNumber}
             </span>
         )

@@ -21,9 +21,12 @@ export const BODY = "text-[14px] leading-[22.75px] text-[#717171]";
 export const BUTTON =
     "inline-flex h-11 w-full cursor-pointer items-center justify-center border text-[12px] leading-4.5 tracking-[0.12em] whitespace-nowrap uppercase transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40";
 // hover only while the button can be used — a disabled button keeps its resting colours
-// (`not-disabled:` rather than `enabled:` so it still works on <Link>s, which are never :disabled)
-export const BUTTON_SOLID = "border-black bg-black text-white not-disabled:hover:border-[#673364] not-disabled:hover:bg-[#673364]";
-export const BUTTON_OUTLINE = "border-[#0d0d0d] bg-white text-[#0d0d0d] not-disabled:hover:border-[#d0a55d] not-disabled:hover:bg-[#fdedd6]";
+// (`not-disabled:` rather than `enabled:` so it still works on <Link>s, which are never :disabled;
+// `not-aria-disabled:` so <span aria-disabled> status labels styled as buttons never react to hover either)
+export const BUTTON_SOLID =
+    "border-black bg-black text-white not-disabled:not-aria-disabled:hover:border-[#673364] not-disabled:not-aria-disabled:hover:bg-[#673364] aria-disabled:cursor-default";
+export const BUTTON_OUTLINE =
+    "border-[#0d0d0d] bg-white text-[#0d0d0d] not-disabled:not-aria-disabled:hover:border-[#d0a55d] not-disabled:not-aria-disabled:hover:bg-[#fdedd6] aria-disabled:cursor-default";
 export const BUTTON_INLINE = "w-auto px-4.25";
 // an action that isn't available yet (registration closed / not open) — a grey slab with the blocked cursor
 export const BUTTON_UNAVAILABLE = "cursor-not-allowed border-[#cecece] bg-[#f4f2ef] text-[#717171]";
