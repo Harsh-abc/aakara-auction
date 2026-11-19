@@ -53,9 +53,9 @@ export function lotDimensions(lot: PublicLot) {
     return formatLotSize(lot.dimension)
 }
 
-// "Oil on canvas · 1978 · 122 × 91 × 3 cm (48 × 35.83 × 1.18 in)"
+// "Oil on canvas · 1978" — the dimensions go on their own line (lotDimensions)
 export function lotDetails(lot: PublicLot) {
-    return [lot.medium, lot.yearCreated, lotDimensions(lot)].filter(Boolean).join(" · ")
+    return [lot.medium, lot.yearCreated].filter(Boolean).join(" · ")
 }
 
 export function lotEstimate(lot: PublicLot) {

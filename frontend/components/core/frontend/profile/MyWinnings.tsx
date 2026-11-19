@@ -11,7 +11,7 @@ import { getMyWinnings } from "@/services/operations/profile.api"
 import type { WinnerPaymentStatus, WonLot } from "@/lib/types/profile.types"
 
 import { BUTTON, BUTTON_SOLID, EYEBROW } from "../storefront"
-import { formatMoney, lotDetails, lotDetailsHref, lotHeading, lotNumber } from "../auctions/detail/lotDisplay"
+import { formatMoney, lotDetails, lotDetailsHref, lotDimensions, lotHeading, lotNumber } from "../auctions/detail/lotDisplay"
 
 const PAYMENT_LABELS: Record<WinnerPaymentStatus, { label: string; className: string }> = {
     PENDING: { label: "Payment due", className: "border-[#d0a55d] bg-[#fdedd6] text-[#0d0d0d]" },
@@ -67,6 +67,7 @@ export function MyWinnings({ empty }: { empty: React.ReactNode }) {
 function WonLotCard({ win }: { win: WonLot }) {
     const { lot, auction, currency } = win
     const details = lotDetails(lot)
+    const dimensions = lotDimensions(lot)
     const payment = PAYMENT_LABELS[win.paymentStatus] ?? PAYMENT_LABELS.PENDING
     const hasPremium = Number(win.buyerPremiumAmount) > 0
 
@@ -98,6 +99,7 @@ function WonLotCard({ win }: { win: WonLot }) {
             <div className="mt-4 flex-1">
                 <h3 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{lotHeading(lot)}</h3>
                 {details && <p className={cn(EYEBROW, "mt-1")}>{details}</p>}
+                {dimensions && <p className={cn(EYEBROW, !details && "mt-1")}>{dimensions}</p>}
                 <Link
                     href={`/auctions/${auction.uuid}`}
                     className="mt-2 block text-[12px] leading-[19.5px] text-[#717171] hover:text-[#0d0d0d] hover:underline"
