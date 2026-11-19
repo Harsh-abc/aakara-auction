@@ -115,6 +115,7 @@ export interface AuctionDimension {
     secondaryWidth: number | string | null;
     secondaryDepth: number | string | null;
     secondaryDimensionUnit: DimensionUnit;
+    extraMeasurement: string | null;
     weight: number | string | null;
     weightUnit: WeightUnit | null;
 }

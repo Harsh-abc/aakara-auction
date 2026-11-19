@@ -197,6 +197,9 @@ export interface LotDetailsForm {
         secondary: LotSizeForm;
     };
 
+    /** Free text shown after the size on the site: "22 × 30 in (56 × 76.5 cm) | <this>" */
+    extraMeasurement: string;
+
     /** Saved to AuctionItemDimension.weight (unit KG). */
     weight: number | null;
 

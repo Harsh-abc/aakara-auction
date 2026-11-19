@@ -274,11 +274,13 @@ const normalizeLot = (lot, index, { isDraft }) => {
             size[`secondary${Side}`] = toNum(d[`secondary${Side}`], label(`${side} (second unit)`));
         }
         const weight = toNum(d.weight, label("weight"));
+        const extraMeasurement = toStr(d.extraMeasurement);
 
         const sizes = ["height", "width", "depth", "secondaryHeight", "secondaryWidth", "secondaryDepth"].map((key) => size[key]);
-        if ([...sizes, weight].some((v) => v !== null)) {
+        if ([...sizes, weight, extraMeasurement].some((v) => v !== null)) {
             dimension = {
                 ...size,
+                extraMeasurement,
                 weight,
                 weightUnit:
                     weight !== null

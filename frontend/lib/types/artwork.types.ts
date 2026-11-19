@@ -23,6 +23,7 @@ export interface ArtworkDimensions {
     secondaryWidth: string | null
     secondaryDepth: string | null
     secondaryDimensionUnit: DimensionUnit
+    extraMeasurement: string | null
 }
 
 export interface ArtworkRow {

@@ -182,7 +182,7 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
     const schedule = useWatch({ control, name: `lots.${lotIndex}.schedule` });
     const category = useLotCategoryLabel(details?.categoryUuid, details?.subCategoryUuid) || EMPTY;
 
-    const dimensions = formatSizeSets(details?.dimensions?.primary, details?.dimensions?.secondary) ?? EMPTY;
+    const dimensions = formatSizeSets(details?.dimensions?.primary, details?.dimensions?.secondary, details?.extraMeasurement) ?? EMPTY;
 
     const rows: [string, string][] = [
         ["Lot Title", text(details?.title)],

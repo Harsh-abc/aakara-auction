@@ -38,6 +38,7 @@ export interface StoredLotSize {
     secondaryWidth: Measure;
     secondaryDepth: Measure;
     secondaryDimensionUnit: DimensionUnit;
+    extraMeasurement?: string | null;
 }
 
 const positive = (value: Measure): number | null => {
@@ -52,12 +53,21 @@ const formatSet = (set: SizeSet | null | undefined) => {
     return sizes.length ? `${sizes.join(" × ")} ${SHORT_LABELS[set.unit] ?? set.unit.toLowerCase()}` : null;
 };
 
-/** "15.5 × 10.5 in (39.5 × 26.5 cm)" — inches always lead, whichever set they were entered in */
-export const formatSizeSets = (primary: SizeSet | null | undefined, secondary: SizeSet | null | undefined) => {
+/**
+ * "15.5 × 10.5 in (39.5 × 26.5 cm)" — inches always lead, whichever set they were entered in.
+ * An extra measurement is appended after a bar: "15.5 × 10.5 in (39.5 × 26.5 cm) | framed 20 × 15 in"
+ */
+export const formatSizeSets = (
+    primary: SizeSet | null | undefined,
+    secondary: SizeSet | null | undefined,
+    extra?: string | null
+) => {
     if (secondary?.unit === "INCH" && primary?.unit !== "INCH") [primary, secondary] = [secondary, primary];
     const first = formatSet(primary);
     const second = primary?.unit === secondary?.unit ? null : formatSet(secondary);
-    return first && second ? `${first} (${second})` : first ?? second;
+    const size = first && second ? `${first} (${second})` : first ?? second;
+    const more = extra?.trim() || null;
+    return size && more ? `${size} | ${more}` : size ?? more;
 };
 
 export const formatLotSize = (size: StoredLotSize | null | undefined) =>
@@ -69,6 +79,7 @@ export const formatLotSize = (size: StoredLotSize | null | undefined) =>
                   width: size.secondaryWidth,
                   depth: size.secondaryDepth,
                   unit: size.secondaryDimensionUnit,
-              }
+              },
+              size.extraMeasurement
           )
         : null;

@@ -352,6 +352,19 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
                 <SizeRow lotIndex={lotIndex} set="primary" />
                 <SizeRow lotIndex={lotIndex} set="secondary" />
 
+                <div className="input-wrapper mb-4">
+                    <label className="block mb-2">Extra Measurement</label>
+                    <Input
+                        type="text"
+                        placeholder="e.g. Framed: 30 × 38 in"
+                        className="w-full border rounded-md px-3 py-2 h-11"
+                        {...register(`lots.${lotIndex}.details.extraMeasurement`)}
+                    />
+                    <p className="mt-1 text-xs text-slate-500">
+                        Shown after the size on the site: 22 × 30 in (56 × 76.5 cm) | your text
+                    </p>
+                </div>
+
                 <div className="grid grid-cols-3 gap-4">
                     <div className="input-wrapper">
                         <label className="block mb-2">Weight (in Kg)</label>

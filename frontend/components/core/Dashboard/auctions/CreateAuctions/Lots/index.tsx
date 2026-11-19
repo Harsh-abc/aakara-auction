@@ -90,6 +90,7 @@ export default function AddLots({
                     secondary: { height: null, width: null, depth: null, unit: "INCH" },
                 },
 
+                extraMeasurement: "",
                 weight: null,
 
 

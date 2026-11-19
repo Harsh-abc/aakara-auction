@@ -260,7 +260,8 @@ export const buildAuctionFormData = (
             secondaryDepth: num(secondary?.depth),
         };
         const weight = num(details.weight);
-        const hasDimension = [...Object.values(measures), weight].some((v) => v !== null);
+        const extraMeasurement = str(details.extraMeasurement);
+        const hasDimension = [...Object.values(measures), weight, extraMeasurement].some((v) => v !== null);
 
         const media = (lot.images ?? []).filter((m) => m?.file instanceof File);
         const docs = (lot.documents ?? []).filter((d) => d?.file instanceof File);
@@ -308,6 +309,7 @@ export const buildAuctionFormData = (
                     ...measures,
                     dimensionUnit: primary?.unit ?? "CM",
                     secondaryDimensionUnit: secondary?.unit ?? "INCH",
+                    extraMeasurement,
                     weight,
                     weightUnit: weight !== null ? "KG" : null,
                 }

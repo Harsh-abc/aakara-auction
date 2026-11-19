@@ -540,7 +540,10 @@ model AuctionItemDimension {
   secondaryDepth         Decimal?      @db.Decimal(10, 2)
   secondaryDimensionUnit DIMENSIONUNIT @default(INCH)
 
-  weight     Decimal?    @db.Decimal(10, 2)
+  /// Free text shown after the size on the site: "22 × 30 in (56 × 76.5 cm) | <this>"
+  extraMeasurement String?
+
+  weight    Decimal?    @db.Decimal(10, 2)
   weightUnit WEIGHTUNIT?
 
   auctionItem AuctionItem @relation(fields: [auctionItemId], references: [id], onDelete: Cascade)

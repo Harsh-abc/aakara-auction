@@ -77,6 +77,7 @@ const toLotForm = (
                     unit: dimension?.secondaryDimensionUnit ?? "INCH",
                 },
             },
+            extraMeasurement: text(dimension?.extraMeasurement),
             weight: num(dimension?.weight),
             description: text(lot.description),
         },

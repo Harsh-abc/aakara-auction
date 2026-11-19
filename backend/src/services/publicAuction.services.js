@@ -177,6 +177,7 @@ const DIMENSION_SELECT = {
     secondaryWidth: true,
     secondaryDepth: true,
     secondaryDimensionUnit: true,
+    extraMeasurement: true,
 };
 
 // "Live / upcoming": the lot on the block, then those yet to open, then the closed ones — each run in lot order.

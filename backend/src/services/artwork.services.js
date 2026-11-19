@@ -75,6 +75,7 @@ const DIMENSION_SELECT = {
     secondaryWidth: true,
     secondaryDepth: true,
     secondaryDimensionUnit: true,
+    extraMeasurement: true,
 };
 
 const dimensionOf = (dimension) =>
@@ -88,6 +89,7 @@ const dimensionOf = (dimension) =>
               secondaryWidth: decimal(dimension.secondaryWidth),
               secondaryDepth: decimal(dimension.secondaryDepth),
               secondaryDimensionUnit: dimension.secondaryDimensionUnit,
+              extraMeasurement: dimension.extraMeasurement,
           }
         : null;
 
