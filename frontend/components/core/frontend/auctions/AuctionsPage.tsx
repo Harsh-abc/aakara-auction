@@ -15,9 +15,13 @@ import { BiddingIncrements } from "./BiddingIncrements";
 import { AbsenteeBid } from "./AbsenteeBid";
 import { SHOW_ABSENTEE_BID } from "@/lib/constants/site-text";
 import { useBidderStatus } from "./useBidderStatus";
+import { useScrollToHash } from "@/hooks/useScrollToHash";
 
 export function AuctionsPage() {
     const { paddles, eligibility, onRegistered } = useBidderStatus();
+
+    // links like akaraart.com → auction.akaraart.com/#how-to-bid land on the section, not the top
+    useScrollToHash();
 
     const [featured, setFeatured] = useState<PublicAuction | null>(null);
     const [featuredLoading, setFeaturedLoading] = useState(true);
