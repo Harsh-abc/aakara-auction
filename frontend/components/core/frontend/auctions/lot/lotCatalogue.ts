@@ -60,7 +60,7 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
             defaultOpen: true,
             // artist, title, then the year on its own line (when the lot has one)
             // artist, then the title and year on their own lines
-            paragraphs: [compact([lot.artistName, lot.title, lot.yearCreated]),compact([lot.medium, lotDimensions(lot)]), ...blocks(lot.catalogueNote)],
+            paragraphs: [compact([lot.artistName, lot.title, lot.yearCreated]),compact([lotDimensions(lot), lot.medium]), ...blocks(lot.catalogueNote)],
         },
         {
             title: "Provenance",
