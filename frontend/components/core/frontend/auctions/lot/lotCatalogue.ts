@@ -1,6 +1,6 @@
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types";
 
-import { artistLifeDates, lotDimensions } from "../detail/lotDisplay";
+import { lotDimensions } from "../detail/lotDisplay";
 import { isClosedLot, isUpcomingLot } from "./lotPageDisplay";
 
 const ACQUISITION_LABELS: Record<string, string> = {
@@ -53,15 +53,14 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
         : lot.acquisitionDate && `Acquired on ${formatDay(lot.acquisitionDate)}`;
     const authentication = lot.authenticateBy && compact([`Authenticated by ${lot.authenticateBy}`, formatDay(lot.authenticatedAt)]).join(", ");
 
-    const lifeDates = artistLifeDates(lot);
 
     const sections: CatalogueSection[] = [
         {
             title: "Description",
             defaultOpen: true,
             // artist, title, then the year on its own line (when the lot has one)
-            // artist, their life dates (small) below, then the title and year on their own lines
-            paragraphs: [[...compact([lot.artistName]), ...(lifeDates ? [{ text: lifeDates, small: true as const }] : []), ...compact([lot.title, lot.yearCreated])],compact([lot.medium, lotDimensions(lot)]), ...blocks(lot.catalogueNote)],
+            // artist, title, medium and year on their own lines, then the size
+            paragraphs: [compact([lot.artistName, lot.title, lot.medium, lot.yearCreated]), compact([lotDimensions(lot)]), ...blocks(lot.catalogueNote)],
         },
         {
             title: "Provenance",

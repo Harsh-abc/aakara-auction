@@ -52,8 +52,9 @@ const formatSet = (set: SizeSet | null | undefined) => {
     return sizes.length ? `${sizes.join(" × ")} ${SHORT_LABELS[set.unit] ?? set.unit.toLowerCase()}` : null;
 };
 
-/** "122 × 91 × 3 cm (48 × 35.83 × 1.18 in)" */
+/** "15.5 × 10.5 in (39.5 × 26.5 cm)" — inches always lead, whichever set they were entered in */
 export const formatSizeSets = (primary: SizeSet | null | undefined, secondary: SizeSet | null | undefined) => {
+    if (secondary?.unit === "INCH" && primary?.unit !== "INCH") [primary, secondary] = [secondary, primary];
     const first = formatSet(primary);
     const second = primary?.unit === secondary?.unit ? null : formatSet(secondary);
     return first && second ? `${first} (${second})` : first ?? second;
