@@ -92,7 +92,6 @@ export default function AddLots({
 
                 weight: null,
 
-                editionType: "UNIQUE",
 
                 description: "",
             },

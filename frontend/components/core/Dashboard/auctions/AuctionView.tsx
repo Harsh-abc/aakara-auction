@@ -328,7 +328,6 @@ const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) =>
                         />
                         <Field label="Medium" value={lot.medium} />
                         <Field label="Year Created" value={lot.yearCreated} />
-                        <Field label="Edition" value={toTitle(lot.editionType)} />
                         <Field
                             label="Dimensions"
                             value={dimensions}

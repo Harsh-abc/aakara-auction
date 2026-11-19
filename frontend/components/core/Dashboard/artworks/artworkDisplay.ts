@@ -23,12 +23,6 @@ export const STAGE_LABELS: Record<ArtworkStage, string> = {
     withdrawn: "Withdrawn",
 }
 
-export const EDITION_LABELS: Record<ArtworkRow["edition"], string> = {
-    UNIQUE: "Unique work",
-    LIMITED: "Limited edition",
-    OPEN: "Open edition",
-}
-
 export const VISIBILITY_LABELS: Record<ArtworkRow["auction"]["visibility"], string> = {
     PUBLIC: "Public",
     REGISTERED_USERS_ONLY: "Registered users",

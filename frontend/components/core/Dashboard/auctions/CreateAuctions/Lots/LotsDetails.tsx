@@ -10,7 +10,6 @@ import DashboardFormText from "@/components/common/DashboardFormText";
 import RichTextEditor from "@/components/common/RichTextEditor/RichTextEditor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import { AuctionFormData } from "@/lib/types/AuctionsFormData";
 import { uploadEditorImage } from "@/services/operations/upload.api";
@@ -366,45 +365,10 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
             </div>
 
             {/* =========================
-                EDITION TYPE
-            ========================== */}
-
-            <div>
-                <h6 className="text-[13px] font-semibold">Edition Type</h6>
-
-                <Controller
-                    name={`lots.${lotIndex}.details.editionType`}
-                    control={control}
-                    render={({ field }) => (
-                        <RadioGroup
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            className="w-fit flex items-center mt-4"
-                        >
-                            <div className="flex items-center gap-3">
-                                <RadioGroupItem value="UNIQUE" id={`unique-${lotIndex}`} />
-                                <Label htmlFor={`unique-${lotIndex}`}>Unique / Original</Label>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <RadioGroupItem value="LIMITED" id={`limited-${lotIndex}`} />
-                                <Label htmlFor={`limited-${lotIndex}`}>Limited Edition</Label>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <RadioGroupItem value="OPEN" id={`open-${lotIndex}`} />
-                                <Label htmlFor={`open-${lotIndex}`}>Open Edition</Label>
-                            </div>
-                        </RadioGroup>
-                    )}
-                />
-            </div>
-
-            {/* =========================
                 DESCRIPTION
             ========================== */}
 
-            <div className="mt-6">
+            <div>
                 <label className="block mb-2">Artwork Description</label>
                 <Controller
                     name={`lots.${lotIndex}.details.description`}

@@ -328,7 +328,6 @@ const PUBLIC_LOT_DETAIL_SELECT = {
     yearCreated: true,
     catalogueNote: true,
     isSpecial: true,
-    editionType: true,
     provenance: true,
     // previousOwner is staff-only — never sent to the storefront / preview
     acquisitionMethod: true,

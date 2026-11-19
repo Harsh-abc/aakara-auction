@@ -78,7 +78,6 @@ const toLotForm = (
                 },
             },
             weight: num(dimension?.weight),
-            editionType: lot.editionType ?? "UNIQUE",
             description: text(lot.description),
         },
 

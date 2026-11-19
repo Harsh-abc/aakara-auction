@@ -3,12 +3,6 @@ import type { PublicLotDetail } from "@/lib/types/publicAuction.types";
 import { artistLifeDates, lotDimensions } from "../detail/lotDisplay";
 import { isClosedLot, isUpcomingLot } from "./lotPageDisplay";
 
-const EDITION_LABELS: Record<PublicLotDetail["editionType"], string> = {
-    UNIQUE: "Unique work",
-    LIMITED: "Limited edition",
-    OPEN: "Open edition",
-};
-
 const ACQUISITION_LABELS: Record<string, string> = {
     PURCHASE: "purchase",
     INHERITANCE: "inheritance",
@@ -67,17 +61,7 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
             defaultOpen: true,
             // artist, title, then the year on its own line (when the lot has one)
             // artist, their life dates (small) below, then the title and year on their own lines
-            paragraphs: [[...compact([lot.artistName]), ...(lifeDates ? [{ text: lifeDates, small: true as const }] : []), ...compact([lot.title, lot.yearCreated])],compact([lot.medium, lotDimensions(lot), EDITION_LABELS[lot.editionType]]), ...blocks(lot.catalogueNote)],
-        },
-        {
-            title: "Condition report",
-            defaultOpen: false,
-            paragraphs: [
-                compact([lot.overallCondition && `Overall condition: ${lot.overallCondition}`, lot.frameCondition && lot.frameCondition !== "Not Applicable" && `Frame: ${lot.frameCondition}`]),
-                lines(lot.conditionReport),
-                // lines(lot.detailedConditionNotes),
-                lines(lot.restorationHistory).map((line, index) => (index === 0 ? `Restoration: ${line}` : line)),
-            ],
+            paragraphs: [[...compact([lot.artistName]), ...(lifeDates ? [{ text: lifeDates, small: true as const }] : []), ...compact([lot.title, lot.yearCreated])],compact([lot.medium, lotDimensions(lot)]), ...blocks(lot.catalogueNote)],
         },
         {
             title: "Provenance",

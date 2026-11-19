@@ -6,7 +6,7 @@ import { FileText, Play } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { AuctionFormData, LotImageFile } from "@/lib/types/AuctionsFormData";
-import type { DocumentType, EditionType } from "@/lib/types/auction.types";
+import type { DocumentType } from "@/lib/types/auction.types";
 import { useCurrencies } from "@/hooks/useCurrencies";
 import {
     getDocumentName,
@@ -28,12 +28,6 @@ interface ReviewSubmitProps {
 // =====================================================================
 
 const EMPTY = "—";
-
-const EDITION_LABELS: Record<EditionType, string> = {
-    UNIQUE: "Unique / Original",
-    LIMITED: "Limited Edition",
-    OPEN: "Open Edition",
-};
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
     CERTIFICATE_OF_AUTHENTICITY: "Certificate of Authenticity",
@@ -204,7 +198,6 @@ const LotDetailsCard = ({ lotIndex, onEdit, canEdit }: CardProps) => {
         ["Catalogue Description", text(details?.catalogueNote)],
         ["Dimensions (H × W × D)", dimensions],
         ["Weight", hasNumber(details?.weight) ? `${details.weight} kg` : EMPTY],
-        ["Edition Type", details?.editionType ? EDITION_LABELS[details.editionType] : EMPTY],
         ["Description", text(details?.description)],
     ];
 

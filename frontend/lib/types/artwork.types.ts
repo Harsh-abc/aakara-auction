@@ -32,7 +32,6 @@ export interface ArtworkRow {
     artist: string | null
     medium: string | null
     year: string | null
-    edition: "UNIQUE" | "LIMITED" | "OPEN"
     dimensions: ArtworkDimensions | null
     status: LotStatus
     isFeatured: boolean

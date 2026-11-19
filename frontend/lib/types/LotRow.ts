@@ -1,5 +1,5 @@
 import type { AuctionLotForm, AuctionScheduleForm } from "@/lib/types/AuctionsFormData";
-import type { AuctionLot, LotStatus, EditionType } from "@/lib/types/auction.types";
+import type { AuctionLot, LotStatus } from "@/lib/types/auction.types";
 import { isImageMedia, isVideoMedia } from "@/utils/lotMedia";
 import { combineDateTime, getLotScheduleError } from "@/utils/buildAuctionFormData";
 import { DEFAULT_AUCTION_TIMEZONE } from "@/utils/auctionTime";
@@ -23,7 +23,6 @@ export interface LotRow {
     artworkId: string;
     medium: string;
     year: string;
-    editionType: EditionType | "";
 
     thumbnail: string | null;
     imageCount: number;
@@ -105,7 +104,6 @@ export const fromFormLot = (
         artworkId: details?.artworkId?.trim() ?? "",
         medium: details?.medium?.trim() ?? "",
         year: details?.yearCreated?.trim() ?? "",
-        editionType: details?.editionType ?? "",
 
         thumbnail: primary?.preview ?? null,
         imageCount: images.length,
@@ -145,7 +143,6 @@ export const fromApiLot = (lot: AuctionLot, index: number): LotRow => {
         artworkId: "",
         medium: lot.medium ?? "",
         year: lot.yearCreated ?? "",
-        editionType: lot.editionType ?? "",
 
         thumbnail: primary?.url ?? null,
         imageCount: images.length,

@@ -7,7 +7,6 @@ import type {
     LotStatus,
     DocumentType,
     DimensionUnit,
-    EditionType,
     MediaType,
 } from "./auction.types";
 
@@ -201,7 +200,6 @@ export interface LotDetailsForm {
     /** Saved to AuctionItemDimension.weight (unit KG). */
     weight: number | null;
 
-    editionType: EditionType;
 
     description: string;
 }

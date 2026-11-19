@@ -160,7 +160,7 @@ function SavedLotsList({ auctionUuid }: { auctionUuid: string }) {
 // =====================================================================
 
 function EmptyLots({ onAddLot }: { onAddLot?: () => void }) {
-    const headers = ["Lot", "Artwork", "Medium / Edition", "Media", "Starting Bid", "Reserve", "Estimate", "Starts", "Ends", "Status"];
+    const headers = ["Lot", "Artwork", "Medium", "Media", "Starting Bid", "Reserve", "Estimate", "Starts", "Ends", "Status"];
 
     return (
         <div className="w-full bg-[#F4F4F4] px-3 py-4 rounded-[8px]">

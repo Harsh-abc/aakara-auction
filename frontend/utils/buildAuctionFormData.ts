@@ -329,7 +329,6 @@ export const buildAuctionFormData = (
             authenticateBy: str(authentication.authenticatedBy),
             auctheticateDate: dateOnlyToIso(authentication.authenticatedDate, timeZone) || null,
 
-            editionType: details.editionType || "UNIQUE",
 
             startingPrice: num(pricing.startingPrice),
             reservePrice: num(pricing.reservePrice),

@@ -472,7 +472,6 @@ model AuctionItem {
   publicationHistory     String?
   authenticateBy         String?
   auctheticateDate       DateTime?
-  editionType            EDITIONTYPE
   startingPrice          Decimal               @db.Decimal(12, 2)
   reservePrice           Decimal?              @db.Decimal(12, 2)
   estimateLow            Decimal?              @db.Decimal(12, 2)
@@ -993,12 +992,6 @@ enum AuctionVisibility {
   PUBLIC
   REGISTERED_USERS_ONLY
   PRIVATE_INVITE_ONLY
-}
-
-enum EDITIONTYPE {
-  UNIQUE
-  LIMITED
-  OPEN
 }
 
 enum MEDIATYPE {

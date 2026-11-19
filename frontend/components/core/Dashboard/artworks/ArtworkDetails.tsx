@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import { getArtwork } from "@/services/operations/artwork.api"
 
 import { DASHBOARD_TIME_ZONE, money, PanelMessage, type PillTone, StatusPill } from "../home/dashboardUi"
-import { ARTWORK_STATUS, EDITION_LABELS, formatDimensions, formatEstimate, storefrontHref, VISIBILITY_LABELS } from "./artworkDisplay"
+import { ARTWORK_STATUS, formatDimensions, formatEstimate, storefrontHref, VISIBILITY_LABELS } from "./artworkDisplay"
 
 // same split as the backend routes: lot bidders and editing are for super admins / admins
 const MANAGE_ROLES = ["SUPER_ADMIN", "ADMIN"]
@@ -254,7 +254,6 @@ function Body({ artwork, canManage }: { artwork: ArtworkDetail; canManage: boole
                         ["Medium", artwork.medium],
                         ["Year", artwork.year],
                         ["Dimensions", formatDimensions(artwork.dimensions)],
-                        ["Edition", EDITION_LABELS[artwork.edition]],
                         ["Category", category || null],
                         ["Insurance value", artwork.insuranceValue ? money(artwork.insuranceValue, code) : null],
                     ]}

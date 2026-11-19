@@ -18,12 +18,6 @@ type ColumnsProps = {
     onDelete?: (index: number) => void;
 };
 
-const EDITION_LABEL: Record<string, string> = {
-    UNIQUE: "Unique",
-    LIMITED: "Limited",
-    OPEN: "Open",
-};
-
 const STATUS_STYLES: Record<string, string> = {
     DRAFT: "bg-slate-100 text-slate-600 border-slate-200",
     SCHEDULED: "bg-blue-50 text-blue-600 border-blue-100",
@@ -140,20 +134,15 @@ export const getColumns = ({
             },
         },
 
-        // MEDIUM + EDITION
+        // MEDIUM
         {
             accessorKey: "medium",
-            header: "Medium / Edition",
+            header: "Medium",
             cell: ({ row }) => (
                 <div className="text-[12px] leading-tight">
                     <p className="max-w-[160px] truncate text-slate-700" title={row.original.medium}>
                         {row.original.medium || "—"}
                     </p>
-                    {row.original.editionType && (
-                        <p className="text-[11px] text-muted-foreground">
-                            {EDITION_LABEL[row.original.editionType] ?? row.original.editionType}
-                        </p>
-                    )}
                 </div>
             ),
         },

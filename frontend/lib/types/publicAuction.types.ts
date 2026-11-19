@@ -94,7 +94,6 @@ export interface PublicLotDetail extends PublicLot {
     artistDeathYear: string | null;
     description: string | null;
     catalogueNote: string | null;
-    editionType: "UNIQUE" | "LIMITED" | "OPEN";
     /** sub-category / category name, e.g. "Painting" */
     artworkType: string | null;
     provenance: string | null;

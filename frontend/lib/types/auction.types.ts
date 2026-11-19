@@ -67,7 +67,6 @@ export type DocumentType =
 
 export type MediaType = "IMAGE" | "VIDEO";
 
-export type EditionType = "UNIQUE" | "LIMITED" | "OPEN";
 
 export type DimensionUnit = "CM" | "INCH" | "MM" | "METER" | "FEET";
 
@@ -156,7 +155,6 @@ export interface CreateAuctionLot {
     authenticateBy?: string | null;
     auctheticateDate?: string | null; // ISO — spelling matches Prisma
 
-    editionType: EditionType;
 
     startingPrice: number | null;
     reservePrice?: number | null;
@@ -479,7 +477,6 @@ export interface AuctionLot {
     yearCreated?: string | null;
     catalogueNote?: string | null;
     provenance?: string | null;
-    editionType: EditionType;
     status: LotStatus;
 
     scheduledStartAt: string; // ISO, inside the auction window
