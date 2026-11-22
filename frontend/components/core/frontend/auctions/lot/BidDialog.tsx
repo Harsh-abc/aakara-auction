@@ -335,7 +335,7 @@ export function BidDialog({ auctionUuid, lot, kind, onKindChange, onClose, onSav
                                     ? `Another bidder got there first — the next bid is now ${money(current?.nextBid ?? null)}. Go back and choose again.`
                                     : kind === "bid"
                                       ? "By confirming, you agree to purchase this lot at the stated price, premiums and applicable taxes if you win. Bids are binding and cannot be withdrawn."
-                                      : `We'll bid for you up to this amount when the auctioneer calls the hammer. If it wins, you agree to buy this lot at the winning price.${proxyMax ? ` It replaces your current maximum of ${money(proxyMax)}.` : ""} You can change it until the lot opens; after that it can't be changed or withdrawn.`}
+                                      : `We'll bid for you up to this amount when the auctioneer calls the hammer. If it wins, you agree to buy this lot at the winning bid plus the applicable buyer's premium and taxes.${proxyMax ? ` It replaces your current maximum of ${money(proxyMax)}.` : ""} You can edit or cancel your proxy bid up to 24 hours before the auction starts, after which the bid will be binding.`}
                             </p>
                         </div>
 

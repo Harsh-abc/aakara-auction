@@ -662,7 +662,7 @@ export const setProxyBidService = async ({ lotUuid, userId, maxAmount, ip, userA
 
     const max = formatMoney(maxAmount, lot.currencyCode);
     return {
-        message: `Your maximum bid of ${max} is ${prevProxy ? "updated" : "set"}. It's placed for you when the auctioneer calls the hammer on Lot #${result.itemNumber}. You can change it until the lot opens.`,
+        message: `Your maximum bid of ${max} on Lot #${result.itemNumber} has been ${prevProxy ? "updated" : "placed"}. You can edit or cancel this bid up to 24 hours before the auction start time, after which this bid will be binding.`,
         data: result,
     };
 };
