@@ -8,7 +8,7 @@ import { Toaster, resolveValue, toast, useToasterStore, type Toast, type ToastOp
 type Variant = "success" | "error" | "warning" | "info" | "loading"
 
 // at most this many toasts on screen; older ones are dismissed (with their exit animation) as new ones arrive
-const MAX_VISIBLE_TOASTS = 4
+const MAX_VISIBLE_TOASTS = 2
 
 // the bottom rule drains from full width to nothing over the toast's lifetime, and pauses while the toasts are
 // hovered (react-hot-toast pauses its timers then too)
