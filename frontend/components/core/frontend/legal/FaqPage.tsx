@@ -2,7 +2,7 @@ import { CooldownLink } from "@/components/common/CooldownLink";
 import { AUCTION_EMAIL } from "@/lib/constants/site-text";
 import { cn } from "@/lib/utils";
 
-import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, Breadcrumb, EYEBROW, PAGE_MAIN, PAGE_TITLE } from "../storefront";
+import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "../storefront";
 import { FaqAccordion } from "./FaqAccordion";
 import { FAQ_INTRO, FAQ_SECTIONS, FAQ_TITLE } from "./faqContent";
 
@@ -17,8 +17,7 @@ export function FaqPage() {
                     <Breadcrumb auctions={false} crumbs={[{ label: "Help & policies" }, { label: "FAQs" }]} />
 
                     <div className="pt-12 md:pt-16">
-                        <p className={EYEBROW}>Help · Buying at Akara</p>
-                        <h1 className={cn(PAGE_TITLE, "mt-5 sm:leading-[62.6px]")}>{FAQ_TITLE}</h1>
+                        <h1 className={cn(PAGE_TITLE, "sm:leading-[62.6px]")}>{FAQ_TITLE}</h1>
                         <p className="mt-6 max-w-191.5 text-[15px] leading-7 text-[#717171]">{FAQ_INTRO}</p>
                     </div>
                 </div>

@@ -13,7 +13,7 @@ import { getPublicAuctions } from "@/services/operations/publicAuction.api";
 import { getErrorMessage } from "@/lib/apiError";
 import { cn } from "@/lib/utils";
 
-import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, SectionHeading, TAB_TRIGGER } from "../storefront";
+import { BODY, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, TAB_TRIGGER } from "../storefront";
 import type { BidderEligibility } from "./auctionDisplay";
 import { AuctionListItem, ROW_GRID } from "./AuctionListItem";
 import { SearchInput } from "./SearchInput";
@@ -116,11 +116,9 @@ export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionL
     };
 
     return (
-        <section id="auctions" aria-labelledby="auction-list-heading" className="scroll-mt-24">
+        <section id="auctions" aria-label="Auctions" className="scroll-mt-24">
             <div className="page-container">
-                <SectionHeading id="auction-list-heading" title="Upcoming & Live Auctions" />
-
-                <div className="mt-6 flex flex-col-reverse gap-4 border-b border-[#cecece] md:flex-row md:items-end md:justify-between">
+                <div className="flex flex-col-reverse gap-4 border-b border-[#cecece] md:flex-row md:items-end md:justify-between">
                     <Tabs value={tab} onValueChange={(value) => changeTab(value as PublicAuctionTab)}>
                         <TabsList className="-mb-px h-auto w-full justify-start rounded-none bg-transparent p-0 group-data-horizontal/tabs:h-auto">
                             {visibleTabs.map((key) => (

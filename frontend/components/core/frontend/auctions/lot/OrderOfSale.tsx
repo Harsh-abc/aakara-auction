@@ -70,7 +70,7 @@ export function OrderOfSale({ lots, saleClosed, media, className }: OrderOfSaleP
                   >
                     <span
                       className={cn(
-                        "w-14 shrink-0 text-[11px] leading-[13.2px] tracking-[0.16em] uppercase",
+                        "mr-3 shrink-0 tabular-nums text-[11px] leading-[13.2px] tracking-[0.16em] uppercase",
                         live ? "text-white" : "text-[#717171]",
                       )}
                     >

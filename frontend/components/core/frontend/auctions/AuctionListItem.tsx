@@ -7,9 +7,8 @@ import { cn } from "@/lib/utils";
 
 import { BODY, BUTTON, BUTTON_OUTLINE, EYEBROW } from "../storefront";
 import { AuctionCountdown } from "./AuctionCountdown";
-import { auctionHref, auctionMeta, badgeTone, countdownFor, STOREFRONT_STATUS_LABELS, type BidderEligibility } from "./auctionDisplay";
+import { auctionHref, auctionMeta, countdownFor, type BidderEligibility } from "./auctionDisplay";
 import { RegisterToBidButton } from "./RegisterToBidButton";
-import { StatusBadge } from "./StatusBadge";
 
 // Figma "Upcoming & Live Auctions" row: 280px cover | details | 288px countdown + actions, 24px inset
 export const ROW_GRID = "grid grid-cols-1 gap-6 border-b border-[#cecece] p-6 last:border-b-0 md:grid-cols-[280px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)_288px]";
@@ -38,9 +37,8 @@ export function AuctionListItem({ auction, paddleNumber, eligibility, onRegister
                 )}
             </div>
 
-            <div className="min-w-0">
-                <StatusBadge label={STOREFRONT_STATUS_LABELS[auction.status] ?? auction.status} tone={badgeTone(auction)} />
-                <h3 className="mt-3.5 text-[20px] leading-7 font-medium tracking-tight text-[#0d0d0d]">
+            <div className="min-w-0 md:self-center">
+                <h3 className="text-[20px] leading-7 font-medium tracking-tight text-[#0d0d0d]">
                     <Link href={auctionHref(auction)} className="hover:underline">
                         {auction.title}
                     </Link>

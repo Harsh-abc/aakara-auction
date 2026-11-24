@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import RichTextContent from "@/components/common/RichTextContent";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
 import type { PublicHomeBanner } from "@/lib/types/website.types";
@@ -93,9 +92,7 @@ export function FeaturedAuction({ auction, banners = [] }: { auction: PublicAuct
                     <div className={BODY_ROW}>
                         <div className="min-w-0 max-w-lg">
                             <StatusBadge label={live ? "Live now" : "Coming soon"} tone={live ? "live" : "upcoming"} />
-                            <h1 className={TITLE}>{auction.title}</h1>
-                            <RichTextContent html={auction.short_description} className={cn(BODY, "mt-4 [&_p+p]:mt-2")} />
-                        </div>
+                            <h1 className={TITLE}>{auction.title}</h1>                        </div>
 
                         <div className="flex shrink-0 flex-col items-start gap-3 md:items-end">
                             {countdown && <AuctionCountdown label={countdown.label} target={countdown.target} doneText={countdown.doneText} />}

@@ -1,10 +1,22 @@
 "use client"
 
+import { useEffect } from "react"
 import { MotionConfig, motion } from "framer-motion"
 import { CircleAlert, CircleCheck, CircleX, TriangleAlert, XIcon } from "lucide-react"
-import { Toaster, resolveValue, toast, type Toast, type ToastOptions } from "react-hot-toast"
+import { Toaster, resolveValue, toast, useToasterStore, type Toast, type ToastOptions } from "react-hot-toast"
 
 type Variant = "success" | "error" | "warning" | "info" | "loading"
+
+// at most this many toasts on screen; older ones are dismissed (with their exit animation) as new ones arrive
+const MAX_VISIBLE_TOASTS = 4
+
+// the bottom rule drains from full width to nothing over the toast's lifetime, and pauses while the toasts are
+// hovered (react-hot-toast pauses its timers then too)
+const PROGRESS_CSS = `
+@keyframes akara-toast-progress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.akara-toaster:hover .akara-toast-progress { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .akara-toast-progress { animation: none !important; } }
+`
 
 /*
  * Storefront toasts: a softly tinted card with square corners, an outlined status icon, a bold coloured
@@ -74,9 +86,18 @@ function AkaraToast({ t, variant, title, message }: AkaraToastProps) {
                 onDragEnd={(_, info) => {
                     if (Math.abs(info.offset.x) > 80 || Math.abs(info.velocity.x) > 500) toast.dismiss(t.id)
                 }}
-                className="pointer-events-auto relative w-[min(420px,calc(100vw-24px))] cursor-grab touch-pan-y border-b-[3px] text-[#0d0d0d] shadow-[0_10px_30px_-8px_rgba(0,0,0,0.22)] select-none active:cursor-grabbing"
-                style={{ background: surface, borderBottomColor: accent }}
+                className="pointer-events-auto relative w-[min(420px,calc(100vw-24px))] cursor-grab touch-pan-y overflow-hidden text-[#0d0d0d] shadow-[0_10px_30px_-8px_rgba(0,0,0,0.22)] select-none active:cursor-grabbing"
+                style={{ background: surface }}
             >
+                {/* status-coloured rule along the bottom: drains over the toast's duration (stays full when it never times out) */}
+                <span
+                    aria-hidden
+                    className="akara-toast-progress absolute inset-x-0 bottom-0 h-0.75 origin-left"
+                    style={{
+                        background: accent,
+                        animation: Number.isFinite(t.duration) && t.duration ? `akara-toast-progress ${t.duration}ms linear forwards` : undefined,
+                    }}
+                />
                 <div className="flex items-center gap-4 py-5 pr-12 pl-5">
                     <span aria-hidden className="flex size-9 shrink-0 items-center justify-center" style={{ color: accent }}>
                         {Icon ? (
@@ -110,10 +131,23 @@ function AkaraToast({ t, variant, title, message }: AkaraToastProps) {
 
 /** The site-wide toaster: toasts stack in the bottom-right corner, newest at the bottom. */
 export function AkaraToaster() {
+    const { toasts } = useToasterStore()
+
+    // newest first: anything past the cap is the oldest, so dismiss it
+    useEffect(() => {
+        toasts
+            .filter((t) => t.visible)
+            .slice(MAX_VISIBLE_TOASTS)
+            .forEach((t) => toast.dismiss(t.id))
+    }, [toasts])
+
     return (
+        <>
+        <style>{PROGRESS_CSS}</style>
         <Toaster
             position="bottom-right"
             gutter={10}
+            containerClassName="akara-toaster"
             containerStyle={{ bottom: 16, right: 16 }}
             toastOptions={{ duration: 4000, success: { duration: 4000 }, error: { duration: 5500 } }}
         >
@@ -124,6 +158,7 @@ export function AkaraToaster() {
                 return <AkaraToast t={t} variant={variant} title={TITLES[variant]} message={resolveValue(t.message, t)} />
             }}
         </Toaster>
+        </>
     )
 }
 
