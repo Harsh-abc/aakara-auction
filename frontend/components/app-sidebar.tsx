@@ -27,6 +27,7 @@ import {
   ShoppingBag,
   Truck,
   UserCheck,
+  UserPlus,
   Users,
 } from "lucide-react"
 
@@ -273,6 +274,8 @@ const data = {
     // { title: "Bidders", url: "/dashboard/bidders", icon: <UserCheck /> },
     { title: "User", url: "/dashboard/users", icon: <Users /> },
     { title: "Bidders", url: "/dashboard/bidders", icon: <HandCoins /> },
+    // bidder accounts a super admin created — register them for an auction (paddle) from here
+    { title: "Added Bidders", url: "/dashboard/added-bidders", icon: <UserPlus /> },
     // { title: "Orders", url: "/dashboard/orders", icon: <ShoppingBag /> },
     // { title: "Payment", url: "/dashboard/payment", icon: <CreditCard /> },
     // { title: "Shipping", url: "/dashboard/shipping", icon: <Truck /> },

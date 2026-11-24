@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import {
     addAuctionParticipantsService,
     addNewUserToAuctionService,
+    getAdminAddedBiddersService,
     getAuctionParticipantsService,
     getParticipantCandidatesService,
     registerForAuctionService,
@@ -12,6 +13,7 @@ import {
 import { getClientIp } from "../utils/clientIp.js";
 import { createUserSchema } from "../validations/user.validation.js";
 import {
+    adminAddedBiddersQuerySchema,
     auctionUuidParamSchema,
     getAuctionParticipantsQuerySchema,
     participantCandidatesQuerySchema,
@@ -74,6 +76,22 @@ export const getParticipantCandidates = async (req, res) => {
         return res.status(200).json({ success: true, message: "Users fetched successfully", data });
     } catch (error) {
         return handleError(res, error, "Get participant candidates", "Failed to fetch users");
+    }
+};
+
+// -----------------------------------------------------------------
+// GET /api/admin/added-bidders?page&limit&search   (SUPER_ADMIN)
+// Bidder accounts a super admin created, with their auctions and
+// paddles, plus the auctions they can be registered for
+// -----------------------------------------------------------------
+
+export const getAdminAddedBidders = async (req, res) => {
+    try {
+        const query = adminAddedBiddersQuerySchema.parse(req.query);
+        const data = await getAdminAddedBiddersService(query);
+        return res.status(200).json({ success: true, message: "Added bidders fetched successfully", data });
+    } catch (error) {
+        return handleError(res, error, "Get admin-added bidders", "Failed to fetch bidders");
     }
 };
 

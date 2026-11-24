@@ -189,6 +189,8 @@ export const websiteEndPoints = {
 
 export const adminEndPoints = {
     CREATE_USER_API: `${BASE_URL}/api/admin/create-user`,
+    // Added Bidders page: bidder accounts a super admin created, with their auctions / paddles
+    ADDED_BIDDERS_API: `${BASE_URL}/api/admin/added-bidders`,
     CHANGE_USER_ROLE_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/role`,
     CHANGE_USER_STATUS_API: (uuid: string) => `${BASE_URL}/api/admin/${uuid}/status`,
     // PATCH { verified }: "Verified for lots" on the user page

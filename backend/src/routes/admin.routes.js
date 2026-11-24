@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/rbac.middleware.js';
 import { exportActivityLogs, getActivityLogs, getActivityLogSummary } from '../controllers/activityLog.controller.js';
 import { getIpBlocks, unblockAllIps, unblockIp } from '../controllers/ipBlock.controller.js';
 import { getOtpLimits, resetAllOtpLimits, resetOtpLimit } from '../controllers/otpLimit.controller.js';
+import { getAdminAddedBidders } from '../controllers/auctionParticipant.controller.js';
 
 const adminRouter = Router();
 
@@ -24,6 +25,9 @@ adminRouter.delete('/:uuid/mfa', authenticate, requireRole('SUPER_ADMIN'), reset
 
 // SUPERAMIND CAN CREATE USER
 adminRouter.post('/create-user', authenticate, requireRole('SUPER_ADMIN'), createUserByAdmin)
+
+// BIDDERS ADDED BY A SUPER ADMIN — with their auctions / paddles, to register them for an auction
+adminRouter.get('/added-bidders', authenticate, requireRole('SUPER_ADMIN'), getAdminAddedBidders)
 
 // ACTIVITY LOGS — who did what, from which IP (super admin only)
 adminRouter.get('/activity-logs', authenticate, requireRole('SUPER_ADMIN'), getActivityLogs)

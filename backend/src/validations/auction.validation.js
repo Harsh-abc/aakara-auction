@@ -56,6 +56,12 @@ export const participantCandidatesQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(50).default(10),
 });
 
+export const adminAddedBiddersQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    search: z.string().trim().max(100).optional(),
+});
+
 export const participantUserUuidsSchema = z.object({
     userUuids: verifyLotBiddersSchema.shape.userUuids,
 });

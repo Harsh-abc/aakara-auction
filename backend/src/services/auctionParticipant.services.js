@@ -601,3 +601,66 @@ export const removeAuctionParticipantsService = async ({ auctionUuid, userUuids,
 
     return { auctionUuid, removed };
 };
+
+// =====================================================================
+// BIDDERS ADDED BY STAFF (SUPER_ADMIN) — dashboard → Added Bidders
+// Bidder accounts a super admin created (Add User, or added straight to an
+// auction), with the auctions they're registered for and their paddles,
+// plus the auctions they can still be registered for. Registering one goes
+// through addAuctionParticipantsService (paddle + verified on every lot).
+// =====================================================================
+
+export const getAdminAddedBiddersService = async ({ page, limit, search }) => {
+    const where = {
+        AND: [{ createdById: { not: null }, deletedAt: null, role: { name: { in: BIDDER_ROLES } } }, searchWhere(search)],
+    };
+
+    const [total, rows, auctions] = await Promise.all([
+        prisma.user.count({ where }),
+        prisma.user.findMany({
+            where,
+            select: {
+                ...USER_SELECT,
+                status: true,
+                createdAt: true,
+                createdBy: { select: { username: true, profile: { select: { displayName: true, firstName: true, lastName: true } } } },
+                auctionParticipations: {
+                    where: { auction: { deletedAt: null } },
+                    select: {
+                        paddleNumber: true,
+                        registeredAt: true,
+                        auction: { select: { uuid: true, title: true, status: true, startTime: true } },
+                    },
+                    orderBy: { registeredAt: "desc" },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+        // auctions a registration can still be added to (assertEditable)
+        prisma.auction.findMany({
+            where: { deletedAt: null, status: { in: EDITABLE_AUCTION_STATUSES } },
+            select: { uuid: true, title: true, status: true, startTime: true },
+            orderBy: { startTime: "asc" },
+        }),
+    ]);
+
+    const personName = (person) => {
+        if (!person) return null;
+        const name = [person.profile?.firstName, person.profile?.lastName].filter(Boolean).join(" ");
+        return person.profile?.displayName || name || person.username;
+    };
+
+    return serializeBigInt({
+        bidders: rows.map(({ status, createdAt, createdBy, auctionParticipations, ...user }) => ({
+            ...toUserSummary(user),
+            status,
+            createdAt,
+            createdBy: personName(createdBy),
+            registrations: auctionParticipations.map(({ auction, ...registration }) => ({ ...registration, auction })),
+        })),
+        auctions,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+};
