@@ -742,7 +742,7 @@ const staffNotVerifiedError = async (lotId, userId, who) => {
     if (account.role.name !== "BIDDER") return httpError(`${who} doesn't have the Bidder role`, 403);
     if (account.kyc?.status !== "VERIFIED") return httpError(`${who}'s KYC isn't verified`, 403);
     return row
-        ? httpError(`${who} isn't verified on this lot yet — verify them under Manage Bidders first`, 403)
+        ? httpError(`${who} isn't verified on this lot yet`, 403)
         : httpError(`${who} isn't registered for this lot's auction`, 403);
 };
 

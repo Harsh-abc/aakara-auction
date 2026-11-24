@@ -240,7 +240,7 @@ export function ProxyBidDialog({ open, onOpenChange, token, editing, onSaved }: 
                             {lot && (
                                 <div className="grid gap-2">
                                     <label htmlFor="proxy-bidder" className="text-[12px] font-medium text-slate-600">
-                                        Bidder (verified on this lot)
+                                        Bidder (registered for this auction)
                                     </label>
                                     <div className="relative">
                                         <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -263,8 +263,8 @@ export function ProxyBidDialog({ open, onOpenChange, token, editing, onSaved }: 
                                     ) : shownBidders.length === 0 ? (
                                         <p className="rounded-md bg-slate-50 px-3 py-4 text-center text-[12px] text-slate-500">
                                             {q
-                                                ? "No verified bidder on this lot matches that"
-                                                : "No bidder is verified on this lot yet — verify them under Manage Bidders"}
+                                                ? "No registered bidder on this lot matches that"
+                                                : "No bidder has registered for this auction yet"}
                                         </p>
                                     ) : (
                                         <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1">

@@ -68,34 +68,28 @@ const findLot = async (lotUuid) => {
  * Unverifying a lot never undoes it; permission to bid stays per lot.
  * (Registrations a super admin adds are approved when added.)
  */
-export const approveRegistrations = (tx, auctionWhere, userIds, actorId) =>
+export const approveRegistrations = (tx, auctionWhere, userIds, actorId = null) =>
     tx.auctionParticipant.updateMany({
         where: { ...auctionWhere, userId: { in: userIds }, status: "PENDING" },
-        data: { status: "APPROVED", approvedAt: new Date(), approvedBy: BigInt(actorId) },
+        data: { status: "APPROVED", approvedAt: new Date(), approvedBy: actorId ? BigInt(actorId) : null },
     });
 
 /**
- * Verifies the still-PENDING lot rows on this auction of users whose "Verified for lots" is on
- * (User.lotsVerifiedAt), and approves their registration — run whenever users get lot rows
- * (registering, being added, lots added to the auction). Returns how many rows were verified.
+ * Registered bidders are verified on every lot by default (there is no per-lot
+ * verification step any more): verifies the still-PENDING lot rows on this
+ * auction of these users and approves their registration — run whenever users
+ * get lot rows (registering, being added, lots added to the auction). Whether
+ * they can actually bid is still gated by their account (active, BIDDER role,
+ * KYC verified) at bid time. Returns how many rows were verified.
  */
-export const verifyLotsForVerifiedUsers = async (tx, auctionId, userIds) => {
+export const verifyLotsForUsers = async (tx, auctionId, userIds, actorId = null) => {
     if (userIds.length === 0) return 0;
-    const users = await tx.user.findMany({
-        where: { id: { in: userIds }, lotsVerifiedAt: { not: null } },
-        select: { id: true, lotsVerifiedById: true },
+    const { count } = await tx.lotBidder.updateMany({
+        where: { userId: { in: userIds }, status: "PENDING", item: { auctionId } },
+        data: { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: actorId ? BigInt(actorId) : null },
     });
-
-    let verified = 0;
-    for (const { id, lotsVerifiedById } of users) {
-        const { count } = await tx.lotBidder.updateMany({
-            where: { userId: id, status: "PENDING", item: { auctionId } },
-            data: { status: "VERIFIED", verifiedAt: new Date(), verifiedBy: lotsVerifiedById },
-        });
-        verified += count;
-        if (lotsVerifiedById) await approveRegistrations(tx, { auctionId }, [id], lotsVerifiedById);
-    }
-    return verified;
+    await approveRegistrations(tx, { auctionId }, userIds, actorId);
+    return count;
 };
 
 const FILTERS = {

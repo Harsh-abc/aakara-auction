@@ -9,17 +9,17 @@ import {
     REGISTRATION_AUCTION_STATUSES,
     approveRegistrations,
     searchWhere,
-    verifyLotsForVerifiedUsers,
+    verifyLotsForUsers,
 } from "./lotBidder.services.js";
 
 // =====================================================================
 // Auction registration
 //
 // A user registers for an auction (or a super admin adds them), which
-// creates an AuctionParticipant row plus a PENDING LotBidder row on every
-// lot of the auction. A super admin then verifies them per lot (lot
-// bidders page) or on all lots at once (verify below). Only VERIFIED rows
-// can bid.
+// creates an AuctionParticipant row plus a LotBidder row on every lot of
+// the auction, VERIFIED by default — there is no per-lot verification
+// step. Bidding is still gated by the account itself (active, BIDDER role,
+// KYC verified).
 // =====================================================================
 
 const httpError = (message, statusCode = 400) => {
@@ -104,12 +104,11 @@ const findUsersOrThrow = async (userUuids, where, notFoundMessage) => {
 };
 
 /**
- * Gives users a PENDING row on every lot of the auction. Existing rows
- * (e.g. already verified) are left alone. Users whose "Verified for lots" is
- * on are verified straight away. Returns how many rows were created and how
- * many were verified that way.
+ * Gives users a row on every lot of the auction and verifies them on all of
+ * them (rows left PENDING from before are verified too). Returns how many rows
+ * were created and how many were verified.
  */
-const addUsersToAllLots = async (tx, auctionId, users) => {
+const addUsersToAllLots = async (tx, auctionId, users, actorId = null) => {
     if (users.length === 0) return { created: 0, autoVerified: 0 };
     const lots = await tx.auctionItem.findMany({ where: { auctionId }, select: { id: true } });
     if (lots.length === 0) return { created: 0, autoVerified: 0 };
@@ -118,7 +117,7 @@ const addUsersToAllLots = async (tx, auctionId, users) => {
         data: users.flatMap(({ userId, source }) => lots.map((lot) => ({ itemId: lot.id, userId, source }))),
         skipDuplicates: true,
     });
-    const autoVerified = await verifyLotsForVerifiedUsers(tx, auctionId, users.map((u) => u.userId));
+    const autoVerified = await verifyLotsForUsers(tx, auctionId, users.map((u) => u.userId), actorId);
     return { created: count, autoVerified };
 };
 
@@ -189,7 +188,7 @@ const registerParticipants = async (tx, auctionId, userIds, source, actorId = nu
         where: { auctionId, userId: { in: userIds } },
         select: { userId: true, source: true },
     });
-    const { created: lotRows, autoVerified } = await addUsersToAllLots(tx, auctionId, participants);
+    const { created: lotRows, autoVerified } = await addUsersToAllLots(tx, auctionId, participants, actorId);
 
     return { added, lotRows, autoVerified };
 };
@@ -280,7 +279,7 @@ export const registerForAuctionService = async ({ auctionUuid, userId, termsAcce
         { maxWait: 10_000, timeout: 30_000 }
     );
 
-    // verified straight away ("Verified for lots" on) — live bidding re-reads who may bid
+    // verified on its lots straight away — live bidding re-reads who may bid
     if (autoVerified > 0) await invalidateBidderAccess({ auctionId: auction.id });
 
     const lots = await prisma.lotBidder.findMany({
@@ -468,7 +467,7 @@ export const addAuctionParticipantsService = async ({ auctionUuid, userUuids, ac
 // =====================================================================
 // CREATE A NEW USER AND ADD THEM TO AN AUCTION (SUPER_ADMIN)
 // Creates the account exactly like "Add User" and registers them for the
-// auction and all its lots (PENDING — still verified per lot), in one
+// auction and all its lots (verified on them by default), in one
 // transaction.
 // =====================================================================
 
@@ -489,6 +488,9 @@ export const addNewUserToAuctionService = async ({ auctionUuid, user, actorId })
                 }));
             },
         });
+
+        // they're verified on its lots now — live bidding re-reads who may bid
+        await invalidateBidderAccess({ auctionId: auction.id });
 
         return serializeBigInt({ auctionUuid, paddleNumber, user: created });
     } catch (error) {
