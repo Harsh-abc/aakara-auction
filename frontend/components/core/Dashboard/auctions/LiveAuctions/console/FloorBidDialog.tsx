@@ -89,7 +89,7 @@ export default function FloorBidDialog({
     const query = paddle.trim().replace(/^#/, "").toLowerCase();
     const exact = floorBidders.find((bidder) => bidder.paddle.toLowerCase() === query) ?? null;
     const proxyCount = floorBidders.filter((bidder) => bidder.proxyMax !== null).length;
-    // the whole list once a paddle is picked, otherwise narrowed by what's typed
+    // narrowed by what's typed (paddle prefix or name), with an exact paddle match first
     // a proxy whose max is below the amount being bid (or the minimum, whichever is higher) is outbid —
     // it drops to the end of the list, and re-sorts live as the amount is typed
     const typed = Number(amount);
@@ -100,9 +100,13 @@ export default function FloorBidDialog({
         .filter(
             (bidder) =>
                 (filter === "all" || bidder.proxyMax !== null) &&
-                (exact || !query || bidder.paddle.toLowerCase().startsWith(query) || bidder.name?.toLowerCase().includes(query))
+                (!query || bidder.paddle.toLowerCase().startsWith(query) || bidder.name?.toLowerCase().includes(query))
         )
-        .sort((a, b) => Number(isOutbid(a)) - Number(isOutbid(b)));
+        .sort(
+            (a, b) =>
+                Number(b.paddle === exact?.paddle) - Number(a.paddle === exact?.paddle) ||
+                Number(isOutbid(a)) - Number(isOutbid(b))
+        );
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
