@@ -210,14 +210,19 @@ export default function FloorBidDialog({
                                                 "relative flex min-w-0 cursor-pointer flex-col rounded-[8px] border px-3 py-2 text-left transition-colors",
                                                 proxy
                                                     ? "border-violet-300 bg-violet-50/70 hover:border-violet-500"
-                                                    : "border-slate-200 bg-white hover:border-[#22C55E] hover:bg-emerald-50/40",
-                                                selected && "border-[#22C55E] bg-emerald-50 ring-2 ring-[#22C55E]/40"
+                                                    : outbid
+                                                      ? "border-red-200 bg-red-50/60 hover:border-red-400"
+                                                      : "border-slate-200 bg-white hover:border-[#22C55E] hover:bg-emerald-50/40",
+                                                selected &&
+                                                    (outbid
+                                                        ? "border-red-500 bg-red-50 ring-2 ring-red-500/30"
+                                                        : "border-[#22C55E] bg-emerald-50 ring-2 ring-[#22C55E]/40")
                                             )}
                                         >
                                             <span className="flex items-center justify-between gap-2">
                                                 <span className="text-[13px] font-semibold text-[#414141]">#{bidder.paddle}</span>
                                                 {selected ? (
-                                                    <Check className="h-3.5 w-3.5 text-[#22C55E]" />
+                                                    <Check className={cn("h-3.5 w-3.5", outbid ? "text-red-600" : "text-[#22C55E]")} />
                                                 ) : leading ? (
                                                     <span className="rounded-[3px] bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-700 uppercase">
                                                         Leading
@@ -235,7 +240,7 @@ export default function FloorBidDialog({
                                                 </span>
                                             )}
                                             {outbid && (
-                                                <span className="mt-0.5 truncate text-[10px] font-medium text-slate-400">
+                                                <span className="mt-0.5 truncate text-[10px] font-medium text-red-600">
                                                     Proxy {money(bidder.proxyMax, currency)} · outbid
                                                 </span>
                                             )}
@@ -259,6 +264,10 @@ export default function FloorBidDialog({
                             <span className="flex items-center gap-1">
                                 <span className="h-2.5 w-2.5 rounded-[3px] border border-violet-300 bg-violet-50" />
                                 Holds a proxy — placed at the hammer
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <span className="h-2.5 w-2.5 rounded-[3px] border border-red-200 bg-red-50" />
+                                Proxy outbid
                             </span>
                             <span className="flex items-center gap-1">
                                 <span className="h-2.5 w-2.5 rounded-[3px] border border-slate-200 bg-white" />
