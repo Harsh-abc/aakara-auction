@@ -45,13 +45,17 @@ const withUploadedDocumentTypes = ({ documents, ...kyc }) => ({
 });
 
 export const getAllUsersService = async ({ page, limit, search, emailVerified, kycStatus, role, auction }) => {
+    // one role, or several comma-separated ("USER,BIDDER")
+    const roles = role ? role.split(',').map((r) => r.trim()).filter(Boolean) : [];
+    // Bidders page, every bidder: each one's auctions and paddle numbers
+    const withRegistrations = !auction && roles.includes('BIDDER');
+
     const where = {
         deletedAt: null,
         ...(auction && { auctionParticipations: { some: { auction: { uuid: auction } } } }),
         ...(emailVerified && { emailVerified: emailVerified === 'true' }),
         ...(kycStatus && { kyc: { status: kycStatus } }),
-        // one role, or several comma-separated ("USER,BIDDER")
-        ...(role && { role: { name: { in: role.split(',').map((r) => r.trim()).filter(Boolean) } } }),
+        ...(roles.length && { role: { name: { in: roles } } }),
         ...(search && {
             OR: [
                 { username: { contains: search, mode: 'insensitive' } },
@@ -124,6 +128,17 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
                         take: 1,
                     },
                 }),
+                ...(withRegistrations && {
+                    auctionParticipations: {
+                        where: { auction: { deletedAt: null } },
+                        select: {
+                            paddleNumber: true,
+                            registeredAt: true,
+                            auction: { select: { uuid: true, title: true, status: true, startTime: true } },
+                        },
+                        orderBy: { registeredAt: 'desc' },
+                    },
+                }),
 
                 _count: {
                     select: {
@@ -146,6 +161,7 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
         failedLoginAttempts: Number(user.failedLoginAttempts),
         kyc: kyc && withUploadedDocumentTypes(kyc),
         ...(auction && { auctionParticipation: auctionParticipations?.[0] ?? null }),
+        ...(withRegistrations && { registrations: auctionParticipations ?? [] }),
     }));
 
     return {

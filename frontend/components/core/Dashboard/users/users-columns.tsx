@@ -2,9 +2,10 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import type { AppTableFeatures } from "@/lib/table-features"
-import { BadgeCheck, BadgeX } from "lucide-react"
+import { BadgeCheck, BadgeX, UserPlus } from "lucide-react"
 import Link from "next/link"
 
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { UserActionsCell } from "./UserActionsCell"
@@ -306,6 +307,78 @@ const registrationColumn: ColumnDef<AppTableFeatures, User> = {
         )
     },
 }
+
+const MAX_PADDLES_SHOWN = 3
+
+interface PaddlesColumnOptions {
+    /** super admin with an auction open for registration: shows the register button */
+    onRegister?: (user: User) => void
+    /** auctions a registration can still be added to */
+    openAuctionUuids: Set<string>
+}
+
+// Bidders page, every bidder: their paddle number in each auction they're registered for.
+// Super admins get a button to register them (assigning a paddle) for an open auction they aren't in yet.
+export const paddlesColumn = ({ onRegister, openAuctionUuids }: PaddlesColumnOptions): ColumnDef<AppTableFeatures, User> => ({
+    id: "paddles",
+    accessorFn: (user) => (user.registrations ?? []).map((r) => r.paddleNumber).join(" "),
+
+    header: "Paddle no.",
+
+    cell: ({ row }) => {
+        const user = row.original
+        const registrations = user.registrations ?? []
+        const shown = registrations.slice(0, MAX_PADDLES_SHOWN)
+        const hidden = registrations.slice(MAX_PADDLES_SHOWN)
+        const registeredIn = new Set(registrations.map((r) => r.auction.uuid))
+        const canRegister = !!onRegister && [...openAuctionUuids].some((uuid) => !registeredIn.has(uuid))
+        const blockedReason =
+            user.status !== "ACTIVE" ? "Account not active" : user.kyc?.status !== "VERIFIED" ? "KYC not verified" : null
+
+        return (
+            <div className="flex min-w-44 flex-col items-start gap-1">
+                {registrations.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">No paddle assigned</span>
+                ) : (
+                    <ul className="grid gap-1">
+                        {shown.map((r) => (
+                            <li key={r.auction.uuid} className="flex items-center gap-1.5" title={r.auction.title}>
+                                <span className="rounded-full bg-[#7B2D52]/10 px-2 py-0.5 text-xs font-medium tabular-nums text-[#7B2D52]">
+                                    #{r.paddleNumber}
+                                </span>
+                                <span className="max-w-40 truncate text-xs text-muted-foreground">{r.auction.title}</span>
+                            </li>
+                        ))}
+                        {hidden.length > 0 && (
+                            <li
+                                className="text-xs text-muted-foreground"
+                                title={hidden.map((r) => `#${r.paddleNumber} ${r.auction.title}`).join("\n")}
+                            >
+                                +{hidden.length} more
+                            </li>
+                        )}
+                    </ul>
+                )}
+                {/* the API only registers active, KYC-verified bidders */}
+                {canRegister && blockedReason && (
+                    <span className="text-[11px] text-orange-500">{blockedReason} — can&apos;t register</span>
+                )}
+                {canRegister && !blockedReason && (
+                    <Button
+                        type="button"
+                        size="sm"
+                        title="Register for an auction and assign a paddle"
+                        onClick={() => onRegister(user)}
+                        className="mt-0.5 h-7 bg-[#7B2D52] px-2.5 text-xs text-white hover:bg-[#62223F]"
+                    >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        {registrations.length === 0 ? "Register for auction" : "Register for another"}
+                    </Button>
+                )}
+            </div>
+        )
+    },
+})
 
 // Bidders page filtered by auction: paddle no. before the name, registration before the bidder badge
 export const auctionBidderListColumns: ColumnDef<AppTableFeatures, User>[] = bidderListColumns.flatMap((column) =>

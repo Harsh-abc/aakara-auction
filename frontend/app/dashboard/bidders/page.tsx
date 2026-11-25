@@ -1,5 +1,7 @@
 'use client'
-import { auctionBidderListColumns, bidderListColumns } from "@/components/core/Dashboard/users/users-columns";
+import { auctionBidderListColumns, bidderListColumns, paddlesColumn } from "@/components/core/Dashboard/users/users-columns";
+import { RegisterDialog, type RegisterTarget } from "@/components/core/Dashboard/addedBidders/AddedBidders";
+import type { AuctionStatus } from "@/lib/types/auction.types";
 import { UsersTable } from "@/components/core/Dashboard/users/users-table";
 import ExportUsersButton from "@/components/core/Dashboard/users/ExportUsersButton";
 import { Field } from "@/components/ui/field";
@@ -15,6 +17,9 @@ import { getAllUsers } from "@/services/operations/user.api";
 
 // value of the "every bidder" option in the auction filter
 const ALL_AUCTIONS = "all";
+
+// same as the backend's EDITABLE_AUCTION_STATUSES — registrations can only change on these
+const OPEN_FOR_REGISTRATION = new Set<AuctionStatus>(["DRAFT", "SCHEDULED", "PREVIEW", "LIVE", "PAUSED"]);
 
 export default function Bidders() {
     const [search, setSearch] = useState("")
@@ -40,6 +45,12 @@ export default function Bidders() {
     const selectedAuction = auctionOptions.find((a) => a.uuid === auctionFilter) ?? null;
     const auctionUuid = auctionFilter === ALL_AUCTIONS ? undefined : auctionFilter;
 
+    const { role: myRole, accessToken } = useSelector((state: RootState) => state.auth);
+    const isSuperAdmin = myRole === "SUPER_ADMIN";
+    // bumped after a registration so the paddle numbers reload
+    const [reload, setReload] = useState(0);
+    const [registering, setRegistering] = useState<RegisterTarget | null>(null);
+
     // only accounts with the Bidder role — website users without bidder access are on the Users page.
     // With an auction picked, only the bidders registered for it
     useEffect(() => {
@@ -48,7 +59,33 @@ export default function Bidders() {
             .unwrap()
             .then((res) => request === latestRequest.current && setTotal(res.data.pagination.total))
             .catch(() => request === latestRequest.current && setTotal(null));
-    }, [dispatch, auctionUuid]);
+    }, [dispatch, auctionUuid, reload]);
+
+    // auctions a bidder can still be registered for (the API refuses ended / cancelled ones)
+    const openAuctions = useMemo(
+        () =>
+            auctions
+                .filter((a) => OPEN_FOR_REGISTRATION.has(a.status))
+                .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+        [auctions]
+    );
+
+    // every bidder: paddle numbers after the name; super admins can register them for an auction
+    const allBiddersColumns = useMemo(() => {
+        const paddles = paddlesColumn({
+            openAuctionUuids: new Set(openAuctions.map((a) => a.uuid)),
+            onRegister: isSuperAdmin
+                ? (user) =>
+                      setRegistering({
+                          uuid: user.uuid,
+                          username: user.username,
+                          name: `${user.profile?.firstName ?? ""} ${user.profile?.lastName ?? ""}`.trim() || null,
+                          registrations: user.registrations ?? [],
+                      })
+                : undefined,
+        });
+        return bidderListColumns.flatMap((column) => (column.id === "fullName" ? [column, paddles] : [column]));
+    }, [openAuctions, isSuperAdmin]);
 
     // the users slice is shared with other pages, so guard against stale unfiltered data
     const bidders = useMemo(
@@ -137,9 +174,23 @@ export default function Bidders() {
                     <UsersTable
                         // remount when switching views so the column set and table state reset together
                         key={auctionUuid ?? ALL_AUCTIONS}
-                        columns={auctionUuid ? auctionBidderListColumns : bidderListColumns}
+                        columns={auctionUuid ? auctionBidderListColumns : allBiddersColumns}
                         data={bidders}
                         search={search}
+                    />
+                )}
+
+                {isSuperAdmin && (
+                    <RegisterDialog
+                        bidder={registering}
+                        auctions={openAuctions}
+                        token={accessToken}
+                        onClose={() => setRegistering(null)}
+                        onRegistered={() => {
+                            setReload((n) => n + 1);
+                            // the auction filter shows registration counts
+                            dispatch(getAuctions());
+                        }}
                     />
                 )}
 

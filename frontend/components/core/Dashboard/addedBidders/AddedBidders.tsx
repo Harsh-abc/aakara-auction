@@ -282,15 +282,25 @@ function RemoveDialog({ target, token, onClose, onRemoved }: RemoveDialogProps) 
     )
 }
 
+/** Who is being registered — an added bidder, or any bidder from the Bidders page */
+export interface RegisterTarget {
+    uuid: string
+    name: string | null
+    username: string
+    registrations: { auction: { uuid: string } }[]
+}
+
 interface RegisterDialogProps {
-    bidder: AddedBidder | null
+    bidder: RegisterTarget | null
+    /** auctions a registration can still be added to (not ended) */
     auctions: AddedBidderAuction[]
     token: string | null
     onClose: () => void
     onRegistered: () => void
 }
 
-function RegisterDialog({ bidder, auctions, token, onClose, onRegistered }: RegisterDialogProps) {
+// super admin: register a bidder for an auction — they get a paddle and are verified on every lot
+export function RegisterDialog({ bidder, auctions, token, onClose, onRegistered }: RegisterDialogProps) {
     const [auctionUuid, setAuctionUuid] = useState("")
     const [error, setError] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)

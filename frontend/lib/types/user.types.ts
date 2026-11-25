@@ -1,4 +1,5 @@
 import type { RoleName } from "@/lib/constants/roles";
+import type { AddedBidderRegistration } from "@/lib/types/addedBidder.types";
 
 export interface UserProfile {
     firstName: string | null;
@@ -83,6 +84,8 @@ export interface User {
     kyc: UserKyc | null;
     // only when the list is filtered by auction — the user's registration for it
     auctionParticipation?: UserAuctionParticipation | null;
+    // only on the Bidders list without an auction filter — every auction they're registered for, with the paddle
+    registrations?: AddedBidderRegistration[];
     _count: { bids: number; auctionsWon: number; auctionParticipations: number; autoBids?: number };
 }
 
