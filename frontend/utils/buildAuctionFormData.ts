@@ -8,6 +8,7 @@ import type { AuctionStatus } from "@/lib/types/auction.types";
 import { isImageMedia } from "@/utils/lotMedia";
 import { DEFAULT_AUCTION_TIMEZONE, zonedTimeToIso } from "@/utils/auctionTime";
 import { serverNow } from "@/lib/serverClock";
+import { isEmptyHtml } from "@/utils/sanitizeHtml";
 
 // ============================================================
 // HELPERS
@@ -260,7 +261,8 @@ export const buildAuctionFormData = (
             secondaryDepth: num(secondary?.depth),
         };
         const weight = num(details.weight);
-        const extraMeasurement = str(details.extraMeasurement);
+        // rich text — an empty editor still sends "<p></p>"
+        const extraMeasurement = isEmptyHtml(details.extraMeasurement) ? null : str(details.extraMeasurement);
         const hasDimension = [...Object.values(measures), weight, extraMeasurement].some((v) => v !== null);
 
         const media = (lot.images ?? []).filter((m) => m?.file instanceof File);

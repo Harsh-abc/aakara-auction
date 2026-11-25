@@ -354,11 +354,17 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
 
                 <div className="input-wrapper mb-4">
                     <label className="block mb-2">Extra Measurement</label>
-                    <Input
-                        type="text"
-                        placeholder="e.g. Framed: 30 × 38 in"
-                        className="w-full border rounded-md px-3 py-2 h-11"
-                        {...register(`lots.${lotIndex}.details.extraMeasurement`)}
+                    <Controller
+                        name={`lots.${lotIndex}.details.extraMeasurement`}
+                        control={control}
+                        render={({ field }) => (
+                            <RichTextEditor
+                                variant="basic"
+                                placeholder="e.g. Framed: 30 × 38 in"
+                                value={field.value ?? ""}
+                                onChange={field.onChange}
+                            />
+                        )}
                     />
                     <p className="mt-1 text-xs text-slate-500">
                         Shown after the size on the site: 22 × 30 in (56 × 76.5 cm) | your text

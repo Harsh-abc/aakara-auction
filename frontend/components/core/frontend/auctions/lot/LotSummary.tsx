@@ -1,9 +1,12 @@
+import type { ReactNode } from "react"
 import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
+import { lotSizeParts } from "@/utils/dimensions"
+import LotSizeText from "@/components/common/LotSizeText"
 
-import { formatMoney, lotDetailsHref, lotDimensions, lotEstimate } from "../detail/lotDisplay"
+import { formatMoney, lotDetailsHref, lotEstimate } from "../detail/lotDisplay"
 import { BidButtons, BUTTON, BUTTON_OUTLINE, type OnBid } from "./BidButtons"
 import { bidCountLabel } from "./lotPageDisplay"
 
@@ -32,12 +35,14 @@ export function LotSummary({ auctionUuid, lot, onBid, bidRefreshKey, proxyEnable
     const amount = formatMoney(count > 0 ? lot.currentBid : lot.startingPrice, lot.currency) ?? "—"
     const leader = count > 0 ? (lot.leadingPaddle ? `Paddle ${lot.leadingPaddle}` : "Another bidder") : null
 
-    const facts = [
+    const size = lotSizeParts(lot.dimension)
+    const facts: { term: string; value: ReactNode }[] = [
         { term: "Medium", value: lot.medium },
         { term: "Year", value: lot.yearCreated },
-        { term: "Dimensions", value: lotDimensions(lot) },
+        // the extra measurement is rich text — keep its formatting
+        { term: "Dimensions", value: size && <LotSizeText parts={size} /> },
         { term: "Estimate", value: lotEstimate(lot) },
-    ].filter((fact): fact is { term: string; value: string } => !!fact.value)
+    ].filter((fact) => !!fact.value)
 
     return (
         <div className={className}>

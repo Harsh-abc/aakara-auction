@@ -42,8 +42,9 @@ import type {
 import { cn } from "@/lib/utils";
 import { MANAGE_BIDDERS_HIDDEN, canAccessPage } from "@/lib/constants/dashboardAccess";
 import { isEmptyHtml, sanitizeHtml } from "@/utils/sanitizeHtml";
-import { formatLotSize } from "@/utils/dimensions";
+import { lotSizeParts } from "@/utils/dimensions";
 import RichTextContent from "@/components/common/RichTextContent";
+import LotSizeText from "@/components/common/LotSizeText";
 
 // =====================================================================
 // LABELS (also used by the wizard's Publish step preview)
@@ -258,7 +259,8 @@ const sortedImages = (lot: AuctionLot) =>
 const LotDetails = ({ lot, currency }: { lot: AuctionLot; currency: string }) => {
     const images = sortedImages(lot);
     const dim = lot.dimension;
-    const dimensions = formatLotSize(dim);
+    const size = lotSizeParts(dim);
+    const dimensions = size && <LotSizeText parts={size} />;
     const estimateLow = formatMoney(lot.estimateLow, currency);
     const estimateHigh = formatMoney(lot.estimateHigh, currency);
 

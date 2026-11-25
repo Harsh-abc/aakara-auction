@@ -1,4 +1,5 @@
 import type { DimensionUnit } from "@/lib/types/auction.types";
+import { htmlToPlainText, isEmptyHtml } from "@/utils/sanitizeHtml";
 
 // ============================================================
 // A lot's size is kept in two units, each set with its own unit
@@ -53,33 +54,55 @@ const formatSet = (set: SizeSet | null | undefined) => {
     return sizes.length ? `${sizes.join(" × ")} ${SHORT_LABELS[set.unit] ?? set.unit.toLowerCase()}` : null;
 };
 
+/** "15.5 × 10.5 in (39.5 × 26.5 cm)" — inches always lead, whichever set they were entered in */
+const formatSize = (primary: SizeSet | null | undefined, secondary: SizeSet | null | undefined) => {
+    if (secondary?.unit === "INCH" && primary?.unit !== "INCH") [primary, secondary] = [secondary, primary];
+    const first = formatSet(primary);
+    const second = primary?.unit === secondary?.unit ? null : formatSet(secondary);
+    return first && second ? `${first} (${second})` : first ?? second;
+};
+
+/** The extra measurement is rich text (HTML); null when it has no visible content */
+const extraHtml = (extra: string | null | undefined) => (isEmptyHtml(extra) ? null : extra!.trim());
+
 /**
- * "15.5 × 10.5 in (39.5 × 26.5 cm)" — inches always lead, whichever set they were entered in.
+ * One line of plain text, for cards and catalogue text.
  * An extra measurement is appended after a bar: "15.5 × 10.5 in (39.5 × 26.5 cm) | framed 20 × 15 in"
+ * Use sizeSetsParts + <LotSizeText> to show the extra measurement with its formatting.
  */
 export const formatSizeSets = (
     primary: SizeSet | null | undefined,
     secondary: SizeSet | null | undefined,
     extra?: string | null
 ) => {
-    if (secondary?.unit === "INCH" && primary?.unit !== "INCH") [primary, secondary] = [secondary, primary];
-    const first = formatSet(primary);
-    const second = primary?.unit === secondary?.unit ? null : formatSet(secondary);
-    const size = first && second ? `${first} (${second})` : first ?? second;
-    const more = extra?.trim() || null;
+    const size = formatSize(primary, secondary);
+    const more = htmlToPlainText(extraHtml(extra)) || null;
     return size && more ? `${size} | ${more}` : size ?? more;
 };
 
+/** The size line and the extra measurement's HTML, kept apart so the HTML can be rendered */
+export const sizeSetsParts = (
+    primary: SizeSet | null | undefined,
+    secondary: SizeSet | null | undefined,
+    extra?: string | null
+) => {
+    const size = formatSize(primary, secondary);
+    const extraMeasurement = extraHtml(extra);
+    return size || extraMeasurement ? { size, extraMeasurement } : null;
+};
+
+const storedSets = (size: StoredLotSize): [SizeSet, SizeSet] => [
+    { height: size.height, width: size.width, depth: size.depth, unit: size.dimensionUnit },
+    {
+        height: size.secondaryHeight,
+        width: size.secondaryWidth,
+        depth: size.secondaryDepth,
+        unit: size.secondaryDimensionUnit,
+    },
+];
+
 export const formatLotSize = (size: StoredLotSize | null | undefined) =>
-    size
-        ? formatSizeSets(
-              { height: size.height, width: size.width, depth: size.depth, unit: size.dimensionUnit },
-              {
-                  height: size.secondaryHeight,
-                  width: size.secondaryWidth,
-                  depth: size.secondaryDepth,
-                  unit: size.secondaryDimensionUnit,
-              },
-              size.extraMeasurement
-          )
-        : null;
+    size ? formatSizeSets(...storedSets(size), size.extraMeasurement) : null;
+
+export const lotSizeParts = (size: StoredLotSize | null | undefined) =>
+    size ? sizeSetsParts(...storedSets(size), size.extraMeasurement) : null;
