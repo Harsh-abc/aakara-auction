@@ -243,7 +243,7 @@ export default function HammerDialog({ open, onOpenChange, lot, position, buyerP
                     </div>
                 )}
 
-                <DialogFooter>
+                <DialogFooter className="sm:justify-between">
                     <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>
