@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import toast from "react-hot-toast"
-import { ChevronLeft, ChevronRight, Loader2, Search, UserPlus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Search, UserMinus, UserPlus, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -14,7 +14,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { getErrorMessage } from "@/lib/apiError"
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
 import type { AddedBidder, AddedBidderAuction, AddedBiddersPage } from "@/lib/types/addedBidder.types"
-import { getAddedBidders, registerBidderForAuction } from "@/services/operations/addedBidder.api"
+import { getAddedBidders, registerBidderForAuction, removeBidderFromAuction } from "@/services/operations/addedBidder.api"
 
 import { DASHBOARD_TIME_ZONE, PanelMessage, StatusPill } from "../home/dashboardUi"
 
@@ -34,6 +34,7 @@ export function AddedBidders() {
     const [loading, setLoading] = useState(true)
     const [reload, setReload] = useState(0)
     const [registering, setRegistering] = useState<AddedBidder | null>(null)
+    const [removing, setRemoving] = useState<{ bidder: AddedBidder; registration: AddedBidder["registrations"][number] } | null>(null)
 
     // a new search starts from the first page
     const [lastSearch, setLastSearch] = useState(debouncedSearch)
@@ -60,6 +61,8 @@ export function AddedBidders() {
     }, [token, page, debouncedSearch, reload])
 
     const pagination = data?.pagination
+    // registrations can only be changed on auctions that are still upcoming or running
+    const editableAuctions = new Set(data?.auctions.map((a) => a.uuid) ?? [])
 
     return (
         <div className="flex flex-col gap-4">
@@ -140,6 +143,17 @@ export function AddedBidders() {
                                                                 {r.auction.title}
                                                             </span>
                                                             <span className="text-[11px] text-slate-400">{AUCTION_STATUS_LABELS[r.auction.status]}</span>
+                                                            {editableAuctions.has(r.auction.uuid) && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setRemoving({ bidder, registration: r })}
+                                                                    className="rounded p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                                                    title={`Remove from ${r.auction.title}`}
+                                                                    aria-label={`Remove from ${r.auction.title}`}
+                                                                >
+                                                                    <X className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            )}
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -189,7 +203,82 @@ export function AddedBidders() {
                 onClose={() => setRegistering(null)}
                 onRegistered={() => setReload((n) => n + 1)}
             />
+
+            <RemoveDialog
+                target={removing}
+                token={token}
+                onClose={() => setRemoving(null)}
+                onRemoved={() => setReload((n) => n + 1)}
+            />
         </div>
+    )
+}
+
+interface RemoveDialogProps {
+    target: { bidder: AddedBidder; registration: AddedBidder["registrations"][number] } | null
+    token: string | null
+    onClose: () => void
+    onRemoved: () => void
+}
+
+function RemoveDialog({ target, token, onClose, onRemoved }: RemoveDialogProps) {
+    const [error, setError] = useState<string | null>(null)
+    const [saving, setSaving] = useState(false)
+
+    // fresh state for each target
+    const key = target ? `${target.bidder.uuid}:${target.registration.auction.uuid}` : null
+    const [forKey, setForKey] = useState<string | null>(null)
+    if (key !== forKey) {
+        setForKey(key)
+        setError(null)
+    }
+
+    const name = target ? (target.bidder.name ?? target.bidder.username) : ""
+
+    const submit = async () => {
+        if (!target) return
+        setError(null)
+        setSaving(true)
+        try {
+            await removeBidderFromAuction(target.registration.auction.uuid, target.bidder.uuid, token)
+            toast.success(`${name} was removed from ${target.registration.auction.title}`)
+            onRemoved()
+            onClose()
+        } catch (err) {
+            setError(getErrorMessage(err, "Could not remove the bidder"))
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    return (
+        <Dialog open={!!target} onOpenChange={(open) => !open && !saving && onClose()}>
+            <DialogContent className="sm:max-w-md" showCloseButton={!saving}>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-[18px] font-semibold text-[#414141]">
+                        <UserMinus className="h-5 w-5 text-red-600" />
+                        Remove from auction
+                    </DialogTitle>
+                    <DialogDescription>
+                        {name} will lose paddle #{target?.registration.paddleNumber} for {target?.registration.auction.title}, is unverified on
+                        all its lots and any proxy bids they have there are withdrawn. You can register them again later — they may get a
+                        different paddle.
+                    </DialogDescription>
+                </DialogHeader>
+
+                {error && <p className="rounded-md bg-red-50 px-3 py-2 text-[12px] text-red-700">{error}</p>}
+
+                <DialogFooter>
+                    <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="button" disabled={saving} onClick={submit} className="bg-red-600 text-white hover:bg-red-700">
+                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {saving ? "Removing…" : "Remove from auction"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
 

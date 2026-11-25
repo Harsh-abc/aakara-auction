@@ -32,3 +32,18 @@ export async function registerBidderForAuction(
     })
     return response.data
 }
+
+// super admin: take a bidder off an auction — paddle, lot verifications and their proxy bids go
+export async function removeBidderFromAuction(
+    auctionUuid: string,
+    userUuid: string,
+    token: string | null
+): Promise<{ message: string }> {
+    const response = await apiConnector({
+        method: "DELETE",
+        url: auctionEndPoints.AUCTION_PARTICIPANTS_API(auctionUuid),
+        body: { userUuids: [userUuid] },
+        header: authHeader(token),
+    })
+    return response.data
+}
