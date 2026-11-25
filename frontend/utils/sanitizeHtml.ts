@@ -112,6 +112,19 @@ export const htmlToPlainText = (html: string | null | undefined): string =>
         .replace(/\s+/g, " ")
         .trim();
 
+/**
+ * Rich text → its rows of plain text (each paragraph, list item or line break is a row),
+ * blank rows dropped. Regex-based so it also runs on the server.
+ */
+export const htmlToLines = (html: string | null | undefined): string[] =>
+    (html ?? "")
+        .replace(/<(br|\/p|\/li|\/h[1-6]|\/div)\b[^>]*>/gi, "\n")
+        .replace(/<[^>]*>/g, "")
+        .replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (_, entity: string) => ENTITIES[entity])
+        .split("\n")
+        .map((line) => line.replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+
 /** True when the rich text has no visible content (e.g. "<p></p>") */
 export const isEmptyHtml = (html: string | null | undefined): boolean =>
     !html ||

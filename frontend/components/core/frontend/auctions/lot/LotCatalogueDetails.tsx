@@ -3,6 +3,7 @@
 import { useState } from "react"
 
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types"
+import RichTextContent from "@/components/common/RichTextContent"
 
 import { catalogueSections, type CatalogueSection } from "./lotCatalogue"
 
@@ -25,12 +26,16 @@ function Section({ section }: { section: CatalogueSection }) {
             {open && (
                 <div className="mt-2.5 flex flex-col gap-3 pb-0.5 text-[14px] leading-[22.75px] text-[#717171]">
                     {section.paragraphs.map((paragraph, index) => (
-                        <p key={index}>
+                        // a div, not a <p>: a rich-text row brings its own paragraphs
+                        <div key={index}>
                             {paragraph.map((line, i) =>
                                 typeof line === "string" ? (
                                     <span key={i} className="block">
                                         {line}
                                     </span>
+                                ) : "html" in line ? (
+                                    // the extra measurement under the size: each paragraph a row, an empty one a blank row
+                                    <RichTextContent key={i} html={line.html} className="[&_p]:min-h-[1lh]" />
                                 ) : (
                                     // e.g. the artist's life dates, under their name
                                     <span key={i} className="block text-[12px] leading-4.5">
@@ -38,7 +43,7 @@ function Section({ section }: { section: CatalogueSection }) {
                                     </span>
                                 )
                             )}
-                        </p>
+                        </div>
                     ))}
                 </div>
             )}

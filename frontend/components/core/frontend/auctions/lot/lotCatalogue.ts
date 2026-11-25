@@ -1,6 +1,7 @@
 import type { PublicLotDetail } from "@/lib/types/publicAuction.types";
 
-import { lotDimensions } from "../detail/lotDisplay";
+import { lotSizeParts } from "@/utils/dimensions";
+
 import { isClosedLot, isUpcomingLot } from "./lotPageDisplay";
 
 const ACQUISITION_LABELS: Record<string, string> = {
@@ -33,8 +34,11 @@ const blocks = (value: string | null) => (value ? value.split(/\r?\n\s*\r?\n/).m
 
 const compact = (values: (string | null | undefined | false)[]) => values.filter((v): v is string => !!v);
 
-/** a row of text; `small` rows (e.g. the artist's life dates) are set in smaller type */
-export type CatalogueLine = string | { text: string; small: true };
+/**
+ * a row of text; `small` rows (e.g. the artist's life dates) are set in smaller type;
+ * `html` is rich text (the extra measurement), each of its paragraphs its own row
+ */
+export type CatalogueLine = string | { text: string; small: true } | { html: string };
 
 export type CatalogueSection = {
     title: string;
@@ -52,6 +56,12 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
           ]).join(" ")
         : lot.acquisitionDate && `Acquired on ${formatDay(lot.acquisitionDate)}`;
     const authentication = lot.authenticateBy && compact([`Authenticated by ${lot.authenticateBy}`, formatDay(lot.authenticatedAt)]).join(", ");
+    // the size, then the extra measurement on the rows below it
+    const size = lotSizeParts(lot.dimension);
+    const sizeLines: CatalogueLine[] = [
+        ...compact([size?.size]),
+        ...(size?.extraMeasurement ? [{ html: size.extraMeasurement }] : []),
+    ];
 
 
     const sections: CatalogueSection[] = [
@@ -60,7 +70,7 @@ export function catalogueSections(lot: PublicLotDetail): CatalogueSection[] {
             defaultOpen: true,
             // artist, title, then the year on its own line (when the lot has one)
             // artist, title, medium and year on their own lines, then the size
-            paragraphs: [compact([lot.artistName, lot.title, lot.medium, lot.yearCreated]), compact([lotDimensions(lot)]), ...blocks(lot.catalogueNote)],
+            paragraphs: [compact([lot.artistName, lot.title, lot.medium, lot.yearCreated]), sizeLines, ...blocks(lot.catalogueNote)],
         },
         {
             title: "Provenance",

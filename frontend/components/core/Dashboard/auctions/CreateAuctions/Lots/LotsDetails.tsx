@@ -367,7 +367,7 @@ export default function LotsDetail({ lotIndex }: LotsDetailProps) {
                         )}
                     />
                     <p className="mt-1 text-xs text-slate-500">
-                        Shown after the size on the site: 22 × 30 in (56 × 76.5 cm) | your text
+                        Shown on the lines below the size on the site, each line of it on its own row. Leave an empty line to add a gap.
                     </p>
                 </div>
 

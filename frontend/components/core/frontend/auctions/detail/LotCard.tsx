@@ -53,7 +53,8 @@ function LotText({ lot }: { lot: PublicLot }) {
         <>
             <h3 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{lotHeading(lot)}</h3>
             {details && <p className={cn(EYEBROW, "mt-1")}>{details}</p>}
-            {dimensions && <p className={cn(EYEBROW, !details && "mt-1")}>{dimensions}</p>}
+            {/* the extra measurement is on its own row(s) below the size */}
+            {dimensions && <p className={cn(EYEBROW, "whitespace-pre-line", !details && "mt-1")}>{dimensions}</p>}
             <div className="mt-4 flex flex-col gap-1 border-t border-[#cecece] pt-3.25">
                 {estimate && <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">Estimate · {estimate}</p>}
                 {showBidLine && <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{bidLine}</p>}

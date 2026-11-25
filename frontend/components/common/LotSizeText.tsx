@@ -7,8 +7,12 @@ type LotSizeTextProps = {
 };
 
 /**
- * "22 × 30 in (56 × 76.5 cm) | <extra measurement>" — the extra measurement keeps its
- * rich-text formatting (bold, colour, links). Paragraphs run inline after the bar.
+ * The size, then the extra measurement below it with its rich-text formatting (bold, colour,
+ * links) — each paragraph its own row, an empty paragraph a blank row:
+ *
+ *   6.25 × 5 in (16 × 13 cm)
+ *   Framed: 10 × 8 in
+ *
  * Renders a <div>: don't put it inside a <p>.
  */
 export default function LotSizeText({ parts, className }: LotSizeTextProps) {
@@ -17,13 +21,10 @@ export default function LotSizeText({ parts, className }: LotSizeTextProps) {
 
     return (
         <div className={className}>
-            {size}
-            {size && extraMeasurement && " | "}
+            {size && <span className="block">{size}</span>}
             {extraMeasurement && (
-                <RichTextContent
-                    html={extraMeasurement}
-                    className="inline [&_p]:inline [&_p+p]:before:content-['_']"
-                />
+                // an empty paragraph keeps a line's height, so a blank line in the editor shows as a gap
+                <RichTextContent html={extraMeasurement} className="[&_p]:min-h-[1lh]" />
             )}
         </div>
     );

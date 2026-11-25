@@ -82,7 +82,8 @@ function ArtworkCard({ row, onOpen }: { row: ArtworkRow; onOpen: () => void }) {
     const price = priceLine(row)
     const estimate = formatEstimate(row)
     const details = [row.medium, row.year].filter(Boolean).join(" · ")
-    const dimensions = formatDimensions(row.dimensions)
+    // one truncated line here: the size's rows (size, extra measurement) side by side
+    const dimensions = formatDimensions(row.dimensions)?.replace(/\n/g, " · ")
 
     return (
         <button

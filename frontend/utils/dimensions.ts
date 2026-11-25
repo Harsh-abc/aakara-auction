@@ -1,5 +1,5 @@
 import type { DimensionUnit } from "@/lib/types/auction.types";
-import { htmlToPlainText, isEmptyHtml } from "@/utils/sanitizeHtml";
+import { htmlToLines, isEmptyHtml } from "@/utils/sanitizeHtml";
 
 // ============================================================
 // A lot's size is kept in two units, each set with its own unit
@@ -66,8 +66,9 @@ const formatSize = (primary: SizeSet | null | undefined, secondary: SizeSet | nu
 const extraHtml = (extra: string | null | undefined) => (isEmptyHtml(extra) ? null : extra!.trim());
 
 /**
- * One line of plain text, for cards and catalogue text.
- * An extra measurement is appended after a bar: "15.5 × 10.5 in (39.5 × 26.5 cm) | framed 20 × 15 in"
+ * Plain text, for cards and summaries. The extra measurement goes below the size, one row per
+ * line of it, joined with "\n" — render with `whitespace-pre-line`:
+ * "15.5 × 10.5 in (39.5 × 26.5 cm)\nFramed: 20 × 15 in"
  * Use sizeSetsParts + <LotSizeText> to show the extra measurement with its formatting.
  */
 export const formatSizeSets = (
@@ -75,9 +76,8 @@ export const formatSizeSets = (
     secondary: SizeSet | null | undefined,
     extra?: string | null
 ) => {
-    const size = formatSize(primary, secondary);
-    const more = htmlToPlainText(extraHtml(extra)) || null;
-    return size && more ? `${size} | ${more}` : size ?? more;
+    const lines = [formatSize(primary, secondary), ...htmlToLines(extraHtml(extra))].filter(Boolean);
+    return lines.length ? lines.join("\n") : null;
 };
 
 /** The size line and the extra measurement's HTML, kept apart so the HTML can be rendered */

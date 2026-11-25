@@ -99,7 +99,7 @@ function WonLotCard({ win }: { win: WonLot }) {
             <div className="mt-4 flex-1">
                 <h3 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{lotHeading(lot)}</h3>
                 {details && <p className={cn(EYEBROW, "mt-1")}>{details}</p>}
-                {dimensions && <p className={cn(EYEBROW, !details && "mt-1")}>{dimensions}</p>}
+                {dimensions && <p className={cn(EYEBROW, "whitespace-pre-line", !details && "mt-1")}>{dimensions}</p>}
                 <Link
                     href={`/auctions/${auction.uuid}`}
                     className="mt-2 block text-[12px] leading-[19.5px] text-[#717171] hover:text-[#0d0d0d] hover:underline"
