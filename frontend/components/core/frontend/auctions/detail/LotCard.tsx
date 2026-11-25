@@ -45,6 +45,9 @@ function LotText({ lot }: { lot: PublicLot }) {
     const details = lotDetails(lot);
     const dimensions = lotDimensions(lot);
     const estimate = lotEstimate(lot);
+    // Hide the "Starting bid · 0 bids" placeholder; keep current bid / sold / withdrawn / unsold lines
+    const bidLine = lotBidLine(lot);
+    const showBidLine = !bidLine.startsWith("Starting bid");
 
     return (
         <>
@@ -52,8 +55,8 @@ function LotText({ lot }: { lot: PublicLot }) {
             {details && <p className={cn(EYEBROW, "mt-1")}>{details}</p>}
             {dimensions && <p className={cn(EYEBROW, !details && "mt-1")}>{dimensions}</p>}
             <div className="mt-4 flex flex-col gap-1 border-t border-[#cecece] pt-3.25">
-                {estimate && <p className={EYEBROW}>Estimate · {estimate}</p>}
-                <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{lotBidLine(lot)}</p>
+                {estimate && <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">Estimate · {estimate}</p>}
+                {showBidLine && <p className="text-[14px] leading-5 font-medium text-[#0d0d0d]">{bidLine}</p>}
                 {lotSoldPrice(lot) && <p className="text-[11px] leading-4 text-[#717171] italic">*Price including buyer&apos;s premium</p>}
             </div>
         </>
