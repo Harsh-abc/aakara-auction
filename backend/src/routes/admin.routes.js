@@ -6,6 +6,7 @@ import { exportActivityLogs, getActivityLogs, getActivityLogSummary } from '../c
 import { getIpBlocks, unblockAllIps, unblockIp } from '../controllers/ipBlock.controller.js';
 import { getOtpLimits, resetAllOtpLimits, resetOtpLimit } from '../controllers/otpLimit.controller.js';
 import { getAdminAddedBidders } from '../controllers/auctionParticipant.controller.js';
+import { getNotificationSettings, updateNotificationSetting } from '../controllers/notificationSetting.controller.js';
 
 const adminRouter = Router();
 
@@ -43,5 +44,9 @@ adminRouter.delete('/ip-blocks/:ip', authenticate, requireRole('SUPER_ADMIN'), u
 adminRouter.get('/otp-limits', authenticate, requireRole('SUPER_ADMIN'), getOtpLimits)
 adminRouter.delete('/otp-limits', authenticate, requireRole('SUPER_ADMIN'), resetAllOtpLimits)
 adminRouter.delete('/otp-limits/:kind/:subject', authenticate, requireRole('SUPER_ADMIN'), resetOtpLimit)
+
+// NOTIFICATIONS — on / off switches for user emails and SMS (super admin only)
+adminRouter.get('/notification-settings', authenticate, requireRole('SUPER_ADMIN'), getNotificationSettings)
+adminRouter.patch('/notification-settings', authenticate, requireRole('SUPER_ADMIN'), updateNotificationSetting)
 
 export default adminRouter;

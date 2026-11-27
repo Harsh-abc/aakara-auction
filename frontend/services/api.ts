@@ -209,4 +209,6 @@ export const adminEndPoints = {
     OTP_LIMITS_API: `${BASE_URL}/api/admin/otp-limits`,
     OTP_LIMIT_API: (kind: string, subject: string) =>
         `${BASE_URL}/api/admin/otp-limits/${kind}/${encodeURIComponent(subject)}`,
+    // Settings → Notifications (super admin only): GET lists, PATCH { key, enabled } flips one switch
+    NOTIFICATION_SETTINGS_API: `${BASE_URL}/api/admin/notification-settings`,
 }

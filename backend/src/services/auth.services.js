@@ -24,6 +24,7 @@ import { clearMfaFailures, decryptSecret, encryptSecret, MFA_ISSUER, MFA_VALID_M
 import { generateTotpSecret, otpauthUrl, verifyTotp } from '../libs/totp.js'
 import { TERMS_OF_SALE_VERSION } from '../utils/termsOfSale.js'
 import { canSignIn } from '../libs/userStatus.js'
+import { isNotificationEnabled } from '../libs/notificationSettings.js'
 // OTP send limits (and their Redis keys) live in libs/otpLimits.js
 import {
     attemptsKey,
@@ -331,16 +332,21 @@ const sendRegistrationReceivedEmails = async (user, pending) => {
         registeredAt: user.createdAt,
     };
 
+    // the registrant's copy can be switched off in Settings → Notifications; the staff copy always goes
+    const userCopyOn = await isNotificationEnabled('REGISTRATION_RECEIVED', 'EMAIL');
+
     const results = await Promise.allSettled([
         sendEmail(REGISTRATION_ADMIN_TO, REGISTRATION_RECEIVED_SUBJECT, registrationAdminTemplate(adminMail), REGISTRATION_ADMIN_CC, {
             ...REGISTRATION_MAIL_OPTIONS,
             text: registrationAdminText(adminMail),
         }),
         // the registrant's copy goes to them alone (null = no MAILGUN_CC)
-        sendEmail(user.email, REGISTRATION_RECEIVED_SUBJECT, registrationReceivedTemplate(userMail), null, {
-            ...REGISTRATION_MAIL_OPTIONS,
-            text: registrationReceivedText(userMail),
-        }),
+        userCopyOn
+            ? sendEmail(user.email, REGISTRATION_RECEIVED_SUBJECT, registrationReceivedTemplate(userMail), null, {
+                ...REGISTRATION_MAIL_OPTIONS,
+                text: registrationReceivedText(userMail),
+            })
+            : Promise.resolve(null),
     ]);
 
     const [adminResult, userResult] = results;

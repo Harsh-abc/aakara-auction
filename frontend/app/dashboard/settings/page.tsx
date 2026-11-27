@@ -7,6 +7,7 @@ import {
     ArrowRightIcon,
     BadgeCheckIcon,
     BanIcon,
+    BellIcon,
     CalendarIcon,
     CircleAlertIcon,
     GlobeIcon,
@@ -74,6 +75,12 @@ const SETTINGS_LINKS = [
         description: "Emails and phone numbers that hit the sign-up OTP limit — reset them here.",
         href: "/dashboard/settings/otp-limits",
         icon: MessageSquareWarningIcon,
+    },
+    {
+        title: "Notifications",
+        description: "Pause or resume the emails and SMS users get for proxy bids, lots won and registration.",
+        href: "/dashboard/settings/notifications",
+        icon: BellIcon,
     },
     {
         title: "Roles & Permissions",

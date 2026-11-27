@@ -138,6 +138,12 @@ const ROUTES = [
     route("DELETE", "/api/admin/otp-limits/:kind/:subject", "AUTH", "OTP_LIMIT_RESET", "Reset an OTP limit", {
         describe: ({ params }) => `Reset the ${params.kind ?? "?"} OTP limit for ${decodeURIComponent(params.subject ?? "?")}`,
     }),
+    route("GET", "/api/admin/notification-settings", "NOTIFICATION", "NOTIFICATION_SETTINGS_VIEW", "Viewed the notification settings", { view: true }),
+    route("PATCH", "/api/admin/notification-settings", "NOTIFICATION", "NOTIFICATION_SETTING_CHANGE", "Changed a notification setting", {
+        // the response message reads e.g. "Lot won (SMS) paused"
+        describe: ({ ok, body, response }) =>
+            ok && response?.message ? response.message : `Tried to turn ${body.key ?? "?"} ${body.enabled ? "on" : "off"}`,
+    }),
 
     route("GET", "/api/users/:uuid", "USER", "USER_PROFILE_VIEW", "Viewed a user's profile and KYC documents", {
         target: USER,

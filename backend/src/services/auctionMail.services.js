@@ -1,3 +1,4 @@
+import { isNotificationEnabled } from "../libs/notificationSettings.js";
 import prisma from "../libs/prisma.js";
 import { emitTo, rooms } from "../libs/socket.js";
 import sendEmail from "../mail/sendMail.js";
@@ -100,8 +101,13 @@ export const notifyLotWinner = async (lotUuid) => {
 
         // "You have won Lot N … Rs. X" SMS — the template is in rupees, so INR lots only.
         // Same amount as the email: hammer price + buyer's premium. Not awaited; a failure is logged.
+        // either one can be switched off in Settings → Notifications
+        const [smsOn, emailOn] = await Promise.all([
+            isNotificationEnabled("LOT_WON", "SMS"),
+            isNotificationEnabled("LOT_WON", "EMAIL"),
+        ]);
         const buyer = winner.winner;
-        if (buyer?.phone && buyer.phoneVerified) {
+        if (smsOn && buyer?.phone && buyer.phoneVerified) {
             if (currency?.code && currency.code !== "INR") {
                 console.info(`[sms] lot ${lotUuid} sold in ${currency.code} — skipped the lot-won SMS (template is in Rs.)`);
             } else {
@@ -114,7 +120,7 @@ export const notifyLotWinner = async (lotUuid) => {
             }
         }
 
-        if (!winner.winner?.email) return;
+        if (!emailOn || !winner.winner?.email) return;
         const auctionDate = formatDate(auction.startTime);
         const mail = {
             userName: personName(winner.winner),
@@ -142,6 +148,13 @@ export const notifyLotWinner = async (lotUuid) => {
  */
 export const sendProxyBidSetEmail = async ({ lotUuid, userId, maxAmount, setAt }) => {
     try {
+        // either one can be switched off in Settings → Notifications
+        const [smsOn, emailOn] = await Promise.all([
+            isNotificationEnabled("PROXY_BID_SET", "SMS"),
+            isNotificationEnabled("PROXY_BID_SET", "EMAIL"),
+        ]);
+        if (!smsOn && !emailOn) return;
+
         const [lot, user] = await Promise.all([
             prisma.auctionItem.findUnique({
                 where: { uuid: lotUuid },
@@ -167,12 +180,12 @@ export const sendProxyBidSetEmail = async ({ lotUuid, userId, maxAmount, setAt }
         if (!lot || !user) return;
 
         // the SMS doesn't wait for the email, and neither one's failure stops the other
-        if (user.phone && user.phoneVerified) {
+        if (smsOn && user.phone && user.phoneVerified) {
             sendProxyBidSetSms({ phone: user.phone, name: personName(user), lotNumber: String(lot.itemNumber) }).catch(
                 (error) => console.error(`Proxy bid SMS for lot ${lotUuid}, user ${userId} failed:`, error?.message)
             );
         }
-        if (!user.email) return;
+        if (!emailOn || !user.email) return;
 
         // the bidder ID is their paddle number for this sale
         const participant = await prisma.auctionParticipant.findUnique({

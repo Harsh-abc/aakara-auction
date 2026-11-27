@@ -1084,6 +1084,19 @@ model HomeBanner {
   @@map("home_banners")
 }
 
+// Settings → Notifications: on / off switches for the emails and SMS sent to users.
+// key = a whole channel ("EMAIL", "SMS") or one notification on one channel
+// ("PROXY_BID_SET:SMS"). No row = on. The catalogue is in src/libs/notificationSettings.js.
+model NotificationSetting {
+  key           String   @id @db.VarChar(60)
+  enabled       Boolean  @default(true)
+  /// who last switched it, copied in so it still reads right after a rename
+  updatedByName String?  @db.VarChar(160)
+  updatedAt     DateTime @updatedAt
+
+  @@map("notification_settings")
+}
+
 // audit trail of who did what, from where — written by src/middleware/activityLogger.js
 // (every API change, sign-ins, key views) and by the scheduler; read by super admins only.
 // The actor's name / email / role are copied in, so a row still reads right after the

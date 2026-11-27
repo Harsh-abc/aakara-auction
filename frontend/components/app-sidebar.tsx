@@ -291,6 +291,7 @@ const data = {
         { title: "Activity Logs", url: "/dashboard/settings/activity-logs" },
         { title: "Blocked IPs", url: "/dashboard/settings/blocked-ips" },
         { title: "OTP Limits", url: "/dashboard/settings/otp-limits" },
+        { title: "Notifications", url: "/dashboard/settings/notifications" },
         // { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
       ],
     },

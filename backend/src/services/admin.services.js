@@ -6,6 +6,7 @@ import { applyLotsVerified } from './lotBidder.services.js';
 import { blockUserAccess, revokeUserTokens, unblockUserAccess } from '../libs/accountBlock.js';
 import { disconnectUser } from '../libs/socket.js';
 import sendEmail from '../mail/sendMail.js';
+import { isNotificationEnabled } from '../libs/notificationSettings.js';
 import { AUCTION_EMAIL, REGISTRATION_INLINE_IMAGES } from '../mail/templates/registrationReceived.js';
 import {
     REGISTRATION_APPROVED_SUBJECT,
@@ -375,6 +376,8 @@ export const createUserByAdminService = async (
 // Logs instead of throwing: the role change is already saved
 const sendRegistrationApprovedEmail = async (user) => {
     try {
+        // can be switched off in Settings → Notifications
+        if (!(await isNotificationEnabled("REGISTRATION_APPROVED", "EMAIL"))) return;
         const mail = { userName: personName(user), siteUrl: process.env.FRONTEND_URL };
         // to the user alone (null = no MAILGUN_CC)
         await sendEmail(user.email, REGISTRATION_APPROVED_SUBJECT, registrationApprovedTemplate(mail), null, {
