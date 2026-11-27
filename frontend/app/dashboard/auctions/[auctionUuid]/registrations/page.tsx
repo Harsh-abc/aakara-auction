@@ -728,6 +728,106 @@ const Legend = ({ status, label }: { status: LotBidderStatus | null; label: stri
     </span>
 );
 
+/** How many lot chips a cell shows before "+N more" — keeps rows short with 100+ lots */
+const MAX_CHIPS = 6;
+
+const LotChip = ({
+    lot,
+    status,
+    auctionUuid,
+}: {
+    lot: ParticipantLot;
+    status: LotBidderStatus | undefined;
+    auctionUuid: string;
+}) => (
+    <Link
+        href={`/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/bidders`}
+        title={`Lot ${lot.itemNumber}: ${lot.title} — ${
+            status === "VERIFIED" ? "verified" : status === "PENDING" ? "awaiting verification" : "not registered"
+        }`}
+        className={cn(
+            "rounded border px-1.5 py-0.5 text-[10px] font-medium tabular-nums hover:opacity-80",
+            LOT_CHIP_STYLES[status ?? "NONE"]
+        )}
+    >
+        {lot.itemNumber}
+    </Link>
+);
+
+const LotsCell = ({
+    lots,
+    byLot,
+    verified,
+    auctionUuid,
+}: {
+    lots: ParticipantLot[];
+    byLot: Map<string, LotBidderStatus>;
+    verified: number;
+    auctionUuid: string;
+}) => {
+    const [expanded, setExpanded] = useState(false);
+
+    if (lots.length === 0) return <span className="text-[11px] text-slate-400">No lots</span>;
+
+    const pct = Math.round((verified / lots.length) * 100);
+    const notVerified = lots.filter((lot) => byLot.get(lot.uuid) !== "VERIFIED");
+    const shownIssues = notVerified.slice(0, MAX_CHIPS);
+
+    return (
+        <div className="w-52">
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className={verified === lots.length ? "text-emerald-700" : "text-slate-600"}>
+                    {verified === lots.length ? "Verified on all" : "Verified on"}{" "}
+                    <span className="font-medium tabular-nums">
+                        {verified}/{lots.length}
+                    </span>
+                </span>
+                <button
+                    type="button"
+                    onClick={() => setExpanded((v) => !v)}
+                    className="cursor-pointer text-[11px] text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline"
+                    aria-expanded={expanded}
+                >
+                    {expanded ? "Hide lots" : "All lots"}
+                </button>
+            </div>
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-100">
+                <div
+                    className={cn("h-full rounded-full", verified === lots.length ? "bg-emerald-500" : "bg-amber-400")}
+                    style={{ width: `${pct}%` }}
+                />
+            </div>
+
+            {expanded ? (
+                <div className="mt-1.5 flex max-h-28 flex-wrap gap-1 overflow-y-auto pr-1">
+                    {lots.map((lot) => (
+                        <LotChip key={lot.uuid} lot={lot} status={byLot.get(lot.uuid)} auctionUuid={auctionUuid} />
+                    ))}
+                </div>
+            ) : (
+                notVerified.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        <span className="text-[10px] text-amber-600">Not verified:</span>
+                        {shownIssues.map((lot) => (
+                            <LotChip key={lot.uuid} lot={lot} status={byLot.get(lot.uuid)} auctionUuid={auctionUuid} />
+                        ))}
+                        {notVerified.length > shownIssues.length && (
+                            <button
+                                type="button"
+                                onClick={() => setExpanded(true)}
+                                className="cursor-pointer text-[10px] text-slate-500 hover:text-slate-800"
+                                title={notVerified.slice(MAX_CHIPS).map((lot) => `Lot ${lot.itemNumber}`).join(", ")}
+                            >
+                                +{notVerified.length - shownIssues.length} more
+                            </button>
+                        )}
+                    </div>
+                )
+            )}
+        </div>
+    );
+};
+
 /** Lots of the auction, in order, that a phone bidder picked (verified lots only) */
 const phoneLotsOf = (participant: AuctionParticipant, lots: ParticipantLot[]) => {
     const picked = new Set(participant.lots.filter((l) => l.phoneInterest).map((l) => l.lotUuid));
@@ -756,8 +856,8 @@ const PhoneLotsCell = ({
             {picked.length === 0 ? (
                 <span className="text-[11px] text-slate-400">No lots picked</span>
             ) : (
-                <div className="flex max-w-56 flex-wrap gap-1">
-                    {picked.map((lot) => (
+                <div className="flex max-w-44 flex-wrap items-center gap-1">
+                    {picked.slice(0, MAX_CHIPS).map((lot) => (
                         <span
                             key={lot.uuid}
                             title={`Lot ${lot.itemNumber}: ${lot.title}`}
@@ -767,6 +867,14 @@ const PhoneLotsCell = ({
                             {lot.itemNumber}
                         </span>
                     ))}
+                    {picked.length > MAX_CHIPS && (
+                        <span
+                            className="text-[10px] text-purple-700"
+                            title={picked.slice(MAX_CHIPS).map((lot) => `Lot ${lot.itemNumber}`).join(", ")}
+                        >
+                            +{picked.length - MAX_CHIPS} more
+                        </span>
+                    )}
                 </div>
             )}
             {canManage &&
@@ -1006,37 +1114,9 @@ const ParticipantRow = ({
                 )}
             </TableCell>
 
-            {/* Per-lot status */}
+            {/* Per-lot status: a summary plus the lots that aren't verified; every lot on demand */}
             <TableCell className="px-3">
-                <div className="flex max-w-md flex-wrap gap-1">
-                    {lots.length === 0 ? (
-                        <span className="text-[11px] text-slate-400">No lots</span>
-                    ) : (
-                        lots.map((lot) => {
-                            const status = byLot.get(lot.uuid);
-                            return (
-                                <Link
-                                    key={lot.uuid}
-                                    href={`/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/bidders`}
-                                    title={`Lot ${lot.itemNumber}: ${lot.title} — ${
-                                        status === "VERIFIED" ? "verified" : status === "PENDING" ? "awaiting verification" : "not registered"
-                                    }`}
-                                    className={cn(
-                                        "rounded border px-1.5 py-0.5 text-[10px] font-medium hover:opacity-80",
-                                        LOT_CHIP_STYLES[status ?? "NONE"]
-                                    )}
-                                >
-                                    {lot.itemNumber}
-                                </Link>
-                            );
-                        })
-                    )}
-                </div>
-                {lots.length > 0 && (
-                    <p className="mt-1 text-[11px] text-slate-400">
-                        Verified on {verified} of {lots.length} lot{lots.length === 1 ? "" : "s"}
-                    </p>
-                )}
+                <LotsCell lots={lots} byLot={byLot} verified={verified} auctionUuid={auctionUuid} />
             </TableCell>
 
             {/* Phone bidders: the verified lots they want to bid on over the phone */}
