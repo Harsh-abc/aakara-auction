@@ -117,7 +117,9 @@ export const changePasswordSchema = z
 export const createUserSchema = z.object({
     fullName: z.string().trim().min(1, "Full name is required").max(100, "Full name too long"),
     email: z.string().trim().toLowerCase().email("Invalid email"),
-    phone: z.string().trim().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number"),
+    // E.164 from the dashboard's country picker (every country) — same rule as sign-up; some
+    // countries' full numbers are only 7–9 digits (e.g. +677 Solomon Islands)
+    phone: z.string().trim().regex(/^\+?[0-9]{7,15}$/, "Invalid phone number"),
     password: z
         .string()
         .min(8, "Password must be at least 8 characters")

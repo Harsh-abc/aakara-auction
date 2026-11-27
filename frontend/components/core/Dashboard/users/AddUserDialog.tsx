@@ -30,12 +30,9 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { createUser } from "@/services/operations/user.api";
 import type { CreateUserPayload } from "@/lib/types/user.types";
 import type { RoleName } from "@/lib/constants/roles";
-
-const countryCodes = [
-    { label: "India", value: "+91" },
-    { label: "United States", value: "+1" },
-    { label: "United Kingdom", value: "+44" },
-];
+// every country, same list and phone check as the storefront sign-up form
+import { COUNTRY_CODES, DEFAULT_COUNTRY, countryNameOf, dialCodeOf, isPhoneCountry, toE164 } from "@/lib/constants/countryCodes";
+import type { CountryCode } from "libphonenumber-js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -155,7 +152,8 @@ export default function AddUserDialog({
     const creatingUser = onCreate ? Boolean(busy) : userSliceCreating;
 
     const [open, setOpen] = useState(false);
-    const [countryCode, setCountryCode] = useState("+91");
+    // the phone number's country (ISO code — several countries share a dialling code, e.g. +1)
+    const [phoneCountry, setPhoneCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
     const [formData, setFormData] = useState(initialForm);
     const [role, setRole] = useState<RoleName | "">("");
 
@@ -168,7 +166,7 @@ export default function AddUserDialog({
         setOpen(next);
         if (!next) {
             setFormData(initialForm);
-            setCountryCode("+91");
+            setPhoneCountry(DEFAULT_COUNTRY);
             setRole("");
         }
     };
@@ -178,7 +176,8 @@ export default function AddUserDialog({
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const phoneNumber = formData.phone.replace(/\D/g, "");
+        // valid for the chosen country (lengths differ by country), in E.164: +447911123456
+        const phone = toE164(formData.phone, phoneCountry);
 
         if (!formData.fullName.trim()) {
             toast.error("Please enter the full name");
@@ -188,8 +187,8 @@ export default function AddUserDialog({
             toast.error("Please enter a valid email address");
             return;
         }
-        if (phoneNumber.length !== 10) {
-            toast.error("Please enter a valid 10-digit phone number");
+        if (!phone) {
+            toast.error(`Please enter a valid ${countryNameOf(phoneCountry)} phone number`);
             return;
         }
         if (formData.password.length < 8) {
@@ -209,7 +208,7 @@ export default function AddUserDialog({
         const payload: CreateUserPayload = {
             fullName: formData.fullName.trim(),
             email: formData.email.trim(),
-            phone: `${countryCode}${phoneNumber}`,
+            phone,
             password: formData.password,
             ...(roleOptions && role ? { roleName: role } : {}),
         };
@@ -259,17 +258,22 @@ export default function AddUserDialog({
 
                         <div className="flex items-center gap-2">
                             <Select
-                                value={countryCode}
-                                onValueChange={(value) => value !== null && setCountryCode(value)}
+                                value={phoneCountry}
+                                onValueChange={(value) => value && isPhoneCountry(value) && setPhoneCountry(value)}
                             >
-                                <SelectTrigger className="h-11! w-20 bg-white" aria-label="Country code">
-                                    <SelectValue>{countryCode}</SelectValue>
+                                <SelectTrigger
+                                    className="h-11! w-24 shrink-0 bg-white"
+                                    aria-label={`Country code: ${countryNameOf(phoneCountry)} ${dialCodeOf(phoneCountry)}`}
+                                    title={countryNameOf(phoneCountry)}
+                                >
+                                    {/* the box shows just the code; the list has every country by name */}
+                                    <SelectValue>{dialCodeOf(phoneCountry)}</SelectValue>
                                 </SelectTrigger>
-                                <SelectContent className="bg-white">
+                                <SelectContent className="max-h-72 bg-white">
                                     <SelectGroup>
-                                        {countryCodes.map((item) => (
-                                            <SelectItem key={item.value} value={item.value}>
-                                                {item.value} {item.label}
+                                        {COUNTRY_CODES.map((item) => (
+                                            <SelectItem key={item.country} value={item.country}>
+                                                {item.name} ({item.dialCode})
                                             </SelectItem>
                                         ))}
                                     </SelectGroup>
