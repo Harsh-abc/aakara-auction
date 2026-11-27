@@ -84,7 +84,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
     const { auction, lot, lots } = state.data;
     const countdown = saleCountdown(auction);
     const saleStatus = (STOREFRONT_STATUS_LABELS[auction.status] ?? auction.status).toLowerCase();
-    const subline = [lotRange(lots), auction.auctioneer].filter(Boolean).join(" · ");
+    const subline = lotRange(lots);
     const liveLot = lots.find((item) => item.status === "ACTIVE") ?? null;
     const showCallout = callout !== null && callout.lotUuid === lot.uuid;
 
