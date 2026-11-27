@@ -677,6 +677,9 @@ model LotBidder {
   registeredAt DateTime        @default(now())
   verifiedAt   DateTime?
   verifiedBy   BigInt?
+  // phone bidders (User.phoneBidderAt): the lots they want to bid on over the phone, picked on
+  // Manage Bidders once they're verified for the lot. Null = not interested
+  phoneInterestAt DateTime?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   item         AuctionItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)

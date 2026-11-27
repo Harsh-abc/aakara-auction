@@ -9,6 +9,7 @@ import {
     registerForAuctionService,
     removeAuctionParticipantsService,
     setParticipantsVerifiedService,
+    setPhoneInterestService,
 } from "../services/auctionParticipant.services.js";
 import { getClientIp } from "../utils/clientIp.js";
 import { createUserSchema } from "../validations/user.validation.js";
@@ -18,6 +19,8 @@ import {
     getAuctionParticipantsQuerySchema,
     participantCandidatesQuerySchema,
     participantUserUuidsSchema,
+    phoneInterestBodySchema,
+    phoneInterestParamsSchema,
     registerForAuctionBodySchema,
     verifyLotBiddersSchema,
 } from "../validations/auction.validation.js";
@@ -166,6 +169,30 @@ export const verifyAuctionParticipants = async (req, res) => {
         });
     } catch (error) {
         return handleError(res, error, "Verify auction participants", "Failed to update registrations");
+    }
+};
+
+// -----------------------------------------------------------------
+// PUT /api/auction/:auctionUuid/participants/:userUuid/phone-lots   (SUPER_ADMIN)
+// Body: { lotUuids: string[] } — the lots a phone bidder wants to bid on
+// over the phone (verified lots only); replaces their current pick
+// -----------------------------------------------------------------
+
+export const setPhoneInterest = async (req, res) => {
+    try {
+        const { auctionUuid, userUuid } = phoneInterestParamsSchema.parse(req.params);
+        const { lotUuids } = phoneInterestBodySchema.parse(req.body);
+
+        const result = await setPhoneInterestService({ auctionUuid, userUuid, lotUuids });
+        const n = result.lotUuids.length;
+
+        return res.status(200).json({
+            success: true,
+            message: n === 0 ? "Phone lots cleared" : `Interested in ${n} lot${n === 1 ? "" : "s"} over the phone`,
+            data: result,
+        });
+    } catch (error) {
+        return handleError(res, error, "Set phone interest", "Failed to save phone lots");
     }
 };
 

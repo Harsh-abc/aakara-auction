@@ -266,6 +266,10 @@ const ROUTES = [
         target: AUCTION,
         describe: ({ body }) => `${body.verified ? "Approved" : "Unapproved"} ${count(body.userUuids, "registration")}`,
     }),
+    route("PUT", "/api/auction/:auctionUuid/participants/:userUuid/phone-lots", "REGISTRATION", "PARTICIPANT_PHONE_LOTS", "Set a phone bidder's lots", {
+        target: AUCTION,
+        describe: ({ body }) => `Set ${count(body.lotUuids, "phone lot")} for a phone bidder`,
+    }),
     route("DELETE", "/api/auction/:auctionUuid/participants", "REGISTRATION", "PARTICIPANTS_REMOVE", "Removed registrations", {
         target: AUCTION,
         describe: ({ body }) => `Removed ${count(body.userUuids, "registration")} from the auction`,

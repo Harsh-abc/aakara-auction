@@ -59,6 +59,8 @@ export const auctionEndPoints = {
     ADD_NEW_PARTICIPANT_API: (auctionUuid: string) => `${BASE_URL}/api/auction/${auctionUuid}/participants/new`,
     VERIFY_PARTICIPANTS_API: (auctionUuid: string) =>
         `${BASE_URL}/api/auction/${auctionUuid}/participants/verify`,
+    PARTICIPANT_PHONE_LOTS_API: (auctionUuid: string, userUuid: string) =>
+        `${BASE_URL}/api/auction/${auctionUuid}/participants/${userUuid}/phone-lots`,
 };
 
 // storefront — no login needed, except to register

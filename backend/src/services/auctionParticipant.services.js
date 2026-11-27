@@ -306,6 +306,8 @@ const PARTICIPANT_FILTERS = {
     }),
     self: () => ({ source: "SELF_REGISTERED" }),
     admin: () => ({ source: "ADDED_BY_ADMIN" }),
+    // marked "Phone bidder" on their user page
+    phone: () => ({ user: { phoneBidderAt: { not: null } } }),
 };
 
 export const getAuctionParticipantsService = async ({ auctionUuid, page, limit, search, filter }) => {
@@ -322,7 +324,7 @@ export const getAuctionParticipantsService = async ({ auctionUuid, page, limit, 
         ],
     };
 
-    const [lots, lotCounts, total, participants, totalCount, selfCount, adminCount, awaitingCount] = await Promise.all([
+    const [lots, lotCounts, total, participants, totalCount, selfCount, adminCount, awaitingCount, phoneCount] = await Promise.all([
         prisma.auctionItem.findMany({
             where: { auctionId },
             select: {
@@ -365,9 +367,10 @@ export const getAuctionParticipantsService = async ({ auctionUuid, page, limit, 
                 user: {
                     select: {
                         ...USER_SELECT,
+                        phoneBidderAt: true,
                         lotBidders: {
                             where: { item: { auctionId } },
-                            select: { itemId: true, status: true },
+                            select: { itemId: true, status: true, phoneInterestAt: true },
                         },
                     },
                 },
@@ -380,6 +383,7 @@ export const getAuctionParticipantsService = async ({ auctionUuid, page, limit, 
         prisma.auctionParticipant.count({ where: { ...base, source: "SELF_REGISTERED" } }),
         prisma.auctionParticipant.count({ where: { ...base, source: "ADDED_BY_ADMIN" } }),
         prisma.auctionParticipant.count({ where: { AND: [base, PARTICIPANT_FILTERS.awaiting(auctionId)] } }),
+        prisma.auctionParticipant.count({ where: { AND: [base, PARTICIPANT_FILTERS.phone()] } }),
     ]);
 
     const lotUuidById = new Map(lots.map((lot) => [lot.id, lot.uuid]));
@@ -400,16 +404,74 @@ export const getAuctionParticipantsService = async ({ auctionUuid, page, limit, 
                 bidders: { registered: verified + pending, verified, pending },
             };
         }),
-        participants: participants.map(({ user: { lotBidders, ...user }, approver, ...participant }) => ({
+        participants: participants.map(({ user: { lotBidders, phoneBidderAt, ...user }, approver, ...participant }) => ({
             ...toUserSummary(user),
             ...participant,
             approvedBy: approver?.username ?? null,
-            // only lots the user has a row on; missing lot = not registered for it
-            lots: lotBidders.map((row) => ({ lotUuid: lotUuidById.get(row.itemId), status: row.status })),
+            isPhoneBidder: phoneBidderAt !== null,
+            // only lots the user has a row on; missing lot = not registered for it. phoneInterest only
+            // counts while they're a phone bidder and verified for the lot
+            lots: lotBidders.map((row) => ({
+                lotUuid: lotUuidById.get(row.itemId),
+                status: row.status,
+                phoneInterest: phoneBidderAt !== null && row.status === "VERIFIED" && row.phoneInterestAt !== null,
+            })),
         })),
-        summary: { total: totalCount, selfRegistered: selfCount, addedByAdmin: adminCount, awaiting: awaitingCount },
+        summary: {
+            total: totalCount,
+            selfRegistered: selfCount,
+            addedByAdmin: adminCount,
+            awaiting: awaitingCount,
+            phoneBidders: phoneCount,
+        },
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
+};
+
+// =====================================================================
+// PHONE BIDDER LOT INTEREST (SUPER_ADMIN)
+// The lots a phone bidder wants to bid on over the phone. Only lots they're
+// verified for can be picked; the list replaces their current pick.
+// =====================================================================
+
+export const setPhoneInterestService = async ({ auctionUuid, userUuid, lotUuids }) => {
+    const auction = await findAuction(auctionUuid);
+    assertEditable(auction);
+
+    const participant = await prisma.auctionParticipant.findFirst({
+        where: { auctionId: auction.id, user: { uuid: userUuid, deletedAt: null } },
+        select: { userId: true, user: { select: { phoneBidderAt: true } } },
+    });
+    if (!participant) throw httpError("This user isn't registered for the auction", 404);
+    if (!participant.user.phoneBidderAt) {
+        throw httpError("Only phone bidders can have phone lots. Mark them as a phone bidder on their user page first.");
+    }
+
+    const wanted = [...new Set(lotUuids)];
+    const rows = await prisma.lotBidder.findMany({
+        where: { userId: participant.userId, item: { auctionId: auction.id } },
+        select: { id: true, status: true, phoneInterestAt: true, item: { select: { uuid: true, itemNumber: true } } },
+    });
+    const byLot = new Map(rows.map((row) => [row.item.uuid, row]));
+
+    const missing = wanted.filter((uuid) => !byLot.has(uuid));
+    if (missing.length > 0) throw httpError(`${plural(missing.length, "lot")} isn't part of this auction or they aren't registered for it`);
+    const unverified = wanted.map((uuid) => byLot.get(uuid)).filter((row) => row.status !== "VERIFIED");
+    if (unverified.length > 0) {
+        const numbers = unverified.map((row) => row.item.itemNumber).join(", ");
+        throw httpError(`Verify them for lot ${numbers} before marking it as a phone lot`);
+    }
+
+    const wantedSet = new Set(wanted);
+    const toAdd = rows.filter((row) => wantedSet.has(row.item.uuid) && !row.phoneInterestAt).map((row) => row.id);
+    const toClear = rows.filter((row) => !wantedSet.has(row.item.uuid) && row.phoneInterestAt).map((row) => row.id);
+
+    await prisma.$transaction([
+        prisma.lotBidder.updateMany({ where: { id: { in: toAdd } }, data: { phoneInterestAt: new Date() } }),
+        prisma.lotBidder.updateMany({ where: { id: { in: toClear } }, data: { phoneInterestAt: null } }),
+    ]);
+
+    return { auctionUuid, userUuid, lotUuids: wanted, added: toAdd.length, removed: toClear.length };
 };
 
 // =====================================================================

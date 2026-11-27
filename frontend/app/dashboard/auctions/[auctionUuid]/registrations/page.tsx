@@ -12,6 +12,8 @@ import {
     ChevronRight,
     ImageOff,
     Loader2,
+    Phone,
+    PhoneCall,
     RefreshCw,
     Search,
     ShieldAlert,
@@ -29,6 +31,14 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -50,6 +60,7 @@ import {
     addNewAuctionParticipant,
     getAuctionParticipants,
     removeAuctionParticipants,
+    setPhoneInterest,
     verifyAuctionParticipants,
 } from "@/services/operations/auctionParticipant.api";
 
@@ -63,6 +74,7 @@ const FILTERS: { value: ParticipantFilter; label: string }[] = [
     { value: "awaiting", label: "Awaiting verification" },
     { value: "self", label: "Self-registered" },
     { value: "admin", label: "Added by admin" },
+    { value: "phone", label: "Phone bidders" },
 ];
 
 const dateFmt = new Intl.DateTimeFormat("en-IN", {
@@ -122,6 +134,9 @@ export default function AuctionRegistrationsPage() {
     const [page, setPage] = useState(1);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [confirmRemove, setConfirmRemove] = useState<string[] | null>(null);
+    // phone bidder whose phone lots are being picked
+    const [pickingPhoneLots, setPickingPhoneLots] = useState<AuctionParticipant | null>(null);
+    const [savingPhoneLots, setSavingPhoneLots] = useState(false);
 
     // Debounce typing -> search, and go back to page 1
     useEffect(() => {
@@ -177,6 +192,19 @@ export default function AuctionRegistrationsPage() {
         changeQuery({});
         load();
         return res;
+    };
+
+    const savePhoneLots = async (userUuid: string, lotUuids: string[]) => {
+        setSavingPhoneLots(true);
+        try {
+            const res = await dispatch(setPhoneInterest({ auctionUuid, userUuid, lotUuids })).unwrap();
+            toast.success(res.message);
+            setPickingPhoneLots(null);
+        } catch (err) {
+            toast.error(typeof err === "string" ? err : "Could not save the phone lots. Try again.");
+        } finally {
+            setSavingPhoneLots(false);
+        }
     };
 
     const remove = async (userUuids: string[]) => {
@@ -264,11 +292,12 @@ export default function AuctionRegistrationsPage() {
             <AuctionOverview auction={current} lotCount={lots.length} />
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <StatCard label="Registered" value={summary?.total} />
                 <StatCard label="Self-registered" value={summary?.selfRegistered} />
                 <StatCard label="Added by admin" value={summary?.addedByAdmin} />
                 <StatCard label="Awaiting verification" value={summary?.awaiting} tone="amber" />
+                <StatCard label="Phone bidders" value={summary?.phoneBidders} tone="purple" />
             </div>
 
             {isSuperAdmin && !auctionOpen && (
@@ -384,7 +413,7 @@ export default function AuctionRegistrationsPage() {
                                     />
                                 </TableHead>
                             )}
-                            {["Paddle", "User", "KYC", "Registered", "Terms", "Lots", ...(canManage ? [""] : [])].map((h, i) => (
+                            {["Paddle", "User", "KYC", "Registered", "Terms", "Lots", "Phone lots", ...(canManage ? [""] : [])].map((h, i) => (
                                 <TableHead key={i} className="h-9 px-3 text-[11px] font-medium whitespace-nowrap text-slate-700">
                                     {h}
                                 </TableHead>
@@ -395,14 +424,14 @@ export default function AuctionRegistrationsPage() {
                     <TableBody>
                         {loading && participants.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-40 text-center text-sm text-slate-500">
+                                <TableCell colSpan={9} className="h-40 text-center text-sm text-slate-500">
                                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                                     Loading registrations...
                                 </TableCell>
                             </TableRow>
                         ) : participants.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-40 text-center text-sm text-slate-500">
+                                <TableCell colSpan={9} className="h-40 text-center text-sm text-slate-500">
                                     {search || filter !== "all"
                                         ? "No registrations match your search."
                                         : "No one has registered for this auction yet."}
@@ -420,6 +449,7 @@ export default function AuctionRegistrationsPage() {
                                     busy={updating.has(participant.uuid)}
                                     onSelect={(checked) => toggleOne(participant.uuid, checked)}
                                     onVerify={(verified) => setVerified([participant.uuid], verified)}
+                                    onPickPhoneLots={() => setPickingPhoneLots(participant)}
                                 />
                             ))
                         )}
@@ -464,6 +494,14 @@ export default function AuctionRegistrationsPage() {
                     </div>
                 )}
             </div>
+
+            <PhoneLotsDialog
+                participant={pickingPhoneLots}
+                lots={lots}
+                saving={savingPhoneLots}
+                onClose={() => !savingPhoneLots && setPickingPhoneLots(null)}
+                onSave={(lotUuids) => pickingPhoneLots && savePhoneLots(pickingPhoneLots.uuid, lotUuids)}
+            />
 
             <AlertDialog
                 open={confirmRemove !== null}
@@ -512,10 +550,12 @@ const BackLink = ({ auctionUuid, label = "Back to auction" }: { auctionUuid: str
     </Link>
 );
 
-const StatCard = ({ label, value, tone = "slate" }: { label: string; value?: number; tone?: "slate" | "amber" }) => (
+const STAT_TONE = { slate: "text-slate-800", amber: "text-amber-600", purple: "text-purple-700" };
+
+const StatCard = ({ label, value, tone = "slate" }: { label: string; value?: number; tone?: keyof typeof STAT_TONE }) => (
     <div className="rounded-[8px] border border-slate-200 bg-white px-5 py-4">
         <p className="text-[12px] text-slate-500">{label}</p>
-        <p className={cn("mt-1 text-2xl font-bold", tone === "amber" ? "text-amber-600" : "text-slate-800")}>
+        <p className={cn("mt-1 text-2xl font-bold", STAT_TONE[tone])}>
             {value ?? "—"}
         </p>
     </div>
@@ -637,6 +677,173 @@ const Legend = ({ status, label }: { status: LotBidderStatus | null; label: stri
     </span>
 );
 
+/** Lots of the auction, in order, that a phone bidder picked (verified lots only) */
+const phoneLotsOf = (participant: AuctionParticipant, lots: ParticipantLot[]) => {
+    const picked = new Set(participant.lots.filter((l) => l.phoneInterest).map((l) => l.lotUuid));
+    return lots.filter((lot) => picked.has(lot.uuid));
+};
+
+const PhoneLotsCell = ({
+    participant,
+    lots,
+    verifiedCount,
+    canManage,
+    onPick,
+}: {
+    participant: AuctionParticipant;
+    lots: ParticipantLot[];
+    verifiedCount: number;
+    canManage: boolean;
+    onPick: () => void;
+}) => {
+    if (!participant.isPhoneBidder) return <span className="text-[11px] text-slate-300">—</span>;
+
+    const picked = phoneLotsOf(participant, lots);
+
+    return (
+        <div className="flex min-w-36 flex-col items-start gap-1">
+            {picked.length === 0 ? (
+                <span className="text-[11px] text-slate-400">No lots picked</span>
+            ) : (
+                <div className="flex max-w-56 flex-wrap gap-1">
+                    {picked.map((lot) => (
+                        <span
+                            key={lot.uuid}
+                            title={`Lot ${lot.itemNumber}: ${lot.title}`}
+                            className="inline-flex items-center gap-0.5 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-700"
+                        >
+                            <Phone className="h-2.5 w-2.5" />
+                            {lot.itemNumber}
+                        </span>
+                    ))}
+                </div>
+            )}
+            {canManage &&
+                (verifiedCount === 0 ? (
+                    <span className="text-[11px] text-amber-600">Verify them on a lot first</span>
+                ) : (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-7 border-purple-200 px-2 text-[11px] text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+                        onClick={onPick}
+                    >
+                        <PhoneCall className="mr-1 h-3 w-3" />
+                        {picked.length === 0 ? "Select lots" : "Edit lots"}
+                    </Button>
+                ))}
+        </div>
+    );
+};
+
+/** Pick the verified lots a phone bidder wants to bid on over the phone */
+const PhoneLotsDialog = ({
+    participant,
+    lots,
+    saving,
+    onClose,
+    onSave,
+}: {
+    participant: AuctionParticipant | null;
+    lots: ParticipantLot[];
+    saving: boolean;
+    onClose: () => void;
+    onSave: (lotUuids: string[]) => void;
+}) => {
+    const [picked, setPicked] = useState<Set<string>>(new Set());
+    const [openFor, setOpenFor] = useState<string | null>(null);
+
+    // start from their current pick each time the dialog opens for someone
+    if (participant && openFor !== participant.uuid) {
+        setOpenFor(participant.uuid);
+        setPicked(new Set(phoneLotsOf(participant, lots).map((lot) => lot.uuid)));
+    } else if (!participant && openFor !== null) {
+        setOpenFor(null);
+    }
+
+    const statusByLot = new Map(participant?.lots.map((l) => [l.lotUuid, l.status]) ?? []);
+    const verifiedLots = lots.filter((lot) => statusByLot.get(lot.uuid) === "VERIFIED");
+    const allPicked = verifiedLots.length > 0 && verifiedLots.every((lot) => picked.has(lot.uuid));
+
+    const toggle = (uuid: string, checked: boolean) =>
+        setPicked((prev) => {
+            const next = new Set(prev);
+            if (checked) next.add(uuid);
+            else next.delete(uuid);
+            return next;
+        });
+
+    return (
+        <Dialog open={participant !== null} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Phone lots</DialogTitle>
+                    <DialogDescription>
+                        Pick the lots <b>{participant?.name || participant?.username}</b> (paddle #
+                        {participant?.paddleNumber}) wants to bid on over the phone. Only lots they&apos;re verified for
+                        are listed.
+                    </DialogDescription>
+                </DialogHeader>
+
+                {verifiedLots.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-slate-500">
+                        They aren&apos;t verified on any lot yet. Verify them first.
+                    </p>
+                ) : (
+                    <div className="space-y-2">
+                        <label className="flex cursor-pointer items-center gap-2 border-b border-slate-100 pb-2 text-[13px] font-medium text-slate-700">
+                            <Checkbox
+                                checked={allPicked}
+                                onCheckedChange={(value) =>
+                                    setPicked(value ? new Set(verifiedLots.map((lot) => lot.uuid)) : new Set())
+                                }
+                            />
+                            All verified lots ({verifiedLots.length})
+                        </label>
+                        <div className="max-h-80 space-y-1 overflow-y-auto pr-1">
+                            {verifiedLots.map((lot) => (
+                                <label
+                                    key={lot.uuid}
+                                    className={cn(
+                                        "flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors",
+                                        picked.has(lot.uuid) ? "border-purple-200 bg-purple-50" : "border-slate-200 hover:bg-slate-50"
+                                    )}
+                                >
+                                    <Checkbox
+                                        checked={picked.has(lot.uuid)}
+                                        onCheckedChange={(value) => toggle(lot.uuid, !!value)}
+                                    />
+                                    <span className="rounded bg-[#fce8f1] px-1.5 py-0.5 text-[10px] font-semibold text-[#833b61]">
+                                        Lot {lot.itemNumber}
+                                    </span>
+                                    <span className="min-w-0 flex-1 truncate text-[13px] text-slate-800">{lot.title}</span>
+                                    {lot.artistName && (
+                                        <span className="max-w-32 truncate text-[11px] text-slate-400">{lot.artistName}</span>
+                                    )}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <DialogFooter>
+                    <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        className="bg-purple-700 text-white hover:bg-purple-700/90"
+                        disabled={saving || verifiedLots.length === 0}
+                        onClick={() => onSave(verifiedLots.filter((lot) => picked.has(lot.uuid)).map((lot) => lot.uuid))}
+                    >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : `Save (${picked.size})`}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 const ParticipantRow = ({
     participant,
     auctionUuid,
@@ -646,6 +853,7 @@ const ParticipantRow = ({
     busy,
     onSelect,
     onVerify,
+    onPickPhoneLots,
 }: {
     participant: AuctionParticipant;
     auctionUuid: string;
@@ -656,6 +864,7 @@ const ParticipantRow = ({
     busy: boolean;
     onSelect: (checked: boolean) => void;
     onVerify: (verified: boolean) => void;
+    onPickPhoneLots: () => void;
 }) => {
     const { byLot, verified, allVerified } = lotProgress(participant, lots);
     const kycVerified = participant.kycStatus === "VERIFIED";
@@ -675,7 +884,7 @@ const ParticipantRow = ({
 
             {/* Paddle */}
             <TableCell className="px-3">
-                <PaddleBadge number={participant.paddleNumber} />
+                <PaddleBadge number={participant.paddleNumber} phone={participant.isPhoneBidder} />
             </TableCell>
 
             {/* User */}
@@ -777,6 +986,17 @@ const ParticipantRow = ({
                         Verified on {verified} of {lots.length} lot{lots.length === 1 ? "" : "s"}
                     </p>
                 )}
+            </TableCell>
+
+            {/* Phone bidders: the verified lots they want to bid on over the phone */}
+            <TableCell className="px-3">
+                <PhoneLotsCell
+                    participant={participant}
+                    lots={lots}
+                    verifiedCount={verified}
+                    canManage={canManage}
+                    onPick={onPickPhoneLots}
+                />
             </TableCell>
 
             {/* Action */}

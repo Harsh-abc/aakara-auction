@@ -178,9 +178,17 @@ export default function AddParticipantsDialog({ auctionUuid, busy, onAdd }: AddP
 }
 
 /** A registrant's paddle number for the auction ("—" for legacy rows without one) */
-export const PaddleBadge = ({ number }: { number: string | null }) =>
+/** `phone`: a phone bidder (user page switch) — shown in purple */
+export const PaddleBadge = ({ number, phone = false }: { number: string | null; phone?: boolean }) =>
     number ? (
-        <span className="inline-flex min-w-12 justify-center rounded-md border border-[#491B3A]/20 bg-[#491B3A]/5 px-2 py-1 font-mono text-[12px] font-semibold text-[#491B3A]">
+        <span
+            title={phone ? "Phone bidder" : undefined}
+            className={
+                phone
+                    ? "inline-flex min-w-12 justify-center rounded-md border border-purple-300 bg-purple-100 px-2 py-1 font-mono text-[12px] font-semibold text-purple-700"
+                    : "inline-flex min-w-12 justify-center rounded-md border border-[#491B3A]/20 bg-[#491B3A]/5 px-2 py-1 font-mono text-[12px] font-semibold text-[#491B3A]"
+            }
+        >
             #{number}
         </span>
     ) : (

@@ -19,6 +19,7 @@ import {
     getParticipantCandidates,
     registerForAuction,
     removeAuctionParticipants,
+    setPhoneInterest,
     verifyAuctionParticipants,
 } from '../controllers/auctionParticipant.controller.js';
 import { getFeaturedAuction, getLotPreview, getPublicAuction, getPublicAuctions, getPublicLot, getPublicLots } from '../controllers/publicAuction.controller.js';
@@ -110,6 +111,7 @@ auctionRouter.get("/:auctionUuid/participants/candidates", authenticate, require
 auctionRouter.post("/:auctionUuid/participants", authenticate, requireRole("SUPER_ADMIN"), addAuctionParticipants);
 auctionRouter.post("/:auctionUuid/participants/new", authenticate, requireRole("SUPER_ADMIN"), addNewUserToAuction);
 auctionRouter.patch("/:auctionUuid/participants/verify", authenticate, requireRole("SUPER_ADMIN"), verifyAuctionParticipants);
+auctionRouter.put("/:auctionUuid/participants/:userUuid/phone-lots", authenticate, requireRole("SUPER_ADMIN"), setPhoneInterest);
 auctionRouter.delete("/:auctionUuid/participants", authenticate, requireRole("SUPER_ADMIN"), removeAuctionParticipants);
 // BIDDER registers for an auction (role checked in the service)
 auctionRouter.post("/:auctionUuid/register", authenticate, registerForAuction);

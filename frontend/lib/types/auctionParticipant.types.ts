@@ -3,7 +3,7 @@ import type { LotBidderSource, LotBidderStatus } from "./lotBidder.types";
 import type { CreateUserPayload, Pagination } from "./user.types";
 
 /** Must match PARTICIPANT_FILTERS in backend/src/services/auctionParticipant.services.js */
-export type ParticipantFilter = "all" | "awaiting" | "self" | "admin";
+export type ParticipantFilter = "all" | "awaiting" | "self" | "admin" | "phone";
 
 export interface ParticipantUser {
     uuid: string;
@@ -30,8 +30,19 @@ export interface AuctionParticipant extends ParticipantUser {
     /** Conditions of Sale version they accepted, e.g. "2026-10" */
     termsVersion: string | null;
     termsAcceptedIp: string | null;
-    /** Only lots the user has a row on — a missing lot means not registered for it */
-    lots: { lotUuid: string; status: LotBidderStatus }[];
+    /** Marked "Phone bidder" on their user page */
+    isPhoneBidder: boolean;
+    /**
+     * Only lots the user has a row on — a missing lot means not registered for it.
+     * phoneInterest: a phone bidder wants to bid on this (verified) lot over the phone
+     */
+    lots: { lotUuid: string; status: LotBidderStatus; phoneInterest: boolean }[];
+}
+
+export interface SetPhoneInterestParams {
+    auctionUuid: string;
+    userUuid: string;
+    lotUuids: string[];
 }
 
 export interface ParticipantLot {
@@ -76,7 +87,7 @@ export interface GetAuctionParticipantsResponse {
         auction: ParticipantAuction;
         lots: ParticipantLot[];
         participants: AuctionParticipant[];
-        summary: { total: number; selfRegistered: number; addedByAdmin: number; awaiting: number };
+        summary: { total: number; selfRegistered: number; addedByAdmin: number; awaiting: number; phoneBidders: number };
         pagination: Pagination;
     };
 }

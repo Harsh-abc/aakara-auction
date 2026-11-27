@@ -10,6 +10,7 @@ import type {
     GetParticipantCandidatesResponse,
     ParticipantActionResponse,
     ParticipantUuidsParams,
+    SetPhoneInterestParams,
     VerifyParticipantsParams,
 } from "@/lib/types/auctionParticipant.types";
 import { RootState } from "@/redux/store";
@@ -158,6 +159,31 @@ export const verifyAuctionParticipants = createAsyncThunk<
         return rejectWithValue(toErrorMessage(error, "Failed to update registrations"));
     }
 });
+
+// =====================================================================
+// PHONE BIDDER: THE LOTS THEY WANT TO BID ON OVER THE PHONE (SUPER_ADMIN only)
+// Replaces their current pick; only lots they're verified for
+// =====================================================================
+
+export const setPhoneInterest = createAsyncThunk<ParticipantActionResponse, SetPhoneInterestParams, ThunkConfig>(
+    "auctionParticipant/setPhoneInterest",
+    async ({ auctionUuid, userUuid, lotUuids }, { getState, rejectWithValue }) => {
+        const token = getState().auth.accessToken;
+        if (!token) return rejectWithValue("Authentication token not found");
+
+        try {
+            const response = await apiConnector<ParticipantActionResponse>({
+                method: "PUT",
+                url: auctionEndPoints.PARTICIPANT_PHONE_LOTS_API(auctionUuid, userUuid),
+                body: { lotUuids },
+                header: authHeader(token),
+            });
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(toErrorMessage(error, "Failed to save phone lots"));
+        }
+    }
+);
 
 // =====================================================================
 // REMOVE FROM THE AUCTION (SUPER_ADMIN only)

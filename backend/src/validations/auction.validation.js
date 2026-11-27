@@ -48,7 +48,17 @@ export const getAuctionParticipantsQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().max(100).optional(),
-    filter: z.enum(["all", "awaiting", "self", "admin"]).default("all"),
+    filter: z.enum(["all", "awaiting", "self", "admin", "phone"]).default("all"),
+});
+
+// Manage Bidders: the lots a phone bidder wants to bid on over the phone (replaces the current pick)
+export const phoneInterestParamsSchema = z.object({
+    auctionUuid: z.uuid({ message: "Invalid auction id" }),
+    userUuid: z.uuid({ message: "Invalid user id" }),
+});
+
+export const phoneInterestBodySchema = z.object({
+    lotUuids: z.array(z.uuid({ message: "Invalid lot id" })).max(1000, "Too many lots"),
 });
 
 export const participantCandidatesQuerySchema = z.object({

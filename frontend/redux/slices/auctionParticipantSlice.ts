@@ -5,6 +5,7 @@ import {
     addNewAuctionParticipant,
     getAuctionParticipants,
     removeAuctionParticipants,
+    setPhoneInterest,
     verifyAuctionParticipants,
 } from "@/services/operations/auctionParticipant.api";
 import type { GetAuctionParticipantsResponse } from "@/lib/types/auctionParticipant.types";
@@ -74,6 +75,16 @@ const auctionParticipantSlice = createSlice({
                 state.loading = false;
                 state.participants = [];
                 state.error = action.payload ?? action.error.message ?? "Failed to fetch auction registrations";
+            })
+
+            // a phone bidder's lots were saved: show them without reloading the page
+            .addCase(setPhoneInterest.fulfilled, (state, action) => {
+                const { userUuid, lotUuids } = action.meta.arg;
+                const picked = new Set(lotUuids);
+                const participant = state.participants.find((p) => p.uuid === userUuid);
+                participant?.lots.forEach((lot) => {
+                    lot.phoneInterest = picked.has(lot.lotUuid);
+                });
             })
 
             // the page refetches after a change, so only track what's in flight
