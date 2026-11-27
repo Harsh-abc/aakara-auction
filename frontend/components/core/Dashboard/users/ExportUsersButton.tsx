@@ -91,6 +91,29 @@ const toAuctionCells = (user: User, auctionTitle: string) => {
     ]
 }
 
+// extra columns when exporting bidders: phone bidder flag, paddles and proxy bids
+const BIDDER_HEADER = ["Phone bidder", "Paddle no(s).", "Proxy bids", "Proxy bids placed on (lot · maximum)"]
+
+const proxyMoney = (amount: string, currency: string | null) => {
+    const n = Number(amount)
+    const figure = Number.isFinite(n) ? n.toLocaleString("en-IN", { maximumFractionDigits: 2 }) : amount
+    return currency ? `${currency} ${figure}` : figure
+}
+
+const toBidderCells = (user: User, auctionFiltered: boolean) => {
+    const proxies = user.proxyBids ?? []
+    // with an auction picked the auction is its own column; otherwise say which auction each lot is in
+    const lots = proxies
+        .map((p) =>
+            `${auctionFiltered ? "" : `${p.auctionTitle} – `}Lot ${p.itemNumber}: ${proxyMoney(p.maxAmount, p.currency)}`
+        )
+        .join("; ")
+    const paddles = auctionFiltered
+        ? user.auctionParticipation?.paddleNumber
+        : (user.registrations ?? []).map((r) => `#${r.paddleNumber} (${r.auction.title})`).join("; ")
+    return [yesNo(!!user.phoneBidderAt), paddles, proxies.length, lots]
+}
+
 // "Modern Masters: Nov 2026" -> "modern-masters-nov-2026"
 const slugify = (text: string) =>
     text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60)
@@ -112,11 +135,20 @@ export default function ExportUsersButton({ role, label = "users", auction }: Ex
     const handleExport = async () => {
         setExporting(true)
         try {
-            const fetched = await fetchAllUsers(token, role, auction?.uuid)
+            const bidders = role === "BIDDER"
+            const fetched = await fetchAllUsers(token, role, auction?.uuid, bidders)
             // guard in case the API ignores the role filter
             const users = role ? fetched.filter((u) => u.role?.name === role) : fetched
-            const header = auction ? [...AUCTION_HEADER, ...HEADER] : HEADER
-            const rows = users.map((u) => (auction ? [...toAuctionCells(u, auction.title), ...toRow(u)] : toRow(u)))
+            const header = [
+                ...(auction ? AUCTION_HEADER : []),
+                ...HEADER,
+                ...(bidders ? BIDDER_HEADER : []),
+            ]
+            const rows = users.map((u) => [
+                ...(auction ? toAuctionCells(u, auction.title) : []),
+                ...toRow(u),
+                ...(bidders ? toBidderCells(u, !!auction) : []),
+            ])
             const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n")
 
             // BOM so Excel reads names in UTF-8

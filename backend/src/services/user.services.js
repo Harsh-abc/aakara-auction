@@ -44,7 +44,9 @@ const withUploadedDocumentTypes = ({ documents, ...kyc }) => ({
     )],
 });
 
-export const getAllUsersService = async ({ page, limit, search, emailVerified, kycStatus, role, auction }) => {
+export const getAllUsersService = async ({ page, limit, search, emailVerified, kycStatus, role, auction, withProxies }) => {
+    // CSV export: proxy bids not withdrawn, on this auction's lots when filtered by one
+    const proxies = withProxies === 'true';
     // one role, or several comma-separated ("USER,BIDDER")
     const roles = role ? role.split(',').map((r) => r.trim()).filter(Boolean) : [];
     // Bidders page, every bidder: each one's auctions and paddle numbers
@@ -142,6 +144,25 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
                     },
                 }),
 
+                ...(proxies && {
+                    autoBids: {
+                        where: {
+                            withdrawnAt: null,
+                            item: { auction: { deletedAt: null, ...(auction && { uuid: auction }) } },
+                        },
+                        select: {
+                            maxAmount: true,
+                            item: {
+                                select: {
+                                    itemNumber: true,
+                                    currency: { select: { code: true } },
+                                    auction: { select: { title: true, startTime: true, currency: { select: { code: true } } } },
+                                },
+                            },
+                        },
+                    },
+                }),
+
                 _count: {
                     select: {
                         bids: true,
@@ -158,8 +179,23 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
         }),
     ]);
 
-    const formattedUsers = users.map(({ kyc, auctionParticipations, ...user }) => ({
+    const formattedUsers = users.map(({ kyc, auctionParticipations, autoBids, ...user }) => ({
         ...user,
+        ...(proxies && {
+            // newest auction first, then lot order
+            proxyBids: (autoBids ?? [])
+                .sort(
+                    (a, b) =>
+                        new Date(b.item.auction.startTime) - new Date(a.item.auction.startTime) ||
+                        Number(a.item.itemNumber) - Number(b.item.itemNumber)
+                )
+                .map(({ maxAmount, item }) => ({
+                    auctionTitle: item.auction.title,
+                    itemNumber: item.itemNumber.toString(),
+                    maxAmount: maxAmount.toString(),
+                    currency: item.currency?.code ?? item.auction.currency?.code ?? null,
+                })),
+        }),
         failedLoginAttempts: Number(user.failedLoginAttempts),
         kyc: kyc && withUploadedDocumentTypes(kyc),
         ...(auction && { auctionParticipation: auctionParticipations?.[0] ?? null }),

@@ -10,6 +10,8 @@ export const getAllUsersSchema = z.object({
     role: z.string().trim().toUpperCase().optional(),
     // only users registered for this auction (Bidders page filter / CSV export)
     auction: z.string().uuid("Invalid auction id").optional(),
+    // CSV export: each user's proxy bids still standing (lot, auction, maximum)
+    withProxies: z.enum(['true', 'false']).optional(),
 });
 
 export const getUserByIdSchema = z.object({

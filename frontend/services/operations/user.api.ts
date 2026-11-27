@@ -22,13 +22,25 @@ export async function getUserStats(token: string | null): Promise<UserStats> {
 // every user, page by page (the API serves 100 at most per page) — for the CSV export, so it
 // doesn't touch the users slice the table reads. Pass a role to export only that role (e.g. BIDDER),
 // and an auction uuid to export only those registered for that auction
-export async function fetchAllUsers(token: string | null, role?: string, auction?: string): Promise<User[]> {
+export async function fetchAllUsers(
+    token: string | null,
+    role?: string,
+    auction?: string,
+    // CSV export: include each user's standing proxy bids
+    withProxies = false
+): Promise<User[]> {
     const users: User[] = [];
     for (let page = 1; ; page++) {
         const response = await apiConnector<GetAllUsersResponse>({
             method: "GET",
             url: GET_ALL_USERS_API,
-            params: { page, limit: 100, ...(role && { role }), ...(auction && { auction }) },
+            params: {
+                page,
+                limit: 100,
+                ...(role && { role }),
+                ...(auction && { auction }),
+                ...(withProxies && { withProxies: "true" }),
+            },
             header: { Authorization: `Bearer ${token}` },
         });
         if (!response.data.success) throw new Error(response.data.message || "Could not fetch users");

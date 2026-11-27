@@ -89,6 +89,8 @@ export interface User {
     auctionParticipation?: UserAuctionParticipation | null;
     // only on the Bidders list without an auction filter — every auction they're registered for, with the paddle
     registrations?: AddedBidderRegistration[];
+    // only with withProxies=true (CSV export) — proxy bids not withdrawn, newest auction first
+    proxyBids?: { auctionTitle: string; itemNumber: string; maxAmount: string; currency: string | null }[];
     _count: { bids: number; auctionsWon: number; auctionParticipations: number; autoBids?: number };
 }
 
