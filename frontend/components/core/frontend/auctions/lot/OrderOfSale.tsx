@@ -15,11 +15,15 @@ type OrderOfSaleProps = {
   /** shown above the list, inside the panel (the live video) — stays put while the list scrolls */
   media?: ReactNode;
   className?: string;
+  /** below lg: classes for the media box as its own grid item (e.g. order-1) */
+  mediaClassName?: string;
+  /** below lg: classes for the list as its own grid item (e.g. order-3, under the lot) */
+  listClassName?: string;
 };
 
 // the lots still to sell, in order — hammered lots drop off, so the lot on the block rises to the top.
 // a running order to follow, not a menu: the rows don't link anywhere
-export function OrderOfSale({ lots, saleClosed, media, className }: OrderOfSaleProps) {
+export function OrderOfSale({ lots, saleClosed, media, className, mediaClassName, listClassName }: OrderOfSaleProps) {
   const upNext = upNextLot(lots);
   const remaining = lots.filter((lot) => !isClosedLot(lot));
   const stillToCome = remaining.filter((lot) => lot.status !== "ACTIVE").length;
@@ -28,11 +32,19 @@ export function OrderOfSale({ lots, saleClosed, media, className }: OrderOfSaleP
     // on desktop the column is taken out of flow (absolute, inset-0) so the row height comes from the lot and
     // its bid ladder alone — the list can never run longer than they do. Inside that, the panel is pinned under
     // the sticky site header (h-19 + border) and capped at both the column and the viewport left below it
-    <div className={cn("lg:relative", className)}>
-      <div className="lg:absolute lg:inset-0">
-        <aside className="flex flex-col border border-[#cecece] bg-white lg:sticky lg:top-25 lg:max-h-[min(100%,calc(100dvh-124px))]">
-          {media && <div className="shrink-0 border-b border-[#cecece] p-2.5">{media}</div>}
+    //
+    // below lg the wrappers are `display: contents`, so the media and the list become items of the parent grid
+    // on their own and can be placed apart (mediaClassName / listClassName) — e.g. the list under the bid ladder
+    <div className={cn("max-lg:contents lg:relative", className)}>
+      <div className="max-lg:contents lg:absolute lg:inset-0">
+        <aside className="max-lg:contents lg:sticky lg:top-25 lg:flex lg:max-h-[min(100%,calc(100dvh-124px))] lg:flex-col lg:border lg:border-[#cecece] lg:bg-white">
+          {media && (
+            <div className={cn("shrink-0 border border-[#cecece] bg-white p-2.5 lg:border-0 lg:border-b", mediaClassName)}>
+              {media}
+            </div>
+          )}
 
+          <div className={cn("flex flex-col border border-[#cecece] bg-white lg:min-h-0 lg:flex-1 lg:border-0", listClassName)}>
           <div className="flex h-11.25 shrink-0 items-center justify-between border-b border-[#cecece] px-4">
             <h2 className="text-[14px] leading-5 font-medium text-[#0d0d0d]">
               Order of sale
@@ -96,6 +108,7 @@ export function OrderOfSale({ lots, saleClosed, media, className }: OrderOfSaleP
               })}
             </ol>
           )}
+          </div>
         </aside>
       </div>
     </div>

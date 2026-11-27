@@ -121,7 +121,10 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
                         <OrderOfSale
                             lots={lots}
                             saleClosed={!countdown}
-                            className="order-1"
+                            // mobile: the video on top, the lot and its ladder, then the order of sale
+                            className="lg:order-1"
+                            mediaClassName="max-lg:order-1"
+                            listClassName="max-lg:order-3"
                             media={
                                 // the auctioneer's live video (signed-in users only); the lot on the block / up next until it plays.
                                 // LOT 06 top left, LIVE top right, mute / full screen bottom right
