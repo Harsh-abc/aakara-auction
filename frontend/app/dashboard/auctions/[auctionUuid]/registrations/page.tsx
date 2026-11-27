@@ -308,20 +308,7 @@ export default function AuctionRegistrationsPage() {
             )}
 
             {/* Lot-wise */}
-            <section className="space-y-3">
-                <h4 className="text-base font-semibold text-slate-900">Registrations by lot</h4>
-                {lots.length === 0 ? (
-                    <p className="rounded-md border border-slate-200 bg-white px-4 py-6 text-center text-[13px] text-slate-400">
-                        This auction has no lots yet. Registrants are added to lots automatically when lots are added.
-                    </p>
-                ) : (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {lots.map((lot) => (
-                            <LotRegistrationCard key={lot.uuid} lot={lot} auctionUuid={auctionUuid} />
-                        ))}
-                    </div>
-                )}
-            </section>
+            <LotRegistrations lots={lots} auctionUuid={auctionUuid} />
 
             <h4 className="pt-2 text-base font-semibold text-slate-900">Registered users</h4>
 
@@ -617,49 +604,113 @@ const AuctionOverview = ({ auction, lotCount }: { auction: ParticipantAuction; l
     </section>
 );
 
-/** One lot: how many registrants, how many verified to bid */
-const LotRegistrationCard = ({ lot, auctionUuid }: { lot: ParticipantLot; auctionUuid: string }) => {
+/**
+ * Registrations by lot — compact so 100+ lots don't push the bidders table far down: small tiles
+ * in a dense grid, a fixed height that scrolls inside, an "awaiting only" filter and a collapse toggle.
+ */
+const LotRegistrations = ({ lots, auctionUuid }: { lots: ParticipantLot[]; auctionUuid: string }) => {
+    const [open, setOpen] = useState(true);
+    const [awaitingOnly, setAwaitingOnly] = useState(false);
+
+    const totals = lots.reduce(
+        (sum, lot) => ({
+            verified: sum.verified + lot.bidders.verified,
+            pending: sum.pending + lot.bidders.pending,
+            lotsAwaiting: sum.lotsAwaiting + (lot.bidders.pending > 0 ? 1 : 0),
+        }),
+        { verified: 0, pending: 0, lotsAwaiting: 0 }
+    );
+    const shown = awaitingOnly ? lots.filter((lot) => lot.bidders.pending > 0) : lots;
+
+    return (
+        <section className="rounded-[8px] border border-slate-200 bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                <button
+                    type="button"
+                    onClick={() => setOpen((v) => !v)}
+                    className="flex cursor-pointer items-center gap-2 text-left"
+                    aria-expanded={open}
+                >
+                    <ChevronRight className={cn("h-4 w-4 text-slate-400 transition-transform", open && "rotate-90")} />
+                    <h4 className="text-base font-semibold text-slate-900">Registrations by lot</h4>
+                    <span className="text-[12px] text-slate-500">
+                        {lots.length} lot{lots.length === 1 ? "" : "s"}
+                        {totals.lotsAwaiting > 0 ? (
+                            <span className="text-amber-600">
+                                {" "}
+                                · {totals.pending} awaiting on {totals.lotsAwaiting} lot{totals.lotsAwaiting === 1 ? "" : "s"}
+                            </span>
+                        ) : (
+                            lots.length > 0 && <span className="text-emerald-700"> · everyone verified</span>
+                        )}
+                    </span>
+                </button>
+
+                {open && totals.lotsAwaiting > 0 && (
+                    <label className="flex cursor-pointer items-center gap-2 text-[12px] text-slate-600">
+                        <Checkbox checked={awaitingOnly} onCheckedChange={(value) => setAwaitingOnly(!!value)} />
+                        Only lots awaiting verification
+                    </label>
+                )}
+            </div>
+
+            {open && (
+                <div className="border-t border-slate-100 p-3">
+                    {lots.length === 0 ? (
+                        <p className="py-4 text-center text-[13px] text-slate-400">
+                            This auction has no lots yet. Registrants are added to lots automatically when lots are added.
+                        </p>
+                    ) : (
+                        <div className="grid max-h-56 grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2 overflow-y-auto pr-1">
+                            {shown.map((lot) => (
+                                <LotRegistrationTile key={lot.uuid} lot={lot} auctionUuid={auctionUuid} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </section>
+    );
+};
+
+/** One lot as a small tile: number, verified / registered, progress. Title and status on hover */
+const LotRegistrationTile = ({ lot, auctionUuid }: { lot: ParticipantLot; auctionUuid: string }) => {
     const { registered, verified, pending } = lot.bidders;
     const verifiedPct = registered ? Math.round((verified / registered) * 100) : 0;
 
     return (
         <Link
             href={`/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/bidders`}
-            className="group flex gap-3 rounded-[8px] border border-slate-200 bg-white p-3 transition-colors hover:border-slate-300 hover:bg-slate-50"
+            title={`Lot ${lot.itemNumber}: ${lot.title} (${toTitle(lot.status)})\n${registered} registered · ${verified} verified${
+                pending ? ` · ${pending} awaiting` : ""
+            }`}
+            className={cn(
+                "group flex items-center gap-2 rounded-md border px-2 py-1.5 transition-colors hover:bg-slate-50",
+                pending > 0 ? "border-amber-200 bg-amber-50/40" : "border-slate-200"
+            )}
         >
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-slate-100">
+            <div className="h-8 w-8 shrink-0 overflow-hidden rounded bg-slate-100">
                 {lot.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={lot.imageUrl} alt="" className="h-full w-full object-cover" />
+                    <img src={lot.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                 ) : (
                     <div className="flex h-full items-center justify-center text-slate-300">
-                        <ImageOff className="h-4 w-4" />
+                        <ImageOff className="h-3 w-3" />
                     </div>
                 )}
             </div>
-
             <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <span className="rounded bg-[#fce8f1] px-1.5 py-0.5 text-[10px] font-semibold text-[#833b61]">
-                        Lot {lot.itemNumber}
+                <div className="flex items-baseline justify-between gap-1">
+                    <span className="text-[11px] font-semibold text-[#833b61]">Lot {lot.itemNumber}</span>
+                    <span className="text-[10px] tabular-nums text-slate-500">
+                        <span className="text-emerald-700">{verified}</span>/{registered}
                     </span>
-                    <span className="text-[11px] text-slate-400">{toTitle(lot.status)}</span>
                 </div>
-                <p className="mt-1 truncate text-[13px] font-medium text-slate-800">{lot.title}</p>
-                <p className="text-[11px] text-slate-500">
-                    {registered} registered · <span className="text-emerald-700">{verified} verified</span>
-                    {pending > 0 && (
-                        <>
-                            {" "}
-                            · <span className="text-amber-600">{pending} awaiting</span>
-                        </>
-                    )}
-                </p>
-                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-100">
                     <div className="h-full rounded-full bg-emerald-500" style={{ width: `${verifiedPct}%` }} />
                 </div>
+                {pending > 0 && <p className="mt-0.5 text-[10px] text-amber-600">{pending} awaiting</p>}
             </div>
-            <ChevronRight className="h-4 w-4 shrink-0 self-center text-slate-300 group-hover:text-slate-500" />
         </Link>
     );
 };
