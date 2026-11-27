@@ -20,6 +20,9 @@ import { canWatchLiveRoom } from "../services/liveStream.services.js";
 //   user:{userId}   joined automatically when the socket carries a valid token
 //   live:{uuid}     eligible live room tabs ("live:watch") — told "live:on-air" when the auctioneer goes live / ends
 //
+// "lot:live" (a lot went on the block) goes to every tab for a public sale, and to the
+// registered bidders' user rooms for an invite-only one (services/liveAuction.services.js).
+//
 // Storefront tabs in auction:{uuid} are counted as viewers (libs/viewers.js) — once
 // per account or browser — and the count is sent to the room as "auction:viewers".
 // Signed-in, eligible tabs on the live room page are also listed by name
@@ -175,6 +178,11 @@ export const initSocket = (server) => {
 /** Sends an event to a room on every API instance. A no-op until the socket server starts. */
 export const emitTo = (room, event, payload) => {
     io?.to(room).emit(event, payload);
+};
+
+/** Sends an event to every connected tab on every API instance (e.g. "lot:live" for a public sale). */
+export const emitAll = (event, payload) => {
+    io?.emit(event, payload);
 };
 
 /** Drops a user's open connections on every API instance (suspended, role or password changed); they reconnect with whatever token they hold now. */

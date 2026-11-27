@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../libs/prisma.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { syncParticipantsToLots } from "./auctionParticipant.services.js";
-import { closeAuctionLots, startOpeningLot } from "./liveAuction.services.js";
+import { announceLotLive, closeAuctionLots, startOpeningLot } from "./liveAuction.services.js";
 import { overlayLiveBids, syncAuctionBidding } from "./bidding.services.js";
 import { notifyLotWinner } from "./auctionMail.services.js";
 
@@ -876,6 +876,8 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
 
     // set by the transaction when ending the sale sells its live lot
     let soldLotUuid = null;
+    // set by the transaction when opening the sale puts its first lot live
+    let openedLotUuid = null;
 
     try {
         const updated = await changeAuctionStatusTx({
@@ -884,10 +886,13 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
             reason,
             changedBy,
             onLotSold: (uuid) => (soldLotUuid = uuid),
+            onLotOpened: (uuid) => (openedLotUuid = uuid),
         });
         await syncBidding();
         // committed: tell the buyer (not awaited — a failed email never undoes the sale)
         if (soldLotUuid) notifyLotWinner(soldLotUuid);
+        // "Lot 01 is live" popup on every storefront tab (not awaited)
+        if (openedLotUuid) announceLotLive(openedLotUuid);
         return updated;
     } catch (error) {
         await syncBidding();
@@ -895,7 +900,7 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
     }
 };
 
-const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy, onLotSold }) =>
+const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy, onLotSold, onLotOpened }) =>
     prisma.$transaction(
         async (tx) => {
             const auction = await tx.auction.findUnique({
@@ -959,7 +964,8 @@ const changeAuctionStatusTx = ({ auctionUuid, status, reason, changedBy, onLotSo
 
             // Opening the sale starts its first lot, same as the scheduled auto-start
             if (status === "LIVE" && (from === "SCHEDULED" || from === "PREVIEW")) {
-                await startOpeningLot(tx, auction.id);
+                const opened = await startOpeningLot(tx, auction.id);
+                if (opened) onLotOpened(opened.uuid);
             }
 
             // Ending the sale closes its lots, same as the scheduled auto-end

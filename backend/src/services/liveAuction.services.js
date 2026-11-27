@@ -1,4 +1,5 @@
 import prisma from "../libs/prisma.js";
+import { emitAll, emitTo, rooms } from "../libs/socket.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { freezeLotBidding, saveClosedLotBids, syncLotBidding } from "./bidding.services.js";
 import { notifyLotWinner } from "./auctionMail.services.js";
@@ -242,12 +243,70 @@ export const closeAuctionLots = async (tx, auctionId) => {
 };
 
 // =====================================================================
+// "LOT IS LIVE" ANNOUNCEMENT
+// Every storefront tab shows a popup linking to the lot when it goes on the
+// block. A public sale tells everyone; an invite-only sale only its
+// registered bidders. Call after the transaction that made the lot ACTIVE has
+// committed, and don't await it: a failed announcement never undoes the start.
+// =====================================================================
+
+export const announceLotLive = async (lotUuid) => {
+    try {
+        const lot = await prisma.auctionItem.findUnique({
+            where: { uuid: lotUuid },
+            select: {
+                uuid: true,
+                itemNumber: true,
+                title: true,
+                artistName: true,
+                status: true,
+                images: {
+                    where: { mediaType: "IMAGE" },
+                    orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+                    take: 1,
+                    select: { url: true, thumbnailUrl: true },
+                },
+                auction: { select: { id: true, uuid: true, title: true, status: true, visibility: true, deletedAt: true } },
+            },
+        });
+        if (!lot || lot.status !== "ACTIVE" || lot.auction.deletedAt || lot.auction.status !== "LIVE") return;
+
+        const image = lot.images[0];
+        const notice = {
+            auctionUuid: lot.auction.uuid,
+            auctionTitle: lot.auction.title,
+            lotUuid: lot.uuid,
+            itemNumber: String(lot.itemNumber),
+            title: lot.title,
+            artistName: lot.artistName,
+            image: image ? image.thumbnailUrl ?? image.url : null,
+        };
+
+        if (lot.auction.visibility !== "PRIVATE_INVITE_ONLY") {
+            emitAll("lot:live", notice);
+            return;
+        }
+
+        const participants = await prisma.auctionParticipant.findMany({
+            where: { auctionId: lot.auction.id, status: { notIn: ["REJECTED", "BANNED"] } },
+            select: { userId: true },
+        });
+        for (const { userId } of participants) emitTo(rooms.user(String(userId)), "lot:live", notice);
+    } catch (error) {
+        console.error(`[live] could not announce lot ${lotUuid} as live:`, error);
+    }
+};
+
+// =====================================================================
 // START / STOP A LOT
 // Only one lot per auction can be live (ACTIVE) at a time.
 // =====================================================================
 
-export const setLotLiveService = ({ lotUuid, action }) =>
-    closingLot(lotUuid, (onFrozen) => setLotLiveTx({ lotUuid, action, onFrozen }));
+export const setLotLiveService = async ({ lotUuid, action }) => {
+    const lot = await closingLot(lotUuid, (onFrozen) => setLotLiveTx({ lotUuid, action, onFrozen }));
+    if (action === "start") announceLotLive(lotUuid);
+    return lot;
+};
 
 const setLotLiveTx = ({ lotUuid, action, onFrozen }) =>
     prisma.$transaction(

@@ -126,6 +126,17 @@ export interface LotWonNotice {
     currency: Currency
 }
 
+/** "lot:live" — a lot went on the block: every tab for a public sale, registered bidders for an invite-only one */
+export interface LotLiveNotice {
+    auctionUuid: string
+    auctionTitle: string | null
+    lotUuid: string
+    itemNumber: string
+    title: string
+    artistName: string | null
+    image: string | null
+}
+
 // ---------------------------------------------------------------------
 // dashboard
 // ---------------------------------------------------------------------

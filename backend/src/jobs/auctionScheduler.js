@@ -1,6 +1,6 @@
 import prisma from "../libs/prisma.js";
 import { logActivity, SYSTEM_ACTOR } from "../libs/activityLog.js";
-import { closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
+import { announceLotLive, closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
 import { flushPendingAuctions, PROXY_CUTOFF_MS, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
 import { notifyLotWinner } from "../services/auctionMail.services.js";
 
@@ -119,7 +119,7 @@ const logSystem = (activity, uuid, title, description, success = true) =>
         targetLabel: title,
     });
 
-const runDue = async (label, activity, where, action, describe) => {
+const runDue = async (label, activity, where, action, describe, afterSync) => {
     const now = new Date();
     const due = await prisma.auction.findMany({
         where: { deletedAt: null, ...where(now) },
@@ -133,6 +133,7 @@ const runDue = async (label, activity, where, action, describe) => {
                 console.info(`[scheduler] ${describe(result)}`);
                 await logSystem(activity, uuid, title, describe(result));
                 await syncBidding(uuid);
+                afterSync?.(result);
             }
         } catch (err) {
             console.error(`[scheduler] failed to ${label} auction ${id}:`, err);
@@ -160,7 +161,9 @@ const startDueAuctions = () =>
         "AUCTION_AUTO_START",
         (now) => ({ status: { in: STARTABLE_AUCTION_STATUSES }, startTime: { lte: now }, endTime: { gt: now } }),
         goLive,
-        ({ title, lot }) => `"${title}" is now LIVE` + (lot ? ` — opened lot #${lot.itemNumber}` : " — no lot to open")
+        ({ title, lot }) => `"${title}" is now LIVE` + (lot ? ` — opened lot #${lot.itemNumber}` : " — no lot to open"),
+        // "Lot 01 is live" popup on every storefront tab
+        ({ lot }) => lot && announceLotLive(lot.uuid)
     );
 
 // Proxy bids close 8h before an auction starts: switch them off once that window opens.
