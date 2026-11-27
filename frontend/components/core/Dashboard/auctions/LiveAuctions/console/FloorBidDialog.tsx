@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Bot, Check, Hand, Loader2, Search } from "lucide-react";
+import { Bot, Check, Hand, Loader2, Phone, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -32,10 +32,11 @@ interface FloorBidDialogProps {
     onSubmit: (paddleNumber: string, amount: number) => void;
 }
 
-type Filter = "all" | "proxy";
+type Filter = "all" | "proxy" | "interested";
 
 // The auctioneer picks the paddle they're bidding for (in the room, on the phone or online), for the picked amount.
-// Bidders holding a proxy on the lot are outlined in violet and listed first.
+// Bidders holding a proxy on the lot are outlined in violet and listed first; phone bidders interested in the lot
+// (picked on Manage Bidders) are in a solid purple box with a phone icon.
 export default function FloorBidDialog({
     open,
     onOpenChange,
@@ -53,8 +54,13 @@ export default function FloorBidDialog({
 }: FloorBidDialogProps) {
     const [paddle, setPaddle] = useState("");
     const [amount, setAmount] = useState(pickedAmount);
-    // open on the proxy holders, unless nobody holds one on this lot
-    const defaultFilter = (): Filter => (floorBidders.some((bidder) => bidder.proxyMax !== null) ? "proxy" : "all");
+    // open on the proxy holders, else the interested phone bidders, else everyone
+    const defaultFilter = (): Filter =>
+        floorBidders.some((bidder) => bidder.proxyMax !== null)
+            ? "proxy"
+            : floorBidders.some((bidder) => bidder.phoneInterest)
+              ? "interested"
+              : "all";
     const [filter, setFilter] = useState<Filter>(defaultFilter);
     const [error, setError] = useState<string | null>(null);
     // the auctioneer typed their own amount
@@ -92,6 +98,9 @@ export default function FloorBidDialog({
     const query = paddle.trim().replace(/^#/, "").toLowerCase();
     const exact = floorBidders.find((bidder) => bidder.paddle.toLowerCase() === query) ?? null;
     const proxyCount = floorBidders.filter((bidder) => bidder.proxyMax !== null).length;
+    const interestedCount = floorBidders.filter((bidder) => bidder.phoneInterest).length;
+    const inTab = (bidder: (typeof floorBidders)[number]) =>
+        filter === "all" || (filter === "proxy" ? bidder.proxyMax !== null : bidder.phoneInterest);
     // narrowed by what's typed (paddle prefix or name), with an exact paddle match first
     // a proxy whose max is below the amount being bid (or the minimum, whichever is higher) is outbid —
     // it drops to the end of the list, and re-sorts live as the amount is typed
@@ -109,7 +118,7 @@ export default function FloorBidDialog({
     const shown = floorBidders
         .filter(
             (bidder) =>
-                (filter === "all" || bidder.proxyMax !== null) &&
+                inTab(bidder) &&
                 (!query || bidder.paddle.toLowerCase().startsWith(query) || bidder.name?.toLowerCase().includes(query))
         )
         .sort(
@@ -173,7 +182,8 @@ export default function FloorBidDialog({
                                 {(
                                     [
                                         ["all", `All · ${floorBidders.length}`],
-                                        ["proxy", `With proxy · ${proxyCount}`],
+                                        ["proxy", `Proxies · ${proxyCount}`],
+                                        ["interested", `Interested in · ${interestedCount}`],
                                     ] as const
                                 ).map(([value, label]) => (
                                     <button
@@ -182,11 +192,19 @@ export default function FloorBidDialog({
                                         role="tab"
                                         aria-selected={filter === value}
                                         onClick={() => setFilter(value)}
+                                        title={value === "interested" ? "Phone bidders who picked this lot on Manage Bidders" : undefined}
                                         className={cn(
-                                            "cursor-pointer rounded px-2 py-0.5 font-medium transition-colors",
-                                            filter === value ? "bg-white text-[#414141] shadow-sm" : "text-slate-500 hover:text-[#414141]"
+                                            "flex cursor-pointer items-center gap-1 rounded px-2 py-0.5 font-medium transition-colors",
+                                            filter === value
+                                                ? value === "interested"
+                                                    ? "bg-purple-600 text-white shadow-sm"
+                                                    : "bg-white text-[#414141] shadow-sm"
+                                                : value === "interested"
+                                                  ? "text-purple-700 hover:text-purple-900"
+                                                  : "text-slate-500 hover:text-[#414141]"
                                         )}
                                     >
+                                        {value === "interested" && <Phone className="h-3 w-3" />}
                                         {label}
                                     </button>
                                 ))}
@@ -213,6 +231,7 @@ export default function FloorBidDialog({
                                     const outbid = isOutbid(bidder);
                                     const proxy = bidder.proxyMax !== null && !outbid;
                                     const leading = Boolean(leaderUuid && bidder.uuid === leaderUuid);
+                                    const phone = bidder.phoneInterest;
                                     return (
                                         <button
                                             key={bidder.uuid ?? bidder.paddle}
@@ -220,11 +239,14 @@ export default function FloorBidDialog({
                                             onClick={() => setPaddle(bidder.paddle)}
                                             className={cn(
                                                 "relative flex min-w-0 cursor-pointer flex-col rounded-[8px] border px-3 py-2 text-left transition-colors",
-                                                proxy
-                                                    ? "border-violet-300 bg-violet-50/70 hover:border-violet-500"
-                                                    : outbid
-                                                      ? "border-red-200 bg-red-50/60 hover:border-red-400"
-                                                      : "border-slate-200 bg-white hover:border-[#22C55E] hover:bg-emerald-50/40",
+                                                // interested phone bidder: solid purple box, whatever their proxy
+                                                phone
+                                                    ? "border-purple-500 bg-purple-100 hover:border-purple-700"
+                                                    : proxy
+                                                      ? "border-violet-300 bg-violet-50/70 hover:border-violet-500"
+                                                      : outbid
+                                                        ? "border-red-200 bg-red-50/60 hover:border-red-400"
+                                                        : "border-slate-200 bg-white hover:border-[#22C55E] hover:bg-emerald-50/40",
                                                 selected &&
                                                     (outbid
                                                         ? "border-red-500 bg-red-50 ring-2 ring-red-500/30"
@@ -232,7 +254,14 @@ export default function FloorBidDialog({
                                             )}
                                         >
                                             <span className="flex items-center justify-between gap-2">
-                                                <span className="text-[13px] font-semibold text-[#414141]">#{bidder.paddle}</span>
+                                                <span
+                                                    className={cn(
+                                                        "flex items-center gap-1 text-[13px] font-semibold",
+                                                        bidder.phoneBidder ? "text-purple-700" : "text-[#414141]"
+                                                    )}
+                                                >
+                                                    {bidder.phoneBidder && <Phone className="h-3 w-3" />}#{bidder.paddle}
+                                                </span>
                                                 {selected ? (
                                                     <Check className={cn("h-3.5 w-3.5", outbid ? "text-red-600" : "text-[#22C55E]")} />
                                                 ) : leading ? (
@@ -246,6 +275,11 @@ export default function FloorBidDialog({
                                             <span className="truncate text-[12px] text-slate-600" title={bidder.name ?? undefined}>
                                                 {bidder.name ?? "Verified bidder"}
                                             </span>
+                                            {phone && (
+                                                <span className="mt-0.5 truncate text-[10px] font-semibold text-purple-700">
+                                                    Phone bidder · interested
+                                                </span>
+                                            )}
                                             {proxy && (
                                                 <span className="mt-0.5 truncate text-[10px] font-medium text-[#7b365d]">
                                                     Proxy up to {money(bidder.proxyMax, currency)}
@@ -262,17 +296,23 @@ export default function FloorBidDialog({
                             </div>
                         ) : (
                             <p className="rounded-md bg-slate-50 px-3 py-4 text-center text-[12px] text-slate-500">
-                                {query && filter === "proxy"
-                                    ? "No proxy holder matches that paddle or name — check the All tab"
+                                {query && filter !== "all"
+                                    ? `No ${filter === "proxy" ? "proxy holder" : "interested phone bidder"} matches that paddle or name — check the All tab`
                                     : query
                                     ? "No verified bidder on this lot matches that paddle or name"
                                     : filter === "proxy"
                                       ? "No bidder holds a proxy on this lot"
-                                      : "No verified bidders on this lot"}
+                                      : filter === "interested"
+                                        ? "No phone bidder is interested in this lot — pick their lots on Manage Bidders"
+                                        : "No verified bidders on this lot"}
                             </p>
                         )}
 
-                        <p className="flex items-center gap-3 text-[10px] text-slate-500">
+                        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                            <span className="flex items-center gap-1">
+                                <span className="h-2.5 w-2.5 rounded-[3px] border border-purple-500 bg-purple-100" />
+                                Phone bidder · interested in this lot
+                            </span>
                             <span className="flex items-center gap-1">
                                 <span className="h-2.5 w-2.5 rounded-[3px] border border-violet-300 bg-violet-50" />
                                 Holds a proxy — placed at the hammer

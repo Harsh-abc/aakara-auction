@@ -18,6 +18,7 @@ import { executeProxies, getAuctionConsole, hammerLot, placeFloorBid } from "@/s
 import CalloutPanel from "./CalloutPanel";
 import FloorBidDialog from "./FloorBidDialog";
 import HammerDialog, { type ProxyStep } from "./HammerDialog";
+import PhoneBidders from "./PhoneBidders";
 import ProxyBook from "./ProxyBook";
 import { compactMoney, money, paddleLabel, sourceBadge } from "./consoleDisplay";
 
@@ -359,6 +360,14 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                             position={position}
                             code={code}
                             reload={reload}
+                        />
+                    )}
+                    {lot && (
+                        <PhoneBidders
+                            itemNumber={lot.itemNumber}
+                            floorBidders={data.floorBidders}
+                            leaderUuid={position?.leader?.uuid ?? null}
+                            code={code}
                         />
                     )}
                     {canControl && lot && position && (

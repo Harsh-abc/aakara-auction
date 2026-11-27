@@ -1473,11 +1473,14 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
     const rows = await prisma.lotBidder.findMany({
         where: { itemId: lot.id, ...ELIGIBLE_LOT_BIDDER_WHERE },
         select: {
+            // a phone bidder picked this lot on Manage Bidders
+            phoneInterestAt: true,
             user: {
                 select: {
                     id: true,
                     uuid: true,
                     username: true,
+                    phoneBidderAt: true,
                     profile: { select: { displayName: true, firstName: true, lastName: true } },
                     auctionParticipations: { where: { auctionId: auction.id }, select: { paddleNumber: true } },
                 },
@@ -1488,15 +1491,23 @@ export const getAuctionConsoleService = async ({ auctionUuid }) => {
         const raw = rawProxies[userId.toString()];
         return raw ? String(JSON.parse(raw).max) : null;
     };
+    // then phone bidders interested in the lot, then everyone else by paddle
     const floorBidders = rows
-        .map(({ user }) => ({
+        .map(({ user, phoneInterestAt }) => ({
             uuid: user.uuid,
             paddle: user.auctionParticipations[0]?.paddleNumber ?? null,
             name: displayName(user),
             proxyMax: proxyMaxOf(user.id),
+            phoneBidder: user.phoneBidderAt !== null,
+            phoneInterest: user.phoneBidderAt !== null && phoneInterestAt !== null,
         }))
         .filter((bidder) => bidder.paddle)
-        .sort((a, b) => Number(b.proxyMax ?? -1) - Number(a.proxyMax ?? -1) || byPaddle(a, b));
+        .sort(
+            (a, b) =>
+                Number(b.proxyMax ?? -1) - Number(a.proxyMax ?? -1) ||
+                Number(b.phoneInterest) - Number(a.phoneInterest) ||
+                byPaddle(a, b)
+        );
 
     const { images, category, id, ...lotFields } = lot; // eslint-disable-line no-unused-vars
     return serializeBigInt({

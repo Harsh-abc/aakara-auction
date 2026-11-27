@@ -245,8 +245,12 @@ export interface AuctionConsole {
     position: ConsolePosition | null
     /** the live lot's bids, newest first */
     bids: StaffBid[]
-    /** paddles verified on the live lot — those holding a proxy on it first; `proxyMax` is their maximum */
-    floorBidders: (BidderRef & { paddle: string; proxyMax: string | null })[]
+    /**
+     * paddles verified on the live lot — those holding a proxy on it first, then phone bidders interested in it.
+     * `proxyMax` is their maximum; `phoneBidder`: marked "Phone bidder" on their user page;
+     * `phoneInterest`: a phone bidder who picked this lot on Manage Bidders
+     */
+    floorBidders: (BidderRef & { paddle: string; proxyMax: string | null; phoneBidder: boolean; phoneInterest: boolean })[]
     /** proxy bids on the live lot, placed when the auctioneer clicks Sell */
     proxyBook: { count: number; topMax: string | null }
 }
