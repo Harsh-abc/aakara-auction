@@ -66,10 +66,23 @@ const onResponseError = async (error: AxiosError) => {
     }
 }
 
+// the storefront auction reads need no login, but send the token when there is one: a sale
+// restricted in Settings → Live Access is only shown to the bidders picked for it while it's live
+const PUBLIC_AUCTION_PATH = "/api/auction/public"
+
+const withViewerToken = (config: InternalAxiosRequestConfig) => {
+    if (config.url?.includes(PUBLIC_AUCTION_PATH) && !config.headers?.Authorization) {
+        const token = store.getState().auth.accessToken
+        if (token) config.headers.set("Authorization", `Bearer ${token}`)
+    }
+    return config
+}
+
 let installed = false
 
 export function setupAuthInterceptors() {
     if (installed || typeof window === "undefined") return
     installed = true
+    axiosInstance.interceptors.request.use(withViewerToken)
     axiosInstance.interceptors.response.use((response) => response, onResponseError)
 }

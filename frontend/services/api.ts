@@ -211,4 +211,12 @@ export const adminEndPoints = {
         `${BASE_URL}/api/admin/otp-limits/${kind}/${encodeURIComponent(subject)}`,
     // Settings → Notifications (super admin only): GET lists, PATCH { key, enabled } flips one switch
     NOTIFICATION_SETTINGS_API: `${BASE_URL}/api/admin/notification-settings`,
+    // Settings → Live Access (super admin only): GET auctions, PATCH { restricted } per auction,
+    // and the bidders picked to see it while live (GET / POST { userUuids } / DELETE one)
+    LIVE_ACCESS_API: `${BASE_URL}/api/admin/live-access`,
+    LIVE_ACCESS_AUCTION_API: (auctionUuid: string) => `${BASE_URL}/api/admin/live-access/${auctionUuid}`,
+    LIVE_ACCESS_VIEWERS_API: (auctionUuid: string) => `${BASE_URL}/api/admin/live-access/${auctionUuid}/viewers`,
+    LIVE_ACCESS_VIEWER_API: (auctionUuid: string, userUuid: string) =>
+        `${BASE_URL}/api/admin/live-access/${auctionUuid}/viewers/${userUuid}`,
+    LIVE_ACCESS_CANDIDATES_API: (auctionUuid: string) => `${BASE_URL}/api/admin/live-access/${auctionUuid}/candidates`,
 }

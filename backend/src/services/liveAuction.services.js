@@ -266,7 +266,9 @@ export const announceLotLive = async (lotUuid) => {
                     take: 1,
                     select: { url: true, thumbnailUrl: true },
                 },
-                auction: { select: { id: true, uuid: true, title: true, status: true, visibility: true, deletedAt: true } },
+                auction: {
+                    select: { id: true, uuid: true, title: true, status: true, visibility: true, deletedAt: true, liveAccessRestricted: true },
+                },
             },
         });
         if (!lot || lot.status !== "ACTIVE" || lot.auction.deletedAt || lot.auction.status !== "LIVE") return;
@@ -281,6 +283,13 @@ export const announceLotLive = async (lotUuid) => {
             artistName: lot.artistName,
             image: image ? image.thumbnailUrl ?? image.url : null,
         };
+
+        // Settings → Live Access: a restricted sale is only announced to the bidders picked for it
+        if (lot.auction.liveAccessRestricted) {
+            const viewers = await prisma.auctionLiveViewer.findMany({ where: { auctionId: lot.auction.id }, select: { userId: true } });
+            for (const { userId } of viewers) emitTo(rooms.user(String(userId)), "lot:live", notice);
+            return;
+        }
 
         if (lot.auction.visibility !== "PRIVATE_INVITE_ONLY") {
             emitAll("lot:live", notice);

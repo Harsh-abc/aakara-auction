@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAppSelector } from "@/hooks/redux";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useHasPastAuctions } from "@/hooks/useHasPastAuctions";
 import type { PublicAuctionsPage, PublicAuctionTab } from "@/lib/types/publicAuction.types";
@@ -86,6 +87,9 @@ export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionL
     const { page = 1, totalPages = 0, total = 0 } = loading ? {} : result.pagination;
     const error = loading ? null : result.error;
 
+    // asked again on sign in / out and token refresh: a restricted live sale only lists for its picked bidders
+    const token = useAppSelector((s) => s.auth.accessToken);
+
     // first page whenever the tab or search changes; drop answers to superseded requests
     useEffect(() => {
         let cancelled = false;
@@ -101,7 +105,7 @@ export function AuctionListings({ paddles, eligibility, onRegistered }: AuctionL
         return () => {
             cancelled = true;
         };
-    }, [tab, search, queryKey]);
+    }, [tab, search, queryKey, token]);
 
     const loadMore = async () => {
         setLoadingMore(true);

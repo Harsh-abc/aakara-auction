@@ -12,7 +12,8 @@ export type LiveStreamAccess = {
 /** why the live room is closed to this user — SIGN_IN, REGISTER, PENDING, NOT_BIDDER */
 export type WatchAccess = {
     allowed: boolean
-    code: "OK" | "SIGN_IN" | "REGISTER" | "PENDING" | "NOT_BIDDER"
+    // LIVE_ACCESS_RESTRICTED: the sale is live and only open to the bidders picked for it (Settings → Live Access)
+    code: "OK" | "SIGN_IN" | "REGISTER" | "PENDING" | "NOT_BIDDER" | "LIVE_ACCESS_RESTRICTED"
     message: string | null
 }
 

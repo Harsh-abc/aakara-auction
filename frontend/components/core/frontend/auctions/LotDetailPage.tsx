@@ -13,6 +13,7 @@ import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, 
 import { auctionHref, isLive, STOREFRONT_STATUS_LABELS } from "./auctionDisplay";
 import { saleCountdown } from "./detail/AuctionDetail";
 import { lotHeading, lotHref } from "./detail/lotDisplay";
+import { LiveAccessComingSoon } from "./LiveAccessComingSoon";
 import { BidDialog } from "./lot/BidDialog";
 import { BidLadder } from "./lot/BidLadder";
 import { announceLotClosed } from "./lot/LotClosedNotice";
@@ -76,6 +77,9 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
             </main>
         );
     }
+
+    // live, and only open to the bidders picked for it (Settings → Live Access)
+    if (state.status === "restricted") return <LiveAccessComingSoon />;
 
     if (state.status !== "ready") {
         return <LotPageMessage auctionUuid={auctionUuid} notFound={state.status === "not-found"} message={state.status === "error" ? state.message : undefined} />;

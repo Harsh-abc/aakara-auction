@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicAuction } from "@/lib/types/publicAuction.types";
 import { getPublicAuction } from "@/services/operations/publicAuction.api";
 import { getErrorMessage } from "@/lib/apiError";
+import { useAppSelector } from "@/hooks/redux";
 import { cn } from "@/lib/utils";
 import { htmlToPlainText } from "@/utils/sanitizeHtml";
 
@@ -16,9 +17,16 @@ import { AuctionCountdown } from "../AuctionCountdown";
 import { auctionMeta, isLive, STARTING_SOON, STOREFRONT_STATUS_LABELS } from "../auctionDisplay";
 import { RegisterToBidButton } from "../RegisterToBidButton";
 import { useBidderStatus } from "../useBidderStatus";
+import { isLiveAccessRestricted, LiveAccessComingSoon } from "../LiveAccessComingSoon";
 import { AuctionLots } from "./AuctionLots";
 
-type AuctionState = { status: "loading" } | { status: "ready"; auction: PublicAuction } | { status: "not-found" } | { status: "error"; message: string };
+type AuctionState =
+    | { status: "loading" }
+    | { status: "ready"; auction: PublicAuction }
+    | { status: "not-found" }
+    // live, and only open to the bidders picked for it (Settings → Live Access)
+    | { status: "restricted" }
+    | { status: "error"; message: string };
 
 // counts to the close while the sale is live, to the opening before that
 export function saleCountdown(auction: PublicAuction): { label: string; target: string; doneText?: string } | null {
@@ -32,6 +40,8 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
     const [state, setState] = useState<AuctionState>({ status: "loading" });
     // so a bidder can register for this sale here too (the bid dialog sends unregistered bidders to this page)
     const { paddles, eligibility, onRegistered } = useBidderStatus();
+    // asked again on sign in / out and token refresh — who's asking decides if a restricted live sale shows
+    const token = useAppSelector((s) => s.auth.accessToken);
 
     useEffect(() => {
         let cancelled = false;
@@ -41,6 +51,7 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
             })
             .catch((err) => {
                 if (cancelled) return;
+                if (isLiveAccessRestricted(err)) return setState({ status: "restricted" });
                 const status = axios.isAxiosError(err) ? err.response?.status : undefined;
                 // 400 = not a valid id, 404 = no such public sale
                 setState(status === 404 || status === 400 ? { status: "not-found" } : { status: "error", message: getErrorMessage(err) });
@@ -48,7 +59,9 @@ export function AuctionDetail({ auctionUuid }: { auctionUuid: string }) {
         return () => {
             cancelled = true;
         };
-    }, [auctionUuid]);
+    }, [auctionUuid, token]);
+
+    if (state.status === "restricted") return <LiveAccessComingSoon />;
 
     if (state.status === "loading") {
         return (

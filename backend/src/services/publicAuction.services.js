@@ -1,4 +1,5 @@
 import prisma from "../libs/prisma.js";
+import { assertCanSeeAuction, liveAccessWhere } from "../libs/liveAccess.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { nextValidBid } from "../utils/bidIncrement.js";
 import { getLiveLotView, overlayLiveBids } from "./bidding.services.js";
@@ -107,10 +108,16 @@ const searchWhere = (search) => {
 // The first entry of the upcoming list: live now, otherwise the next one to open
 // =====================================================================
 
-export const getFeaturedAuctionService = async () => {
+// `viewer` ({ userId, role } or null): a restricted live sale they may not see is skipped
+// (Settings → Live Access), so the hero moves on to the next sale or the default banner
+export const getFeaturedAuctionService = async ({ viewer = null } = {}) => {
     for (const { where, orderBy, hero = true } of timelineBuckets("upcoming")) {
         if (!hero) continue;
-        const auction = await prisma.auction.findFirst({ where, orderBy, select: PUBLIC_AUCTION_SELECT });
+        const auction = await prisma.auction.findFirst({
+            where: { AND: [where, liveAccessWhere(viewer)] },
+            orderBy,
+            select: PUBLIC_AUCTION_SELECT,
+        });
         if (auction) return serializeBigInt(toPublicAuction(auction));
     }
     return null;
@@ -120,9 +127,13 @@ export const getFeaturedAuctionService = async () => {
 // UPCOMING / LIVE + PAST LISTS
 // =====================================================================
 
-export const getPublicAuctionsService = async ({ type, search, page, limit }) => {
+export const getPublicAuctionsService = async ({ type, search, page, limit, viewer = null }) => {
     const searchFilter = search ? searchWhere(search) : {};
-    const buckets = timelineBuckets(type).map((bucket) => ({ ...bucket, where: { ...bucket.where, ...searchFilter } }));
+    // restricted live sales the viewer may not see are left out (Settings → Live Access)
+    const buckets = timelineBuckets(type).map((bucket) => ({
+        ...bucket,
+        where: { AND: [bucket.where, searchFilter, liveAccessWhere(viewer)] },
+    }));
 
     const counts = await Promise.all(buckets.map(({ where }) => prisma.auction.count({ where })));
     const total = counts.reduce((sum, count) => sum + count, 0);
@@ -153,18 +164,29 @@ export const getPublicAuctionsService = async ({ type, search, page, limit }) =>
 
 // invite-only, draft or cancelled sales read as "not found" rather than leaking that they exist
 // `preview` (dashboard staff only) also finds drafts, cancelled and invite-only sales
-const findPublicAuction = async (auctionUuid, select, { preview = false } = {}) => {
+// `viewer`: a restricted live sale they may not see answers 403 LIVE_ACCESS_RESTRICTED (Settings → Live Access)
+const ACCESS_FIELDS = { id: true, status: true, liveAccessRestricted: true };
+
+const findPublicAuction = async (auctionUuid, select, { preview = false, viewer = null } = {}) => {
     const auction = await prisma.auction.findFirst({
         where: { uuid: auctionUuid, ...(preview ? { deletedAt: null } : publicWhere(ALL_PUBLIC_STATUSES)) },
-        select,
+        select: { ...select, ...ACCESS_FIELDS },
     });
     if (!auction) throw httpError("Auction not found", 404);
+    if (!preview) await assertCanSeeAuction(auction, viewer);
+
+    // hand back only what the caller asked for
+    for (const field of Object.keys(ACCESS_FIELDS)) if (!select[field]) delete auction[field];
     return auction;
 };
 
-export const getPublicAuctionService = async ({ auctionUuid }) => {
+export const getPublicAuctionService = async ({ auctionUuid, viewer = null }) => {
     // terms are shown to bidders in the register dialog
-    const auction = await findPublicAuction(auctionUuid, { ...PUBLIC_AUCTION_SELECT, description: true, termsAndConditions: true });
+    const auction = await findPublicAuction(
+        auctionUuid,
+        { ...PUBLIC_AUCTION_SELECT, description: true, termsAndConditions: true },
+        { viewer }
+    );
     return serializeBigInt(toPublicAuction(auction));
 };
 
@@ -266,8 +288,8 @@ const findUpNextLotUuid = async (auctionId) => {
     return next?.uuid ?? null;
 };
 
-export const getPublicLotsService = async ({ auctionUuid, search, sort, page, limit }) => {
-    const auction = await findPublicAuction(auctionUuid, { id: true, currency: { select: { code: true, symbol: true } } });
+export const getPublicLotsService = async ({ auctionUuid, search, sort, page, limit, viewer = null }) => {
+    const auction = await findPublicAuction(auctionUuid, { id: true, currency: { select: { code: true, symbol: true } } }, { viewer });
 
     const where = { auctionId: auction.id };
     if (search) {
@@ -385,7 +407,7 @@ const displayName = (user) => {
 };
 
 // `preview`: the dashboard's "Preview lot" — the same page for a sale that isn't public (yet)
-export const getPublicLotService = async ({ auctionUuid, lotUuid, preview = false }) => {
+export const getPublicLotService = async ({ auctionUuid, lotUuid, preview = false, viewer = null }) => {
     const { id: auctionId, creator, rules, ...auction } = await findPublicAuction(
         auctionUuid,
         {
@@ -397,7 +419,7 @@ export const getPublicLotService = async ({ auctionUuid, lotUuid, preview = fals
                 select: { valueType: true, rangeMin: true, rangeMax: true, value: true },
             },
         },
-        { preview }
+        { preview, viewer }
     );
 
     // a lot from another sale reads as not found

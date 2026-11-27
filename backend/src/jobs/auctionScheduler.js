@@ -3,6 +3,7 @@ import { logActivity, SYSTEM_ACTOR } from "../libs/activityLog.js";
 import { announceLotLive, closeAuctionLots, startOpeningLot } from "../services/liveAuction.services.js";
 import { flushPendingAuctions, PROXY_CUTOFF_MS, syncAuctionBidding, syncDirtyLots } from "../services/bidding.services.js";
 import { notifyLotWinner } from "../services/auctionMail.services.js";
+import { enforceLiveAccess } from "../services/liveAccess.services.js";
 
 /**
  * Every tick:
@@ -133,7 +134,7 @@ const runDue = async (label, activity, where, action, describe, afterSync) => {
                 console.info(`[scheduler] ${describe(result)}`);
                 await logSystem(activity, uuid, title, describe(result));
                 await syncBidding(uuid);
-                afterSync?.(result);
+                afterSync?.(result, uuid);
             }
         } catch (err) {
             console.error(`[scheduler] failed to ${label} auction ${id}:`, err);
@@ -162,8 +163,12 @@ const startDueAuctions = () =>
         (now) => ({ status: { in: STARTABLE_AUCTION_STATUSES }, startTime: { lte: now }, endTime: { gt: now } }),
         goLive,
         ({ title, lot }) => `"${title}" is now LIVE` + (lot ? ` — opened lot #${lot.itemNumber}` : " — no lot to open"),
-        // "Lot 01 is live" popup on every storefront tab
-        ({ lot }) => lot && announceLotLive(lot.uuid)
+        (({ lot }, uuid) => {
+            // "Lot 01 is live" popup on every storefront tab
+            if (lot) announceLotLive(lot.uuid);
+            // a restricted sale (Settings → Live Access) closes to tabs not on its list
+            enforceLiveAccess(uuid);
+        })
     );
 
 // Proxy bids close 8h before an auction starts: switch them off once that window opens.

@@ -1,6 +1,6 @@
 import express from 'express'
 import { changeAuctionStatus, createAuction, deleteAuction, deleteLot, getAuction, getLotByAuctionIdController, updateAuction } from '../controllers/auction.controller.js';
-import { authenticate } from '../middleware/auth.middleware.js';
+import { authenticate, optionalAuthenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { uploadAny } from "../middleware/upload.middleware.js";
 import { getLotBidders, getLotSummary, verifyLotBidders } from '../controllers/lotBidder.controller.js';
@@ -28,12 +28,19 @@ import { getArtwork, getArtworks, getArtworkSummary } from '../controllers/artwo
 
 const auctionRouter = express.Router()
 
-// STOREFRONT — no login; only published, non-invite-only sales
-auctionRouter.get('/public', getPublicAuctions)
-auctionRouter.get('/public/featured', getFeaturedAuction) // before /public/:auctionUuid
-auctionRouter.get('/public/:auctionUuid', getPublicAuction)
-auctionRouter.get('/public/:auctionUuid/lots', getPublicLots)
-auctionRouter.get('/public/:auctionUuid/lots/:lotUuid', getPublicLot)
+// STOREFRONT — no login needed; only published, non-invite-only sales. The token is read when
+// sent, because a restricted live sale is only shown to its picked bidders (Settings → Live Access);
+// the answer depends on who asks, so no shared cache may keep it
+const perViewer = (req, res, next) => {
+    res.set('Cache-Control', 'private, no-store');
+    res.vary('Authorization');
+    next();
+};
+auctionRouter.get('/public', optionalAuthenticate, perViewer, getPublicAuctions)
+auctionRouter.get('/public/featured', optionalAuthenticate, perViewer, getFeaturedAuction) // before /public/:auctionUuid
+auctionRouter.get('/public/:auctionUuid', optionalAuthenticate, perViewer, getPublicAuction)
+auctionRouter.get('/public/:auctionUuid/lots', optionalAuthenticate, perViewer, getPublicLots)
+auctionRouter.get('/public/:auctionUuid/lots/:lotUuid', optionalAuthenticate, perViewer, getPublicLot)
 
 auctionRouter.post(
     "/create-auction",

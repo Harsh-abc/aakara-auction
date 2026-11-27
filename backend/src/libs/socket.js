@@ -9,6 +9,7 @@ import { DASHBOARD_ROLES, tokenHasFreshMfa } from "./dashboardMfa.js";
 import { readVisitorId, startViewerTracking } from "./viewers.js";
 import { startWatcherTracking } from "./liveWatchers.js";
 import { canWatchLiveRoom } from "../services/liveStream.services.js";
+import { canSeeAuction } from "./liveAccess.js";
 
 // =====================================================================
 // Real-time channel (Socket.IO over the Redis adapter, so an event sent
@@ -46,14 +47,17 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 let io = null;
 
-// invite-only sales are only watchable by staff and their registered bidders
+// invite-only sales are only watchable by staff and their registered bidders;
+// a restricted live sale (Settings → Live Access) only by staff and its picked bidders
 const canWatchAuction = async (auctionUuid, user) => {
     const auction = await prisma.auction.findUnique({
         where: { uuid: auctionUuid },
-        select: { id: true, visibility: true, status: true, deletedAt: true },
+        select: { id: true, visibility: true, status: true, deletedAt: true, liveAccessRestricted: true },
     });
     if (!auction || auction.deletedAt || auction.status === "DRAFT") return false;
-    if (auction.visibility !== "PRIVATE_INVITE_ONLY" || isVerifiedStaff(user)) return true;
+    if (isVerifiedStaff(user)) return true;
+    if (!(await canSeeAuction(auction, user))) return false;
+    if (auction.visibility !== "PRIVATE_INVITE_ONLY") return true;
     if (!user) return false;
     const registration = await prisma.auctionParticipant.findUnique({
         where: { auctionId_userId: { auctionId: auction.id, userId: BigInt(user.userId) } },
@@ -183,6 +187,33 @@ export const emitTo = (room, event, payload) => {
 /** Sends an event to every connected tab on every API instance (e.g. "lot:live" for a public sale). */
 export const emitAll = (event, payload) => {
     io?.emit(event, payload);
+};
+
+/**
+ * Settings → Live Access: takes every tab that may no longer see the sale out of its storefront
+ * and live rooms, on every API instance, and tells it "auction:hidden" so the page reloads into
+ * the "coming soon" view. Call after the sale goes live, its restriction is switched on, or a
+ * bidder is taken off its list. Resolves to how many tabs were removed.
+ */
+export const ejectHiddenViewers = async (auctionUuid) => {
+    if (!io) return 0;
+    const auction = await prisma.auction.findUnique({
+        where: { uuid: auctionUuid },
+        select: { id: true, status: true, liveAccessRestricted: true },
+    });
+    if (!auction) return 0;
+
+    const sockets = await io.in([rooms.auction(auctionUuid), rooms.live(auctionUuid)]).fetchSockets();
+    let removed = 0;
+    for (const socket of sockets) {
+        const user = socket.data.user ?? null;
+        if (isVerifiedStaff(user) || (await canSeeAuction(auction, user))) continue;
+        socket.leave(rooms.auction(auctionUuid));
+        socket.leave(rooms.live(auctionUuid));
+        socket.emit("auction:hidden", { auctionUuid });
+        removed += 1;
+    }
+    return removed;
 };
 
 /** Drops a user's open connections on every API instance (suspended, role or password changed); they reconnect with whatever token they hold now. */

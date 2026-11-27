@@ -5,6 +5,7 @@ import { syncParticipantsToLots } from "./auctionParticipant.services.js";
 import { announceLotLive, closeAuctionLots, startOpeningLot } from "./liveAuction.services.js";
 import { overlayLiveBids, syncAuctionBidding } from "./bidding.services.js";
 import { notifyLotWinner } from "./auctionMail.services.js";
+import { enforceLiveAccess } from "./liveAccess.services.js";
 
 // =====================================================================
 // Helpers
@@ -893,6 +894,8 @@ export const changeAuctionStatusService = async ({ auctionUuid, status, reason, 
         if (soldLotUuid) notifyLotWinner(soldLotUuid);
         // "Lot 01 is live" popup on every storefront tab (not awaited)
         if (openedLotUuid) announceLotLive(openedLotUuid);
+        // a restricted sale (Settings → Live Access) closes to tabs not on its list (not awaited)
+        if (status === "LIVE" || status === "PAUSED") enforceLiveAccess(auctionUuid);
         return updated;
     } catch (error) {
         await syncBidding();

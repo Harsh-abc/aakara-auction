@@ -3,6 +3,7 @@ import { AccessToken } from "livekit-server-sdk";
 import prisma from "../libs/prisma.js";
 import { listWatcherTabs } from "../libs/liveWatchers.js";
 import { isDashboardRole } from "../libs/dashboardMfa.js";
+import { canSeeAuction, LIVE_ACCESS_MESSAGE, LIVE_ACCESS_RESTRICTED } from "../libs/liveAccess.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import {
     HOST_PREFIX,
@@ -46,7 +47,7 @@ const findUser = (userId) =>
 const findStreamAuction = async (auctionUuid, where = {}) => {
     const auction = await prisma.auction.findFirst({
         where: { uuid: auctionUuid, deletedAt: null, ...where },
-        select: { id: true, title: true, status: true },
+        select: { id: true, title: true, status: true, liveAccessRestricted: true },
     });
     if (!auction) throw httpError("Auction not found", 404);
     return auction;
@@ -85,6 +86,8 @@ const watchDenial = async (auction, userId, role) => {
     if (participant && BLOCKED_PARTICIPANT_STATUSES.includes(participant.status)) {
         return { code: "NOT_BIDDER", message: "Your registration for this auction isn't active, so you can't join its live room." };
     }
+    // Settings → Live Access: a restricted live sale is only for the bidders picked for it
+    if (!(await canSeeAuction(auction, { userId, role }))) return { code: LIVE_ACCESS_RESTRICTED, message: LIVE_ACCESS_MESSAGE };
     return null;
 };
 
@@ -101,7 +104,10 @@ export const getWatchAccessService = async ({ auctionUuid, userId, role }) => {
 /** May this signed-in socket be listed as watching the live room? (eligible, and not banned from the stream) */
 export const canWatchLiveRoom = async ({ auctionUuid, userId, role }) => {
     if (!userId) return false;
-    const auction = await prisma.auction.findFirst({ where: { uuid: auctionUuid, deletedAt: null }, select: { id: true } });
+    const auction = await prisma.auction.findFirst({
+        where: { uuid: auctionUuid, deletedAt: null },
+        select: { id: true, status: true, liveAccessRestricted: true },
+    });
     if (!auction || (await watchDenial(auction, userId, role))) return false;
 
     const user = await prisma.user.findFirst({ where: { id: BigInt(userId), deletedAt: null }, select: { uuid: true } });

@@ -16,6 +16,7 @@ import { AbsenteeBid } from "./AbsenteeBid";
 import { SHOW_ABSENTEE_BID } from "@/lib/constants/site-text";
 import { useBidderStatus } from "./useBidderStatus";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
+import { useAppSelector } from "@/hooks/redux";
 
 export function AuctionsPage() {
     const { paddles, eligibility, onRegistered } = useBidderStatus();
@@ -29,6 +30,11 @@ export function AuctionsPage() {
     // the hero's default images (Settings → Website), for when there's no sale or it has no cover
     const [banners, setBanners] = useState<PublicHomeBanner[]>([]);
 
+    // the featured sale is asked again on sign in / out and token refresh: a restricted live sale
+    // only features for its picked bidders (Settings → Live Access) — everyone else gets the next sale
+    // or the default banner
+    const token = useAppSelector((s) => s.auth.accessToken);
+
     useEffect(() => {
         // wait for both so the hero doesn't flash the house banner before the real images
         Promise.all([
@@ -41,7 +47,7 @@ export function AuctionsPage() {
                 // not critical — the hero keeps the built-in house banner
                 .catch(() => setBanners([])),
         ]).finally(() => setFeaturedLoading(false));
-    }, []);
+    }, [token]);
 
     return (
         <main className={PAGE_MAIN}>

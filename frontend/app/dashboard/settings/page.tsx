@@ -10,6 +10,7 @@ import {
     BellIcon,
     CalendarIcon,
     CircleAlertIcon,
+    EyeOffIcon,
     GlobeIcon,
     MailIcon,
     MessageSquareWarningIcon,
@@ -81,6 +82,12 @@ const SETTINGS_LINKS = [
         description: "Pause or resume the emails and SMS users get for proxy bids, lots won and registration.",
         href: "/dashboard/settings/notifications",
         icon: BellIcon,
+    },
+    {
+        title: "Live Access",
+        description: "Choose which bidders can see an auction while it's live — everyone else sees the coming-soon banner.",
+        href: "/dashboard/settings/live-access",
+        icon: EyeOffIcon,
     },
     {
         title: "Roles & Permissions",

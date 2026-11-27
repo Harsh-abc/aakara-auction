@@ -4,6 +4,7 @@ import prisma from "../libs/prisma.js";
 import redis from "../libs/redis.js";
 import { AUCTION_STATUS_TTL_SECONDS, ELIGIBLE_SENTINEL, ELIGIBLE_TTL_SECONDS, auctionKeyList, bidKeys, hydrateLotState, lotKeyList, readLotState, runBidEngine } from "../libs/biddingStore.js";
 import { emitTo, rooms } from "../libs/socket.js";
+import { canBidInAuction, liveAccessError } from "../libs/liveAccess.js";
 import { bidOptions, nextValidBid, proxyBidOptions } from "../utils/bidIncrement.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { sendProxyBidSetEmail } from "./auctionMail.services.js";
@@ -567,6 +568,8 @@ const runForUser = async ({ mode, lotUuid, userId, amount, ip, userAgent }) => {
     await checkRate(userId);
 
     const lot = await ensureLotState(lotUuid);
+    // Settings → Live Access: a restricted live sale only takes bids from the bidders picked for it
+    if (!(await canBidInAuction(lot.auctionId, userId))) throw liveAccessError();
     if (!(await isVerifiedBidder(lotUuid, lot.lotId, userId))) throw await notVerifiedError(lot.lotId, userId);
     // a bid, or a proxy's maximum, can't go above the bidder's limit
     await assertWithinBiddingLimit({ userId, amount, currencyCode: lot.currencyCode });

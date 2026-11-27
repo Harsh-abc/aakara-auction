@@ -7,6 +7,14 @@ import { getIpBlocks, unblockAllIps, unblockIp } from '../controllers/ipBlock.co
 import { getOtpLimits, resetAllOtpLimits, resetOtpLimit } from '../controllers/otpLimit.controller.js';
 import { getAdminAddedBidders } from '../controllers/auctionParticipant.controller.js';
 import { getNotificationSettings, updateNotificationSetting } from '../controllers/notificationSetting.controller.js';
+import {
+    addLiveViewers,
+    getLiveAccessAuctions,
+    getLiveViewerCandidates,
+    getLiveViewers,
+    removeLiveViewer,
+    setLiveAccessRestricted,
+} from '../controllers/liveAccess.controller.js';
 
 const adminRouter = Router();
 
@@ -48,5 +56,13 @@ adminRouter.delete('/otp-limits/:kind/:subject', authenticate, requireRole('SUPE
 // NOTIFICATIONS — on / off switches for user emails and SMS (super admin only)
 adminRouter.get('/notification-settings', authenticate, requireRole('SUPER_ADMIN'), getNotificationSettings)
 adminRouter.patch('/notification-settings', authenticate, requireRole('SUPER_ADMIN'), updateNotificationSetting)
+
+// LIVE ACCESS — per auction: while live, only staff and the picked bidders see it (super admin only)
+adminRouter.get('/live-access', authenticate, requireRole('SUPER_ADMIN'), getLiveAccessAuctions)
+adminRouter.patch('/live-access/:auctionUuid', authenticate, requireRole('SUPER_ADMIN'), setLiveAccessRestricted)
+adminRouter.get('/live-access/:auctionUuid/viewers', authenticate, requireRole('SUPER_ADMIN'), getLiveViewers)
+adminRouter.get('/live-access/:auctionUuid/candidates', authenticate, requireRole('SUPER_ADMIN'), getLiveViewerCandidates)
+adminRouter.post('/live-access/:auctionUuid/viewers', authenticate, requireRole('SUPER_ADMIN'), addLiveViewers)
+adminRouter.delete('/live-access/:auctionUuid/viewers/:userUuid', authenticate, requireRole('SUPER_ADMIN'), removeLiveViewer)
 
 export default adminRouter;

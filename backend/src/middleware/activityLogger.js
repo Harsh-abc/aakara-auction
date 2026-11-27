@@ -138,6 +138,21 @@ const ROUTES = [
     route("DELETE", "/api/admin/otp-limits/:kind/:subject", "AUTH", "OTP_LIMIT_RESET", "Reset an OTP limit", {
         describe: ({ params }) => `Reset the ${params.kind ?? "?"} OTP limit for ${decodeURIComponent(params.subject ?? "?")}`,
     }),
+    route("GET", "/api/admin/live-access", "AUCTION", "LIVE_ACCESS_VIEW", "Viewed Live Access", { view: true }),
+    route("PATCH", "/api/admin/live-access/:auctionUuid", "AUCTION", "LIVE_ACCESS_SET", "Changed an auction's live access", {
+        target: AUCTION,
+        describe: ({ ok, body, response }) =>
+            ok && response?.message ? response.message : `Tried to turn live access restriction ${body.restricted ? "on" : "off"}`,
+    }),
+    route("POST", "/api/admin/live-access/:auctionUuid/viewers", "AUCTION", "LIVE_ACCESS_ADD", "Picked bidders to see a live auction", {
+        target: AUCTION,
+        describe: ({ ok, body, response }) =>
+            ok && response?.message ? response.message : `Tried to add ${count(body.userUuids, "bidder")} to the live access list`,
+    }),
+    route("DELETE", "/api/admin/live-access/:auctionUuid/viewers/:userUuid", "AUCTION", "LIVE_ACCESS_REMOVE", "Removed a bidder from a live auction's list", {
+        target: AUCTION,
+        describe: ({ ok, response }) => (ok && response?.message ? response.message : "Tried to remove a bidder from the live access list"),
+    }),
     route("GET", "/api/admin/notification-settings", "NOTIFICATION", "NOTIFICATION_SETTINGS_VIEW", "Viewed the notification settings", { view: true }),
     route("PATCH", "/api/admin/notification-settings", "NOTIFICATION", "NOTIFICATION_SETTING_CHANGE", "Changed a notification setting", {
         // the response message reads e.g. "Lot won (SMS) paused"

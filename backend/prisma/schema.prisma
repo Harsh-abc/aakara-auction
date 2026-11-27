@@ -83,6 +83,8 @@ model User {
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")
   galleryItems              UserGalleryItem[]
   activityLogs              ActivityLog[]          @relation("ActivityLogActor")
+  liveAuctionAccess         AuctionLiveViewer[]    @relation("AuctionLiveViewerUser")
+  liveAuctionAccessGranted  AuctionLiveViewer[]    @relation("AuctionLiveViewerAddedBy")
 
   @@index([roleId])
   @@index([status])
@@ -326,6 +328,10 @@ model Auction {
   paddleCounter        Int                    @default(0)
   /// Bidders may leave proxy (maximum) bids on lots that haven't opened — switched by staff on the Proxy Bids page
   proxyBiddingEnabled  Boolean                @default(true)
+  /// Settings → Live Access: while LIVE / PAUSED only staff and the bidders in `liveViewers` see the sale;
+  /// everyone else gets the storefront's default "coming soon" banner (src/libs/liveAccess.js)
+  liveAccessRestricted Boolean                @default(false)
+  liveViewers          AuctionLiveViewer[]
   timezone             String                 @default("Asia/Kolkata")
   currencyId           BigInt
   currency             Currency               @relation(fields: [currencyId], references: [id])
@@ -1082,6 +1088,23 @@ model HomeBanner {
 
   @@index([isActive, sortOrder])
   @@map("home_banners")
+}
+
+// Settings → Live Access: a bidder who may see this auction while it's live and
+// restricted (Auction.liveAccessRestricted). Staff always can.
+model AuctionLiveViewer {
+  id        BigInt   @id @default(autoincrement())
+  auctionId BigInt
+  userId    BigInt
+  addedById BigInt?
+  createdAt DateTime @default(now())
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  user      User     @relation("AuctionLiveViewerUser", fields: [userId], references: [id], onDelete: Cascade)
+  addedBy   User?    @relation("AuctionLiveViewerAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+
+  @@unique([auctionId, userId])
+  @@index([userId])
+  @@map("auction_live_viewers")
 }
 
 // Settings → Notifications: on / off switches for the emails and SMS sent to users.

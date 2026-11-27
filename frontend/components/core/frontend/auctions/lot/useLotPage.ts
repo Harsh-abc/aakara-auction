@@ -12,6 +12,7 @@ import { useAuctionChannel } from "@/hooks/useAuctionChannel"
 import { useAppSelector } from "@/hooks/redux"
 
 import { isLive } from "../auctionDisplay"
+import { isLiveAccessRestricted } from "../LiveAccessComingSoon"
 import { formatMoney } from "../detail/lotDisplay"
 
 // bids arrive over the socket; this poll only runs while it's disconnected
@@ -21,6 +22,8 @@ export type LotPageState =
     | { status: "loading" }
     | { status: "ready"; data: PublicLotPage }
     | { status: "not-found" }
+    // the sale is live and only open to the bidders picked for it (Settings → Live Access)
+    | { status: "restricted" }
     | { status: "error"; message: string }
 
 // a socket update merged into the page: the lot in the order of sale, and the open lot with its ladder
@@ -63,8 +66,10 @@ export function useLotPage(
     { preview = false, onLotClosed }: { preview?: boolean; onLotClosed?: (event: LotClosedEvent) => void } = {}
 ) {
     const token = useAppSelector((state) => state.auth.accessToken)
-    // only the preview depends on the token; the storefront read stays anonymous
     const previewToken = preview ? token : null
+    // the storefront read sends the token too (services/authSession.ts) — asked again on sign in / out
+    // and refresh, since a restricted live sale only shows to the bidders picked for it
+    const viewerToken = preview ? null : token
     const [state, setState] = useState<LotPageState>({ status: "loading" })
     const stateRef = useRef(state)
     useEffect(() => {
@@ -123,6 +128,7 @@ export function useLotPage(
             })
             .catch((err) => {
                 if (cancelled) return
+                if (isLiveAccessRestricted(err)) return setState({ status: "restricted" })
                 const status = axios.isAxiosError(err) ? err.response?.status : undefined
                 const notFound = status === 404 || status === 400
                 // a failed refresh keeps the last good page on screen
@@ -137,7 +143,7 @@ export function useLotPage(
         return () => {
             cancelled = true
         }
-    }, [auctionUuid, lotUuid, refresh, preview, previewToken])
+    }, [auctionUuid, lotUuid, refresh, preview, previewToken, viewerToken])
 
     return state
 }

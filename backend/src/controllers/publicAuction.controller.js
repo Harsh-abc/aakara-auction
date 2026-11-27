@@ -21,22 +21,28 @@ const handleError = (res, error, label, fallback) => {
             message: error.issues?.[0]?.message || "Validation failed",
         });
     }
-    console.error(`${label} error:`, error);
     const status = error.statusCode || 500;
+    if (status >= 500) console.error(`${label} error:`, error);
     return res.status(status).json({
         success: false,
         message: status === 500 ? fallback : error.message,
+        // LIVE_ACCESS_RESTRICTED → the storefront shows its "coming soon" page
+        ...(error.code && { code: error.code }),
     });
 };
 
+// the signed-in user (optionalAuthenticate), or null for a guest — Settings → Live Access
+// can hide a live sale from everyone but the bidders picked for it
+const viewerOf = (req) => (req.user ? { userId: req.user.userId, role: req.user.role } : null);
+
 // -----------------------------------------------------------------
 // GET /api/auction/public/featured
-// Hero sale for the storefront — live now, else the next to open (data is null when none)
+// Hero sale for the storefront â€” live now, else the next to open (data is null when none)
 // -----------------------------------------------------------------
 
 export const getFeaturedAuction = async (req, res) => {
     try {
-        const data = await getFeaturedAuctionService();
+        const data = await getFeaturedAuctionService({ viewer: viewerOf(req) });
         return res.status(200).json({
             success: true,
             message: data ? "Featured auction fetched successfully" : "No upcoming auctions",
@@ -55,7 +61,7 @@ export const getFeaturedAuction = async (req, res) => {
 export const getPublicAuctions = async (req, res) => {
     try {
         const query = getPublicAuctionsQuerySchema.parse(req.query);
-        const data = await getPublicAuctionsService(query);
+        const data = await getPublicAuctionsService({ ...query, viewer: viewerOf(req) });
         return res.status(200).json({
             success: true,
             message: `${query.type === "past" ? "Past" : "Upcoming"} auctions fetched successfully`,
@@ -74,7 +80,7 @@ export const getPublicAuctions = async (req, res) => {
 export const getPublicAuction = async (req, res) => {
     try {
         const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
-        const data = await getPublicAuctionService({ auctionUuid });
+        const data = await getPublicAuctionService({ auctionUuid, viewer: viewerOf(req) });
         return res.status(200).json({ success: true, message: "Auction fetched successfully", data });
     } catch (error) {
         return handleError(res, error, "Get public auction", "Failed to fetch the auction");
@@ -89,7 +95,7 @@ export const getPublicLots = async (req, res) => {
     try {
         const { auctionUuid } = auctionUuidParamSchema.parse(req.params);
         const query = getPublicLotsQuerySchema.parse(req.query);
-        const data = await getPublicLotsService({ auctionUuid, ...query });
+        const data = await getPublicLotsService({ auctionUuid, ...query, viewer: viewerOf(req) });
         return res.status(200).json({ success: true, message: "Lots fetched successfully", data });
     } catch (error) {
         return handleError(res, error, "Get public lots", "Failed to fetch lots");
@@ -104,7 +110,7 @@ export const getPublicLots = async (req, res) => {
 export const getPublicLot = async (req, res) => {
     try {
         const params = publicLotParamsSchema.parse(req.params);
-        const data = await getPublicLotService(params);
+        const data = await getPublicLotService({ ...params, viewer: viewerOf(req) });
         return res.status(200).json({ success: true, message: "Lot fetched successfully", data });
     } catch (error) {
         return handleError(res, error, "Get public lot", "Failed to fetch the lot");
@@ -113,7 +119,7 @@ export const getPublicLot = async (req, res) => {
 
 // -----------------------------------------------------------------
 // GET /api/auction/dashboard/preview/:auctionUuid/lots/:lotUuid  (staff only)
-// The storefront lot page's data for any sale — drafts and invite-only included
+// The storefront lot page's data for any sale â€” drafts and invite-only included
 // -----------------------------------------------------------------
 
 export const getLotPreview = async (req, res) => {

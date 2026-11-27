@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { BODY, Breadcrumb, PAGE_MAIN, PAGE_TITLE } from "../storefront";
 import { auctionHref, auctionMeta, isFinished } from "./auctionDisplay";
 import { lotHeading, lotHref } from "./detail/lotDisplay";
+import { LiveAccessComingSoon } from "./LiveAccessComingSoon";
 import { useGallery } from "./detail/useGallery";
 import { BidDialog } from "./lot/BidDialog";
 import { LotCatalogueDetails } from "./lot/LotCatalogueDetails";
@@ -74,6 +75,9 @@ export function LotFullPage({ auctionUuid, lotUuid, preview = false }: { auction
             </main>
         );
     }
+
+    // live, and only open to the bidders picked for it (Settings → Live Access)
+    if (state.status === "restricted") return <LiveAccessComingSoon />;
 
     if (state.status !== "ready") {
         return <LotPageMessage auctionUuid={auctionUuid} notFound={state.status === "not-found"} message={state.status === "error" ? state.message : undefined} />;

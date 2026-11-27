@@ -71,12 +71,16 @@ export function useAuctionChannel(auctionUuid: string | null | undefined, handle
         const onLot = ours<LiveLotUpdate>((update) => handlersRef.current.onLotUpdate?.(update))
         const onStatus = ours<LiveAuctionStatus>((update) => handlersRef.current.onAuctionStatus?.(update))
         const onStaff = ours<StaffBidEvent>((event) => handlersRef.current.onStaffBid?.(event))
+        // Settings → Live Access closed this live sale to us (restricted, or taken off its list):
+        // reload, and the page comes back as the storefront's "coming soon" view
+        const onHidden = ours<{ auctionUuid: string }>(() => window.location.reload())
         const onOutbid = (notice: OutbidNotice) => handlersRef.current.onOutbid?.(notice)
         const onProxyOutbid = (notice: ProxyOutbidNotice) => handlersRef.current.onProxyOutbid?.(notice)
 
         socket.on("connect", join)
         socket.on("lot:update", onLot)
         socket.on("auction:status", onStatus)
+        socket.on("auction:hidden", onHidden)
         socket.on("bid:outbid", onOutbid)
         socket.on("proxy:outbid", onProxyOutbid)
         if (staff) socket.on("bid:new", onStaff)
@@ -87,6 +91,7 @@ export function useAuctionChannel(auctionUuid: string | null | undefined, handle
             socket.off("connect", join)
             socket.off("lot:update", onLot)
             socket.off("auction:status", onStatus)
+            socket.off("auction:hidden", onHidden)
             socket.off("bid:outbid", onOutbid)
             socket.off("proxy:outbid", onProxyOutbid)
             socket.off("bid:new", onStaff)

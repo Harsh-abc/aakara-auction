@@ -292,6 +292,7 @@ const data = {
         { title: "Blocked IPs", url: "/dashboard/settings/blocked-ips" },
         { title: "OTP Limits", url: "/dashboard/settings/otp-limits" },
         { title: "Notifications", url: "/dashboard/settings/notifications" },
+        { title: "Live Access", url: "/dashboard/settings/live-access" },
         // { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
       ],
     },

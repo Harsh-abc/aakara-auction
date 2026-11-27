@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { getWatchAccess, type WatchAccess } from "@/services/operations/liveStream.api";
 
 import { BODY, Breadcrumb, BUTTON, BUTTON_INLINE, BUTTON_OUTLINE, BUTTON_SOLID, PAGE_MAIN } from "../../storefront";
+import { LIVE_ACCESS_RESTRICTED, LiveAccessComingSoon } from "../LiveAccessComingSoon";
 
 type GateState = { status: "checking" } | { status: "allowed" } | { status: "denied"; access: Pick<WatchAccess, "code" | "message"> } | { status: "error" };
 
@@ -66,6 +67,8 @@ export function LiveRoomGate({ auctionUuid, children }: { auctionUuid: string; c
     }
 
     const code = state.status === "denied" ? state.access.code : null;
+    // live, and only open to the bidders picked for it (Settings → Live Access)
+    if (code === LIVE_ACCESS_RESTRICTED) return <LiveAccessComingSoon />;
     const message = state.status === "denied" ? state.access.message : "We couldn't check your access to the live auction. Please try again.";
 
     return (
