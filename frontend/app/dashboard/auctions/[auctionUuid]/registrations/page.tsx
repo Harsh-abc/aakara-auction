@@ -83,7 +83,7 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", {
     year: "numeric",
 });
 
-const formatDate = (iso?: string | null) => (iso ? dateFmt.format(new Date(iso)) : "—");
+const formatDate = (iso?: string | null) => (iso ? dateFmt.format(new Date(iso)) : "â€”");
 
 const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
@@ -95,7 +95,7 @@ const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
     timeZoneName: "short",
 });
 
-const formatDateTime = (iso?: string | null) => (iso ? dateTimeFmt.format(new Date(iso)) : "—");
+const formatDateTime = (iso?: string | null) => (iso ? dateTimeFmt.format(new Date(iso)) : "â€”");
 
 const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, " ");
 
@@ -255,7 +255,7 @@ export default function AuctionRegistrationsPage() {
     const busy = updating.size > 0;
 
     return (
-        <div className="space-y-6 px-8 py-8 pb-16">
+        <div className="min-w-0 max-w-full space-y-6 px-8 py-8 pb-16">
             {/* Header */}
             <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
@@ -263,7 +263,7 @@ export default function AuctionRegistrationsPage() {
                     <h3 className="text-2xl font-bold">Manage Bidders</h3>
                     <p className="mt-1 max-w-2xl text-sm text-slate-500">
                         Everyone registered for this auction is registered for all of its lots. They can bid on a lot
-                        only once a super admin verifies them for it — here for all lots at once, or lot by lot.
+                        only once a super admin verifies them for it â€” here for all lots at once, or lot by lot.
                     </p>
                 </div>
 
@@ -400,7 +400,7 @@ export default function AuctionRegistrationsPage() {
                                     />
                                 </TableHead>
                             )}
-                            {["Paddle", "User", "KYC", "Registered", "Terms", "Lots", "Phone lots", ...(canManage ? [""] : [])].map((h, i) => (
+                            {["Paddle", "User", "Registration", "Lots", "Phone lots", ...(canManage ? [""] : [])].map((h, i) => (
                                 <TableHead key={i} className="h-9 px-3 text-[11px] font-medium whitespace-nowrap text-slate-700">
                                     {h}
                                 </TableHead>
@@ -411,14 +411,14 @@ export default function AuctionRegistrationsPage() {
                     <TableBody>
                         {loading && participants.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-40 text-center text-sm text-slate-500">
+                                <TableCell colSpan={7} className="h-40 text-center text-sm text-slate-500">
                                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                                     Loading registrations...
                                 </TableCell>
                             </TableRow>
                         ) : participants.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-40 text-center text-sm text-slate-500">
+                                <TableCell colSpan={7} className="h-40 text-center text-sm text-slate-500">
                                     {search || filter !== "all"
                                         ? "No registrations match your search."
                                         : "No one has registered for this auction yet."}
@@ -456,7 +456,7 @@ export default function AuctionRegistrationsPage() {
                 {pagination && pagination.totalPages > 1 && (
                     <div className="flex items-center gap-3">
                         <span>
-                            Page {pagination.page} of {pagination.totalPages} · {pagination.total} users
+                            Page {pagination.page} of {pagination.totalPages} Â· {pagination.total} users
                         </span>
                         <Button
                             type="button"
@@ -543,7 +543,7 @@ const StatCard = ({ label, value, tone = "slate" }: { label: string; value?: num
     <div className="rounded-[8px] border border-slate-200 bg-white px-5 py-4">
         <p className="text-[12px] text-slate-500">{label}</p>
         <p className={cn("mt-1 text-2xl font-bold", STAT_TONE[tone])}>
-            {value ?? "—"}
+            {value ?? "â€”"}
         </p>
     </div>
 );
@@ -561,7 +561,7 @@ const OverviewField = ({ label, value }: { label: string; value: string }) => (
     </div>
 );
 
-/** The auction this page is about — dates, registration window, lot count */
+/** The auction this page is about â€” dates, registration window, lot count */
 const AuctionOverview = ({ auction, lotCount }: { auction: ParticipantAuction; lotCount: number }) => (
     <section className="flex flex-col gap-5 rounded-[8px] border border-slate-200 bg-white p-5 sm:flex-row">
         <div className="h-28 w-full shrink-0 overflow-hidden rounded-md bg-slate-100 sm:w-44">
@@ -594,7 +594,7 @@ const AuctionOverview = ({ auction, lotCount }: { auction: ParticipantAuction; l
                     label="Registration window"
                     value={
                         auction.registrationRequired
-                            ? `${formatDateTime(auction.registrationStarts)} → ${formatDateTime(auction.registrationDeadline)}`
+                            ? `${formatDateTime(auction.registrationStarts)} â†’ ${formatDateTime(auction.registrationDeadline)}`
                             : "Not required"
                     }
                 />
@@ -605,7 +605,7 @@ const AuctionOverview = ({ auction, lotCount }: { auction: ParticipantAuction; l
 );
 
 /**
- * Registrations by lot — compact so 100+ lots don't push the bidders table far down: small tiles
+ * Registrations by lot â€” compact so 100+ lots don't push the bidders table far down: small tiles
  * in a dense grid, a fixed height that scrolls inside, an "awaiting only" filter and a collapse toggle.
  */
 const LotRegistrations = ({ lots, auctionUuid }: { lots: ParticipantLot[]; auctionUuid: string }) => {
@@ -638,10 +638,10 @@ const LotRegistrations = ({ lots, auctionUuid }: { lots: ParticipantLot[]; aucti
                         {totals.lotsAwaiting > 0 ? (
                             <span className="text-amber-600">
                                 {" "}
-                                · {totals.pending} awaiting on {totals.lotsAwaiting} lot{totals.lotsAwaiting === 1 ? "" : "s"}
+                                Â· {totals.pending} awaiting on {totals.lotsAwaiting} lot{totals.lotsAwaiting === 1 ? "" : "s"}
                             </span>
                         ) : (
-                            lots.length > 0 && <span className="text-emerald-700"> · everyone verified</span>
+                            lots.length > 0 && <span className="text-emerald-700"> Â· everyone verified</span>
                         )}
                     </span>
                 </button>
@@ -681,8 +681,8 @@ const LotRegistrationTile = ({ lot, auctionUuid }: { lot: ParticipantLot; auctio
     return (
         <Link
             href={`/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/bidders`}
-            title={`Lot ${lot.itemNumber}: ${lot.title} (${toTitle(lot.status)})\n${registered} registered · ${verified} verified${
-                pending ? ` · ${pending} awaiting` : ""
+            title={`Lot ${lot.itemNumber}: ${lot.title} (${toTitle(lot.status)})\n${registered} registered Â· ${verified} verified${
+                pending ? ` Â· ${pending} awaiting` : ""
             }`}
             className={cn(
                 "group flex items-center gap-2 rounded-md border px-2 py-1.5 transition-colors hover:bg-slate-50",
@@ -728,7 +728,7 @@ const Legend = ({ status, label }: { status: LotBidderStatus | null; label: stri
     </span>
 );
 
-/** How many lot chips a cell shows before "+N more" — keeps rows short with 100+ lots */
+/** How many lot chips a cell shows before "+N more" â€” keeps rows short with 100+ lots */
 const MAX_CHIPS = 6;
 
 const LotChip = ({
@@ -742,7 +742,7 @@ const LotChip = ({
 }) => (
     <Link
         href={`/dashboard/auctions/${auctionUuid}/lots/${lot.uuid}/bidders`}
-        title={`Lot ${lot.itemNumber}: ${lot.title} — ${
+        title={`Lot ${lot.itemNumber}: ${lot.title} â€” ${
             status === "VERIFIED" ? "verified" : status === "PENDING" ? "awaiting verification" : "not registered"
         }`}
         className={cn(
@@ -774,7 +774,7 @@ const LotsCell = ({
     const shownIssues = notVerified.slice(0, MAX_CHIPS);
 
     return (
-        <div className="w-52">
+        <div className="w-48">
             <div className="flex items-center justify-between gap-2 text-[11px]">
                 <span className={verified === lots.length ? "text-emerald-700" : "text-slate-600"}>
                     {verified === lots.length ? "Verified on all" : "Verified on"}{" "}
@@ -847,12 +847,12 @@ const PhoneLotsCell = ({
     canManage: boolean;
     onPick: () => void;
 }) => {
-    if (!participant.isPhoneBidder) return <span className="text-[11px] text-slate-300">—</span>;
+    if (!participant.isPhoneBidder) return <span className="text-[11px] text-slate-300">â€”</span>;
 
     const picked = phoneLotsOf(participant, lots);
 
     return (
-        <div className="flex min-w-36 flex-col items-start gap-1">
+        <div className="flex w-36 flex-col items-start gap-1">
             {picked.length === 0 ? (
                 <span className="text-[11px] text-slate-400">No lots picked</span>
             ) : (
@@ -1047,8 +1047,9 @@ const ParticipantRow = ({
             </TableCell>
 
             {/* User */}
+            {/* User, with their KYC under the name */}
             <TableCell className="px-3">
-                <div className="flex min-w-55 items-center gap-3">
+                <div className="flex w-56 items-center gap-2.5">
                     {participant.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={participant.avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
@@ -1058,59 +1059,58 @@ const ParticipantRow = ({
                         </div>
                     )}
                     <div className="min-w-0">
-                        <p className="truncate text-[13px] font-medium text-slate-800">
+                        <p className="truncate text-[13px] font-medium text-slate-800" title={participant.name || participant.username}>
                             {participant.name || participant.username}
                         </p>
-                        <p className="truncate text-[11px] text-slate-500">
-                            @{participant.username} · {participant.email}
+                        <p className="truncate text-[11px] text-slate-500" title={`@${participant.username} Â· ${participant.email}`}>
+                            {participant.email}
                         </p>
+                        <div className="mt-1">
+                            <KycBadge status={participant.kycStatus} />
+                        </div>
                     </div>
                 </div>
             </TableCell>
 
-            {/* KYC */}
-            <TableCell className="px-3">
-                <KycBadge status={participant.kycStatus} />
-            </TableCell>
-
-            {/* How / when they registered */}
+            {/* How / when they registered, and the Conditions of Sale (details on hover) */}
             <TableCell className="px-3 text-[11px] whitespace-nowrap">
-                <span
-                    className={cn(
-                        "rounded px-2 py-0.5",
-                        participant.source === "SELF_REGISTERED" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"
-                    )}
-                >
-                    {participant.source === "SELF_REGISTERED" ? "Self" : "By admin"}
-                </span>
-                <p className="mt-1 text-slate-400">{formatDate(participant.registeredAt)}</p>
+                <div className="flex items-center gap-1.5">
+                    <span
+                        className={cn(
+                            "rounded px-1.5 py-0.5",
+                            participant.source === "SELF_REGISTERED" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"
+                        )}
+                    >
+                        {participant.source === "SELF_REGISTERED" ? "Self" : "By admin"}
+                    </span>
+                    <span className="text-slate-400">{formatDate(participant.registeredAt)}</span>
+                </div>
                 {participant.status === "APPROVED" ? (
-                    <p className="mt-0.5 text-emerald-700" title={formatDateTime(participant.approvedAt)}>
+                    <p
+                        className="mt-0.5 max-w-40 truncate text-emerald-700"
+                        title={`Approved${participant.approvedBy ? ` by @${participant.approvedBy}` : ""} Â· ${formatDateTime(participant.approvedAt)}`}
+                    >
                         Approved{participant.approvedBy ? ` by @${participant.approvedBy}` : ""}
                     </p>
                 ) : (
                     <p className="mt-0.5 text-amber-600">Approval pending</p>
                 )}
-            </TableCell>
-
-            {/* Conditions of Sale acceptance */}
-            <TableCell className="px-3 text-[11px] whitespace-nowrap">
                 {participant.termsAcceptedAt ? (
-                    <>
-                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">Agreed</span>
-                        <p className="mt-1 text-slate-500">{formatDateTime(participant.termsAcceptedAt)}</p>
-                        <p className="mt-0.5 text-slate-400">
-                            v{participant.termsVersion}
-                            {participant.termsAcceptedIp ? ` · IP ${participant.termsAcceptedIp}` : ""}
-                        </p>
-                    </>
+                    <p
+                        className="mt-0.5 text-slate-500"
+                        title={`Agreed ${formatDateTime(participant.termsAcceptedAt)} Â· v${participant.termsVersion}${
+                            participant.termsAcceptedIp ? ` Â· IP ${participant.termsAcceptedIp}` : ""
+                        }`}
+                    >
+                        Terms agreed <span className="text-slate-400">v{participant.termsVersion}</span>
+                    </p>
                 ) : (
-                    <>
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-500">Not recorded</span>
-                        <p className="mt-1 text-slate-400">
-                            {participant.source === "ADDED_BY_ADMIN" ? "Added by admin" : "Registered before terms tracking"}
-                        </p>
-                    </>
+                    <p
+                        className="mt-0.5 text-slate-400"
+                        title={participant.source === "ADDED_BY_ADMIN" ? "Added by admin" : "Registered before terms tracking"}
+                    >
+                        Terms not recorded
+                    </p>
                 )}
             </TableCell>
 
@@ -1137,7 +1137,7 @@ const ParticipantRow = ({
                         <Button
                             type="button"
                             variant="outline"
-                            className="h-8 min-w-28 text-xs"
+                            className="h-8 min-w-24 px-2.5 text-xs"
                             disabled={busy}
                             onClick={() => onVerify(false)}
                         >
@@ -1146,12 +1146,12 @@ const ParticipantRow = ({
                     ) : (
                         <Button
                             type="button"
-                            className="h-8 min-w-28 bg-[#491B3A] text-xs text-white hover:bg-[#491B3A]/90"
+                            className="h-8 min-w-24 bg-[#491B3A] px-2.5 text-xs text-white hover:bg-[#491B3A]/90"
                             disabled={busy || !kycVerified || lots.length === 0}
                             title={kycVerified ? undefined : "KYC must be verified before they can bid"}
                             onClick={() => onVerify(true)}
                         >
-                            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Verify all lots"}
+                            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Verify all"}
                         </Button>
                     )}
                 </TableCell>
