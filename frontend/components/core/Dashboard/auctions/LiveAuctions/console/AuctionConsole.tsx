@@ -387,6 +387,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
                         amount={selectedAmount ?? position.nextBid}
                         nextBid={position.nextBid}
                         floorBidders={data.floorBidders}
+                        recentBids={data.bids}
                         currentBid={position.currentBid}
                         leader={position.leader}
                         leaderUuid={position.leader?.uuid ?? null}

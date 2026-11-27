@@ -21,6 +21,8 @@ interface FloorBidDialogProps {
     /** smallest valid bid right now */
     nextBid: string;
     floorBidders: AuctionConsole["floorBidders"];
+    /** the lot's bids, newest first — paddles that bid lately go to the top of the list */
+    recentBids: AuctionConsole["bids"];
     /** the highest bid on the lot right now, null before the first bid */
     currentBid: ConsolePosition["currentBid"];
     leader: ConsolePosition["leader"];
@@ -42,6 +44,7 @@ export default function FloorBidDialog({
     amount: pickedAmount,
     nextBid,
     floorBidders,
+    recentBids,
     currentBid,
     leader,
     leaderUuid,
@@ -96,6 +99,13 @@ export default function FloorBidDialog({
     const bar = Math.max(Number(nextBid) || 0, Number.isFinite(typed) ? typed : 0);
     const isOutbid = (bidder: (typeof floorBidders)[number]) =>
         bidder.proxyMax !== null && Number(bidder.proxyMax) < bar;
+    // paddles that bid on this lot, most recent first — they're the ones the auctioneer is most likely to bid for again
+    const recentRank = new Map<string, number>();
+    for (const bid of recentBids) {
+        const paddleNo = bid.bidder?.paddle;
+        if (paddleNo && !recentRank.has(paddleNo)) recentRank.set(paddleNo, recentRank.size);
+    }
+    const rankOf = (bidder: (typeof floorBidders)[number]) => recentRank.get(bidder.paddle) ?? Infinity;
     const shown = floorBidders
         .filter(
             (bidder) =>
@@ -105,6 +115,8 @@ export default function FloorBidDialog({
         .sort(
             (a, b) =>
                 Number(b.paddle === exact?.paddle) - Number(a.paddle === exact?.paddle) ||
+                // Infinity - Infinity is NaN, which `||` skips to the next rule
+                rankOf(a) - rankOf(b) ||
                 Number(isOutbid(a)) - Number(isOutbid(b))
         );
 
