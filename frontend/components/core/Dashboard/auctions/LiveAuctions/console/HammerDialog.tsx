@@ -28,7 +28,7 @@ interface HammerDialogProps {
     lot: ConsoleLot;
     position: ConsolePosition;
     buyerPremium: AuctionConsole["buyerPremium"];
-    /** set when the lot had proxy bids: they were placed, and the dialog counts down before selling */
+    /** set when the lot had proxy bids: what placing them did (the dialog counts down before every sale) */
     proxyStep: ProxyStep | null;
     busy: boolean;
     /** sells at the bid count shown, so a bid landing meanwhile stops the sale */
@@ -37,7 +37,7 @@ interface HammerDialogProps {
 
 // Sell confirmation. Every figure is read from the live position, so a bid that
 // lands while it's open changes the winner and price in place (and says so).
-// After proxy bids were placed it counts 1-2-3 first; a new bid restarts the count.
+// It always counts 1-2-3 before the sale can be confirmed; a new bid restarts the count.
 export default function HammerDialog({ open, onOpenChange, lot, position, buyerPremium, proxyStep, busy, onConfirm }: HammerDialogProps) {
     // the proxies' own bids arriving over the socket aren't "new" — count from what they left
     const liveCount = Math.max(Number(position.bidCount), Number(proxyStep?.bidCount ?? 0));
@@ -54,12 +54,11 @@ export default function HammerDialog({ open, onOpenChange, lot, position, buyerP
         }
     }
 
-    // countdown: restarts when the dialog opens or a new bid comes in
-    const withCountdown = proxyStep !== null;
+    // countdown on every sale: restarts when the dialog opens or a new bid comes in
     const countKey = `${session}|${liveCount}`;
     const [count, setCount] = useState({ key: countKey, tick: 0 });
     const tick = count.key === countKey ? count.tick : 0;
-    const counting = withCountdown && tick < COUNTDOWN.length;
+    const counting = tick < COUNTDOWN.length;
 
     useEffect(() => {
         if (!open || !counting) return;
@@ -132,8 +131,8 @@ export default function HammerDialog({ open, onOpenChange, lot, position, buyerP
                 {changed && (
                     <p className="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-[12px] text-amber-800">
                         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        A new bid came in while this was open — the winner and price below are up to date
-                        {withCountdown ? ", and the count started again." : "."}
+                        A new bid came in while this was open — the winner and price below are up to date, and the
+                        count started again.
                     </p>
                 )}
 
@@ -218,7 +217,7 @@ export default function HammerDialog({ open, onOpenChange, lot, position, buyerP
                 )}
 
                 {/* 1 · 2 · 3 */}
-                {withCountdown && canSell && !syncing && (
+                {canSell && !syncing && (
                     <div className="flex items-center gap-3 rounded-lg border border-[#F5C26B] bg-[#FFF8E6] px-4 py-3">
                         <div className="flex gap-1.5" aria-hidden>
                             {COUNTDOWN.map((_, index) => (
@@ -256,7 +255,7 @@ export default function HammerDialog({ open, onOpenChange, lot, position, buyerP
                         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="h-4 w-4" />}
                         {busy
                             ? "Selling…"
-                            : withCountdown && counting && canSell
+                            : counting && canSell
                               ? `${tick + 1}…`
                               : `Sell for ${money(hammer, code)}`}
                     </Button>

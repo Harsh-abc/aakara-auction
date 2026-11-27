@@ -150,7 +150,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
     };
 
     // Sell: the lot's proxy bids are placed first (the highest takes the lead), then the
-    // dialog counts 1-2-3 before the sale can be confirmed. No proxies: straight to the dialog.
+    // dialog counts 1-2-3 before the sale can be confirmed. No proxies: straight to the dialog (which still counts).
     const openHammer = async () => {
         if (!lot) return;
         if (!data?.proxyBook.count) {
