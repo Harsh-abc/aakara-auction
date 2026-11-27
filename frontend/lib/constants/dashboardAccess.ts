@@ -49,9 +49,9 @@ const PAGE_RULES: { path: RegExp; roles: Role[] }[] = [
     // Artworks, User, Bidders, Settings and anything new: no rule → super admin only
 ]
 
-// Manage Bidders is hidden for every role: bidders are verified for lots with the one switch on
-// the user page instead. Set to false to bring the pages and their links back.
-export const MANAGE_BIDDERS_HIDDEN = true
+// Manage Bidders is shown again (to the roles in PAGE_RULES). Set to true to hide its pages and
+// links for every role — bidders can still be verified for lots with the one switch on the user page.
+export const MANAGE_BIDDERS_HIDDEN = false
 
 const MANAGE_BIDDERS_PATHS = [
     /^\/dashboard\/auctions\/manage-bidders(\/|$)/,
