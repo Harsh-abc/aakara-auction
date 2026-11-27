@@ -118,6 +118,10 @@ const ROUTES = [
         target: USER,
         describe: ({ body }) => (body.verified ? "Verified the bidder for all their lots" : "Took back the bidder's lot verification"),
     }),
+    route("PATCH", "/api/admin/:uuid/phone-bidder", "USER", "USER_PHONE_BIDDER", "Changed a bidder's phone bidder flag", {
+        target: USER,
+        describe: ({ body }) => (body.phoneBidder ? "Marked the bidder as a phone bidder" : "Took off the bidder's phone bidder flag"),
+    }),
     route("DELETE", "/api/admin/:uuid/mfa", "USER", "USER_MFA_RESET", "Reset a user's authenticator", { target: USER }),
     route("POST", "/api/admin/create-user", "USER", "USER_CREATE", "Created a user", {
         describe: ({ body }) => `Created ${body.roleName ?? "BIDDER"} account for ${body.fullName ?? "?"} (${body.email ?? "?"})`,

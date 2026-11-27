@@ -2,12 +2,12 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { getErrorMessage } from "@/lib/apiError";
 import { adminEndPoints, userEndPoints } from "../api";
 import { apiConnector } from "../apiConnector";
-import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, SetBiddingLimitPayload, SetBiddingLimitResponse, SetKycStatusPayload, SetKycStatusResponse, SetLotsVerifiedPayload, SetLotsVerifiedResponse, SetUserActivePayload, SetUserActiveResponse, UpdateUserDetailsPayload, UpdateUserDetailsResponse, UploadUserKycPayload, UploadUserKycResponse, User, UserStats } from "@/lib/types/user.types";
+import { ChangeUserRolePayload, ChangeUserRoleResponse, ChangeUserStatusPayload, ChangeUserStatusResponse, CreateUserPayload, CreateUserResponse, GetAllUsersParams, GetAllUsersResponse, GetUserByIdResponse, RequestKycDocumentsPayload, RequestKycDocumentsResponse, ReviewUserKycPayload, ReviewUserKycResponse, SetBiddingLimitPayload, SetBiddingLimitResponse, SetKycStatusPayload, SetKycStatusResponse, SetLotsVerifiedPayload, SetLotsVerifiedResponse, SetPhoneBidderPayload, SetPhoneBidderResponse, SetUserActivePayload, SetUserActiveResponse, UpdateUserDetailsPayload, UpdateUserDetailsResponse, UploadUserKycPayload, UploadUserKycResponse, User, UserStats } from "@/lib/types/user.types";
 import { RootState } from "@/redux/store";
 
 const { GET_ALL_USERS_API, GET_USER_STATS_API, GET_USER_BY_ID_API, UPLOAD_USER_KYC_API, REVIEW_USER_KYC_API, REQUEST_KYC_DOCUMENTS_API, SET_KYC_STATUS_API, SET_USER_ACTIVE_API, UPDATE_USER_DETAILS_API } = userEndPoints;
 
-const { CREATE_USER_API, CHANGE_USER_ROLE_API, CHANGE_USER_STATUS_API, SET_USER_LOTS_VERIFIED_API, SET_USER_BIDDING_LIMIT_API } = adminEndPoints;
+const { CREATE_USER_API, CHANGE_USER_ROLE_API, CHANGE_USER_STATUS_API, SET_USER_LOTS_VERIFIED_API, SET_USER_BIDDING_LIMIT_API, SET_USER_PHONE_BIDDER_API } = adminEndPoints;
 
 // counts for the users page cards — read straight from the database, not the loaded page of users
 export async function getUserStats(token: string | null): Promise<UserStats> {
@@ -343,6 +343,35 @@ export const setLotsVerified = createAsyncThunk<
             return response.data;
         } catch (error) {
             return rejectWithValue(getErrorMessage(error, "Could not change lot verification. Try again."));
+        }
+    }
+);
+
+// "Phone bidder": marks / unmarks a bidder whose bids are taken over the phone (super admin)
+export const setPhoneBidder = createAsyncThunk<
+    SetPhoneBidderResponse,
+    SetPhoneBidderPayload,
+    { rejectValue: string; state: RootState }
+>(
+    "user/setPhoneBidder",
+    async ({ uuid, phoneBidder }, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().auth.accessToken;
+
+            const response = await apiConnector<SetPhoneBidderResponse>({
+                method: "PATCH",
+                url: SET_USER_PHONE_BIDDER_API(uuid),
+                body: { phoneBidder },
+                header: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.data.success) {
+                return rejectWithValue(response.data.message || "Could not change the phone bidder flag");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(getErrorMessage(error, "Could not change the phone bidder flag. Try again."));
         }
     }
 );

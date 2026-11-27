@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { changeUserRole, changeUserStatus, createUserByAdmin, resetUserMfa, setUserBiddingLimit, setUserLotsVerified } from '../controllers/admin.controller.js';
+import { changeUserRole, changeUserStatus, createUserByAdmin, resetUserMfa, setUserBiddingLimit, setUserLotsVerified, setUserPhoneBidder } from '../controllers/admin.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { exportActivityLogs, getActivityLogs, getActivityLogSummary } from '../controllers/activityLog.controller.js';
@@ -28,6 +28,8 @@ adminRouter.patch('/:uuid/status', authenticate, requireRole('SUPER_ADMIN'), cha
 // VERIFY / UNVERIFY A BIDDER ON ALL THEIR LOTS
 adminRouter.patch('/:uuid/lots-verified', authenticate, requireRole('SUPER_ADMIN'), setUserLotsVerified)
 adminRouter.patch('/:uuid/bidding-limit', authenticate, requireRole('SUPER_ADMIN'), setUserBiddingLimit)
+// MARK / UNMARK A PHONE BIDDER (purple paddles on the Bidders page)
+adminRouter.patch('/:uuid/phone-bidder', authenticate, requireRole('SUPER_ADMIN'), setUserPhoneBidder)
 
 // RESET A USER'S GOOGLE AUTHENTICATOR (lost / new phone)
 adminRouter.delete('/:uuid/mfa', authenticate, requireRole('SUPER_ADMIN'), resetUserMfa)

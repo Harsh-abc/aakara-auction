@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setBiddingLimit, setKycStatus, setLotsVerified, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
+import { changeUserRole, changeUserStatus, createUser, getAllUsers, getUserById, requestKycDocuments, reviewUserKyc, setBiddingLimit, setKycStatus, setLotsVerified, setPhoneBidder, setUserActive, updateUserDetails, uploadUserKyc } from "@/services/operations/user.api";
 import { User, Pagination, GetAllUsersParams } from "@/lib/types/user.types";
 
 interface UserState {
@@ -37,6 +37,9 @@ interface UserState {
     // uuid of the user whose "Verified for lots" is being changed
     changingLotsVerifiedFor: string | null;
 
+    // uuid of the user whose "Phone bidder" flag is being changed
+    changingPhoneBidderFor: string | null;
+
     // uuid of the user whose bidding limit is being changed
     changingBiddingLimitFor: string | null;
 }
@@ -69,6 +72,8 @@ const initialState: UserState = {
     changingStatusFor: null,
 
     changingLotsVerifiedFor: null,
+
+    changingPhoneBidderFor: null,
 
     changingBiddingLimitFor: null,
 };
@@ -236,6 +241,23 @@ const userSlice = createSlice({
             })
             .addCase(setLotsVerified.rejected, (state) => {
                 state.changingLotsVerifiedFor = null;
+            })
+
+            .addCase(setPhoneBidder.pending, (state, action) => {
+                state.changingPhoneBidderFor = action.meta.arg.uuid;
+            })
+            .addCase(setPhoneBidder.fulfilled, (state, action) => {
+                state.changingPhoneBidderFor = null;
+                const { uuid, phoneBidderAt, phoneBidderBy } = action.payload.data;
+                if (state.selectedUser?.uuid === uuid) {
+                    state.selectedUser.phoneBidderAt = phoneBidderAt;
+                    state.selectedUser.phoneBidderBy = phoneBidderBy;
+                }
+                const listed = state.users?.find((u) => u.uuid === uuid);
+                if (listed) listed.phoneBidderAt = phoneBidderAt;
+            })
+            .addCase(setPhoneBidder.rejected, (state) => {
+                state.changingPhoneBidderFor = null;
             })
 
             .addCase(setBiddingLimit.pending, (state, action) => {

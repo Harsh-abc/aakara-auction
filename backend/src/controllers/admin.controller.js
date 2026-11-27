@@ -1,6 +1,6 @@
 
-import { changeRoleSchema, changeUserStatusSchema, setBiddingLimitSchema, setLotsVerifiedSchema } from '../validations/role.validation.js'
-import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService, sendTeamMemberAddedEmail, setUserBiddingLimitService, TEAM_ROLES } from '../services/admin.services.js'
+import { changeRoleSchema, changeUserStatusSchema, setBiddingLimitSchema, setLotsVerifiedSchema, setPhoneBidderSchema } from '../validations/role.validation.js'
+import { changeUserRoleService, changeUserStatusService, createUserByAdminService, resetUserMfaService, sendTeamMemberAddedEmail, setUserBiddingLimitService, setUserPhoneBidderService, TEAM_ROLES } from '../services/admin.services.js'
 import { setUserLotsVerifiedService } from '../services/lotBidder.services.js'
 import { createUserWithRoleSchema } from '../validations/user.validation.js';
 import { ZodError } from "zod";
@@ -119,6 +119,38 @@ export const setUserBiddingLimit = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: amount === null ? 'Bidding limit removed' : 'Bidding limit set',
+            data: result,
+        });
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: error.issues?.[0]?.message || "Validation failed",
+            });
+        }
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.statusCode ? error.message : "Internal server error",
+        });
+    }
+};
+
+
+
+// PATCH /api/admin/:uuid/phone-bidder — { phoneBidder: true | false }
+export const setUserPhoneBidder = async (req, res) => {
+    try {
+        const { phoneBidder } = setPhoneBidderSchema.parse(req.body);
+
+        const result = await setUserPhoneBidderService({
+            targetUuid: req.params.uuid,
+            phoneBidder,
+            actorId: req.user.userId,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: phoneBidder ? 'Marked as a phone bidder' : 'No longer a phone bidder',
             data: result,
         });
     } catch (error) {

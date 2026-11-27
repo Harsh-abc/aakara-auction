@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import UserProfile from "@/components/core/Dashboard/users/UserProfiile"
 import { BidderAccess } from "@/components/core/Dashboard/users/BidderAccess"
 import { LotsVerified } from "@/components/core/Dashboard/users/LotsVerified"
+import { PhoneBidder } from "@/components/core/Dashboard/users/PhoneBidder"
 import { BiddingLimit } from "@/components/core/Dashboard/users/BiddingLimit"
 import { UserProxyBids } from "@/components/core/Dashboard/users/UserProxyBids"
 
@@ -71,6 +72,7 @@ export default function UserPage() {
 
             <BidderAccess user={user} />
             <LotsVerified user={user} />
+            <PhoneBidder user={user} />
             <BiddingLimit user={user} />
 
             <div className="w-full rounded-[8px] bg-[#f8f8f8] px-5 py-4 h-40.75">

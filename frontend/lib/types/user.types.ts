@@ -75,6 +75,9 @@ export interface User {
     // only on GET /users/:uuid — "Verified for lots" is on while lotsVerifiedAt is set
     lotsVerifiedAt?: string | null;
     lotsVerifiedBy?: RoleChangedBy | null;
+    // "Phone bidder" is on while phoneBidderAt is set (purple paddles on the Bidders page); who set it only on GET /users/:uuid
+    phoneBidderAt?: string | null;
+    phoneBidderBy?: RoleChangedBy | null;
     // only on GET /users/:uuid — the most any one bid of theirs may be (null = no limit), and who last set it
     biddingLimit?: string | null;
     biddingLimitCurrency?: string | null;
@@ -302,6 +305,21 @@ export interface SetLotsVerifiedResponse {
         changed: number;
         lotsVerifiedAt: string | null;
         lotsVerifiedBy: RoleChangedBy | null;
+    };
+}
+
+export interface SetPhoneBidderPayload {
+    uuid: string;
+    phoneBidder: boolean;
+}
+
+export interface SetPhoneBidderResponse {
+    success: boolean;
+    message: string;
+    data: {
+        uuid: string;
+        phoneBidderAt: string | null;
+        phoneBidderBy: RoleChangedBy | null;
     };
 }
 

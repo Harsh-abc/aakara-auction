@@ -14,6 +14,11 @@ export const setLotsVerifiedSchema = z.object({
     verified: z.boolean(),
 })
 
+// "Phone bidder" on the user page (super admin)
+export const setPhoneBidderSchema = z.object({
+    phoneBidder: z.boolean(),
+})
+
 // bidding limit on the user page (super admin): an amount sets it, null removes it
 export const setBiddingLimitSchema = z.object({
     amount: z

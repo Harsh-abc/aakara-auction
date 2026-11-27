@@ -78,6 +78,12 @@ model User {
   biddingLimitSetById       BigInt?
   biddingLimitSetBy         User?                  @relation("UserBiddingLimitSetBy", fields: [biddingLimitSetById], references: [id], onDelete: SetNull)
   usersBiddingLimitSet      User[]                 @relation("UserBiddingLimitSetBy")
+  // "Phone bidder" on the user page (super admin): bids for this bidder are taken over the phone.
+  // Their paddle numbers show in purple on the Bidders page. Null = not a phone bidder
+  phoneBidderAt             DateTime?
+  phoneBidderById           BigInt?
+  phoneBidderBy             User?                  @relation("UserPhoneBidderSetBy", fields: [phoneBidderById], references: [id], onDelete: SetNull)
+  usersPhoneBidderSet       User[]                 @relation("UserPhoneBidderSetBy")
   lotBidders             LotBidder[]            @relation("LotBidderUser")
   lotBiddersVerified        LotBidder[]            @relation("LotBidderVerifier")
   liveStreamBans            LiveStreamBan[]        @relation("LiveStreamBanIssuer")

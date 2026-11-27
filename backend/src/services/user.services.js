@@ -85,6 +85,8 @@ export const getAllUsersService = async ({ page, limit, search, emailVerified, k
                 lockedUntil: true,
                 createdAt: true,
                 updatedAt: true,
+                // Bidders page: purple paddles and the "Phone bidder" column
+                phoneBidderAt: true,
 
                 role: { select: { name: true } },
 
@@ -203,6 +205,14 @@ export const getUserByIdService = async ({ uuid }) => {
             },
             lotsVerifiedAt: true,
             lotsVerifiedBy: {
+                select: {
+                    uuid: true,
+                    username: true,
+                    profile: { select: { firstName: true, lastName: true, displayName: true } },
+                },
+            },
+            phoneBidderAt: true,
+            phoneBidderBy: {
                 select: {
                     uuid: true,
                     username: true,

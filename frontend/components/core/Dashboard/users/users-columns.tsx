@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table"
 import type { AppTableFeatures } from "@/lib/table-features"
-import { BadgeCheck, BadgeX, UserPlus } from "lucide-react"
+import { BadgeCheck, BadgeX, Phone, UserPlus } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -249,9 +249,38 @@ const proxyBidsColumn: ColumnDef<AppTableFeatures, User> = {
     },
 }
 
-// Bidders page: the bidder columns plus each bidder's proxy bids, after the contact number
+// Phone bidders (switch on the user page) get purple paddles; everyone else the usual plum
+const isPhoneBidder = (user: User) => !!user.phoneBidderAt
+const paddleBadgeClass = (user: User) =>
+    isPhoneBidder(user) ? "bg-purple-100 text-purple-700" : "bg-[#7B2D52]/10 text-[#7B2D52]"
+
+// Bidders page: whether the bidder's bids are taken over the phone
+const phoneBidderColumn: ColumnDef<AppTableFeatures, User> = {
+    id: "phoneBidder",
+    accessorFn: (user) => (isPhoneBidder(user) ? "Yes" : "No"),
+
+    header: "Phone bidder",
+
+    cell: ({ row }) =>
+        isPhoneBidder(row.original) ? (
+            <Badge
+                variant="outline"
+                className="gap-1 rounded-full border-purple-200 bg-purple-50 px-3 py-1 text-xs font-normal text-purple-700"
+            >
+                <Phone className="h-3 w-3" />
+                Phone bidder
+            </Badge>
+        ) : (
+            <span className="text-muted-foreground">-</span>
+        ),
+}
+
+// Bidders page: the bidder columns plus each bidder's proxy bids after the contact number,
+// and the phone bidder flag after the bidder badge
 export const bidderListColumns: ColumnDef<AppTableFeatures, User>[] = bidderColumns.flatMap((column) =>
-    "accessorKey" in column && column.accessorKey === "phone" ? [column, proxyBidsColumn] : [column]
+    "accessorKey" in column && column.accessorKey === "phone" ? [column, proxyBidsColumn]
+        : column.id === "bidder" ? [column, phoneBidderColumn]
+            : [column]
 )
 
 // Bidders page filtered by auction: the bidder's paddle number for that auction
@@ -261,11 +290,18 @@ const paddleColumn: ColumnDef<AppTableFeatures, User> = {
 
     header: "Paddle no.",
 
-    cell: ({ row }) => (
-        <span className="font-medium tabular-nums">
-            {row.original.auctionParticipation?.paddleNumber ?? "-"}
-        </span>
-    ),
+    cell: ({ row }) => {
+        const paddle = row.original.auctionParticipation?.paddleNumber
+        if (paddle == null) return <span className="text-muted-foreground">-</span>
+        return (
+            <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${paddleBadgeClass(row.original)}`}
+                title={isPhoneBidder(row.original) ? "Phone bidder" : undefined}
+            >
+                #{paddle}
+            </span>
+        )
+    },
 }
 
 const REGISTRATION_LABEL: Record<string, string> = {
@@ -342,8 +378,12 @@ export const paddlesColumn = ({ onRegister, openAuctionUuids }: PaddlesColumnOpt
                 ) : (
                     <ul className="grid gap-1">
                         {shown.map((r) => (
-                            <li key={r.auction.uuid} className="flex items-center gap-1.5" title={r.auction.title}>
-                                <span className="rounded-full bg-[#7B2D52]/10 px-2 py-0.5 text-xs font-medium tabular-nums text-[#7B2D52]">
+                            <li
+                                key={r.auction.uuid}
+                                className="flex items-center gap-1.5"
+                                title={isPhoneBidder(user) ? `${r.auction.title} (phone bidder)` : r.auction.title}
+                            >
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${paddleBadgeClass(user)}`}>
                                     #{r.paddleNumber}
                                 </span>
                                 <span className="max-w-40 truncate text-xs text-muted-foreground">{r.auction.title}</span>

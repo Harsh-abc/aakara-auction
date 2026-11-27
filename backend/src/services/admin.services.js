@@ -528,3 +528,35 @@ export const setUserBiddingLimitService = async ({ targetUuid, amount, currency,
         proxiesWithdrawn: proxies.withdrawn,
     };
 };
+
+// "Phone bidder" on the user page (super admin): marks a bidder whose bids are taken over the
+// phone. It only labels them (purple paddles on the Bidders page); it doesn't change who may bid
+export const setUserPhoneBidderService = async ({ targetUuid, phoneBidder, actorId }) => {
+    const user = await prisma.user.findFirst({
+        where: { uuid: targetUuid, deletedAt: null },
+        select: { id: true, phoneBidderAt: true, role: { select: { name: true } } },
+    });
+    if (!user) {
+        const err = new Error('User not found');
+        err.statusCode = 404;
+        throw err;
+    }
+    if (phoneBidder && user.role.name !== 'BIDDER') {
+        const err = new Error('Only bidders can be marked as phone bidders');
+        err.statusCode = 400;
+        throw err;
+    }
+
+    // turning it on again keeps who set it first and when
+    const data = phoneBidder
+        ? user.phoneBidderAt
+            ? {}
+            : { phoneBidderAt: new Date(), phoneBidderById: BigInt(actorId) }
+        : { phoneBidderAt: null, phoneBidderById: null };
+
+    return prisma.user.update({
+        where: { id: user.id },
+        data,
+        select: { uuid: true, phoneBidderAt: true, phoneBidderBy: { select: PERSON_SELECT } },
+    });
+};
