@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 dotenv.config();
 import cookieParser from "cookie-parser";
@@ -33,6 +34,17 @@ const parseTrustProxy = (value) => {
     return /^\d+$/.test(value) ? Number(value) : value;
 };
 app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
+
+// security headers (nosniff, HSTS, no X-Powered-By, …). The API only answers with JSON
+// and CSV, never pages, so its CSP allows nothing to load and nothing to frame it.
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            useDefaults: false,
+            directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] },
+        },
+    })
+);
 
 app.use(
     cors({
