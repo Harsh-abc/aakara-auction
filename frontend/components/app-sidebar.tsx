@@ -293,6 +293,7 @@ const data = {
         { title: "OTP Limits", url: "/dashboard/settings/otp-limits" },
         { title: "Notifications", url: "/dashboard/settings/notifications" },
         { title: "Live Access", url: "/dashboard/settings/live-access" },
+        { title: "Auction Emails", url: "/dashboard/settings/auction-emails" },
         // { title: "Roles & Permissions", url: "/dashboard/settings/permissions" },
       ],
     },

@@ -38,6 +38,39 @@ export const siteBase = (siteUrl) => (siteUrl || WEBSITE_URL).replace(/\/+$/, ""
 export const link = (href, label) =>
     `<a href="${escapeHtml(href)}" style="color:#1a1a1a; text-decoration:underline;">${label}</a>`;
 
+// ── Internet connectivity notice ─────────────────────
+// the one wording every bidder-facing email shows (registration approved, proxy bid, auction messages)
+export const CONNECTIVITY_HEADING = "Important: Internet Connectivity";
+export const CONNECTIVITY_POINTS = [
+    "Please make sure you have a stable, high-speed internet connection while bidding online. A wired broadband or strong Wi-Fi connection is recommended over mobile data.",
+    "A weak or interrupted connection can delay your bids and the live video. Bids are accepted in the order they reach our servers, so a delayed bid may not be placed.",
+    "AKARA cannot be held responsible for bids that are missed or delayed because of connectivity issues on the bidder's side.",
+    "If your connection may be unreliable, we recommend setting a proxy bid in advance, or contacting us to arrange telephone bidding.",
+];
+
+// a highlighted box, as a body row for emailLayout's `content`
+export const connectivityNoticeRow = (padding = "24px 48px 0 48px") => `
+                        <!-- Internet connectivity -->
+                        <tr>
+                            <td style="padding: ${padding};">
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f1e3; border-left: 3px solid #c9a44c;">
+                                    <tr>
+                                        <td style="padding: 18px 22px;">
+                                            <p style="margin:0 0 10px 0; font-size: 11px; letter-spacing: 1.5px; color:#1a1a1a; text-transform: uppercase;">
+                                                ${CONNECTIVITY_HEADING}
+                                            </p>
+                                            <ul style="margin:0; padding-left: 18px; font-size: 13px; line-height: 21px; color:#1a1a1a;">
+                                                ${CONNECTIVITY_POINTS.map((point) => `<li style="margin: 0 0 6px 0;">${escapeHtml(point)}</li>`).join("")}
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>`;
+
+// plain-text version, for the text part
+export const connectivityNoticeText = () => [CONNECTIVITY_HEADING, ...CONNECTIVITY_POINTS.map((point) => `- ${point}`)];
+
 const formatIst = (date) =>
     new Date(date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" }) + " IST";
 

@@ -222,4 +222,9 @@ export const adminEndPoints = {
     LIVE_ACCESS_VIEWER_API: (auctionUuid: string, userUuid: string) =>
         `${BASE_URL}/api/admin/live-access/${auctionUuid}/viewers/${userUuid}`,
     LIVE_ACCESS_CANDIDATES_API: (auctionUuid: string) => `${BASE_URL}/api/admin/live-access/${auctionUuid}/candidates`,
+    // Settings → Auction Emails (super admin only): GET auctions, GET an auction's registered bidders,
+    // POST { subject, heading, message, userUuids, test } emails them
+    AUCTION_EMAILS_API: `${BASE_URL}/api/admin/auction-emails`,
+    AUCTION_EMAIL_RECIPIENTS_API: (auctionUuid: string) => `${BASE_URL}/api/admin/auction-emails/${auctionUuid}/recipients`,
+    AUCTION_EMAIL_SEND_API: (auctionUuid: string) => `${BASE_URL}/api/admin/auction-emails/${auctionUuid}/send`,
 }

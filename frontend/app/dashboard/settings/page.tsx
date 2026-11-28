@@ -16,6 +16,7 @@ import {
     MessageSquareWarningIcon,
     PencilIcon,
     PhoneIcon,
+    SendIcon,
     ShieldCheckIcon,
     UserIcon,
     UsersIcon,
@@ -88,6 +89,12 @@ const SETTINGS_LINKS = [
         description: "Choose which bidders can see an auction while it's live — everyone else sees the coming-soon banner.",
         href: "/dashboard/settings/live-access",
         icon: EyeOffIcon,
+    },
+    {
+        title: "Auction Emails",
+        description: "Write a message and email it to the bidders registered for an auction — e.g. a last-minute reminder.",
+        href: "/dashboard/settings/auction-emails",
+        icon: SendIcon,
     },
     {
         title: "Roles & Permissions",

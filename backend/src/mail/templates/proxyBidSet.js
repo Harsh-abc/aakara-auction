@@ -1,4 +1,6 @@
 import {
+    connectivityNoticeRow,
+    connectivityNoticeText,
     emailLayout,
     escapeHtml,
     link,
@@ -66,6 +68,8 @@ export const proxyBidSetTemplate = ({ siteUrl = "", ...details }) => {
                             </td>
                         </tr>
 
+                        ${connectivityNoticeRow()}
+
                         <!-- How it works -->
                         <tr>
                             <td style="padding: 24px 48px 32px 48px;">
@@ -104,6 +108,8 @@ export const proxyBidSetText = ({ siteUrl = "", ...details }) => {
         "Please note that your maximum proxy bid is confidential and will not be disclosed to other bidders.",
         "",
         "Proxy bidding will close at 12 PM IST (Indian Standard Time) on the day of the sale.",
+        "",
+        ...connectivityNoticeText(),
         "",
         `Thank you for your participation. For any assistance, please contact us at ${BIDS_EMAIL}.`,
         "",

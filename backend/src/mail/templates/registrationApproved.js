@@ -1,5 +1,7 @@
 import {
     AUCTION_EMAIL,
+    connectivityNoticeRow,
+    connectivityNoticeText,
     emailLayout,
     escapeHtml,
     link,
@@ -53,6 +55,8 @@ export const registrationApprovedTemplate = ({ userName = "", siteUrl = "" }) =>
                             </td>
                         </tr>
 
+                        ${connectivityNoticeRow()}
+
                         <!-- Button -->
                         <tr>
                             <td align="center" style="padding: 32px 40px 8px 40px;">
@@ -90,6 +94,8 @@ export const registrationApprovedText = ({ userName = "", siteUrl = "" }) => {
         `You can now log in to your AKARA AUCTIONS account and participate in the sale: ${loginUrl(site)}`,
         "",
         `Before placing your bids, please review the auction details, Terms and Conditions of Sale (${site}/terms) and bidding guidelines.`,
+        "",
+        ...connectivityNoticeText(),
         "",
         `If you have any questions or require assistance, please contact us at ${AUCTION_EMAIL}`,
         "",

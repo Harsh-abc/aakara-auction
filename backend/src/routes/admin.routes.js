@@ -15,6 +15,7 @@ import {
     removeLiveViewer,
     setLiveAccessRestricted,
 } from '../controllers/liveAccess.controller.js';
+import { getBroadcastAuctions, getBroadcastRecipients, sendAuctionMessage } from '../controllers/auctionBroadcast.controller.js';
 
 const adminRouter = Router();
 
@@ -66,5 +67,10 @@ adminRouter.get('/live-access/:auctionUuid/viewers', authenticate, requireRole('
 adminRouter.get('/live-access/:auctionUuid/candidates', authenticate, requireRole('SUPER_ADMIN'), getLiveViewerCandidates)
 adminRouter.post('/live-access/:auctionUuid/viewers', authenticate, requireRole('SUPER_ADMIN'), addLiveViewers)
 adminRouter.delete('/live-access/:auctionUuid/viewers/:userUuid', authenticate, requireRole('SUPER_ADMIN'), removeLiveViewer)
+
+// AUCTION EMAILS — write a message and email it to the bidders registered for one auction (super admin only)
+adminRouter.get('/auction-emails', authenticate, requireRole('SUPER_ADMIN'), getBroadcastAuctions)
+adminRouter.get('/auction-emails/:auctionUuid/recipients', authenticate, requireRole('SUPER_ADMIN'), getBroadcastRecipients)
+adminRouter.post('/auction-emails/:auctionUuid/send', authenticate, requireRole('SUPER_ADMIN'), sendAuctionMessage)
 
 export default adminRouter;

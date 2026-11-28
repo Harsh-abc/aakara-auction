@@ -157,6 +157,15 @@ const ROUTES = [
         target: AUCTION,
         describe: ({ ok, response }) => (ok && response?.message ? response.message : "Tried to remove a bidder from the live access list"),
     }),
+    route("GET", "/api/admin/auction-emails", "NOTIFICATION", "AUCTION_EMAILS_VIEW", "Viewed Auction Emails", { view: true }),
+    route("POST", "/api/admin/auction-emails/:auctionUuid/send", "NOTIFICATION", "AUCTION_EMAIL_SEND", "Emailed an auction's registered bidders", {
+        target: AUCTION,
+        // the response message reads e.g. `"Reminder" sent to 42 bidders of "The Fine Art Sale"`
+        describe: ({ ok, body, response }) =>
+            ok && response?.message
+                ? response.message
+                : `Tried to send ${quoted(body.subject, "an email")} to ${body.test ? "themselves (test)" : count(body.userUuids, "bidder")}`,
+    }),
     route("GET", "/api/admin/notification-settings", "NOTIFICATION", "NOTIFICATION_SETTINGS_VIEW", "Viewed the notification settings", { view: true }),
     route("PATCH", "/api/admin/notification-settings", "NOTIFICATION", "NOTIFICATION_SETTING_CHANGE", "Changed a notification setting", {
         // the response message reads e.g. "Lot won (SMS) paused"
