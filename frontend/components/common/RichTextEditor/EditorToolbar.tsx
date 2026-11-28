@@ -5,6 +5,7 @@ import { Editor, useEditorState } from "@tiptap/react";
 import {
     Baseline,
     Bold,
+    Braces,
     Code,
     CodeXml,
     Grid2x2Plus,
@@ -38,7 +39,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { InlineInputForm, MenuItem, ToolbarButton, ToolbarDivider, ToolbarDropdown } from "./ToolbarPrimitives";
-import type { RichTextEditorVariant } from "./RichTextEditor";
+import type { MergeTag, RichTextEditorVariant } from "./RichTextEditor";
 
 const ICON = "h-4 w-4";
 
@@ -81,6 +82,7 @@ interface EditorToolbarProps {
     editor: Editor;
     disabled?: boolean;
     variant: RichTextEditorVariant;
+    mergeTags?: MergeTag[];
     // undefined → images can only be inserted by URL
     onUploadImages?: (files: File[]) => void;
     uploadingCount: number;
@@ -92,6 +94,7 @@ export default function EditorToolbar({
     editor,
     disabled,
     variant,
+    mergeTags,
     onUploadImages,
     uploadingCount,
     fullscreen,
@@ -99,7 +102,9 @@ export default function EditorToolbar({
 }: EditorToolbarProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     // "basic" has no headings, sizes, alignment, blocks, media or tables (see buildExtensions)
-    const full = variant === "full";
+    const full = variant !== "basic";
+    // "email" has everything but video embeds — email clients don't show them
+    const video = variant === "full";
 
     // Tiptap v3 doesn't re-render on every transaction — subscribe to what the toolbar shows
     const state = useEditorState({
@@ -425,6 +430,7 @@ export default function EditorToolbar({
                 </ToolbarDropdown>
 
                 {/* YouTube */}
+                {video && (
                 <ToolbarDropdown label="Embed YouTube video" trigger={<Video className={ICON} />} panelClassName="p-2">
                     {(close) => (
                         <InlineInputForm
@@ -437,6 +443,7 @@ export default function EditorToolbar({
                         />
                     )}
                 </ToolbarDropdown>
+                )}
 
                 {/* Table */}
                 <ToolbarDropdown label="Insert table" trigger={<Grid2x2Plus className={ICON} />} panelClassName="p-2">
@@ -450,6 +457,41 @@ export default function EditorToolbar({
                     )}
                 </ToolbarDropdown>
                 </>
+                )}
+
+                {/* Merge fields — filled in per recipient */}
+                {mergeTags && mergeTags.length > 0 && (
+                    <>
+                        <ToolbarDivider />
+                        <ToolbarDropdown
+                            label="Insert field"
+                            trigger={
+                                <span className="flex items-center gap-1 text-xs font-medium">
+                                    <Braces className="h-3.5 w-3.5" /> Insert field
+                                </span>
+                            }
+                            panelClassName="w-64"
+                        >
+                            {(close) =>
+                                mergeTags.map((tag) => (
+                                    <MenuItem
+                                        key={tag.token}
+                                        onClick={() => {
+                                            chain().insertContent(`{{${tag.token}}}`).run();
+                                            close();
+                                        }}
+                                    >
+                                        <span className="flex min-w-0 flex-col items-start">
+                                            <span className="text-xs font-medium text-slate-800">
+                                                {tag.label} <code className="ml-1 text-[11px] text-slate-400">{`{{${tag.token}}}`}</code>
+                                            </span>
+                                            {tag.description && <span className="text-[11px] text-slate-400">{tag.description}</span>}
+                                        </span>
+                                    </MenuItem>
+                                ))
+                            }
+                        </ToolbarDropdown>
+                    </>
                 )}
 
                 <ToolbarDivider />

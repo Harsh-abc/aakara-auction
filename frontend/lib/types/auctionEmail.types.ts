@@ -36,7 +36,18 @@ export type AuctionEmailRecipientList = {
 export type AuctionEmailDraft = {
     subject: string
     heading: string
+    /** rich text (HTML) from the editor — cleaned on the server before it's sent */
     message: string
+    /** start the email with "Dear <name>," */
+    greeting: boolean
+}
+
+export type AuctionEmailPreview = {
+    subject: string
+    html: string
+    text: string
+    /** whose details filled the {{fields}} */
+    previewFor: { name: string | null; email: string | null; paddleNumber: string | null }
 }
 
 export type AuctionEmailSendResult = {

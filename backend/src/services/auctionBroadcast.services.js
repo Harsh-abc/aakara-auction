@@ -1,8 +1,10 @@
 import prisma from "../libs/prisma.js";
 import { LIVE_STATUSES } from "../libs/liveAccess.js";
+import { LOGO_INLINE_IMAGE } from "../mail/logo.js";
+import { emailSafeHtml, fillMergeTags, htmlToText, isEmptyRichText } from "../mail/richText.js";
 import sendEmail from "../mail/sendMail.js";
 import { AUCTION_EMAIL, REGISTRATION_INLINE_IMAGES } from "../mail/templates/registrationReceived.js";
-import { auctionMessageTemplate, auctionMessageText } from "../mail/templates/auctionMessage.js";
+import { auctionMessageTemplate, auctionMessageText, auctionPageUrl } from "../mail/templates/auctionMessage.js";
 import { serializeBigInt } from "../utils/serialize.js";
 import { searchWhere } from "./lotBidder.services.js";
 
@@ -149,26 +151,84 @@ const runPool = async (items, limit, task) => {
     await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 };
 
-const mailFor = ({ auction, subject, heading, message, userName, paddleNumber }) => {
+// the editor's HTML, cleaned once per send (mail/richText.js) — per bidder only the merge tags change
+const prepareMessage = (message) => {
+    if (isEmptyRichText(message)) throw httpError("Write a message");
+    return emailSafeHtml(message);
+};
+
+// {{tag}} values for one bidder (subject, heading and message all take them)
+const mergeValues = (auction, user, paddleNumber) => ({
+    name: personName(user) || "Collector",
+    firstName: user?.profile?.firstName || personName(user) || "Collector",
+    paddle: paddleNumber ? String(paddleNumber) : "",
+    auction: auction.title,
+    auctionDate: formatDate(auction.startTime),
+    auctionLink: auctionPageUrl(process.env.FRONTEND_URL, auction.uuid),
+});
+
+// subject / heading are plain text — fill the tags without HTML escaping
+const fillPlain = (text, values) => htmlToText(fillMergeTags(text, values)).replace(/\s+/g, " ").trim();
+
+const mailFor = ({ auction, subject, heading, greeting, safeHtml, user, paddleNumber }) => {
+    const values = mergeValues(auction, user, paddleNumber);
+    const messageHtml = fillMergeTags(safeHtml, values);
     const fields = {
-        userName,
+        userName: personName(user),
         siteUrl: process.env.FRONTEND_URL,
         auctionTitle: auction.title,
-        auctionDate: formatDate(auction.startTime),
+        auctionDate: values.auctionDate,
         auctionUuid: auction.uuid,
-        paddleNumber: paddleNumber ? String(paddleNumber) : "",
-        heading,
-        message,
+        paddleNumber: values.paddle,
+        heading: fillPlain(heading, values),
+        greeting,
+        messageHtml,
+        messageText: htmlToText(messageHtml),
     };
-    return { subject, html: auctionMessageTemplate(fields), text: auctionMessageText(fields) };
+    return { subject: fillPlain(subject, values), html: auctionMessageTemplate(fields), text: auctionMessageText(fields) };
+};
+
+// cid: images only exist inside a sent email — inline them so the dashboard preview shows them
+const PREVIEW_IMAGES = [LOGO_INLINE_IMAGE, ...REGISTRATION_INLINE_IMAGES];
+const withDataImages = (html) =>
+    PREVIEW_IMAGES.reduce((out, { filename, data }) => {
+        const type = filename.endsWith(".png") ? "image/png" : "image/jpeg";
+        return out.replaceAll(`cid:${filename}`, `data:${type};base64,${Buffer.from(data).toString("base64")}`);
+    }, html);
+
+/**
+ * The email exactly as one bidder would get it — the first of `userUuids` registered for the
+ * auction, else the first registered bidder, else the super admin previewing it.
+ */
+export const previewAuctionMessageService = async ({ auctionUuid, subject, heading, message, greeting, userUuids, actorId }) => {
+    const auction = await findAuction(auctionUuid);
+    const safeHtml = prepareMessage(message);
+
+    const participant = await prisma.auctionParticipant.findFirst({
+        where: { ...sendableWhere(auction.id), ...(userUuids?.length ? { user: { deletedAt: null, uuid: { in: userUuids } } } : {}) },
+        orderBy: { registeredAt: "asc" },
+        select: { paddleNumber: true, user: { select: { email: true, username: true, profile: PROFILE_SELECT } } },
+    });
+    const user =
+        participant?.user ??
+        (await prisma.user.findUnique({ where: { id: BigInt(actorId) }, select: { email: true, username: true, profile: PROFILE_SELECT } }));
+
+    const mail = mailFor({ auction, subject, heading, greeting, safeHtml, user, paddleNumber: participant?.paddleNumber ?? "" });
+    return {
+        subject: mail.subject,
+        html: withDataImages(mail.html),
+        text: mail.text,
+        previewFor: { name: personName(user) || null, email: user?.email ?? null, paddleNumber: participant?.paddleNumber ?? null },
+    };
 };
 
 /**
  * Sends the message to the picked bidders of the auction (one email each, no CC).
  * `test: true` sends a single copy to the super admin who is writing it instead.
  */
-export const sendAuctionMessageService = async ({ auctionUuid, subject, heading, message, userUuids, test, actorId }) => {
+export const sendAuctionMessageService = async ({ auctionUuid, subject, heading, message, greeting, userUuids, test, actorId }) => {
     const auction = await findAuction(auctionUuid);
+    const safeHtml = prepareMessage(message);
 
     if (test) {
         const actor = await prisma.user.findUnique({
@@ -176,8 +236,8 @@ export const sendAuctionMessageService = async ({ auctionUuid, subject, heading,
             select: { email: true, username: true, profile: PROFILE_SELECT },
         });
         if (!actor?.email) throw httpError("Your account has no email address to send the test to");
-        const mail = mailFor({ auction, subject: `[TEST] ${subject}`, heading, message, userName: personName(actor), paddleNumber: "" });
-        await sendEmail(actor.email, mail.subject, mail.html, null, { ...MAIL_OPTIONS, text: mail.text });
+        const mail = mailFor({ auction, subject, heading, greeting, safeHtml, user: actor, paddleNumber: "" });
+        await sendEmail(actor.email, `[TEST] ${mail.subject}`, mail.html, null, { ...MAIL_OPTIONS, text: mail.text });
         return { auction: { uuid: auction.uuid, title: auction.title }, test: true, sentTo: actor.email, sent: 1, failed: [] };
     }
 
@@ -206,7 +266,7 @@ export const sendAuctionMessageService = async ({ auctionUuid, subject, heading,
     let sent = 0;
 
     await runPool(sendable, SEND_CONCURRENCY, async ({ paddleNumber, user }) => {
-        const mail = mailFor({ auction, subject, heading, message, userName: personName(user), paddleNumber });
+        const mail = mailFor({ auction, subject, heading, greeting, safeHtml, user, paddleNumber });
         try {
             await sendEmail(user.email, mail.subject, mail.html, null, { ...MAIL_OPTIONS, text: mail.text });
             sent += 1;

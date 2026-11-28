@@ -3,11 +3,13 @@ import { ZodError } from "zod";
 import {
     listBroadcastAuctionsService,
     listBroadcastRecipientsService,
+    previewAuctionMessageService,
     sendAuctionMessageService,
 } from "../services/auctionBroadcast.services.js";
 import {
     broadcastAuctionParamsSchema,
     broadcastRecipientsQuerySchema,
+    previewAuctionMessageSchema,
     sendAuctionMessageSchema,
 } from "../validations/auctionBroadcast.validation.js";
 
@@ -53,7 +55,23 @@ export const getBroadcastRecipients = async (req, res) => {
 };
 
 // -----------------------------------------------------------------
-// POST /api/admin/auction-emails/:auctionUuid/send { subject, heading?, message, userUuids, test? }
+// POST /api/admin/auction-emails/:auctionUuid/preview { subject, heading?, message, greeting?, userUuids? }
+// -----------------------------------------------------------------
+
+export const previewAuctionMessage = async (req, res) => {
+    try {
+        const { auctionUuid } = broadcastAuctionParamsSchema.parse(req.params);
+        const body = previewAuctionMessageSchema.parse(req.body ?? {});
+        const data = await previewAuctionMessageService({ auctionUuid, ...body, actorId: req.user?.userId });
+        res.set("Cache-Control", "no-store");
+        return res.status(200).json({ success: true, message: "Preview ready", data });
+    } catch (error) {
+        return handleError(res, error, "Preview auction email", "Failed to build the preview");
+    }
+};
+
+// -----------------------------------------------------------------
+// POST /api/admin/auction-emails/:auctionUuid/send { subject, heading?, message, greeting?, userUuids, test? }
 // -----------------------------------------------------------------
 
 export const sendAuctionMessage = async (req, res) => {

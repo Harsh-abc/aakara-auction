@@ -10,41 +10,42 @@ import {
 } from "./registrationReceived.js";
 
 // =====================================================================
-// Settings → Auction Emails: a message a super admin writes and sends to
-// the bidders registered for one auction (auctionBroadcast.services.js).
-// The message is plain text — escaped here, blank lines start a new paragraph.
-// Every one carries the internet connectivity notice.
+// Settings → Auction Emails: a message a super admin writes in the rich
+// text editor and sends to the bidders registered for one auction
+// (auctionBroadcast.services.js). `messageHtml` must already be cleaned
+// and filled in (mail/richText.js emailSafeHtml + fillMergeTags);
+// `messageText` is its plain-text version. Every one carries the
+// internet connectivity notice.
 // =====================================================================
 
-const paragraphs = (message) =>
-    String(message ?? "")
-        .replace(/\r\n?/g, "\n")
-        .split(/\n\s*\n/)
-        .map((block) => block.trim())
-        .filter(Boolean);
-
-const auctionUrl = (site, auctionUuid) => (auctionUuid ? `${site}/auctions/${auctionUuid}` : site);
-
-export const auctionMessageTemplate = ({ userName = "", siteUrl = "", auctionTitle = "", auctionDate = "", auctionUuid = "", paddleNumber = "", heading = "", message = "" }) => {
+export const auctionPageUrl = (siteUrl, auctionUuid) => {
     const site = siteBase(siteUrl);
-    const greeting = userName ? `Dear ${escapeHtml(userName)},` : "Dear Collector,";
-    const body = paragraphs(message)
-        .map((block) => `
-                                <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#555555;">
-                                    ${escapeHtml(block).replace(/\n/g, "<br/>")}
-                                </p>`)
-        .join("");
+    return auctionUuid ? `${site}/auctions/${auctionUuid}` : site;
+};
+
+export const auctionMessageTemplate = ({
+    userName = "",
+    siteUrl = "",
+    auctionTitle = "",
+    auctionDate = "",
+    auctionUuid = "",
+    paddleNumber = "",
+    heading = "",
+    greeting = true,
+    messageHtml = "",
+    messageText = "",
+}) => {
+    const site = siteBase(siteUrl);
+    const hello = userName ? `Dear ${escapeHtml(userName)},` : "Dear Collector,";
     const saleLine = [auctionTitle, auctionDate].filter(Boolean).map(escapeHtml).join(" &middot; ");
-    const preheader = escapeHtml(paragraphs(message)[0]?.replace(/\s+/g, " ").slice(0, 140) || `A message about ${auctionTitle}`);
+    const preheader = escapeHtml(messageText.replace(/\s+/g, " ").trim().slice(0, 140) || `A message about ${auctionTitle}`);
 
     const content = `
                         <!-- Body -->
                         <tr>
-                            <td style="padding: 32px 48px 0 48px;">
-                                <p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">
-                                    ${greeting}
-                                </p>
-                                ${body}
+                            <td style="padding: 32px 48px 0 48px; font-size: 14px; line-height: 22px; color:#555555;">
+                                ${greeting ? `<p style="margin:0 0 16px 0; font-size: 14px; line-height: 22px; color:#1a1a1a;">${hello}</p>` : ""}
+                                ${messageHtml}
                             </td>
                         </tr>
 
@@ -68,7 +69,7 @@ export const auctionMessageTemplate = ({ userName = "", siteUrl = "", auctionTit
                         <!-- Button -->
                         <tr>
                             <td align="center" style="padding: 32px 40px 8px 40px;">
-                                <a href="${escapeHtml(auctionUrl(site, auctionUuid))}" style="display:inline-block; background-color:#1a1a1a; color:#ffffff; padding: 14px 32px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; text-decoration:none;">
+                                <a href="${escapeHtml(auctionPageUrl(site, auctionUuid))}" style="display:inline-block; background-color:#1a1a1a; color:#ffffff; padding: 14px 32px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; text-decoration:none;">
                                     View the auction
                                 </a>
                             </td>
@@ -93,15 +94,24 @@ export const auctionMessageTemplate = ({ userName = "", siteUrl = "", auctionTit
 };
 
 // plain-text part, for clients that don't show HTML (and better deliverability)
-export const auctionMessageText = ({ userName = "", siteUrl = "", auctionTitle = "", auctionDate = "", auctionUuid = "", paddleNumber = "", message = "" }) => {
+export const auctionMessageText = ({
+    userName = "",
+    siteUrl = "",
+    auctionTitle = "",
+    auctionDate = "",
+    auctionUuid = "",
+    paddleNumber = "",
+    greeting = true,
+    messageText = "",
+}) => {
     const site = siteBase(siteUrl);
     return [
-        userName ? `Dear ${userName},` : "Dear Collector,",
+        ...(greeting ? [userName ? `Dear ${userName},` : "Dear Collector,", ""] : []),
+        messageText,
         "",
-        ...paragraphs(message).flatMap((block) => [block, ""]),
         ...(auctionTitle ? [`Auction: ${[auctionTitle, auctionDate].filter(Boolean).join(" · ")}`] : []),
         ...(paddleNumber ? [`Your paddle number: ${paddleNumber}`] : []),
-        `View the auction: ${auctionUrl(site, auctionUuid)}`,
+        `View the auction: ${auctionPageUrl(site, auctionUuid)}`,
         "",
         ...connectivityNoticeText(),
         "",

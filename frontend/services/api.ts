@@ -226,5 +226,6 @@ export const adminEndPoints = {
     // POST { subject, heading, message, userUuids, test } emails them
     AUCTION_EMAILS_API: `${BASE_URL}/api/admin/auction-emails`,
     AUCTION_EMAIL_RECIPIENTS_API: (auctionUuid: string) => `${BASE_URL}/api/admin/auction-emails/${auctionUuid}/recipients`,
+    AUCTION_EMAIL_PREVIEW_API: (auctionUuid: string) => `${BASE_URL}/api/admin/auction-emails/${auctionUuid}/preview`,
     AUCTION_EMAIL_SEND_API: (auctionUuid: string) => `${BASE_URL}/api/admin/auction-emails/${auctionUuid}/send`,
 }

@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
-import { CheckIcon, FlaskConicalIcon, Loader2, MailIcon, SearchIcon, SendIcon, WifiIcon } from "lucide-react"
+import { CheckIcon, EyeIcon, FlaskConicalIcon, Loader2, MailIcon, SearchIcon, SendIcon, WifiIcon } from "lucide-react"
 
+import RichTextEditor, { type MergeTag } from "@/components/common/RichTextEditor/RichTextEditor"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -15,20 +16,29 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import { useAppSelector } from "@/hooks/redux"
 import { getErrorMessage } from "@/lib/apiError"
 import { AUCTION_STATUS_LABELS } from "@/lib/constants/auctionStatus"
 import type {
     AuctionEmailAuction,
     AuctionEmailDraft,
+    AuctionEmailPreview,
     AuctionEmailRecipient,
     AuctionEmailSendResult,
     RecipientStatus,
 } from "@/lib/types/auctionEmail.types"
 import { cn } from "@/lib/utils"
-import { getAuctionEmailAuctions, getAuctionEmailRecipients, sendAuctionEmail } from "@/services/operations/auctionEmail.api"
+import { isEmptyHtml } from "@/utils/sanitizeHtml"
+import {
+    getAuctionEmailAuctions,
+    getAuctionEmailRecipients,
+    previewAuctionEmail,
+    sendAuctionEmail,
+} from "@/services/operations/auctionEmail.api"
+import { uploadEditorImage } from "@/services/operations/upload.api"
 
 import { DASHBOARD_TIME_ZONE, PanelMessage, StatusPill, type PillTone } from "../home/dashboardUi"
 
@@ -65,9 +75,18 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 
 const SUBJECT_MAX = 200
 const HEADING_MAX = 120
-const MESSAGE_MAX = 10000
 
-const EMPTY_DRAFT: AuctionEmailDraft = { subject: "", heading: "", message: "" }
+// must match MERGE_TAGS in backend/src/mail/richText.js — filled in per bidder when sending
+const MERGE_TAGS: MergeTag[] = [
+    { token: "name", label: "Full name", description: "e.g. Asha Rao" },
+    { token: "firstName", label: "First name", description: "e.g. Asha" },
+    { token: "paddle", label: "Paddle number", description: "their paddle for this auction" },
+    { token: "auction", label: "Auction name" },
+    { token: "auctionDate", label: "Auction date", description: "e.g. 12 December 2026" },
+    { token: "auctionLink", label: "Auction link", description: "the auction's page on the website" },
+]
+
+const EMPTY_DRAFT: AuctionEmailDraft = { subject: "", heading: "", message: "", greeting: true }
 
 const personLabel = (p: AuctionEmailRecipient) => p.name || p.username || p.email
 
@@ -244,9 +263,25 @@ function AuctionComposer({
             return next
         })
 
-    const set = (field: keyof AuctionEmailDraft) => (value: string) => onDraftChange({ ...draft, [field]: value })
+    const set = (field: "subject" | "heading" | "message") => (value: string) => onDraftChange({ ...draft, [field]: value })
 
-    const draftReady = draft.subject.trim().length > 0 && draft.message.trim().length > 0
+    const draftReady = draft.subject.trim().length > 0 && !isEmptyHtml(draft.message)
+
+    const [preview, setPreview] = useState<AuctionEmailPreview | null>(null)
+    const [previewing, setPreviewing] = useState(false)
+
+    const uploadImage = useCallback((file: File) => uploadEditorImage(file, token), [token])
+
+    const openPreview = async () => {
+        setPreviewing(true)
+        try {
+            setPreview(await previewAuctionEmail(token, auction.uuid, draft, [...picked]))
+        } catch (err) {
+            toast.error(getErrorMessage(err))
+        } finally {
+            setPreviewing(false)
+        }
+    }
 
     const send = async (test: boolean) => {
         setSending(test ? "test" : "send")
@@ -278,7 +313,8 @@ function AuctionComposer({
             <div className="rounded-xl border border-slate-200 bg-white p-4 md:p-5">
                 <h3 className="text-[15px] font-semibold text-slate-900">Message</h3>
                 <p className="text-[12px] text-[#62666F]">
-                    Each bidder gets their own email, addressed by name with their paddle number. Leave a blank line between paragraphs.
+                    Each bidder gets their own email. Use <span className="font-medium">Insert field</span> to add their name, paddle number or the
+                    auction&apos;s link — you can also type fields like <code className="text-[11px]">{"{{firstName}}"}</code> into the subject and heading.
                 </p>
 
                 <div className="mt-4 space-y-3">
@@ -300,16 +336,31 @@ function AuctionComposer({
                             className="h-9"
                         />
                     </Field>
-                    <Field label="Message" count={draft.message.length} max={MESSAGE_MAX}>
-                        <Textarea
+                    <div>
+                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-[12px] font-medium text-slate-900">Message</span>
+                            <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#62666F]">
+                                <Switch
+                                    checked={draft.greeting}
+                                    onCheckedChange={(greeting) => onDraftChange({ ...draft, greeting })}
+                                    className="data-checked:bg-[#7B2D52]"
+                                />
+                                Start with &ldquo;Dear &lt;name&gt;,&rdquo;
+                            </label>
+                        </div>
+                        <RichTextEditor
+                            variant="email"
                             value={draft.message}
-                            onChange={(e) => set("message")(e.target.value)}
-                            maxLength={MESSAGE_MAX}
-                            rows={8}
-                            placeholder={"\"Dear <name>,\" is added for you — start straight with your message.\n\nThe sale opens at 6 PM IST today. Please log in a few minutes early…"}
-                            className="min-h-40"
+                            onChange={set("message")}
+                            mergeTags={MERGE_TAGS}
+                            onImageUpload={uploadImage}
+                            placeholder={
+                                draft.greeting
+                                    ? "“Dear <name>,” is added for you — start straight with your message, e.g. The sale opens at 6 PM IST today…"
+                                    : "Write your message — add a greeting with Insert field → First name…"
+                            }
                         />
-                    </Field>
+                    </div>
                 </div>
 
                 <div className="mt-4 flex gap-3 rounded-lg bg-[#F7F1E3] px-4 py-3 text-[12px] text-[#5c4a1e]">
@@ -454,6 +505,10 @@ function AuctionComposer({
 
             {/* actions */}
             <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button type="button" variant="outline" onClick={openPreview} disabled={!draftReady || previewing}>
+                    {previewing ? <Loader2 className="size-3.5 animate-spin" /> : <EyeIcon className="size-3.5" />}
+                    Preview
+                </Button>
                 <Button type="button" variant="outline" onClick={() => send(true)} disabled={!draftReady || sending !== null}>
                     {sending === "test" ? <Loader2 className="size-3.5 animate-spin" /> : <FlaskConicalIcon className="size-3.5" />}
                     Send test to me
@@ -468,6 +523,29 @@ function AuctionComposer({
                     {sending === "send" ? "Sending…" : picked.size ? `Send to ${plural(picked.size, "bidder")}` : "Send"}
                 </Button>
             </div>
+
+            <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+                <DialogContent className="flex max-h-[92vh] flex-col gap-3 sm:max-w-[720px]">
+                    <DialogHeader>
+                        <DialogTitle className="truncate">{preview?.subject}</DialogTitle>
+                        <DialogDescription>
+                            As{" "}
+                            {preview?.previewFor.name || preview?.previewFor.email || "a bidder"}
+                            {preview?.previewFor.paddleNumber ? ` (paddle ${preview.previewFor.paddleNumber})` : ""} will get it. Mail apps may differ
+                            slightly — send yourself a test to check.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {preview && (
+                        <iframe
+                            title="Email preview"
+                            srcDoc={preview.html}
+                            // the server already cleaned it; no scripts may run here either way
+                            sandbox="allow-popups allow-popups-to-escape-sandbox"
+                            className="min-h-[60vh] w-full flex-1 rounded-lg border border-slate-200 bg-[#f5f5f3]"
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                 <AlertDialogContent>

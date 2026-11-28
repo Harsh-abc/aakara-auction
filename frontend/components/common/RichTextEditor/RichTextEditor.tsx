@@ -35,12 +35,17 @@ const AlignedImage = Image.extend({
     },
 });
 
-export type RichTextEditorVariant = "full" | "basic";
+export type RichTextEditorVariant = "full" | "basic" | "email";
+
+/** A {{token}} the "Insert field" menu adds at the cursor (filled in per recipient on the server) */
+export type MergeTag = { token: string; label: string; description?: string };
 
 // "basic" = inline formatting, colors, links and lists only — for short text shown on cards.
+// "email" = everything in "full" except video embeds, which email clients don't show.
 // Leaving the block nodes out also strips them from pasted content.
 const buildExtensions = (variant: RichTextEditorVariant, placeholder: string) => {
     const basic = variant === "basic";
+    const email = variant === "email";
 
     return [
         StarterKit.configure({
@@ -82,12 +87,16 @@ const buildExtensions = (variant: RichTextEditorVariant, placeholder: string) =>
                   TableRow,
                   TableHeader,
                   TableCell,
-                  Youtube.configure({
-                      nocookie: true,
-                      modestBranding: true,
-                      width: 640,
-                      height: 360,
-                  }),
+                  ...(email
+                      ? []
+                      : [
+                            Youtube.configure({
+                                nocookie: true,
+                                modestBranding: true,
+                                width: 640,
+                                height: 360,
+                            }),
+                        ]),
               ]),
     ];
 };
@@ -98,8 +107,10 @@ interface RichTextEditorProps {
     placeholder?: string;
     disabled?: boolean;
     className?: string;
-    /** "full" (default) or "basic" — formatting, colors, links and lists only */
+    /** "full" (default), "basic" — formatting, colors, links and lists only — or "email" (full minus video) */
     variant?: RichTextEditorVariant;
+    /** adds an "Insert field" menu that types these {{tokens}} at the cursor */
+    mergeTags?: MergeTag[];
     /** Uploads an image and resolves to its public URL. Without it, images can only be inserted by URL. */
     onImageUpload?: (file: File) => Promise<string>;
     maxImageSizeMB?: number;
@@ -112,6 +123,7 @@ export default function RichTextEditor({
     disabled = false,
     className,
     variant = "full",
+    mergeTags,
     onImageUpload: onImageUploadProp,
     maxImageSizeMB = 10,
 }: RichTextEditorProps) {
@@ -268,6 +280,7 @@ export default function RichTextEditor({
                 editor={editor}
                 disabled={disabled}
                 variant={variant}
+                mergeTags={mergeTags}
                 onUploadImages={onImageUpload ? (files) => insertImages(files) : undefined}
                 uploadingCount={uploadingCount}
                 fullscreen={fullscreen}
