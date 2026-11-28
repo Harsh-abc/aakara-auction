@@ -3,7 +3,7 @@ import { changeMyPassword, getAllUsers, getUserStats, getMyKyc, getMyProfile, ge
 import { addToGallery, getMyGallery, getMyWinnings, removeFromGallery } from '../controllers/gallery.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
-import { uploadAny } from '../middleware/upload.middleware.js';
+import { uploadKycDocuments, uploadProfileAvatar, uploadStaffKycDocuments } from '../middleware/upload.middleware.js';
 import { STAFF_ROLES } from '../libs/socket.js';
 
 const userRouter = Router();
@@ -11,11 +11,11 @@ const userRouter = Router();
 
 // USER PROFILE
 userRouter.get('/me/profile', authenticate, getMyProfile);
-userRouter.patch('/me/update-profile', authenticate, uploadAny, updateMyProfile);
+userRouter.patch('/me/update-profile', authenticate, uploadProfileAvatar, updateMyProfile);
 userRouter.patch('/me/change-password', authenticate, changeMyPassword);
 userRouter.get('/me/registrations', authenticate, getMyRegistrations);
 userRouter.get('/me/kyc', authenticate, getMyKyc);
-userRouter.post('/me/kyc', authenticate, uploadAny, submitMyKyc);
+userRouter.post('/me/kyc', authenticate, uploadKycDocuments, submitMyKyc);
 
 // MY AUCTION GALLERY (lots saved from the storefront; signed-in users only)
 userRouter.get('/me/gallery', authenticate, getMyGallery);
@@ -39,7 +39,7 @@ userRouter.patch('/:uuid/details', authenticate, requireRole('SUPER_ADMIN', 'ADM
 // active / inactive (new signups start inactive and can't register for auctions or bid)
 userRouter.patch('/:uuid/active', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), setUserActive)
 
-userRouter.post('/:uuid/kyc', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), uploadAny, uploadUserKyc)
+userRouter.post('/:uuid/kyc', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), uploadStaffKycDocuments, uploadUserKyc)
 
 // approve / reject documents the user submitted from My profile
 userRouter.patch('/:uuid/kyc/review', authenticate, requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS'), reviewUserKyc)

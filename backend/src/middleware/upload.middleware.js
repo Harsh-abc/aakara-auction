@@ -113,4 +113,65 @@ export const uploadBannerImages = (req, res, next) => {
     ])(req, res, (err) => (err ? imageUploadError(res, err) : next()));
 };
 
+// ============================================================
+// Bidder uploads (any signed-up user can reach these), kept small so a request
+// can't fill the server's memory. multer stops reading — and answers 400 — as soon
+// as a limit is crossed, so oversized files are never held in RAM in full.
+// ============================================================
+
+const typeFilter = (allowed, message) => (req, file, cb) => {
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    const error = new Error(message.replace("{name}", file.originalname));
+    error.statusCode = 400;
+    cb(error, false);
+};
+
+const withJsonErrors = (middleware, { sizeMessage, countMessage }) => (req, res, next) => {
+    middleware(req, res, (err) => {
+        if (!err) return next();
+        let message = err.message || "File upload failed";
+        if (err instanceof multer.MulterError) {
+            if (err.code === "LIMIT_FILE_SIZE") message = sizeMessage;
+            if (err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE") message = countMessage;
+            if (err.code === "LIMIT_FIELD_VALUE" || err.code === "LIMIT_FIELD_COUNT") message = "Form data is too large";
+        }
+        return res.status(400).json({ success: false, message });
+    });
+};
+
+const KYC_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
+const KYC_TYPE_MESSAGE = '"{name}" is not allowed. KYC documents must be JPG, PNG, WEBP or PDF.';
+
+// POST /api/users/me/kyc — up to 10 documents ("document_0" … "document_9"), 5 MB each
+// (the same limits submitMyKycSchema and the KYC service enforce)
+export const uploadKycDocuments = withJsonErrors(
+    multer({
+        storage,
+        limits: { fileSize: 5 * 1024 * 1024, files: 10, fields: 30, fieldSize: 64 * 1024 },
+        fileFilter: typeFilter(KYC_TYPES, KYC_TYPE_MESSAGE),
+    }).any(),
+    { sizeMessage: "Each document must be 5 MB or smaller", countMessage: "Upload at most 10 documents at a time" }
+);
+
+// POST /api/users/:uuid/kyc — staff adding documents for a user: larger scans allowed
+export const uploadStaffKycDocuments = withJsonErrors(
+    multer({
+        storage,
+        limits: { fileSize: 20 * 1024 * 1024, files: 20, fields: 60, fieldSize: 256 * 1024 },
+        fileFilter: typeFilter(KYC_TYPES, KYC_TYPE_MESSAGE),
+    }).any(),
+    { sizeMessage: "Each document must be 20 MB or smaller", countMessage: "Upload at most 20 documents at a time" }
+);
+
+// PATCH /api/users/me/update-profile — profile fields plus an optional "avatar" image, 1 MB
+// (.any() capped at one file, because the controller looks the avatar up in req.files)
+export const uploadProfileAvatar = withJsonErrors(
+    multer({
+        storage,
+        limits: { fileSize: 1 * 1024 * 1024, files: 1, fields: 40, fieldSize: 64 * 1024 },
+        fileFilter: typeFilter(["image/jpeg", "image/jpg", "image/png", "image/webp"], '"{name}" is not allowed. Use a JPG, PNG or WEBP image.'),
+    }).any(),
+    { sizeMessage: "Profile photo must be 1 MB or smaller", countMessage: "Only one profile photo can be uploaded" }
+);
+
 export default upload;
