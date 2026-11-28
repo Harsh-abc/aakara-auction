@@ -21,6 +21,7 @@ import redis from "./redis.js";
 //   auction:{auctionUuid}:feed     LIST  latest bids across the sale, newest first (capped)
 //   auction:{auctionUuid}:stats    HASH  total / manual / proxy bid counts
 //   auction:{auctionUuid}:counts   ZSET  userId -> bids placed
+//   auction:{auctionUuid}:callout  STR   the latest callout (JSON, expires after CALLOUT_TTL_MS)
 //   dirty                          SET   lots changed since the last database snapshot
 //   flush-pending                  SET   ended auctions whose bids still need writing to the database
 // =====================================================================
@@ -28,6 +29,8 @@ import redis from "./redis.js";
 export const FEED_SIZE = 200;
 export const ELIGIBLE_TTL_SECONDS = 600;
 export const AUCTION_STATUS_TTL_SECONDS = 60;
+// a callout is on screen for 12 s (frontend useLotCallout) — kept a little longer than that
+export const CALLOUT_TTL_MS = 15_000;
 export const ELIGIBLE_SENTINEL = "__loaded__";
 
 export const bidKeys = {
@@ -41,6 +44,8 @@ export const bidKeys = {
     auctionFeed: (auctionUuid) => `bid:auction:${auctionUuid}:feed`,
     auctionStats: (auctionUuid) => `bid:auction:${auctionUuid}:stats`,
     auctionCounts: (auctionUuid) => `bid:auction:${auctionUuid}:counts`,
+    // the auctioneer's latest callout (JSON), kept a few seconds for tabs that reconnect and missed it
+    auctionCallout: (auctionUuid) => `bid:auction:${auctionUuid}:callout`,
     dirty: "bid:dirty",
     flushPending: "bid:flush-pending",
     rate: (userId) => `bid:rate:${userId}`,

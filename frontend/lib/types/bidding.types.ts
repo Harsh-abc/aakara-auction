@@ -70,6 +70,8 @@ export interface LiveLotUpdate {
     leadingPaddle?: string | null
     /** new bids, newest first */
     bids?: PublicBid[]
+    /** when the server sent it (ms, server clock) — to measure how late bids reach the page */
+    sentAt?: number
 }
 
 /** "auction:status" */

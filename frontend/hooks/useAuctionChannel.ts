@@ -3,6 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react"
 
 import { useAppSelector } from "@/hooks/redux"
+import { reportServerEvent } from "@/lib/networkHealth"
 import { getSocket, setSocketToken } from "@/lib/socket"
 import type { LiveAuctionStatus, LiveLotUpdate, OutbidNotice, ProxyOutbidNotice, StaffBidEvent } from "@/lib/types/bidding.types"
 
@@ -68,7 +69,10 @@ export function useAuctionChannel(auctionUuid: string | null | undefined, handle
         const ours = <T extends { auctionUuid: string }>(fn: (payload: T) => void) => (payload: T) => {
             if (payload?.auctionUuid === auctionUuid) fn(payload)
         }
-        const onLot = ours<LiveLotUpdate>((update) => handlersRef.current.onLotUpdate?.(update))
+        const onLot = ours<LiveLotUpdate>((update) => {
+            reportServerEvent(update.sentAt)
+            handlersRef.current.onLotUpdate?.(update)
+        })
         const onStatus = ours<LiveAuctionStatus>((update) => handlersRef.current.onAuctionStatus?.(update))
         const onStaff = ours<StaffBidEvent>((event) => handlersRef.current.onStaffBid?.(event))
         // Settings → Live Access closed this live sale to us (restricted, or taken off its list):

@@ -7,6 +7,7 @@ import { AlertTriangle, ChevronRight, Gavel, ImageOff, Loader2, PauseCircle, Pla
 
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { NetworkBanner } from "@/components/common/NetworkBanner";
 import { useAuctionChannel } from "@/hooks/useAuctionChannel";
 import { getErrorMessage } from "@/lib/apiError";
 import { canControlLots } from "@/lib/constants/roles";
@@ -248,6 +249,7 @@ export default function AuctionConsole({ auctionUuid }: { auctionUuid: string })
 
     return (
         <ConsoleFrame title={auction.title} status={auction.status} lots={`${auction.closedLots} / ${auction.lotCount} lots closed`}>
+            <NetworkBanner audience="staff" className="mt-4 rounded-md" />
             {error && (
                 <div className="mt-4 flex items-center justify-between rounded-md bg-red-50 px-4 py-2 text-[13px] text-red-600">
                     <span>{error}</span>

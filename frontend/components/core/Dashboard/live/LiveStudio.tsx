@@ -8,6 +8,8 @@ import { DisconnectReason } from "livekit-client"
 import { AlertTriangle, RefreshCw } from "lucide-react"
 
 import DashboardFormText from "@/components/common/DashboardFormText"
+import { NetworkBanner } from "@/components/common/NetworkBanner"
+import { StreamQualityReporter } from "@/components/common/StreamQualityReporter"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -203,6 +205,7 @@ export function LiveStudio() {
                 }}
                 onError={(error) => setConnection({ status: "error", message: error.message })}
             >
+                <StreamQualityReporter />
                 <StudioRoom
                     auctionUuid={connection.access.auction.uuid}
                     liveLotUuid={selected.liveLot?.uuid}
@@ -217,6 +220,8 @@ export function LiveStudio() {
 
     return (
         <div className="mx-8 my-9 flex flex-col gap-6">
+            {/* only once broadcasting — before that the room isn't connected */}
+            {connection.status === "ready" && roomOn && <NetworkBanner audience="host" className="rounded-md" />}
             {header}
             {body}
         </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ImageOff, Megaphone } from "lucide-react";
 
+import { NetworkBanner } from "@/components/common/NetworkBanner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLotCallout } from "@/hooks/useLotCallout";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,7 @@ export function LotDetailPage({ auctionUuid, lotUuid }: { auctionUuid: string; l
             {/* the room: sale header, order of sale, the lot on view and its ladder */}
             <section>
                 <div className="page-container">
+                    {isLive(auction) && <NetworkBanner audience="bidder" className="mb-4" />}
                     <Breadcrumb crumbs={[{ label: "Live auction" }]} />
 
                     <header className="mt-6 flex flex-col gap-4 border-b border-[#cecece] pb-4 md:flex-row md:items-end md:justify-between">

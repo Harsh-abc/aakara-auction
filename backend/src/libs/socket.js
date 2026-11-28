@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 
 import prisma from "./prisma.js";
 import redis from "./redis.js";
+import { bidKeys } from "./biddingStore.js";
 import { tokenAccessProblem } from "./accountBlock.js";
 import { DASHBOARD_ROLES, tokenHasFreshMfa } from "./dashboardMfa.js";
 import { readVisitorId, startViewerTracking } from "./viewers.js";
@@ -74,6 +75,10 @@ export const initSocket = (server) => {
     io = new Server(server, {
         cors: { origin: process.env.FRONTEND_URL, credentials: true },
         adapter: createAdapter(redis.duplicate(), redis.duplicate()),
+        // notice a dead connection (a phone switching networks, a stalled Wi-Fi) in ~18 s instead of the
+        // default ~45 s, so the tab reconnects and catches up sooner — everything sent meanwhile is missed
+        pingInterval: 10_000,
+        pingTimeout: 8_000,
     });
 
     const viewers = startViewerTracking(io, rooms.auction);
@@ -110,6 +115,26 @@ export const initSocket = (server) => {
             }, user.mfaUntil - Date.now());
             socket.on("disconnect", () => clearTimeout(expiry));
         }
+
+        // the live pages time this round trip to warn a user whose connection is too weak (NetworkBanner)
+        // `now` lets the page line its clock up with ours, to measure how late "lot:update" reaches it
+        socket.on("net:ping", (_payload, ack) => reply(ack, { ok: true, now: Date.now() }));
+
+        // the auctioneer's latest callout, for a tab that (re)connects just after it was sent
+        socket.on("callout:latest", async ({ auctionUuid } = {}, ack) => {
+            try {
+                if (!UUID_RE.test(auctionUuid ?? "")) return reply(ack, { ok: false });
+                if (!(await canWatchAuction(auctionUuid, user))) return reply(ack, { ok: false });
+                const saved = await redis.get(bidKeys.auctionCallout(auctionUuid));
+                if (!saved) return reply(ack, { ok: true, callout: null });
+                const callout = JSON.parse(saved);
+                // its age by our clock — the page's clock may be off
+                reply(ack, { ok: true, callout, ageMs: Math.max(0, Date.now() - Date.parse(callout.at)) });
+            } catch (error) {
+                console.error("[socket] callout:latest failed:", error);
+                reply(ack, { ok: false });
+            }
+        });
 
         socket.on("auction:join", async ({ auctionUuid } = {}, ack) => {
             try {

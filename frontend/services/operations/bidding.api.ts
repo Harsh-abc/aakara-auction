@@ -1,3 +1,5 @@
+import { reportBidRoundTrip } from "@/lib/networkHealth"
+
 import { apiConnector } from "../apiConnector"
 import { auctionEndPoints, biddingEndPoints } from "../api"
 import type {
@@ -24,6 +26,16 @@ const { HAMMER_LOT_API } = auctionEndPoints
 
 const authHeader = (token: string | null) => ({ Authorization: `Bearer ${token}` })
 
+// a bid's trip to the server and back — a slow one tells the network banner bids are late here
+async function timedBid<T>(request: () => Promise<T>): Promise<T> {
+    const started = performance.now()
+    try {
+        return await request()
+    } finally {
+        reportBidRoundTrip(performance.now() - started)
+    }
+}
+
 // the signed-in bidder's registration, position and proxy on one lot
 export async function getMyLotStanding(lotUuid: string, token: string | null): Promise<MyLotStanding> {
     const response = await apiConnector({ method: "GET", url: MY_LOT_STANDING_API(lotUuid), header: authHeader(token) })
@@ -32,22 +44,26 @@ export async function getMyLotStanding(lotUuid: string, token: string | null): P
 
 // both return the backend message — it says whether the bidder leads or was topped by a proxy
 export async function placeBid(lotUuid: string, amount: number, token: string | null): Promise<{ message: string; data: BidResult }> {
-    const response = await apiConnector({
-        method: "POST",
-        url: PLACE_BID_API(lotUuid),
-        body: { amount },
-        header: authHeader(token),
-    })
+    const response = await timedBid(() =>
+        apiConnector({
+            method: "POST",
+            url: PLACE_BID_API(lotUuid),
+            body: { amount },
+            header: authHeader(token),
+        })
+    )
     return { message: response.data.message, data: response.data.data }
 }
 
 export async function setProxyBid(lotUuid: string, maxAmount: number, token: string | null): Promise<{ message: string; data: BidResult }> {
-    const response = await apiConnector({
-        method: "POST",
-        url: SET_PROXY_BID_API(lotUuid),
-        body: { maxAmount },
-        header: authHeader(token),
-    })
+    const response = await timedBid(() =>
+        apiConnector({
+            method: "POST",
+            url: SET_PROXY_BID_API(lotUuid),
+            body: { maxAmount },
+            header: authHeader(token),
+        })
+    )
     return { message: response.data.message, data: response.data.data }
 }
 
@@ -70,12 +86,14 @@ export async function placeFloorBid(
     amount: number,
     token: string | null
 ): Promise<{ message: string; data: BidResult }> {
-    const response = await apiConnector({
-        method: "POST",
-        url: FLOOR_BID_API(lotUuid),
-        body: { paddleNumber, amount },
-        header: authHeader(token),
-    })
+    const response = await timedBid(() =>
+        apiConnector({
+            method: "POST",
+            url: FLOOR_BID_API(lotUuid),
+            body: { paddleNumber, amount },
+            header: authHeader(token),
+        })
+    )
     return { message: response.data.message, data: response.data.data }
 }
 

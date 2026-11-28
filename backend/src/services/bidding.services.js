@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import prisma from "../libs/prisma.js";
 import redis from "../libs/redis.js";
-import { AUCTION_STATUS_TTL_SECONDS, ELIGIBLE_SENTINEL, ELIGIBLE_TTL_SECONDS, auctionKeyList, bidKeys, hydrateLotState, lotKeyList, readLotState, runBidEngine } from "../libs/biddingStore.js";
+import { AUCTION_STATUS_TTL_SECONDS, CALLOUT_TTL_MS, ELIGIBLE_SENTINEL, ELIGIBLE_TTL_SECONDS, auctionKeyList, bidKeys, hydrateLotState, lotKeyList, readLotState, runBidEngine } from "../libs/biddingStore.js";
 import { emitTo, rooms } from "../libs/socket.js";
 import { canBidInAuction, liveAccessError } from "../libs/liveAccess.js";
 import { bidOptions, nextValidBid, proxyBidOptions } from "../utils/bidIncrement.js";
@@ -493,7 +493,8 @@ const broadcastLot = async (lotUuid, state, result = null) => {
             bids: bids.map((bid) => ({ ...toPublicBid(lotUuid, bid), paddle: bidders.get(String(bid.u))?.paddle ?? null })).reverse(),
         };
 
-        emitTo(rooms.auction(auctionUuid), "lot:update", update);
+        // sentAt: the lot pages measure how late bids reach them (NetworkBanner)
+        emitTo(rooms.auction(auctionUuid), "lot:update", { ...update, sentAt: Date.now() });
 
         if (bids.length > 0) {
             emitTo(rooms.staff(auctionUuid), "bid:new", {
@@ -1090,7 +1091,8 @@ export const executeProxiesService = async ({ lotUuid }) => {
 // =====================================================================
 // CALLOUT (auctioneer console)
 // What the auctioneer says to the room — "Fair warning", "Going once" — shown
-// to everyone watching the sale. Not stored: it's only for those watching now.
+// to everyone watching the sale. Kept only a few seconds — long enough for a tab whose
+// connection dropped or switched networks to pick it up when it reconnects ("callout:latest").
 // =====================================================================
 
 export const sendLotCalloutService = async ({ lotUuid, message }) => {
@@ -1108,6 +1110,7 @@ export const sendLotCalloutService = async ({ lotUuid, message }) => {
         message,
         at: new Date().toISOString(),
     };
+    await redis.set(bidKeys.auctionCallout(lot.auctionUuid), JSON.stringify(callout), "PX", CALLOUT_TTL_MS);
     emitTo(rooms.auction(lot.auctionUuid), "lot:callout", callout);
 
     return { message: "Sent to the room", data: callout };

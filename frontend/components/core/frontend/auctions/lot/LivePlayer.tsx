@@ -6,6 +6,7 @@ import { LiveKitRoom, VideoTrack, useRemoteParticipants, useRoomContext, useTrac
 import { DisconnectReason, Track } from "livekit-client"
 import { Maximize2, Minimize2, PictureInPicture2, Volume2, VolumeX } from "lucide-react"
 
+import { StreamQualityReporter } from "@/components/common/StreamQualityReporter"
 import { cn } from "@/lib/utils"
 import { useAppSelector } from "@/hooks/redux"
 import { getSocket, setSocketToken } from "@/lib/socket"
@@ -289,6 +290,7 @@ export function LiveConnection({ auctionUuid, fallback, className, ...stage }: L
             }}
             className={cn("absolute inset-0", className)}
         >
+            <StreamQualityReporter />
             <Stage
                 {...stage}
                 fallback={fallback}
