@@ -10,7 +10,7 @@ const newPasswordRule = z
 
 export const registerSchema = z.object({
     username: z.string().min(3, "Name must be at least 3 characters").max(50, "Name cannot exceed 50 characters").regex(/^[a-zA-Z0-9_ ]+$/, "Only letters, numbers, spaces and underscores are allowed"),
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: newPasswordRule,
     // E.164 (e.g. +919876543210); the frontend checks the length for the chosen country
     phone: z.string().regex(/^\+[0-9]{7,15}$/, "Invalid phone number").optional(),
@@ -22,7 +22,7 @@ export const registerSchema = z.object({
 });
 
 export const verifyOtpSchema = z.object({
-    email: z.string().email("Invalid email address"),
+    email: z.string().trim().toLowerCase().email("Invalid email address"),
 
     otp: z
         .string()
@@ -31,11 +31,11 @@ export const verifyOtpSchema = z.object({
 });
 
 export const resendOtpSchema = z.object({
-    email: z.string().email("Invalid email address"),
+    email: z.string().trim().toLowerCase().email("Invalid email address"),
 });
 
 export const resendPhoneOtpSchema = z.object({
-    email: z.string().email("Invalid email address"),
+    email: z.string().trim().toLowerCase().email("Invalid email address"),
 });
 
 export const loginSchema = z.object({
